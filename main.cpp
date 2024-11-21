@@ -55,7 +55,7 @@ enum class MapType {
 	World, Building, Dungeon
 };
 
-void draw(UI ui);
+void draw(UI& ui);
 void exit(SDL_Surface* surface, SDL_Window* window);
 
 
@@ -107,7 +107,7 @@ int main(int argc, char* args[]) {
 }
 
 // This will go in the Menu Screen loop
-void draw(UI ui) {
+void draw(UI& ui) {
 
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 145, 145, 154, 1);
 	SDL_RenderClear(ui.getMainRenderer());
