@@ -1,0 +1,69 @@
+{
+  "TITLE": [ "Land", "of", "Limbs" ],
+  "WINDOW": {
+    "DEFAULTS": {
+      "WIDTH": {
+        "MOBILE": 360,
+        "TABLET": 810,
+        "DESKTOP": 1600
+      },
+      "HEIGHT": {
+        "MOBILE": 800,
+        "TABLET": 1080,
+        "DESKTOP": 900
+      }
+    }
+  },
+  "BUTTON_TEXT": {
+    "ABOUT": "ABOUT",
+    "LOAD_GAME": "LOAD GAME",
+    "SETTINGS": "SETTINGS",
+    "NEW_GAME": "NEW GAME",
+    "EXIT": "EXIT",
+    "OPTIONS":  "OPTIONS",
+
+
+    "BACK": "BACK",
+
+    "MOBILE": "360x800",
+    "TABLET": "810x1080",
+    "DESKTOP": "1600x900",
+    "FULLSCREEN": "FULLSCREEN"
+  },
+  "BUTTON_BORDER": {
+    "SMALL": 10,
+    "LARGE":  20
+  },
+  "FONT_SIZES": {
+    "TITLE": {
+      "X_SMALL": 54,
+      "SMALL": 72,
+      "MEDIUM": 96,
+      "LARGE": 128
+    },
+    "BUTTON": {
+      "X_SMALL": 16,
+      "SMALL":  20,
+      "MEDIUM": 24,
+      "LARGE": 34
+    },
+    "DIALOG": {
+      "X_SMALL": 15,
+      "SMALL":  18,
+      "MEDIUM": 21,
+      "LARGE": 33
+    },
+    "BODY": {
+      "X_SMALL": 16,
+      "SMALL": 19,
+      "MEDIUM": 22,
+      "LARGE": 34
+    }
+  },
+  "MEDIA_MIN_WIDTHS": {
+    "X_SMALL": 500,
+    "SMALL": 800,
+    "MEDIUM": 1200,
+    "LARGE": 1919
+  }
+}

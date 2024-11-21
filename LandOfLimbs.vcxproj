@@ -139,12 +139,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BattleScreen.ixx" />
     <ClCompile Include="GameState.ixx" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MapScreen.ixx" />
+    <ClCompile Include="MenuScreen.ixx" />
+    <ClCompile Include="Resources.ixx" />
+    <ClCompile Include="ScreenType.ixx" />
     <ClCompile Include="UI.ixx" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="data\resources.json" />
     <None Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\json.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
