@@ -62,7 +62,7 @@ enum class MapType {
 	World, Building, Dungeon
 };
 
-void draw(UI& ui);
+void draw(UI& ui, Panel& panel);
 void exit(SDL_Surface* surface, SDL_Window* window);
 
 
@@ -71,6 +71,7 @@ int main(int argc, char* args[]) {
 
 	UI ui = UI();
 
+	Panel menuPanel = createMainMenuPanel();
 
 	// This loop will be in the menu screen
 
@@ -99,7 +100,7 @@ int main(int argc, char* args[]) {
 			}
 		}
 
-		draw(ui);
+		draw(ui, menuPanel);
 
 		// Delay so the app doesn't just crash
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -114,10 +115,25 @@ int main(int argc, char* args[]) {
 }
 
 // This will go in the Menu Screen loop
-void draw(UI& ui) {
+void draw(UI& ui, Panel& panel) {
 
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 145, 145, 154, 1);
 	SDL_RenderClear(ui.getMainRenderer());
+
+
+	// draw panel
+
+	SDL_SetRenderDrawColor(ui.getMainRenderer(), 95, 77, 227, 1);
+
+	vector<Button> buttons = panel.getButtons();
+
+	for (int i = 0; i < buttons.size(); ++i) {
+		// get the rect, send it a reference (to be converted to a pointer)
+		SDL_Rect rect = buttons[i].getRect();
+		SDL_RenderFillRect(ui.getMainRenderer(), &rect);
+
+		// now draw the text
+	}
 
 	// Update window
 	SDL_RenderPresent(ui.getMainRenderer());

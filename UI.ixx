@@ -40,7 +40,6 @@
 
 module;
 
-export module UI;
 
 #include "SDL.h"
 #include "SDL_image.h"
@@ -52,8 +51,10 @@ export module UI;
 #include <vector>
 #include <cstdlib>
 #include <time.h>
-#include <functional>
+#include <vector>
+//#include <functional>
 
+export module UI;
 
 using namespace std;
 
@@ -236,6 +237,8 @@ export class Panel {
 		// Might turn this private since we should only operate on it internally
 		SDL_Rect getRect() { return rect; }
 
+		vector<Button> getButtons() { return buttons; }
+
 		// check if mouse location has hit the panel
 		bool isInPanel(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
 
@@ -253,7 +256,7 @@ export class Panel {
 // Possibly a panel will need a parent rect? so we know how large it can be?
 // YES this WILL need a parent rect, so we can know the X,Y.
 // Also need COLORS. But not yet.
-export Panel createMainMenu() {
+export Panel createMainMenuPanel() {
 	vector<Button> buttons;
 
 	int x = 0;
