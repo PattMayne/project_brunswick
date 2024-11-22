@@ -34,3 +34,4 @@
   - [ ] JSON?
 - [ ] Incorporate LIMBS and AVATARS into MAP screen
 - [ ] Build Battle Screen
+- [ ] When closing program close each font with TTF_CloseFont()

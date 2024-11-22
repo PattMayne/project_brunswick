@@ -67,21 +67,13 @@ export class UI {
 			initialized = initialize();
 		}
 
-		bool isInitialized() {
-			return initialized;
-		}
+		bool isInitialized() { return initialized; }
+		SDL_Renderer* getMainRenderer() { return mainRenderer; }
+		SDL_Surface* getWindowSurface() { return mainWindowSurface; }
+		SDL_Window* getMainWindow() { return mainWindow; }
+		TTF_Font* getButtonFont() { return buttonFont; }
+		SDL_Color getTextColor() { return textColor; }
 
-		SDL_Renderer* getMainRenderer() {
-			return mainRenderer;
-		}
-
-		SDL_Surface* getWindowSurface() {
-			return mainWindowSurface;
-		}
-
-		SDL_Window* getMainWindow() {
-			return mainWindow;
-		}
 	private:
 
 		const int SCREEN_WIDTH = 720;
@@ -94,9 +86,11 @@ export class UI {
 		SDL_Surface* mainWindowSurface = NULL;
 
 		TTF_Font* titleFont = NULL;
-		TTF_Font* uiFont = NULL;
+		TTF_Font* buttonFont = NULL;
 		TTF_Font* bodyFont = NULL;
 		TTF_Font* dialogFont = NULL;
+
+		SDL_Color textColor = { 25, 25, 25 };
 
 		bool initialize() {
 
@@ -158,9 +152,9 @@ export class UI {
 				return false;
 			}
 			
-			uiFont = TTF_OpenFont("assets/alte_haas_bold.ttf", 36);
+			buttonFont = TTF_OpenFont("assets/alte_haas_bold.ttf", 36);
 
-			if (!uiFont) {
+			if (!buttonFont) {
 				SDL_Log("Font (alte_haas_bold) failed to load. TTF_Error: %s\n", TTF_GetError());
 				cerr << "Font (alte_haas_bold) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 				return false;
@@ -202,27 +196,58 @@ export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
 
 // Buttons contain a Rect, but also must contain their (anonymous) action function.
 // Buttons make a Rect clickable and allow us to perform other actions on them.
+// We need a TEXT rect for the text.
+// -- the textRect should have a constant border on top and bottom, but the width should be based on the length of the text string.
+// I'm sending in strings to convert to char... we should START with char instead.
 export class Button {
 	public:
 		// constructor
-		Button(int x, int y, int w, int h, string incomingText) {
+		Button(int x, int y, int w, int h, string incomingText, TTF_Font* buttonFont) {
 			rect = { x, y, w, h };
 			text = incomingText;
+			setTextRect(rect, text, buttonFont);
 			// Somehow we must pass in a function as an action
 			// use the Standard library header <functional> for lambdas and anoymous fuctions
 		}
 
 		// Might turn this private since we should only operate on it internally
 		SDL_Rect getRect() { return rect; }
+		SDL_Rect getTextRect() { return textRect; }
+		string getText() { return text; } // turn this completely into char for the printing
 
 		// check if mouse location has hit the panel
 		bool isInButton(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
 
 
-
 	private:
 		SDL_Rect rect;
+		SDL_Rect textRect;
 		string text = "";
+
+		void setTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont) {
+			rect = buttonRect;
+			
+			// I need to set size and position of the textRect within the buttonRect
+			// I can use     int TTF_SizeUTF8(TTF_Font *font, const char *text, int *w, int *h);
+			// This fills w & h with the width and height
+			// and I can use THAT to position the thing.
+			// But I need the actual font from the UI object.
+
+			int textRectWidth, textRectHeight;
+
+			TTF_SizeUTF8(buttonFont, buttonText.c_str(), &textRectWidth, &textRectHeight);
+
+			int xPadding = (buttonRect.w - textRectWidth) / 2;
+			int yPadding = (buttonRect.h - textRectHeight) / 2;
+
+			// finally make the textRect with the appropriate borders
+			textRect = {
+				buttonRect.x + xPadding,
+				buttonRect.y + yPadding,
+				textRectWidth,
+				textRectHeight
+			};
+		}
 };
 
 
@@ -256,7 +281,7 @@ export class Panel {
 // Possibly a panel will need a parent rect? so we know how large it can be?
 // YES this WILL need a parent rect, so we can know the X,Y.
 // Also need COLORS. But not yet.
-export Panel createMainMenuPanel() {
+export Panel createMainMenuPanel(TTF_Font* buttonFont) {
 	vector<Button> buttons;
 
 	int x = 0;
@@ -277,7 +302,8 @@ export Panel createMainMenuPanel() {
 		newGameButtonY,
 		newGameButtonW,
 		newGameButtonH,
-		newGameButtonText
+		newGameButtonText,
+		buttonFont
 	);
 
 	/* OTHER BUTTONS WILL INCLUDE :

@@ -7,6 +7,8 @@
 
 /*
 * NEXT:
+* - refactor drawing panels, so that the UI object draws the panel (takes a panel as a parameter)
+* - buttonTextTexture should be saved in the button object
 * - make Screen module
 *	- enum of screen types
 *	- 
@@ -71,7 +73,7 @@ int main(int argc, char* args[]) {
 
 	UI ui = UI();
 
-	Panel menuPanel = createMainMenuPanel();
+	Panel menuPanel = createMainMenuPanel(ui.getButtonFont());
 
 	// This loop will be in the menu screen
 
@@ -121,7 +123,7 @@ void draw(UI& ui, Panel& panel) {
 	SDL_RenderClear(ui.getMainRenderer());
 
 
-	// draw panel
+	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
 
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 95, 77, 227, 1);
 
@@ -130,9 +132,14 @@ void draw(UI& ui, Panel& panel) {
 	for (int i = 0; i < buttons.size(); ++i) {
 		// get the rect, send it a reference (to be converted to a pointer)
 		SDL_Rect rect = buttons[i].getRect();
+		SDL_Rect textRect = buttons[i].getTextRect();
 		SDL_RenderFillRect(ui.getMainRenderer(), &rect);
 
 		// now draw the text
+		SDL_Surface* buttonTextSurface = TTF_RenderText_Blended(ui.getButtonFont(), buttons[i].getText().c_str(), ui.getTextColor());
+		SDL_Texture* buttonTextTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), buttonTextSurface);
+		SDL_FreeSurface(buttonTextSurface);
+		SDL_RenderCopyEx(ui.getMainRenderer(), buttonTextTexture, NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
 	}
 
 	// Update window
