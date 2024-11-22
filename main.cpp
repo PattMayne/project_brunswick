@@ -11,6 +11,13 @@
 *	- enum of screen types
 *	- 
 * 
+* 
+* 
+* DESGIN PATTERS TO USE:
+*	- Singleton (for GameState)
+*	- Factory (for Screens, Panels, and Buttons)
+*	- Observer (allow resizing of screens and propagating the size down to Panels and Buttons)
+* 
 */
 
 

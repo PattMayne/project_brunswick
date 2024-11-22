@@ -19,6 +19,18 @@
 * 
 * There are some Panels which should be available to multiple Screens.
 * 
+* A Screen object will have a collection of Panels.
+* A Panel object will have a collection of Buttons.
+* 
+* So do we need a factory in the UI module?
+* And does it have the functions for EACH Panel (with its buttons?)
+* YES.
+* Now... how do we apply functionality to the buttons?
+* Maybe we make our own event queue?
+* 
+* 
+* ACtual PANELS will be created in a PanelFactory module
+* 
 * CLASSES TO CREATE:
 * Panel
 * Button
@@ -40,11 +52,35 @@ export module UI;
 #include <vector>
 #include <cstdlib>
 #include <time.h>
+#include <functional>
+
 
 using namespace std;
 
 // Make this a SINGLETON
 export class UI {
+
+	public:
+		//constructor
+		UI() {
+			initialized = initialize();
+		}
+
+		bool isInitialized() {
+			return initialized;
+		}
+
+		SDL_Renderer* getMainRenderer() {
+			return mainRenderer;
+		}
+
+		SDL_Surface* getWindowSurface() {
+			return mainWindowSurface;
+		}
+
+		SDL_Window* getMainWindow() {
+			return mainWindow;
+		}
 	private:
 
 		const int SCREEN_WIDTH = 720;
@@ -62,6 +98,21 @@ export class UI {
 		TTF_Font* dialogFont = NULL;
 
 		bool initialize() {
+
+			// Initialize SDL
+			if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+				SDL_Log("SDL failed to initialize. SDL_Error: %s\n", SDL_GetError());
+				std::cerr << "SDL failed to initialize. SDL_Error: " << SDL_GetError() << std::endl;
+				return false;
+			}
+
+			//Initialize PNG loading
+			int imgFlags = IMG_INIT_PNG;
+			if (!(IMG_Init(imgFlags) & imgFlags))
+			{
+				SDL_Log("SDL_image could not initialize! %s\n", IMG_GetError());
+				return false;
+			}
 
 			// Load main window, surface, and renderer
 			mainWindow = SDL_CreateWindow("Main Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
@@ -88,29 +139,37 @@ export class UI {
 				return false;
 			}
 
+			// Initialize TTF font library
+			if (TTF_Init() == -1) {
+				SDL_Log("WTTF failed to initialize. TTF_Error: %s\n", TTF_GetError());
+				std::cerr << "TTF failed to initialize. TTF_Error: " << TTF_GetError() << std::endl;
+				return false;
+			}
+
+
 			// Load the fonts
 
 			titleFont = TTF_OpenFont("assets/ander_hedge.ttf", 42);
 
 			if (!titleFont) {
-				SDL_Log("Font failed to load. TTF_Error: %s\n", TTF_GetError());
-				cerr << "Font failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+				SDL_Log("Font (ander_hedge) failed to load. TTF_Error: %s\n", TTF_GetError());
+				cerr << "Font (ander_hedge) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 				return false;
 			}
-
+			
 			uiFont = TTF_OpenFont("assets/alte_haas_bold.ttf", 36);
 
 			if (!uiFont) {
-				SDL_Log("Font failed to load. TTF_Error: %s\n", TTF_GetError());
-				cerr << "Font failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+				SDL_Log("Font (alte_haas_bold) failed to load. TTF_Error: %s\n", TTF_GetError());
+				cerr << "Font (alte_haas_bold) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 				return false;
 			}
 
 			bodyFont = TTF_OpenFont("assets/alte_haas.ttf", 18);
 
 			if (!bodyFont) {
-				SDL_Log("Font failed to load. TTF_Error: %s\n", TTF_GetError());
-				cerr << "Font failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+				SDL_Log("Font (alte_haas) failed to load. TTF_Error: %s\n", TTF_GetError());
+				cerr << "Font (alte_haas) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 				return false;
 			}
 
@@ -122,31 +181,110 @@ export class UI {
 				return false;
 			}
 
+			// Initialize Image library (though we're not using any images yet)
+
 			return true;
-
-		}
-
-	public:
-		//constructor
-		UI() {
-			initialized = initialize();
-		}
-
-		bool isInitialized() {
-			return initialized;
-		}
-
-		SDL_Renderer* getMainRenderer() {
-			return mainRenderer;
-		}
-
-		SDL_Surface* getWindowSurface() {
-			return mainWindowSurface;
-		}
-
-		SDL_Window* getMainWindow() {
-			return mainWindow;
 		}
 };
+
+
+export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
+	// check horizontal
+	if (mouseX >= rect.x && mouseX <= rect.x + rect.w) {
+		// check vertical
+		if (mouseY >= rect.y && mouseY <= rect.y + rect.h) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// Buttons contain a Rect, but also must contain their (anonymous) action function.
+// Buttons make a Rect clickable and allow us to perform other actions on them.
+export class Button {
+	public:
+		// constructor
+		Button(int x, int y, int w, int h, string incomingText) {
+			rect = { x, y, w, h };
+			text = incomingText;
+			// Somehow we must pass in a function as an action
+			// use the Standard library header <functional> for lambdas and anoymous fuctions
+		}
+
+		// Might turn this private since we should only operate on it internally
+		SDL_Rect getRect() { return rect; }
+
+		// check if mouse location has hit the panel
+		bool isInButton(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
+
+
+
+	private:
+		SDL_Rect rect;
+		string text = "";
+};
+
+
+export class Panel {
+	public:
+		// constructor
+		Panel(int x, int y, int w, int h, vector<Button> incomingButtons) {
+			rect = { x, y, w, h };
+			buttons = incomingButtons;
+		}
+
+		// Might turn this private since we should only operate on it internally
+		SDL_Rect getRect() { return rect; }
+
+		// check if mouse location has hit the panel
+		bool isInPanel(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
+
+	private:
+		SDL_Rect rect;
+		vector<Button> buttons;
+		// color? bg image?
+};
+
+// Instead of factories, I'm just creating a function to deliver particular panels
+// maybe factories will prove useful once I see that these are repeated code?
+
+// Main Menu
+// send in anonymous functions as arguments / demand anon. funcs as params
+// Possibly a panel will need a parent rect? so we know how large it can be?
+// YES this WILL need a parent rect, so we can know the X,Y.
+// Also need COLORS. But not yet.
+export Panel createMainMenu() {
+	vector<Button> buttons;
+
+	int x = 0;
+	int y = 250;
+	int w = 200;
+	int h = 84;
+
+	// now make the BUTTONS
+
+	int newGameButtonX = x;
+	int newGameButtonY = y;
+	int newGameButtonW = w;
+	int newGameButtonH = h;
+	string newGameButtonText = "New Game";
+
+	Button newGameButton = Button(
+		newGameButtonX,
+		newGameButtonY,
+		newGameButtonW,
+		newGameButtonH,
+		newGameButtonText
+	);
+
+	/* OTHER BUTTONS WILL INCLUDE :
+	* ---load game button
+	* ---settings button? (much later!)
+	*/
+
+	buttons = { newGameButton };
+	Panel menuPanel = Panel(x, y, w, h, buttons);
+	return menuPanel;
+}
 
 
