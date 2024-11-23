@@ -1,46 +1,25 @@
 /*
 * Basic UI elements.
-* This should NOT be specific to any particular Screen.
-* All Screen modules should use this UI module.
 * The UI class will be a singleton which is shared between all Screen modules.
+* Main script creates it and hands it to the active Screen.
 * 
-* So a SCREEN can have PANELS, and PANELS can have BUTTONS (no panels outside of screens, no buttons outside of panels).
-* Panel and Button classes will be exported separately from the UI object.
-* 
+* A SCREEN can have PANELS, and PANELS can have BUTTONS (no panels outside of screens, no buttons outside of panels).
 * This module will also include functions to check if a screen's panel's buttons are being hovered over or clicked.
-* -- OR -- the SCREEN class (different module?) will have those functions.
-* That might seem odd, to have classes from one module affected by functions from a different class/module.
-* 
-* That's something to think about. Where do Panel and Button classes belong?
-* 
-* If this is really basic stuff that gets used everywhere, then yeah maybe Panel and Button should be in the Screen module.
-* In fact, I don't even need to export Button or Panel.
-* The Screen class will have functions to run through each Panel's Buttons.
-* 
+* But the onclick action function will be in the SCREEN object (or at least will originate there and be fed in).
 * There are some Panels which should be available to multiple Screens.
-* 
-* A Screen object will have a collection of Panels.
-* A Panel object will have a collection of Buttons.
-* 
-* So do we need a factory in the UI module?
-* And does it have the functions for EACH Panel (with its buttons?)
-* YES.
-* Now... how do we apply functionality to the buttons?
+*
+* How do we apply functionality to the buttons?
 * Maybe we make our own event queue?
 * 
-* 
-* Actual panels will be created by the UI object.
-* 
 * TO DO:
+* - buttonTextTexture should be saved in the button object
 * - make window resizable.
 * - minimum limit for size (set as consts).
 * - panel resizes based on window.
-* 
+* - make UI class a singleton
 */
 
-
 module;
-
 
 #include "SDL.h"
 #include "SDL_image.h"
@@ -56,14 +35,16 @@ module;
 //#include <functional>
 
 export module UI;
-
 using namespace std;
 
 class Panel;
 class Button;
 struct PreButtonStruct;
 
-// Make this a SINGLETON
+/* UI class holds basic reusable SDL objects.
+* It's also responsible for creating panels and buttons,
+* but does not HOLD panels and buttons.
+* Screen objects instead will hold panels. */
 export class UI {
 
 	public:
@@ -82,7 +63,6 @@ export class UI {
 
 
 	private:
-
 		const int SCREEN_WIDTH = 720;
 		const int SCREEN_HEIGHT = 960;
 
@@ -207,16 +187,12 @@ export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
 	return false;
 }
 
-// Buttons contain a Rect, but also must contain their (anonymous) action function.
-// Buttons make a Rect clickable and allow us to perform other actions on them.
-// We need a TEXT rect for the text.
-// -- the textRect should have a constant border on top and bottom, but the width should be based on the length of the text string.
-// I'm sending in strings to convert to char... we should START with char instead.
-// Button length should depend on string length (?)
-// text texture should be saved in the button
+/*  Buttons contain a Rect, but also must contain their (anonymous) action function.
+	 Buttons make a Rect clickable and allow us to perform other actions on them.
+	 text texture should be saved in the button */
 export class Button {
 	public:
-		/* To make a button the length of its text (must send in padding)
+		/* Constructor to make a button the length of its text (must send in padding)
 		* Constructor receives the position of the button, text string, and font.
 		* Will receive anonymous function too.
 		*/
@@ -248,14 +224,9 @@ export class Button {
 				textRectWidth + buttonPadding,
 				textRectHeight + buttonPadding
 			};
-			/*
-			* REFACTORING BUTTON:
-			* -- get textRect height and width
-			* -- set button padding
-			* -- set buttonRect height and width BASED on those
-			*/
 		}
 
+		/* Constructor for when we already have both SDL_Rects */
 		Button(SDL_Rect buttonRect, SDL_Rect incomingTextRect, string incomingText) {
 			rect = buttonRect;
 			textRect = incomingTextRect;
@@ -276,17 +247,12 @@ export class Button {
 		SDL_Rect textRect;
 		string text = "";
 
+		/* build inner textRect based on other button information */
 		void setTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont) {
 			rect = buttonRect;
-			
-			// I need to set size and position of the textRect within the buttonRect
-			// I can use     int TTF_SizeUTF8(TTF_Font *font, const char *text, int *w, int *h);
-			// This fills w & h with the width and height
-			// and I can use THAT to position the thing.
-			// But I need the actual font from the UI object.
 
+			// get height and width of textRect
 			int textRectWidth, textRectHeight;
-
 			TTF_SizeUTF8(buttonFont, buttonText.c_str(), &textRectWidth, &textRectHeight);
 
 			int xPadding = (buttonRect.w - textRectWidth) / 2;
@@ -302,15 +268,10 @@ export class Button {
 		}
 };
 
-
+/* Panels contain buttons. There can be no buttons without a Panel container. */
 export class Panel {
 	public:
 		// constructor
-		Panel(int x, int y, int w, int h, vector<Button> incomingButtons) {
-			rect = { x, y, w, h };
-			buttons = incomingButtons;
-		}
-
 		Panel(SDL_Rect incomingRect, vector<Button> incomingButtons) {
 			rect = incomingRect;
 			buttons = incomingButtons;
@@ -318,7 +279,6 @@ export class Panel {
 
 		// Might turn this private since we should only operate on it internally
 		SDL_Rect getRect() { return rect; }
-
 		vector<Button> getButtons() { return buttons; }
 
 		// check if mouse location has hit the panel
@@ -330,11 +290,9 @@ export class Panel {
 		// color? bg image?
 };
 
-/*
-* Stores initial data to assist construction of the panel.
+/* Stores initial data to assist construction of the panel.
 * Panel uses this data to help construct itself.
-* Then buttons use this data AND panel data to construct THEMselves.
-*/
+* Then buttons use this data AND panel data to construct THEMselves. */
 struct PreButtonStruct {
 	int textRectWidth;
 	int textRectHeight;
@@ -342,13 +300,17 @@ struct PreButtonStruct {
 };
 
 
+/* Extra member functions */
+
+/* Buttons need their parent panel rect before they can be built.
+* Yet panel rects need information about their child buttons before they can be built.
+* So we build PART of the button first, for the panel rects which let us finish the buttons.*/
 PreButtonStruct UI::buildPreButtonStruct(string text) {
 	int textRectWidth, textRectHeight;
 	// get height and width of text based on string (set those values into ints)
 	TTF_SizeUTF8(buttonFont, text.c_str(), &textRectWidth, &textRectHeight);
 
 	PreButtonStruct preButtonStruct;
-
 	preButtonStruct.textRectWidth = textRectWidth;
 	preButtonStruct.textRectHeight = textRectHeight;
 	preButtonStruct.text = text;
@@ -356,6 +318,7 @@ PreButtonStruct UI::buildPreButtonStruct(string text) {
 	return preButtonStruct;
 }
 
+/* Now that we have some information about the buttons (via struct), we can build the Panel's RECT. */
 SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs) {
 	int panelHeight = PANEL_PADDING; // start with one padding
 	int longestButtonTextLength = 0;
@@ -369,49 +332,19 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 		}
 	}
 
-	// panel is just wide enough to accomodate the longest button
-	int panelWidth = longestButtonTextLength + (BUTTON_PADDING * 2) + (PANEL_PADDING * 2);
-
-	int panelX = 0;
-	int panelY = SCREEN_HEIGHT - panelHeight;
-
-	SDL_Rect panelRect = {panelX, panelY, panelWidth, panelHeight};
-	return panelRect;
+	return {
+		/* x is always 0 */
+		0,
+		SCREEN_HEIGHT - panelHeight,
+		/* panel is just wide enough to accomodate the longest button */
+		longestButtonTextLength + (BUTTON_PADDING * 2) + (PANEL_PADDING * 2),
+		panelHeight
+	};
 }
 
-
-//vector<SDL_Rect> UI::buildVerticalButtonRectsFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect) {
-//	vector<SDL_Rect> buttonRects;
-//
-//	const int xForAll = PANEL_PADDING;
-//	int widthForAll = panelRect.w - (PANEL_PADDING * 2);
-//	int heightSoFar = panelRect.y + PANEL_PADDING;
-//
-//
-//	for (int i = 0; i < preButtonStructs.size(); ++i) {
-//		// PreButtonStruct preButtonStruct : preButtonStructs
-//		// start at the top of the panelRect PLUS panelPadding
-//
-//		SDL_Rect thisButtonRect = {
-//			xForAll,
-//			heightSoFar,
-//			widthForAll,
-//			preButtonStructs[i].textRectHeight + (BUTTON_PADDING * 2)
-//		};
-//
-//		buttonRects.push_back(thisButtonRect);
-//
-//		// increment heightSoFar
-//		heightSoFar += thisButtonRect.h + PANEL_PADDING;
-//	}
-//
-//	return buttonRects;
-//}
-
+/* NOW that we have both some info about the buttons, plus the panel rect, make the actual buttons. */
 vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect) {
-
 	vector<Button> buttons;
-
 	const int xForAll = PANEL_PADDING;
 	int widthForAll = panelRect.w - (PANEL_PADDING * 2);
 	int heightSoFar = panelRect.y + PANEL_PADDING;
@@ -456,91 +389,28 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 */
 
 
-// Instead of factories, I'm just creating a function to deliver particular panels
-// maybe factories will prove useful once I see that these are repeated code?
-
-// Main Menu
-// send in anonymous functions as arguments / demand anon. funcs as params
-// Possibly a panel will need a parent rect? so we know how large it can be?
-// YES this WILL need a parent rect, so we can know the X,Y.
-// Also need COLORS. But not yet.
-// CHANGE: must set the x and y based on screen size
-// THEREFORE: the UI object MUST create the menu panel, because it holds the screen size.
-
-// FOUR BUTTONS: new game, load game, about, settings
-
-
-
 /*
-* Is now a member function of UI, declared outside of class for readability and organization.
-* Now I can base the panel width on the screen width.
+* Panel for the Main Menu Screen.
 */
 Panel UI::createMainMenuPanel() {
-	vector<Button> buttons;
 	vector<PreButtonStruct> preButtonStructs;
 
-	// buttons up the side
-	// each one's length based on its text
-	// panel x = 0, y based on buttons, width and height also based on buttons
-	// 
-	// so START with text to fill the STRUCTS
-
-	PreButtonStruct newGameButtonStruct = buildPreButtonStruct("NEW GAME");
-	PreButtonStruct loadGameButtonStruct = buildPreButtonStruct("LOAD GAME");
-	PreButtonStruct settingsButtonStruct = buildPreButtonStruct("SETTINGS");
-	PreButtonStruct aboutButtonStruct = buildPreButtonStruct("ABOUT");
-
+	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
 	preButtonStructs = {
-		newGameButtonStruct,
-		loadGameButtonStruct,
-		settingsButtonStruct,
-		aboutButtonStruct
+		buildPreButtonStruct("NEW GAME"),
+		buildPreButtonStruct("LOAD GAME"),
+		buildPreButtonStruct("SETTINGS"),
+		buildPreButtonStruct("ABOUT")
 	};
 
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
-
-	// now build each button RECT
-
-	buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
-
-	// now build each TEXT RECT (should be CENTERED in the button rects)
-	// make a function which makes the RECT and then the BUTTON and returns a VECTOR of BUTTONS
-	//buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect)
-
-	// now build each BUTTON
-
-
-
-	// old stuff
-
-	int x = 50;
-	int y = 250;
-	int w = SCREEN_WIDTH;
-	int h = 84;
-
-	// now make the BUTTONS
-
-
-
-	int newGameButtonX = x;
-	int newGameButtonY = y;
-	string newGameButtonText = "NEW GAME";
-
-	Button newGameButton = Button(
-		newGameButtonX,
-		newGameButtonY,
-		newGameButtonText,
-		buttonFont
-	);
-
-	/* OTHER BUTTONS WILL INCLUDE :
-	* ---load game button
-	* ---settings button? (much later!)
-	*/
-
-	buttons = { newGameButton };
-	Panel menuPanel = Panel(x, y, w, h, buttons);
-	return menuPanel;
+	return Panel(panelRect, buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect));
 }
 
+/*
+* STILL TO COME:
+*	Main Menu Sub-Panels : Settings Menu & Load Game Menu
+*	Battle Panel (and possibly battle Sub-Panels)
+*	Map Panel (no idea what will go in here!)
+*/
 
