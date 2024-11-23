@@ -103,6 +103,7 @@ export class UI {
 
 		PreButtonStruct buildPreButtonStruct(string text);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
+		vector<SDL_Rect> buildVerticalButtonRectsFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 
 		bool initialize() {
 
@@ -214,7 +215,7 @@ export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
 // text texture should be saved in the button
 export class Button {
 	public:
-		/* 
+		/* To make a button the length of its text (must send in padding)
 		* Constructor receives the position of the button, text string, and font.
 		* Will receive anonymous function too.
 		*/
@@ -252,6 +253,12 @@ export class Button {
 			* -- set button padding
 			* -- set buttonRect height and width BASED on those
 			*/
+		}
+
+		Button(SDL_Rect buttonRect, SDL_Rect incomingTextRect, string incomingText) {
+			rect = buttonRect;
+			textRect = incomingTextRect;
+			text = incomingText;
 		}
 
 		// Might turn this private since we should only operate on it internally
@@ -333,6 +340,7 @@ struct PreButtonStruct {
 	string text;
 };
 
+
 PreButtonStruct UI::buildPreButtonStruct(string text) {
 	int textRectWidth, textRectHeight;
 	// get height and width of text based on string (set those values into ints)
@@ -368,6 +376,34 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 
 	SDL_Rect panelRect = {panelX, panelY, panelWidth, panelHeight};
 	return panelRect;
+}
+
+vector<SDL_Rect> UI::buildVerticalButtonRectsFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect) {
+	vector<SDL_Rect> buttonRects;
+
+	const int xForAll = PANEL_PADDING;
+	int widthForAll = panelRect.w - (PANEL_PADDING * 2);
+	int heightSoFar = panelRect.y + PANEL_PADDING;
+
+
+	for (int i = 0; i < preButtonStructs.size(); ++i) {
+		// PreButtonStruct preButtonStruct : preButtonStructs
+		// start at the top of the panelRect PLUS panelPadding
+
+		SDL_Rect thisButtonRect = {
+			xForAll,
+			heightSoFar,
+			widthForAll,
+			preButtonStructs[i].textRectHeight + (BUTTON_PADDING * 2)
+		};
+
+		buttonRects.push_back(thisButtonRect);
+
+		// increment heightSoFar
+		heightSoFar += thisButtonRect.h + PANEL_PADDING;
+	}
+
+	return buttonRects;
 }
 
 /* 
@@ -406,6 +442,7 @@ Panel UI::createMainMenuPanel() {
 	// buttons up the side
 	// each one's length based on its text
 	// panel x = 0, y based on buttons, width and height also based on buttons
+	// 
 	// so START with text to fill the STRUCTS
 
 	PreButtonStruct newGameButtonStruct = buildPreButtonStruct("NEW GAME");
@@ -421,6 +458,19 @@ Panel UI::createMainMenuPanel() {
 	};
 
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+
+	// now build each button RECT
+
+	vector<SDL_Rect> buttonRects = buildVerticalButtonRectsFromButtonTextRects(preButtonStructs, panelRect);
+
+	// now build each TEXT RECT (should be CENTERED in the button rects)
+
+
+	// now build each BUTTON
+
+
+
+	// old stuff
 
 	int x = 50;
 	int y = 250;
