@@ -100,6 +100,8 @@ int main(int argc, char* args[]) {
 			{
 				running = false;
 			}
+
+			// check event for mouse or keyboard action
 		}
 
 		draw(ui, menuPanel);

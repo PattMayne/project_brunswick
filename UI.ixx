@@ -60,6 +60,7 @@ export module UI;
 using namespace std;
 
 class Panel;
+struct PreButtonStruct;
 
 // Make this a SINGLETON
 export class UI {
@@ -84,6 +85,9 @@ export class UI {
 		const int SCREEN_WIDTH = 720;
 		const int SCREEN_HEIGHT = 960;
 
+		const int BUTTON_PADDING = 20;
+		const int PANEL_PADDING = 20;
+
 		int initialized = false;
 
 		SDL_Window* mainWindow = NULL;
@@ -96,6 +100,9 @@ export class UI {
 		TTF_Font* dialogFont = NULL;
 
 		SDL_Color textColor = { 25, 25, 25 };
+
+		PreButtonStruct buildPreButtonStruct(string text);
+		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
 
 		bool initialize() {
 
@@ -296,6 +303,11 @@ export class Panel {
 			buttons = incomingButtons;
 		}
 
+		Panel(SDL_Rect incomingRect, vector<Button> incomingButtons) {
+			rect = incomingRect;
+			buttons = incomingButtons;
+		}
+
 		// Might turn this private since we should only operate on it internally
 		SDL_Rect getRect() { return rect; }
 
@@ -310,6 +322,64 @@ export class Panel {
 		// color? bg image?
 };
 
+/*
+* Stores initial data to assist construction of the panel.
+* Panel uses this data to help construct itself.
+* Then buttons use this data AND panel data to construct THEMselves.
+*/
+struct PreButtonStruct {
+	int textRectWidth;
+	int textRectHeight;
+	string text;
+};
+
+PreButtonStruct UI::buildPreButtonStruct(string text) {
+	int textRectWidth, textRectHeight;
+	// get height and width of text based on string (set those values into ints)
+	TTF_SizeUTF8(buttonFont, text.c_str(), &textRectWidth, &textRectHeight);
+
+	PreButtonStruct preButtonStruct;
+
+	preButtonStruct.textRectWidth = textRectWidth;
+	preButtonStruct.textRectHeight = textRectHeight;
+	preButtonStruct.text = text;
+
+	return preButtonStruct;
+}
+
+SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs) {
+	int panelHeight = PANEL_PADDING; // start with one padding
+	int longestButtonTextLength = 0;
+	for (PreButtonStruct preButtonStruct : preButtonStructs) {
+		// add up the heights of the buttons plus padding
+		panelHeight += preButtonStruct.textRectHeight + (BUTTON_PADDING * 2) + PANEL_PADDING;
+
+		// set the longest text length
+		if (preButtonStruct.textRectWidth > longestButtonTextLength) {
+			longestButtonTextLength = preButtonStruct.textRectWidth;
+		}
+	}
+
+	// panel is just wide enough to accomodate the longest button
+	int panelWidth = longestButtonTextLength + (BUTTON_PADDING * 2) + (PANEL_PADDING * 2);
+
+	int panelX = 0;
+	int panelY = SCREEN_HEIGHT - panelHeight;
+
+	SDL_Rect panelRect = {panelX, panelY, panelWidth, panelHeight};
+	return panelRect;
+}
+
+/* 
+* PANEL CREATION FUNCTIONS
+* These are member functions of the UI class.
+* Defining them in the class definition would be too bulky.
+* 
+* We can have VERTICAL panels (going all up the side)
+* and HORIZONTAL panels (2x buttons stacked up from the bottom)
+*/
+
+
 // Instead of factories, I'm just creating a function to deliver particular panels
 // maybe factories will prove useful once I see that these are repeated code?
 
@@ -320,19 +390,46 @@ export class Panel {
 // Also need COLORS. But not yet.
 // CHANGE: must set the x and y based on screen size
 // THEREFORE: the UI object MUST create the menu panel, because it holds the screen size.
+
+// FOUR BUTTONS: new game, load game, about, settings
+
+
+
 /*
 * Is now a member function of UI, declared outside of class for readability and organization.
 * Now I can base the panel width on the screen width.
 */
 Panel UI::createMainMenuPanel() {
 	vector<Button> buttons;
+	vector<PreButtonStruct> preButtonStructs;
+
+	// buttons up the side
+	// each one's length based on its text
+	// panel x = 0, y based on buttons, width and height also based on buttons
+	// so START with text to fill the STRUCTS
+
+	PreButtonStruct newGameButtonStruct = buildPreButtonStruct("NEW GAME");
+	PreButtonStruct loadGameButtonStruct = buildPreButtonStruct("LOAD GAME");
+	PreButtonStruct settingsButtonStruct = buildPreButtonStruct("SETTINGS");
+	PreButtonStruct aboutButtonStruct = buildPreButtonStruct("ABOUT");
+
+	preButtonStructs = {
+		newGameButtonStruct,
+		loadGameButtonStruct,
+		settingsButtonStruct,
+		aboutButtonStruct
+	};
+
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
 
 	int x = 50;
 	int y = 250;
-	int w = 200;
+	int w = SCREEN_WIDTH;
 	int h = 84;
 
 	// now make the BUTTONS
+
+
 
 	int newGameButtonX = x;
 	int newGameButtonY = y;
