@@ -29,11 +29,12 @@
 * Maybe we make our own event queue?
 * 
 * 
-* ACtual PANELS will be created in a PanelFactory module
+* Actual panels will be created by the UI object.
 * 
-* CLASSES TO CREATE:
-* Panel
-* Button
+* TO DO:
+* - make window resizable.
+* - minimum limit for size (set as consts).
+* - panel resizes based on window.
 * 
 */
 
@@ -58,6 +59,8 @@ export module UI;
 
 using namespace std;
 
+class Panel;
+
 // Make this a SINGLETON
 export class UI {
 
@@ -73,6 +76,8 @@ export class UI {
 		SDL_Window* getMainWindow() { return mainWindow; }
 		TTF_Font* getButtonFont() { return buttonFont; }
 		SDL_Color getTextColor() { return textColor; }
+		Panel createMainMenuPanel();
+
 
 	private:
 
@@ -100,6 +105,8 @@ export class UI {
 				std::cerr << "SDL failed to initialize. SDL_Error: " << SDL_GetError() << std::endl;
 				return false;
 			}
+
+			// Initialize Image library (though we're not using any images yet)
 
 			//Initialize PNG loading
 			int imgFlags = IMG_INIT_PNG;
@@ -175,9 +182,6 @@ export class UI {
 				cerr << "Font failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 				return false;
 			}
-
-			// Initialize Image library (though we're not using any images yet)
-
 			return true;
 		}
 };
@@ -199,15 +203,48 @@ export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
 // We need a TEXT rect for the text.
 // -- the textRect should have a constant border on top and bottom, but the width should be based on the length of the text string.
 // I'm sending in strings to convert to char... we should START with char instead.
+// Button length should depend on string length (?)
+// text texture should be saved in the button
 export class Button {
 	public:
-		// constructor
-		Button(int x, int y, int w, int h, string incomingText, TTF_Font* buttonFont) {
-			rect = { x, y, w, h };
+		/* 
+		* Constructor receives the position of the button, text string, and font.
+		* Will receive anonymous function too.
+		*/
+		Button(int x, int y, string incomingText, TTF_Font* buttonFont) {
+			// constants for the creation of the button
+			const int buttonPadding = 20;
+
 			text = incomingText;
-			setTextRect(rect, text, buttonFont);
+			//setTextRect(rect, text, buttonFont);
 			// Somehow we must pass in a function as an action
 			// use the Standard library header <functional> for lambdas and anoymous fuctions
+
+			int textRectWidth, textRectHeight;
+			// get height and width of text based on string (set those values into ints)
+			TTF_SizeUTF8(buttonFont, text.c_str(), &textRectWidth, &textRectHeight);
+
+			// make the textRect with the appropriate borders
+			textRect = {
+				x + (buttonPadding / 2),
+				y + (buttonPadding / 2),
+				textRectWidth,
+				textRectHeight
+			};
+
+			// the actual button rect
+			rect = {
+				x,
+				y,
+				textRectWidth + buttonPadding,
+				textRectHeight + buttonPadding
+			};
+			/*
+			* REFACTORING BUTTON:
+			* -- get textRect height and width
+			* -- set button padding
+			* -- set buttonRect height and width BASED on those
+			*/
 		}
 
 		// Might turn this private since we should only operate on it internally
@@ -281,10 +318,16 @@ export class Panel {
 // Possibly a panel will need a parent rect? so we know how large it can be?
 // YES this WILL need a parent rect, so we can know the X,Y.
 // Also need COLORS. But not yet.
-export Panel createMainMenuPanel(TTF_Font* buttonFont) {
+// CHANGE: must set the x and y based on screen size
+// THEREFORE: the UI object MUST create the menu panel, because it holds the screen size.
+/*
+* Is now a member function of UI, declared outside of class for readability and organization.
+* Now I can base the panel width on the screen width.
+*/
+Panel UI::createMainMenuPanel() {
 	vector<Button> buttons;
 
-	int x = 0;
+	int x = 50;
 	int y = 250;
 	int w = 200;
 	int h = 84;
@@ -293,15 +336,11 @@ export Panel createMainMenuPanel(TTF_Font* buttonFont) {
 
 	int newGameButtonX = x;
 	int newGameButtonY = y;
-	int newGameButtonW = w;
-	int newGameButtonH = h;
-	string newGameButtonText = "New Game";
+	string newGameButtonText = "NEW GAME";
 
 	Button newGameButton = Button(
 		newGameButtonX,
 		newGameButtonY,
-		newGameButtonW,
-		newGameButtonH,
 		newGameButtonText,
 		buttonFont
 	);

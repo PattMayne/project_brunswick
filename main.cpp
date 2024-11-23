@@ -73,7 +73,7 @@ int main(int argc, char* args[]) {
 
 	UI ui = UI();
 
-	Panel menuPanel = createMainMenuPanel(ui.getButtonFont());
+	Panel menuPanel = ui.createMainMenuPanel();
 
 	// This loop will be in the menu screen
 
@@ -118,12 +118,10 @@ int main(int argc, char* args[]) {
 
 // This will go in the Menu Screen loop
 void draw(UI& ui, Panel& panel) {
+	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
 
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 145, 145, 154, 1);
 	SDL_RenderClear(ui.getMainRenderer());
-
-
-	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
 
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 95, 77, 227, 1);
 
