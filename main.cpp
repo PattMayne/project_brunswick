@@ -35,6 +35,8 @@ using namespace std;
 
 //import GameState;
 import UI;
+import GameState;
+import ScreenType;
 
 const bool DEBUG = false;
 
@@ -46,20 +48,6 @@ using std::to_string;
 
 
 // GLOBAL CONSTANTS - many of these will be stored in the UI module
-
-/*
-* There will be different sub-map screens.
-* These will inherit from the map class... or they will just be internal enums.
-* This will be stored in the GameState module.
-*/
-enum class ScreenType {
-	Menu, Map, Battle, CharacterCreation
-};
-
-// This will be stored in the Map module, with a value held in each
-enum class MapType {
-	World, Building, Dungeon
-};
 
 void draw(UI& ui, Panel& panel);
 void exit(SDL_Surface* surface, SDL_Window* window);
