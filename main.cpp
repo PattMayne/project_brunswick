@@ -36,6 +36,7 @@ using namespace std;
 //import GameState;
 import UI;
 import GameState;
+import Screen;
 import ScreenType;
 
 const bool DEBUG = false;

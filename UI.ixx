@@ -7,6 +7,9 @@
 * This module will also include functions to check if a screen's panel's buttons are being hovered over or clicked.
 * But the onclick action function will be in the SCREEN object (or at least will originate there and be fed in).
 * There are some Panels which should be available to multiple Screens.
+* 
+* UI holds no state. This object can be created and destroyed for each Screen, within the run function.
+* It goes out of scope and dies when the run function is finished.
 *
 * How do we apply functionality to the buttons?
 * Maybe we make our own event queue?

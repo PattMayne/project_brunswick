@@ -26,13 +26,9 @@ module;
 export module Screen;
 using namespace std;
 import ScreenType;
+import UI;
 
-
-/* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens */
-export struct ParentStruct {
-	ScreenType screenType;
-	int id;
-};
+void draw(UI& ui, Panel& panel);
 
 export class Screen {
 	public:
@@ -54,17 +50,17 @@ export class Screen {
 			return 0;
 		}
 
-		void setParentStruct(ParentStruct incomingParentStruct) {
+		void setParentStruct(ParentScreenStruct incomingParentStruct) {
 			parentStruct = incomingParentStruct;
 		}
 
-		ParentStruct getParentStruct() { return parentStruct; }
+		ParentScreenStruct getParentStruct() { return parentStruct; }
 
 
 	protected:
 		ScreenType screenType;
 		int id;
-		ParentStruct parentStruct;		
+		ParentScreenStruct parentStruct;		
 };
 
 export class MapScreen : Screen {
@@ -82,3 +78,98 @@ export class MapScreen : Screen {
 };
 
 
+export class MenuScreen {
+	public:
+		// constructor
+		MenuScreen() {
+			screenType = ScreenType::Menu;
+			parentStruct.id = -1;
+			parentStruct.screenType = ScreenType::Menu;
+		}
+
+		ParentScreenStruct run() {
+			// We only need UI within the loop.
+			UI ui = UI();
+			Panel menuPanel = ui.createMainMenuPanel();
+
+			// Timeout data
+			const int TARGET_FPS = 60;
+			const int FRAME_DELAY = 600 / TARGET_FPS; // milliseconds per frame
+			Uint32 frameStartTime; // Tick count when this particular frame began
+			int frameTimeElapsed; // how much time has elapsed during this frame
+
+			// loop and event control
+			SDL_Event e;
+			bool running = true;
+
+			while (running) {
+				// Get the total running time (tick count) at the beginning of the frame, for the frame timeout at the end
+				frameStartTime = SDL_GetTicks();
+
+				// Check for events in queue, and handle them (really just checking for X close now
+				while (SDL_PollEvent(&e) != 0)
+				{
+					// User pressed X to close
+					if (e.type == SDL_QUIT)
+					{
+						running = false;
+					}
+
+					// check event for mouse or keyboard action
+				}
+
+				draw(ui, menuPanel);
+
+				// Delay so the app doesn't just crash
+				frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
+				// Delay loop
+				if (frameTimeElapsed < FRAME_DELAY) {
+					SDL_Delay(FRAME_DELAY - frameTimeElapsed);
+				}
+			}
+
+			// we return the information to load the appropriate screen.
+			return parentStruct;
+		}
+
+		void setParentStruct(ParentScreenStruct incomingParentStruct) {
+			parentStruct = incomingParentStruct;
+		}
+
+		ParentScreenStruct getParentStruct() { return parentStruct; }
+
+
+	protected:
+		ScreenType screenType;
+		ParentScreenStruct parentStruct;
+};
+
+// Currently the ONLY draw function...
+// ... must re-work so that it's specifically for the MainMenu screen...
+// ...overriding the abstract class Screen.
+void draw(UI& ui, Panel& panel) {
+	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
+
+	SDL_SetRenderDrawColor(ui.getMainRenderer(), 145, 145, 154, 1);
+	SDL_RenderClear(ui.getMainRenderer());
+
+	SDL_SetRenderDrawColor(ui.getMainRenderer(), 95, 77, 227, 1);
+
+	vector<Button> buttons = panel.getButtons();
+
+	for (int i = 0; i < buttons.size(); ++i) {
+		// get the rect, send it a reference (to be converted to a pointer)
+		SDL_Rect rect = buttons[i].getRect();
+		SDL_Rect textRect = buttons[i].getTextRect();
+		SDL_RenderFillRect(ui.getMainRenderer(), &rect);
+
+		// now draw the text
+		SDL_Surface* buttonTextSurface = TTF_RenderText_Blended(ui.getButtonFont(), buttons[i].getText().c_str(), ui.getTextColor());
+		SDL_Texture* buttonTextTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), buttonTextSurface);
+		SDL_FreeSurface(buttonTextSurface);
+		SDL_RenderCopyEx(ui.getMainRenderer(), buttonTextTexture, NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
+	}
+
+	// Update window
+	SDL_RenderPresent(ui.getMainRenderer());
+}

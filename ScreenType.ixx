@@ -9,3 +9,8 @@ export enum class MapType {
 	World, Building, Dungeon
 };
 
+/* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens */
+export struct ParentScreenStruct {
+	ScreenType screenType;
+	int id;
+};
