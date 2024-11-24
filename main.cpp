@@ -57,7 +57,10 @@ void exit(SDL_Surface* surface, SDL_Window* window);
 int main(int argc, char* args[]) {
 	cout << "Hello new world";
 
-	Panel menuPanel = UI::getInstance().createMainMenuPanel();
+	// store the singleton as a REFERENCE... but only in the actual Screen ojects. (REFACTOR LIKE THIS IN THE MENU SCREEN OBJECT)
+	UI& ui = UI::getInstance();
+
+	Panel menuPanel = ui.createMainMenuPanel();
 
 	// This loop will be in the menu screen
 
