@@ -51,10 +51,17 @@ struct PreButtonStruct;
 export class UI {
 
 	public:
-		//constructor
-		UI() {
-			initialized = initialize();
+		// Deleted copy constructor and assignment operator to prevent copies
+		UI(const UI&) = delete;
+		UI& operator=(const UI&) = delete;
+
+		// Static method to get the instance of the singleton (so we don't call the constructor... we call getInstance())
+		static UI& getInstance() {
+			// THIS is the key moment where we create the actual object
+			static UI instance; // will be destroyed when program exits
+			return instance;
 		}
+
 
 		bool isInitialized() { return initialized; }
 		SDL_Renderer* getMainRenderer() { return mainRenderer; }
@@ -66,6 +73,15 @@ export class UI {
 
 
 	private:
+		// Constructor is PRIVATE to prevent instantiation from outside the class
+		UI() {
+			cout << "UI created";
+			initialized = initialize();
+		}
+
+		// Private destructor to prevent deletion through a pointer to the base class
+		~UI() = default;
+
 		const int SCREEN_WIDTH = 720;
 		const int SCREEN_HEIGHT = 960;
 

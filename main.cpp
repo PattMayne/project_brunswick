@@ -50,16 +50,14 @@ using std::to_string;
 
 // GLOBAL CONSTANTS - many of these will be stored in the UI module
 
-void draw(UI& ui, Panel& panel);
+void draw(Panel& panel);
 void exit(SDL_Surface* surface, SDL_Window* window);
 
 
 int main(int argc, char* args[]) {
 	cout << "Hello new world";
 
-	UI ui = UI();
-
-	Panel menuPanel = ui.createMainMenuPanel();
+	Panel menuPanel = UI::getInstance().createMainMenuPanel();
 
 	// This loop will be in the menu screen
 
@@ -90,7 +88,7 @@ int main(int argc, char* args[]) {
 			// check event for mouse or keyboard action
 		}
 
-		draw(ui, menuPanel);
+		draw(menuPanel);
 
 		// Delay so the app doesn't just crash
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -100,18 +98,18 @@ int main(int argc, char* args[]) {
 		}
 	}
 
-	exit(ui.getWindowSurface(), ui.getMainWindow());
+	exit(UI::getInstance().getWindowSurface(), UI::getInstance().getMainWindow());
 	return 0;
 }
 
 // This will go in the Menu Screen loop
-void draw(UI& ui, Panel& panel) {
+void draw(Panel& panel) {
 	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
 
-	SDL_SetRenderDrawColor(ui.getMainRenderer(), 145, 145, 154, 1);
-	SDL_RenderClear(ui.getMainRenderer());
+	SDL_SetRenderDrawColor(UI::getInstance().getMainRenderer(), 145, 145, 154, 1);
+	SDL_RenderClear(UI::getInstance().getMainRenderer());
 
-	SDL_SetRenderDrawColor(ui.getMainRenderer(), 95, 77, 227, 1);
+	SDL_SetRenderDrawColor(UI::getInstance().getMainRenderer(), 95, 77, 227, 1);
 
 	vector<Button> buttons = panel.getButtons();
 
@@ -119,17 +117,17 @@ void draw(UI& ui, Panel& panel) {
 		// get the rect, send it a reference (to be converted to a pointer)
 		SDL_Rect rect = buttons[i].getRect();
 		SDL_Rect textRect = buttons[i].getTextRect();
-		SDL_RenderFillRect(ui.getMainRenderer(), &rect);
+		SDL_RenderFillRect(UI::getInstance().getMainRenderer(), &rect);
 
 		// now draw the text
-		SDL_Surface* buttonTextSurface = TTF_RenderText_Blended(ui.getButtonFont(), buttons[i].getText().c_str(), ui.getTextColor());
-		SDL_Texture* buttonTextTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), buttonTextSurface);
+		SDL_Surface* buttonTextSurface = TTF_RenderText_Blended(UI::getInstance().getButtonFont(), buttons[i].getText().c_str(), UI::getInstance().getTextColor());
+		SDL_Texture* buttonTextTexture = SDL_CreateTextureFromSurface(UI::getInstance().getMainRenderer(), buttonTextSurface);
 		SDL_FreeSurface(buttonTextSurface);
-		SDL_RenderCopyEx(ui.getMainRenderer(), buttonTextTexture, NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(UI::getInstance().getMainRenderer(), buttonTextTexture, NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
 	}
 
 	// Update window
-	SDL_RenderPresent(ui.getMainRenderer());
+	SDL_RenderPresent(UI::getInstance().getMainRenderer());
 }
 
 
