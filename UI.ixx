@@ -19,7 +19,6 @@
 * - make window resizable.
 * - minimum limit for size (set as consts).
 * - panel resizes based on window.
-* - make UI class a singleton
 */
 
 module;
@@ -44,7 +43,7 @@ class Panel;
 class Button;
 struct PreButtonStruct;
 
-/* UI class holds basic reusable SDL objects.
+/* UI (singleton) class holds basic reusable SDL objects.
 * It's also responsible for creating panels and buttons,
 * but does not HOLD panels and buttons.
 * Screen objects instead will hold panels. */
@@ -75,7 +74,7 @@ export class UI {
 	private:
 		// Constructor is PRIVATE to prevent instantiation from outside the class
 		UI() {
-			cout << "UI created";
+			cout << "UI created\n";
 			initialized = initialize();
 		}
 
@@ -296,7 +295,6 @@ export class Panel {
 			buttons = incomingButtons;
 		}
 
-		// Might turn this private since we should only operate on it internally
 		SDL_Rect getRect() { return rect; }
 		vector<Button> getButtons() { return buttons; }
 

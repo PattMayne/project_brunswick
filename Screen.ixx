@@ -8,6 +8,20 @@
 * BUT FOR NOW just accept the ONE screen for the MENU.
 */
 
+/*
+* NEXT:
+* -- Load background image
+* -- Print title on tope
+* -- Make window size adjustable
+* -- Make Screen class abstract
+* -- Make MenuScreen a child of Screen
+* -- Make Buttons responsive (on hover)
+* -- Make "New Game" open MAP screen
+* -- Make "About" open a panel with text.
+* -- Make "Settings" open a new menu. (will there really be settings? No... maybe delete!)
+* -- Make "Load Game" load different Menu (unless there will only be one game?) (leave alone for now actually)
+*/
+
 module;
 
 #include "SDL.h"
@@ -24,7 +38,9 @@ module;
 //#include <functional>
 
 export module Screen;
+
 using namespace std;
+
 import ScreenType;
 import UI;
 
@@ -89,6 +105,7 @@ export class MenuScreen {
 		}
 
 		ParentScreenStruct run() {
+			cout << "Menu Screen loaded\n";
 			// Get reference to UI singleton for the loop
 			UI& ui = UI::getInstance();
 			Panel menuPanel = ui.createMainMenuPanel();
