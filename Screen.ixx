@@ -1,11 +1,6 @@
-/*
-* Possibly make parent SCREEN a virtual or abstract class.
-* Map, Menu, and Battle will all extend the class.
+/* THERE IS NO ABSTRACT SCREEN. Each Screen object is a VARIATION of each other, but they will NEVER be used interchangably. There's no benefit to that.
 * 
-* Apparently with virtual members we are supposed to use pointers to the derived class,
-* instead of calling functions directly on the objects.
 * 
-* BUT FOR NOW just accept the ONE screen for the MENU.
 */
 
 /*
@@ -13,7 +8,6 @@
 * -- Load background image
 * -- Print title on tope
 * -- Make window size adjustable
-* -- Make Screen class abstract
 * -- Make MenuScreen a child of Screen
 * -- Make Buttons responsive (on hover)
 * -- Make "New Game" open MAP screen
@@ -34,7 +28,6 @@ module;
 #include <vector>
 #include <cstdlib>
 #include <time.h>
-#include <vector>
 //#include <functional>
 
 export module Screen;
@@ -67,17 +60,17 @@ export class Screen {
 		}
 
 
-		void setParentStruct(ParentScreenStruct incomingParentStruct) {
-			parentStruct = incomingParentStruct;
+		void setParentStruct(ScreenToLoadStruct incomingParentStruct) {
+			screenToLoadStruct = incomingParentStruct;
 		}
 
-		ParentScreenStruct getParentStruct() { return parentStruct; }
+		ScreenToLoadStruct getParentStruct() { return screenToLoadStruct; }
 
 
 	protected:
 		ScreenType screenType;
 		int id;
-		ParentScreenStruct parentStruct;		
+		ScreenToLoadStruct screenToLoadStruct;
 };
 
 export class MapScreen : Screen {
@@ -100,11 +93,11 @@ export class MenuScreen {
 		// constructor
 		MenuScreen() {
 			screenType = ScreenType::Menu;
-			parentStruct.id = -1;
-			parentStruct.screenType = ScreenType::Menu;
+			screenToLoadStruct.id = -1;
+			screenToLoadStruct.screenType = ScreenType::NoScreen;
 		}
 
-		ParentScreenStruct run() {
+		ScreenToLoadStruct run() {
 			cout << "Menu Screen loaded\n";
 			// Get reference to UI singleton for the loop
 			UI& ui = UI::getInstance();
@@ -125,15 +118,12 @@ export class MenuScreen {
 				frameStartTime = SDL_GetTicks();
 
 				// Check for events in queue, and handle them (really just checking for X close now
-				while (SDL_PollEvent(&e) != 0)
-				{
+				while (SDL_PollEvent(&e) != 0) {
 					// User pressed X to close
-					if (e.type == SDL_QUIT)
-					{
-						running = false;
-					}
+					if (e.type == SDL_QUIT) { running = false; }
 
 					// check event for mouse or keyboard action
+					// These events might change the value of screenToLoad
 				}
 
 				draw(ui, menuPanel);
@@ -147,19 +137,19 @@ export class MenuScreen {
 			}
 
 			// we return the information to load the appropriate screen.
-			return parentStruct;
+			return screenToLoadStruct;
 		}
 
-		void setParentStruct(ParentScreenStruct incomingParentStruct) {
-			parentStruct = incomingParentStruct;
+		void setParentStruct(ScreenToLoadStruct incomingParentStruct) {
+			screenToLoadStruct = incomingParentStruct;
 		}
 
-		ParentScreenStruct getParentStruct() { return parentStruct; }
+		ScreenToLoadStruct getParentStruct() { return screenToLoadStruct; }
 
 
 	private:
 		ScreenType screenType;
-		ParentScreenStruct parentStruct;
+		ScreenToLoadStruct screenToLoadStruct;
 };
 
 // Currently the ONLY draw function...
@@ -167,22 +157,20 @@ export class MenuScreen {
 // ...overriding the abstract class Screen.
 void draw(UI& ui, Panel& panel) {
 	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
-
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 145, 145, 154, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 
+	// button background color
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 95, 77, 227, 1);
 
-	vector<Button> buttons = panel.getButtons();
-
-	for (int i = 0; i < buttons.size(); ++i) {
+	for (Button button: panel.getButtons()) {
 		// get the rect, send it a reference (to be converted to a pointer)
-		SDL_Rect rect = buttons[i].getRect();
-		SDL_Rect textRect = buttons[i].getTextRect();
+		SDL_Rect rect = button.getRect();
+		SDL_Rect textRect = button.getTextRect();
 		SDL_RenderFillRect(ui.getMainRenderer(), &rect);
 
 		// now draw the text
-		SDL_RenderCopyEx(ui.getMainRenderer(), buttons[i].getTextTexture(), NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(ui.getMainRenderer(), button.getTextTexture(), NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
 	}
 
 	// Update window

@@ -18,6 +18,7 @@
 * - make window resizable.
 * - minimum limit for size (set as consts).
 * - panel resizes based on window.
+* - SDL_SetRenderDrawColor should be hidden behind another function where I can send in a saved color (instead of writing each R/G/B int)
 */
 
 module;
@@ -32,7 +33,6 @@ module;
 #include <vector>
 #include <cstdlib>
 #include <time.h>
-#include <vector>
 //#include <functional>
 
 export module UI;
@@ -60,7 +60,6 @@ export class UI {
 			return instance;
 		}
 
-
 		bool isInitialized() { return initialized; }
 		SDL_Renderer* getMainRenderer() { return mainRenderer; }
 		SDL_Surface* getWindowSurface() { return mainWindowSurface; }
@@ -68,7 +67,6 @@ export class UI {
 		TTF_Font* getButtonFont() { return buttonFont; }
 		SDL_Color getTextColor() { return textColor; }
 		Panel createMainMenuPanel();
-
 
 	private:
 		// Constructor is PRIVATE to prevent instantiation from outside the class

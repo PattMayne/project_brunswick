@@ -10,7 +10,6 @@
 * - refactor drawing panels, so that the UI object draws the panel (takes a panel as a parameter) (really? I'm not sure... have to think about this)
 * - make Screen module
 *	- enum of screen types
-*	- 
 * 
 * DESGIN PATTERS TO USE:
 *	- Singleton (for GameState and UI)
@@ -42,7 +41,6 @@ using namespace std;
 const bool DEBUG = false;
 
 
-
 // declarations
 void exit(SDL_Surface* surface, SDL_Window* window);
 
@@ -52,34 +50,34 @@ int main(int argc, char* args[]) {
 
 	// instantiate the UI instance, and hold the reference for eventual destruction in this file.
 	UI& ui = UI::getInstance();
+	GameState& gameState = GameState::getInstance();
 
 	// For now just get the MenuScreen. Later we'll make it dynamic for other screens.
 	MenuScreen menuScreen = MenuScreen();
 
+	ScreenToLoadStruct screenToLoadStruct = closingScreenStruct();
 	bool running = true;
 	SDL_Event e;
 
-	// Game loop
-	while (running)
-	{
+	/* Game loop checks gameState for screen to load, then loads that screen.
+	* Each screen, once loaded, has its own game loop (where the real game logic happens).
+	* When a screen is finished its job (or a user has chosen to move to a new screen),
+	* the screen's "run" function returns a NEW screen to load.	*/
+	while (running) {
 
 		// Check for closing the app (clicking the (x) button)
-		while (SDL_PollEvent(&e) != 0)
-		{
-			// User pressed X to close
-			if (e.type == SDL_QUIT)
-			{
-				running = false;
-			}
-
-			// run the chosen screen
-			ParentScreenStruct parentScreenStruct = menuScreen.run();
-
-			// check which screen to load next, or NONE.
-			if (parentScreenStruct.id < 0) {
-				running = false;
-			}
+		while (SDL_PollEvent(&e) != 0) {
+			if (e.type == SDL_QUIT) { running = false; }
 		}
+
+		// run the chosen screen and receive the next screen to load
+		// if the screenToLoad is Map or Battle, we will send in the ID to the Run function
+		screenToLoadStruct =
+			gameState.getScreenType() == ScreenType::Menu ? menuScreen.run() :
+			closingScreenStruct();
+
+		// check for closingScreen type and close. Otherwise we will load the NEW screen on the next loop
+		if (screenToLoadStruct.screenType == ScreenType::NoScreen) { running = false; }
 
 	}
 
