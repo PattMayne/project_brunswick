@@ -15,7 +15,6 @@
 * Maybe we make our own event queue?
 * 
 * TO DO:
-* - buttonTextTexture should be saved in the button object
 * - make window resizable.
 * - minimum limit for size (set as consts).
 * - panel resizes based on window.
@@ -214,7 +213,7 @@ export class Button {
 		* Constructor receives the position of the button, text string, and font.
 		* Will receive anonymous function too.
 		*/
-		Button(int x, int y, string incomingText, TTF_Font* buttonFont) {
+		Button(int x, int y, string incomingText, TTF_Font* buttonFont, SDL_Color fontColor, SDL_Renderer* mainRenderer) {
 			// constants for the creation of the button
 			const int buttonPadding = 20;
 
@@ -242,19 +241,30 @@ export class Button {
 				textRectWidth + buttonPadding,
 				textRectHeight + buttonPadding
 			};
+
+			// make the textTexture
+			SDL_Surface* buttonTextSurface = TTF_RenderText_Blended(buttonFont, text.c_str(), fontColor);
+			textTexture = SDL_CreateTextureFromSurface(mainRenderer, buttonTextSurface);
+			SDL_FreeSurface(buttonTextSurface);
 		}
 
 		/* Constructor for when we already have both SDL_Rects */
-		Button(SDL_Rect buttonRect, SDL_Rect incomingTextRect, string incomingText) {
+		Button(SDL_Rect buttonRect, SDL_Rect incomingTextRect, string incomingText, TTF_Font* buttonFont, SDL_Color fontColor, SDL_Renderer* mainRenderer) {
 			rect = buttonRect;
 			textRect = incomingTextRect;
 			text = incomingText;
+
+			// make the textTexture
+			SDL_Surface* buttonTextSurface = TTF_RenderText_Blended(buttonFont, text.c_str(), fontColor);
+			textTexture = SDL_CreateTextureFromSurface(mainRenderer, buttonTextSurface);
+			SDL_FreeSurface(buttonTextSurface);
 		}
 
 		// Might turn this private since we should only operate on it internally
 		SDL_Rect getRect() { return rect; }
 		SDL_Rect getTextRect() { return textRect; }
 		string getText() { return text; } // turn this completely into char for the printing
+		SDL_Texture* getTextTexture() { return textTexture; }
 
 		// check if mouse location has hit the panel
 		bool isInButton(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
@@ -263,6 +273,7 @@ export class Button {
 	private:
 		SDL_Rect rect;
 		SDL_Rect textRect;
+		SDL_Texture* textTexture = NULL;
 		string text = "";
 
 		/* build inner textRect based on other button information */
@@ -386,7 +397,7 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 			preButtonStructs[i].textRectHeight
 		};
 
-		Button thisButton = Button(thisButtonRect, thisTextRect, preButtonStructs[i].text);
+		Button thisButton = Button(thisButtonRect, thisTextRect, preButtonStructs[i].text, buttonFont, textColor, mainRenderer);
 		buttons.push_back(thisButton);
 
 		// increment heightSoFar

@@ -182,10 +182,7 @@ void draw(UI& ui, Panel& panel) {
 		SDL_RenderFillRect(ui.getMainRenderer(), &rect);
 
 		// now draw the text
-		SDL_Surface* buttonTextSurface = TTF_RenderText_Blended(ui.getButtonFont(), buttons[i].getText().c_str(), ui.getTextColor());
-		SDL_Texture* buttonTextTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), buttonTextSurface);
-		SDL_FreeSurface(buttonTextSurface);
-		SDL_RenderCopyEx(ui.getMainRenderer(), buttonTextTexture, NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(ui.getMainRenderer(), buttons[i].getTextTexture(), NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
 	}
 
 	// Update window
