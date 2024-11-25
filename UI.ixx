@@ -67,6 +67,7 @@ export class UI {
 		TTF_Font* getButtonFont() { return buttonFont; }
 		TTF_Font* getTitleFont() { return titleFont; }
 		SDL_Color getTextColor() { return textColor; }
+		SDL_Color getTitleColor() { return titleColor; }
 		Panel createMainMenuPanel();
 
 	private:
@@ -97,6 +98,7 @@ export class UI {
 		TTF_Font* dialogFont = NULL;
 
 		SDL_Color textColor = { 14, 14, 14 };
+		SDL_Color titleColor = { 242, 222, 6 };
 
 		PreButtonStruct buildPreButtonStruct(string text);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);

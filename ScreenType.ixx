@@ -9,8 +9,8 @@ export enum class MapType {
 	World, Building, Dungeon
 };
 
-/* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens */
-/* id refers to the id of the Map or Battle object in the database */
+/* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens.
+	id refers to the id of the Map or Battle object in the database */
 export struct ScreenToLoadStruct {
 	ScreenType screenType;
 	int id;

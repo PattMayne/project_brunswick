@@ -10,9 +10,10 @@
         - [x] UI (sans serif)
         - [x] Body (storytelling - serif / mono ?)
         - [x] dialog (script / handwriting)
-    - [ ] Background for main menu screen
-- [ ] Make main menu screen
-  - [ ] UI module to process buttons and panels
+    - [x] Background for main menu screen
+- [x] Make main menu screen
+  - [x] UI module to process buttons and panels
+    - [ ] Buttons light up on-hover
     - [ ] Panels can be resized based on screen size.
     - [x] Buttons relative to panels.
     - [x] No buttons without panels! Every button is in a panel.
@@ -36,8 +37,11 @@
 - [ ] Build Battle Screen
 - [ ] When closing program close each font with TTF_CloseFont()
 - [ ] incorporate SQLite database
+    - [ ] must download the sqlite3.h header file (#include <sqlite3.h>)
 
 ## Long-Range Notes & Plans
 
 * In the Character table, the Player Character is always #1
 * A map has a type (in the DB). So when a Screen object loads a Map object, it creates a sub-type depending on the value of its type.
+* Title Screen: have random limbs snapping onto each other and coming apart in an animation.
+*   As one snaps on, another comes off and flies off-screen, while yet another flies on-screen to snap on... forever!

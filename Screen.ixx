@@ -1,19 +1,15 @@
-/* THERE IS NO ABSTRACT SCREEN. Each Screen object is a VARIATION of each other, but they will NEVER be used interchangably. There's no benefit to that.
-* 
-* 
+/* 
+* THERE IS NO ABSTRACT SCREEN. Each Screen object is a VARIATION of each other, but they will NEVER be used interchangably. There's no benefit to that.
 */
 
 /*
 * NEXT:
-* -- Load background image
-* --	bg image texture is SAVED.
-* --	Now just print it in the drawMainMenu script
-* --	center it (and keep it centered on resize)
-* -- Print title on top
+* -- Make Buttons responsive (on hover)
 * -- Make window size adjustable
 * --	Each Screen will need to capture resize window event from the queue in the loop, and then resize.
-* -- Make Buttons responsive (on hover)
 * -- Make "New Game" open MAP screen
+* --	MAP screen has three buttons (vertical): OTHER MAP, MANU, and BATTLE
+* -- Make BATTLE screen with two buttons: BACK TO MAP and MENU
 * -- Make "About" open a panel with text.
 * -- Make "Settings" open a new menu. (will there really be settings? No... maybe delete!)
 * -- Make "Load Game" load different Menu (unless there will only be one game?) (leave alone for now actually)
@@ -82,32 +78,7 @@ export class MenuScreen {
 			}
 
 			getBackgroundTexture(ui);
-
-			// create logo texture
-
-			// save this color in UI object
-			SDL_Color titleColor = { 242, 222, 6 };
-			SDL_SetRenderDrawColor(ui.getMainRenderer(), titleColor.r, titleColor.g, titleColor.b, 1);
-
-			string titleText = "Land of Limbs";
-			SDL_Surface* titleTextSurface = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), titleColor);
-			titleTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), titleTextSurface);
-			SDL_FreeSurface(titleTextSurface);
-
-			// create title text rect
-
-			// get the width and height of the title texture, calculate the x & y for the rect on which to draw it
-			int titleTextWidth, titleTextHeight;
-			SDL_QueryTexture(titleTexture,NULL, NULL, &titleTextWidth, &titleTextHeight);
-
-			// create the rect to draw the title
-			SDL_Surface* mainWindowSurface = ui.getWindowSurface();
-			titleRect = {
-				(mainWindowSurface->w / 2) - (titleTextWidth / 2),
-				titleTextHeight,
-				titleTextWidth,
-				titleTextHeight
-			};
+			createTitleTexture(ui);
 		}
 
 		ScreenToLoadStruct run() {
@@ -164,6 +135,7 @@ export class MenuScreen {
 		void draw(UI& ui, Panel& panel);
 		void drawMainMenuBackground(UI& ui);
 		void getBackgroundTexture(UI& ui);
+		void createTitleTexture(UI& ui);
 
 
 	private:
@@ -231,4 +203,60 @@ void MenuScreen::getBackgroundTexture(UI& ui) {
 	bgSourceRect = { 0, 0, windowWidth, windowHeight };
 	bgDestinationRect = { 0, 0, windowWidth, windowHeight };
 
+}
+
+void MenuScreen::createTitleTexture(UI& ui) {
+	// YELLOW text with BLACK offset underlay
+	SDL_SetRenderDrawColor(ui.getMainRenderer(), ui.getTitleColor().r, ui.getTitleColor().g, ui.getTitleColor().b, 1);
+	string titleText = "Land of Limbs";
+
+	// make one yellow, one black, blit them onto a slightly larger one so the black is beneath but offset by 10px
+	SDL_Surface* titleTextSurfaceFG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), ui.getTitleColor());
+	SDL_Surface* titleTextSurfaceBG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), ui.getTextColor());
+
+	// blit them both onto the new surface, with the black at an offset
+
+	int xOffset = 6;
+	int yOffset = 6;
+
+	SDL_Surface* titleTextSurface = SDL_CreateRGBSurface(
+		0,
+		titleTextSurfaceFG->w + xOffset,
+		titleTextSurfaceFG->h + yOffset,
+		32,  // bits per pixel
+		0x00FF0000, // Red mask
+		0x0000FF00, // Green mask
+		0x000000FF, // Blue mask
+		0xFF000000  // Alpha mask
+	);
+
+	SDL_Rect bgRect = {
+		xOffset,
+		yOffset,
+		titleTextSurface->w,
+		titleTextSurface->h
+	};
+
+	// do the blitting
+
+	SDL_BlitSurface(titleTextSurfaceBG, NULL, titleTextSurface, &bgRect);
+	SDL_BlitSurface(titleTextSurfaceFG, NULL, titleTextSurface, NULL);
+
+	titleTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), titleTextSurface);
+	SDL_FreeSurface(titleTextSurface);
+
+	// create title text rect
+
+	// get the width and height of the title texture, calculate the x & y for the rect on which to draw it
+	int titleTextWidth, titleTextHeight;
+	SDL_QueryTexture(titleTexture, NULL, NULL, &titleTextWidth, &titleTextHeight);
+
+	// create the rect to draw the title
+	SDL_Surface* mainWindowSurface = ui.getWindowSurface();
+	titleRect = {
+		(mainWindowSurface->w / 2) - (titleTextWidth / 2),
+		titleTextHeight,
+		titleTextWidth,
+		titleTextHeight
+	};
 }
