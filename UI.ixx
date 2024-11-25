@@ -65,6 +65,7 @@ export class UI {
 		SDL_Surface* getWindowSurface() { return mainWindowSurface; }
 		SDL_Window* getMainWindow() { return mainWindow; }
 		TTF_Font* getButtonFont() { return buttonFont; }
+		TTF_Font* getTitleFont() { return titleFont; }
 		SDL_Color getTextColor() { return textColor; }
 		Panel createMainMenuPanel();
 
@@ -95,7 +96,7 @@ export class UI {
 		TTF_Font* bodyFont = NULL;
 		TTF_Font* dialogFont = NULL;
 
-		SDL_Color textColor = { 25, 25, 25 };
+		SDL_Color textColor = { 14, 14, 14 };
 
 		PreButtonStruct buildPreButtonStruct(string text);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
@@ -155,7 +156,7 @@ export class UI {
 
 			// Load the fonts
 
-			titleFont = TTF_OpenFont("assets/ander_hedge.ttf", 42);
+			titleFont = TTF_OpenFont("assets/ander_hedge.ttf", 84);
 
 			if (!titleFont) {
 				SDL_Log("Font (ander_hedge) failed to load. TTF_Error: %s\n", TTF_GetError());

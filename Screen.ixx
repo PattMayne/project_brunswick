@@ -8,9 +8,10 @@
 * -- Load background image
 * --	bg image texture is SAVED.
 * --	Now just print it in the drawMainMenu script
+* --	center it (and keep it centered on resize)
 * -- Print title on top
 * -- Make window size adjustable
-* -- Make MenuScreen a child of Screen
+* --	Each Screen will need to capture resize window event from the queue in the loop, and then resize.
 * -- Make Buttons responsive (on hover)
 * -- Make "New Game" open MAP screen
 * -- Make "About" open a panel with text.
@@ -77,8 +78,36 @@ export class MenuScreen {
 			bgImageRaw = IMG_Load("assets/field.png");
 			if (!bgImageRaw) {
 				std::cerr << "Image failed to load. SDL_image: " << IMG_GetError() << std::endl;
+				// Make background from raw color
 			}
+
 			getBackgroundTexture(ui);
+
+			// create logo texture
+
+			// save this color in UI object
+			SDL_Color titleColor = { 242, 222, 6 };
+			SDL_SetRenderDrawColor(ui.getMainRenderer(), titleColor.r, titleColor.g, titleColor.b, 1);
+
+			string titleText = "Land of Limbs";
+			SDL_Surface* titleTextSurface = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), titleColor);
+			titleTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), titleTextSurface);
+			SDL_FreeSurface(titleTextSurface);
+
+			// create title text rect
+
+			// get the width and height of the title texture, calculate the x & y for the rect on which to draw it
+			int titleTextWidth, titleTextHeight;
+			SDL_QueryTexture(titleTexture,NULL, NULL, &titleTextWidth, &titleTextHeight);
+
+			// create the rect to draw the title
+			SDL_Surface* mainWindowSurface = ui.getWindowSurface();
+			titleRect = {
+				(mainWindowSurface->w / 2) - (titleTextWidth / 2),
+				titleTextHeight,
+				titleTextWidth,
+				titleTextHeight
+			};
 		}
 
 		ScreenToLoadStruct run() {
@@ -145,7 +174,8 @@ export class MenuScreen {
 		SDL_Texture* bgTexture = NULL;
 		SDL_Rect bgSourceRect;
 		SDL_Rect bgDestinationRect;
-
+		SDL_Texture* titleTexture;
+		SDL_Rect titleRect;
 };
 
 /* Specific Draw functions for each Screen */
@@ -170,6 +200,10 @@ void MenuScreen::draw(UI& ui, Panel& panel) {
 		// now draw the text
 		SDL_RenderCopyEx(ui.getMainRenderer(), button.getTextTexture(), NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
 	}
+
+	// draw the logo
+	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
+
 
 	// Update window
 	SDL_RenderPresent(ui.getMainRenderer());
