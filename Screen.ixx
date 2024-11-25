@@ -108,6 +108,14 @@ export class MenuScreen {
 
 					// check event for mouse or keyboard action
 					// These events might change the value of screenToLoad
+
+					// check for mouse over
+					if (e.type == SDL_MOUSEMOTION) {
+						int mouseX, mouseY;
+						SDL_GetMouseState(&mouseX, &mouseY);
+						// send the x and y to the panel and its buttons to change the color
+					}
+					
 				}
 
 				draw(ui, menuPanel);
@@ -133,7 +141,6 @@ export class MenuScreen {
 		ScreenToLoadStruct getParentStruct() { return screenToLoadStruct; }
 
 		void draw(UI& ui, Panel& panel);
-		void drawMainMenuBackground(UI& ui);
 		void getBackgroundTexture(UI& ui);
 		void createTitleTexture(UI& ui);
 
@@ -181,12 +188,6 @@ void MenuScreen::draw(UI& ui, Panel& panel) {
 	SDL_RenderPresent(ui.getMainRenderer());
 }
 
-void MenuScreen::drawMainMenuBackground(UI& ui) {
-	// image texture is in the Screen object (we are in that scope)
-	// window is in the ui
-	// we need a source rect, showing which portion of the image to print.
-}
-
 
 void MenuScreen::getBackgroundTexture(UI& ui) {
 	// This is a big texture of the whole image
@@ -219,6 +220,7 @@ void MenuScreen::createTitleTexture(UI& ui) {
 	int xOffset = 6;
 	int yOffset = 6;
 
+	// create a blank surface
 	SDL_Surface* titleTextSurface = SDL_CreateRGBSurface(
 		0,
 		titleTextSurfaceFG->w + xOffset,
