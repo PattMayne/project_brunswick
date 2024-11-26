@@ -27,9 +27,8 @@ module;
 #include <cstdlib>
 #include <time.h>
 #include <unordered_map>
-//#include <functional>
 
-export module Screen;
+export module MenuScreen;
 
 using namespace std;
 
@@ -95,19 +94,7 @@ export class MenuScreen {
 
 				// Check for events in queue, and handle them (really just checking for X close now
 				while (SDL_PollEvent(&e) != 0) {
-					// User pressed X to close
-					if (e.type == SDL_QUIT) { running = false; }
-
-					// check event for mouse or keyboard action
-					// These events might change the value of screenToLoad
-
-					// check for mouse over
-					if (e.type == SDL_MOUSEMOTION) {
-						int mouseX, mouseY;
-						SDL_GetMouseState(&mouseX, &mouseY);
-						// send the x and y to the panel and its buttons to change the color
-					}
-					
+					handleEvent(e, menuPanel, running);
 				}
 
 				draw(ui, menuPanel);
@@ -143,6 +130,7 @@ export class MenuScreen {
 		SDL_Rect bgDestinationRect;
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
+		void handleEvent(SDL_Event &e, Panel& menuPanel, bool& running);
 };
 
 /* Specific Draw functions for each Screen */
@@ -159,28 +147,32 @@ void MenuScreen::draw(UI& ui, Panel& panel) {
 		// get the rect, send it a reference (to be converted to a pointer)
 		SDL_Rect rect = button.getRect();
 
-		// now draw the text
-		SDL_RenderCopyEx(ui.getMainRenderer(), button.getNormalTexture(), NULL, &rect, 0, NULL, SDL_FLIP_NONE);
+		// now draw the button texture
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
+			NULL, &rect,
+			0,
+			NULL,
+			SDL_FLIP_NONE
+		);
 	}
 
 	// draw the logo
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
-
-
-	// Update window
-	SDL_RenderPresent(ui.getMainRenderer());
+	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
 
 void MenuScreen::getBackgroundTexture(UI& ui) {
 	// create background texture
-	SDL_Surface* bgImageRaw = IMG_Load("assets/field.png");
+	SDL_Surface* bgImageRaw = IMG_Load("assets/field.png"); /* create BG surface*/
 
 	if (!bgImageRaw) {
 		std::cerr << "Image failed to load. SDL_image: " << IMG_GetError() << std::endl;
-		// Make background from raw color
+		// TODO: Make background from raw color
 	}
-	// This is a big texture of the whole image. When drawing, we will draw from a rect which matches the window size.
+	/* This is a big texture of the whole image.When drawing, we will draw from a rect which matches the window size. */
 	bgTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), bgImageRaw);
 	SDL_FreeSurface(bgImageRaw);
 
@@ -250,4 +242,58 @@ void MenuScreen::createTitleTexture(UI& ui) {
 		titleTextWidth,
 		titleTextHeight
 	};
+}
+
+void MenuScreen::handleEvent(SDL_Event& e, Panel& menuPanel, bool& running) {
+	// User pressed X to close
+	if (e.type == SDL_QUIT) { running = false; }
+	else {
+		// user clicked
+		if (e.type == SDL_MOUSEBUTTONDOWN) {
+			cout << "user clicked mouse\n";
+			// These events might change the value of screenToLoad
+			int mouseX, mouseY;
+			SDL_GetMouseState(&mouseX, &mouseY);
+
+			if (menuPanel.isInPanel(mouseX, mouseY)) {
+
+				// panel has a function to return which ButtonOption was clicked, and an ID (in the ButtonClickStruct).
+				ButtonClickStruct clickStruct = menuPanel.checkButtonClick(mouseX, mouseY);
+
+				// see what button might have been clicked:
+				switch (clickStruct.buttonOption) {
+				case ButtonOption::About:
+					cout << "ABOUT";
+					break;
+				case ButtonOption::NoOption:
+					cout << "NO OPTION";
+					break;
+				case ButtonOption::NewGame:
+					cout << "NEW GAME";
+					break;
+				case ButtonOption::LoadGame:
+					cout << "LOAD GAME";
+					break;
+				case ButtonOption::Settings:
+					cout << "SETTINGS";
+					break;
+				default:
+					cout << "ERROR";
+				}
+
+				/*
+				* NOW replace the "cout" calls with FUNCTION calls.
+				*/
+
+			}
+		}
+
+		// check for mouse over (for button hover)
+		if (e.type == SDL_MOUSEMOTION) {
+			int mouseX, mouseY;
+			SDL_GetMouseState(&mouseX, &mouseY);
+			// send the x and y to the panel and its buttons to change the color
+			menuPanel.checkMouseOver(mouseX, mouseY);
+		}
+	}
 }

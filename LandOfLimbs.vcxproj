@@ -141,7 +141,7 @@
   <ItemGroup>
     <ClCompile Include="GameState.ixx" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Screen.ixx" />
+    <ClCompile Include="MenuScreen.ixx" />
     <ClCompile Include="ScreenType.ixx" />
     <ClCompile Include="UI.ixx" />
   </ItemGroup>

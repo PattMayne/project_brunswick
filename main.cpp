@@ -33,7 +33,7 @@ using namespace std;
 //import GameState;
 import UI;
 import GameState;
-import Screen;
+import MenuScreen;
 import ScreenType;
 using namespace std;
 const bool DEBUG = false;

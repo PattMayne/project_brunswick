@@ -24,7 +24,7 @@
     <ClCompile Include="UI.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Screen.ixx">
+    <ClCompile Include="MenuScreen.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
     <ClCompile Include="ScreenType.ixx">

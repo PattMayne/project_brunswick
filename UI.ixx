@@ -35,6 +35,7 @@ module;
 
 export module UI;
 using namespace std;
+import ScreenType;
 
 class Panel;
 class Button;
@@ -97,8 +98,7 @@ export class UI {
 		TTF_Font* buttonFont = NULL;
 		TTF_Font* bodyFont = NULL;
 		TTF_Font* dialogFont = NULL;
-
-		PreButtonStruct buildPreButtonStruct(string text);
+		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 		void prepareColors();
@@ -107,93 +107,7 @@ export class UI {
 		unordered_map<string, SDL_Color> colorsByFunction; // colors by function, which reference colors by name
 		unordered_map<string, SDL_Color> colorsByName; // raw colors
 
-		bool initialize() {
-
-			// Initialize SDL
-			if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-				SDL_Log("SDL failed to initialize. SDL_Error: %s\n", SDL_GetError());
-				std::cerr << "SDL failed to initialize. SDL_Error: " << SDL_GetError() << std::endl;
-				return false;
-			}
-
-			// Initialize Image library (though we're not using any images yet)
-
-			//Initialize PNG loading
-			int imgFlags = IMG_INIT_PNG;
-			if (!(IMG_Init(imgFlags) & imgFlags))
-			{
-				SDL_Log("SDL_image could not initialize! %s\n", IMG_GetError());
-				return false;
-			}
-
-			// Load main window, surface, and renderer
-			mainWindow = SDL_CreateWindow("Main Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
-
-			if (!mainWindow) {
-				SDL_Log("Window failed to load. SDL_Error: %s\n", SDL_GetError());
-				cerr << "Window failed to load. SDL_Error: " << SDL_GetError() << std::endl;
-				return false;
-			}
-
-			mainRenderer = SDL_CreateRenderer(mainWindow, -1, SDL_RENDERER_ACCELERATED);
-
-			if (!mainRenderer) {
-				SDL_Log("Renderer failed to load. SDL_Error: %s\n", SDL_GetError());
-				cerr << "Renderer failed to load. SDL_Error: " << SDL_GetError() << std::endl;
-				return false;
-			}
-
-			mainWindowSurface = SDL_GetWindowSurface(mainWindow);
-
-			if (!mainWindowSurface) {
-				SDL_Log("Window Surface failed to load. SDL_Error: %s\n", SDL_GetError());
-				cerr << "Window Surface failed to load. SDL_Error: " << SDL_GetError() << std::endl;
-				return false;
-			}
-
-			// Initialize TTF font library
-			if (TTF_Init() == -1) {
-				SDL_Log("WTTF failed to initialize. TTF_Error: %s\n", TTF_GetError());
-				std::cerr << "TTF failed to initialize. TTF_Error: " << TTF_GetError() << std::endl;
-				return false;
-			}
-
-
-			// Load the fonts
-
-			titleFont = TTF_OpenFont("assets/ander_hedge.ttf", 84);
-
-			if (!titleFont) {
-				SDL_Log("Font (ander_hedge) failed to load. TTF_Error: %s\n", TTF_GetError());
-				cerr << "Font (ander_hedge) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
-				return false;
-			}
-			
-			buttonFont = TTF_OpenFont("assets/alte_haas_bold.ttf", 36);
-
-			if (!buttonFont) {
-				SDL_Log("Font (alte_haas_bold) failed to load. TTF_Error: %s\n", TTF_GetError());
-				cerr << "Font (alte_haas_bold) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
-				return false;
-			}
-
-			bodyFont = TTF_OpenFont("assets/alte_haas.ttf", 18);
-
-			if (!bodyFont) {
-				SDL_Log("Font (alte_haas) failed to load. TTF_Error: %s\n", TTF_GetError());
-				cerr << "Font (alte_haas) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
-				return false;
-			}
-
-			dialogFont = TTF_OpenFont("assets/la_belle_aurore.ttf", 18);
-
-			if (!dialogFont) {
-				SDL_Log("Font failed to load. TTF_Error: %s\n", TTF_GetError());
-				cerr << "Font failed to load. TTF_Error: " << TTF_GetError() << std::endl;
-				return false;
-			}
-			return true;
-		}
+		bool initialize();
 };
 
 
@@ -219,6 +133,7 @@ export class Button {
 		* NOT CURRENTLY USING THIS ONE... WILL HAVE TO UPDATE IF/WHEN USED (for horizontal screen?)
 		*/
 		Button(int x, int y, string incomingText, TTF_Font* buttonFont, SDL_Color fontColor, SDL_Renderer* mainRenderer) {
+			//mouseOver = false;
 			///* constants for the creation of the button*/
 			//const int buttonPadding = 20;
 
@@ -260,8 +175,11 @@ export class Button {
 			string incomingText,
 			TTF_Font* buttonFont,
 			unordered_map<string, SDL_Color> colors,
-			SDL_Renderer* mainRenderer
+			SDL_Renderer* mainRenderer,
+			ButtonClickStruct incomingClickStruct
 		){
+			clickStruct = incomingClickStruct;
+			mouseOver = false;
 			rect = buttonRect;
 			text = incomingText;
 
@@ -320,6 +238,9 @@ export class Button {
 		SDL_Texture* getNormalTexture() { return normalTexture; }
 		// check if mouse location has hit the panel
 		bool isInButton(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
+		void setMouseOver(bool incomingMouseOver) { mouseOver = incomingMouseOver; }
+		bool isMouseOver() { return mouseOver; }
+		ButtonClickStruct getClickStruct() { return clickStruct; }
 
 
 	private:
@@ -329,6 +250,8 @@ export class Button {
 		SDL_Texture* hoverTexture = NULL;
 		SDL_Texture* normalTexture = NULL;
 		string text = "";
+		bool mouseOver;
+		ButtonClickStruct clickStruct;
 
 		/* build inner textRect based on other button information */
 		SDL_Rect createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont) {
@@ -358,6 +281,7 @@ export class Panel {
 		Panel(SDL_Rect incomingRect, vector<Button> incomingButtons) {
 			rect = incomingRect;
 			buttons = incomingButtons;
+			mouseOver = false;
 		}
 
 		SDL_Rect getRect() { return rect; }
@@ -365,10 +289,40 @@ export class Panel {
 
 		// check if mouse location has hit the panel
 		bool isInPanel(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
+		void setMouseOver(bool incomingMouseOver) { mouseOver = incomingMouseOver; }
+
+		void checkMouseOver(int mouseX, int mouseY) {		
+			if (isInRect(getRect(), mouseX, mouseY)) {
+				// Panel mouseOver helps manage button mouseOver
+				mouseOver = true;
+				for (Button &button : buttons) {
+					button.setMouseOver(button.isInButton(mouseX, mouseY));
+				}
+			}
+			else if (mouseOver) {
+				// this checks if mouse recently LEFT the panel, and resets all buttons to "false"
+				mouseOver = false;
+				// change button mouseOver to false.
+				for (Button &button : buttons) {
+					button.setMouseOver(false);
+				}
+			}
+		}
+
+		ButtonClickStruct checkButtonClick(int mouseX, int mouseY) {
+			for (Button &button : buttons) {
+				if (button.isInButton(mouseX, mouseY)) {
+					cout << "Button clicked!\n";
+					return button.getClickStruct();
+				}
+			}
+			return ButtonClickStruct();
+		}
 
 	private:
 		SDL_Rect rect;
 		vector<Button> buttons;
+		bool mouseOver;
 		// color? bg image?
 };
 
@@ -379,25 +333,27 @@ struct PreButtonStruct {
 	int textRectWidth;
 	int textRectHeight;
 	string text;
+	ButtonClickStruct clickStruct;
+
+	PreButtonStruct(int iWidth, int iHeight, string iText, ButtonClickStruct iClickStruct) {
+		textRectWidth = iWidth;
+		textRectHeight = iHeight;
+		text = iText;
+		clickStruct = iClickStruct;
+	}
 };
 
 
-/* Extra member functions */
+/* Extra UI member functions */
 
 /* Buttons need their parent panel rect before they can be built.
 * Yet panel rects need information about their child buttons before they can be built.
 * So we build PART of the button first, for the panel rects which let us finish the buttons.*/
-PreButtonStruct UI::buildPreButtonStruct(string text) {
+PreButtonStruct UI::buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID) {
 	int textRectWidth, textRectHeight;
 	// get height and width of text based on string (set those values into ints)
 	TTF_SizeUTF8(buttonFont, text.c_str(), &textRectWidth, &textRectHeight);
-
-	PreButtonStruct preButtonStruct;
-	preButtonStruct.textRectWidth = textRectWidth;
-	preButtonStruct.textRectHeight = textRectHeight;
-	preButtonStruct.text = text;
-
-	return preButtonStruct;
+	return PreButtonStruct(textRectWidth, textRectHeight, text, ButtonClickStruct(buttonOption, optionID));
 }
 
 /* Now that we have some information about the buttons (via struct), we can build the Panel's RECT. */
@@ -452,7 +408,15 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 			preButtonStructs[i].textRectHeight
 		};
 
-		Button thisButton = Button(thisButtonRect, thisTextRect, preButtonStructs[i].text, buttonFont, colorsByFunction, mainRenderer);
+		Button thisButton = Button(
+			thisButtonRect,
+			thisTextRect,
+			preButtonStructs[i].text,
+			buttonFont,
+			colorsByFunction,
+			mainRenderer,
+			preButtonStructs[i].clickStruct
+		);
 		buttons.push_back(thisButton);
 
 		// increment heightSoFar
@@ -462,49 +426,6 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 	return buttons;
 }
 
-/* 
-* PANEL CREATION FUNCTIONS
-* These are member functions of the UI class.
-* Defining them in the class definition would be too bulky.
-* 
-* We can have VERTICAL panels (going all up the side)
-* and HORIZONTAL panels (2x buttons stacked up from the bottom)
-*/
-
-
-/*
-* Panel for the Main Menu Screen.
-*/
-Panel UI::createMainMenuPanel() {
-	vector<PreButtonStruct> preButtonStructs;
-
-	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
-	preButtonStructs = {
-		buildPreButtonStruct("NEW GAME"),
-		buildPreButtonStruct("LOAD GAME"),
-		buildPreButtonStruct("SETTINGS"),
-		buildPreButtonStruct("ABOUT")
-	};
-
-	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
-	return Panel(panelRect, buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect));
-}
-
-/*
-* STILL TO COME:
-*	Main Menu Sub-Panels : Settings Menu & Load Game Menu
-*	Battle Panel (and possibly battle Sub-Panels)
-*	Map Panel (no idea what will go in here!)
-*/
-
-// because SDL2 is very picky about its colors (and there are a trillion color formats)
-Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) {
-	return SDL_MapRGB(
-		format,
-		color.r,
-		color.g,
-		color.b);
-}
 
 void UI::prepareColors() {
 	/*	NESTED COLOR SCHEME:
@@ -541,4 +462,136 @@ void UI::prepareColors() {
 	colorsByFunction["OK_GREEN"] = colorsByName["FERN_GREEN"];
 	colorsByFunction["BTN_TEXT"] = colorsByName["GOLD"];
 
+}
+
+bool UI::initialize() {
+
+	// Initialize SDL
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+		SDL_Log("SDL failed to initialize. SDL_Error: %s\n", SDL_GetError());
+		std::cerr << "SDL failed to initialize. SDL_Error: " << SDL_GetError() << std::endl;
+		return false;
+	}
+
+	// Initialize Image library (though we're not using any images yet)
+
+	//Initialize PNG loading
+	int imgFlags = IMG_INIT_PNG;
+	if (!(IMG_Init(imgFlags) & imgFlags))
+	{
+		SDL_Log("SDL_image could not initialize! %s\n", IMG_GetError());
+		return false;
+	}
+
+	// Load main window, surface, and renderer
+	mainWindow = SDL_CreateWindow("Main Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+
+	if (!mainWindow) {
+		SDL_Log("Window failed to load. SDL_Error: %s\n", SDL_GetError());
+		cerr << "Window failed to load. SDL_Error: " << SDL_GetError() << std::endl;
+		return false;
+	}
+
+	mainRenderer = SDL_CreateRenderer(mainWindow, -1, SDL_RENDERER_ACCELERATED);
+
+	if (!mainRenderer) {
+		SDL_Log("Renderer failed to load. SDL_Error: %s\n", SDL_GetError());
+		cerr << "Renderer failed to load. SDL_Error: " << SDL_GetError() << std::endl;
+		return false;
+	}
+
+	mainWindowSurface = SDL_GetWindowSurface(mainWindow);
+
+	if (!mainWindowSurface) {
+		SDL_Log("Window Surface failed to load. SDL_Error: %s\n", SDL_GetError());
+		cerr << "Window Surface failed to load. SDL_Error: " << SDL_GetError() << std::endl;
+		return false;
+	}
+
+	// Initialize TTF font library
+	if (TTF_Init() == -1) {
+		SDL_Log("WTTF failed to initialize. TTF_Error: %s\n", TTF_GetError());
+		std::cerr << "TTF failed to initialize. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
+
+
+	// Load the fonts
+
+	titleFont = TTF_OpenFont("assets/ander_hedge.ttf", 84);
+
+	if (!titleFont) {
+		SDL_Log("Font (ander_hedge) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (ander_hedge) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
+
+	buttonFont = TTF_OpenFont("assets/alte_haas_bold.ttf", 36);
+
+	if (!buttonFont) {
+		SDL_Log("Font (alte_haas_bold) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (alte_haas_bold) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
+
+	bodyFont = TTF_OpenFont("assets/alte_haas.ttf", 18);
+
+	if (!bodyFont) {
+		SDL_Log("Font (alte_haas) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (alte_haas) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
+
+	dialogFont = TTF_OpenFont("assets/la_belle_aurore.ttf", 18);
+
+	if (!dialogFont) {
+		SDL_Log("Font failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
+	return true;
+}
+
+/* 
+* PANEL CREATION FUNCTIONS
+* These are member functions of the UI class.
+* Defining them in the class definition would be too bulky.
+* 
+* We can have VERTICAL panels (going all up the side)
+* and HORIZONTAL panels (2x buttons stacked up from the bottom)
+*/
+
+
+/*
+* Panel for the Main Menu Screen.
+*/
+Panel UI::createMainMenuPanel() {
+	vector<PreButtonStruct> preButtonStructs;
+
+	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
+	preButtonStructs = {
+		buildPreButtonStruct("NEW GAME", ButtonOption::NewGame),
+		buildPreButtonStruct("LOAD GAME", ButtonOption::LoadGame),
+		buildPreButtonStruct("SETTINGS", ButtonOption::Settings),
+		buildPreButtonStruct("ABOUT", ButtonOption::About)
+	};
+
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+	return Panel(panelRect, buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect));
+}
+
+/*
+* STILL TO COME:
+*	Main Menu Sub-Panels : Settings Menu & Load Game Menu
+*	Battle Panel (and possibly battle Sub-Panels)
+*	Map Panel (no idea what will go in here!)
+*/
+
+// because SDL2 is very picky about its colors (and there are a trillion color formats)
+Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) {
+	return SDL_MapRGB(
+		format,
+		color.r,
+		color.g,
+		color.b);
 }
