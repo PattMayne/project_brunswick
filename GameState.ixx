@@ -6,8 +6,6 @@
 module;
 
 #include<vector>
-#include<cstdlib> // Needed for rand() and srand()
-#include<ctime>   // Needed for time()
 #include<iostream>
 export module GameState;
 

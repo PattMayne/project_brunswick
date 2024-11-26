@@ -23,10 +23,10 @@ module;
 #include <string>
 #include <iostream>
 #include "SDL_ttf.h"
-#include <cmath>
 #include <vector>
 #include <cstdlib>
 #include <time.h>
+#include <unordered_map>
 //#include <functional>
 
 export module Screen;
@@ -161,23 +161,18 @@ export class MenuScreen {
 
 void MenuScreen::draw(UI& ui, Panel& panel) {
 	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
-	//SDL_SetRenderDrawColor(ui.getMainRenderer(), 14, 14, 14, 1);
+	SDL_SetRenderDrawColor(ui.getMainRenderer(), 14, 14, 14, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 
 	// print the BG image (just a section)
 	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
 
-	// button background color
-	SDL_SetRenderDrawColor(ui.getMainRenderer(), 95, 77, 227, 1);
-
 	for (Button button: panel.getButtons()) {
 		// get the rect, send it a reference (to be converted to a pointer)
 		SDL_Rect rect = button.getRect();
-		SDL_Rect textRect = button.getTextRect();
-		SDL_RenderFillRect(ui.getMainRenderer(), &rect);
 
 		// now draw the text
-		SDL_RenderCopyEx(ui.getMainRenderer(), button.getTextTexture(), NULL, &textRect, 0, NULL, SDL_FLIP_NONE);
+		SDL_RenderCopyEx(ui.getMainRenderer(), button.getNormalTexture(), NULL, &rect, 0, NULL, SDL_FLIP_NONE);
 	}
 
 	// draw the logo

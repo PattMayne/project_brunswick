@@ -25,10 +25,8 @@
 #include <string>
 #include <iostream>
 #include "SDL_ttf.h"
-#include <cmath>
 #include <vector>
 #include <cstdlib>
-#include <time.h>
 
 using namespace std;
 
