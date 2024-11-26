@@ -69,14 +69,6 @@ export class MenuScreen {
 			screenToLoadStruct.id = -1;
 			screenToLoadStruct.screenType = ScreenType::NoScreen;
 
-			// create background texture
-
-			bgImageRaw = IMG_Load("assets/field.png");
-			if (!bgImageRaw) {
-				std::cerr << "Image failed to load. SDL_image: " << IMG_GetError() << std::endl;
-				// Make background from raw color
-			}
-
 			getBackgroundTexture(ui);
 			createTitleTexture(ui);
 		}
@@ -128,8 +120,6 @@ export class MenuScreen {
 				}
 			}
 
-			SDL_FreeSurface(bgImageRaw);
-
 			// we return the information to load the appropriate screen.
 			return screenToLoadStruct;
 		}
@@ -148,8 +138,6 @@ export class MenuScreen {
 	private:
 		ScreenType screenType;
 		ScreenToLoadStruct screenToLoadStruct;
-		// bg image stuff
-		SDL_Surface* bgImageRaw = NULL;
 		SDL_Texture* bgTexture = NULL;
 		SDL_Rect bgSourceRect;
 		SDL_Rect bgDestinationRect;
@@ -185,30 +173,36 @@ void MenuScreen::draw(UI& ui, Panel& panel) {
 
 
 void MenuScreen::getBackgroundTexture(UI& ui) {
-	// This is a big texture of the whole image
-	bgTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), bgImageRaw);
+	// create background texture
+	SDL_Surface* bgImageRaw = IMG_Load("assets/field.png");
 
-	// but I need a sourceRect, a destinationRect (whole window).
-	// the destinationRect should ALWAYS have the height and width of the WINDOW.
-	// That's easy to change. But if we're centering the image, we also need to recalculate the x and y positions on resize.
+	if (!bgImageRaw) {
+		std::cerr << "Image failed to load. SDL_image: " << IMG_GetError() << std::endl;
+		// Make background from raw color
+	}
+	// This is a big texture of the whole image. When drawing, we will draw from a rect which matches the window size.
+	bgTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), bgImageRaw);
+	SDL_FreeSurface(bgImageRaw);
 
 	int windowHeight, windowWidth;
 	SDL_GetWindowSize(ui.getMainWindow(), &windowWidth, &windowHeight);
 
-	// for now, don't resize or center. Just print the fucker.
+	// for now, don't resize or center. Just print.
 	bgSourceRect = { 0, 0, windowWidth, windowHeight };
 	bgDestinationRect = { 0, 0, windowWidth, windowHeight };
-
 }
 
 void MenuScreen::createTitleTexture(UI& ui) {
 	// YELLOW text with BLACK offset underlay
-	SDL_SetRenderDrawColor(ui.getMainRenderer(), ui.getTitleColor().r, ui.getTitleColor().g, ui.getTitleColor().b, 1);
+	unordered_map<string, SDL_Color> colors = ui.getColors();
+	SDL_Color logoColor = colors["LOGO_COLOR"];
+	SDL_Color textColor = colors["DARK_TEXT"];
+	SDL_SetRenderDrawColor(ui.getMainRenderer(), logoColor.r, logoColor.g, logoColor.b, 1);
 	string titleText = "Land of Limbs";
 
 	// make one yellow, one black, blit them onto a slightly larger one so the black is beneath but offset by 10px
-	SDL_Surface* titleTextSurfaceFG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), ui.getTitleColor());
-	SDL_Surface* titleTextSurfaceBG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), ui.getTextColor());
+	SDL_Surface* titleTextSurfaceFG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), logoColor);
+	SDL_Surface* titleTextSurfaceBG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), textColor);
 
 	// blit them both onto the new surface, with the black at an offset
 

@@ -66,9 +66,7 @@ export class UI {
 		SDL_Window* getMainWindow() { return mainWindow; }
 		TTF_Font* getButtonFont() { return buttonFont; }
 		TTF_Font* getTitleFont() { return titleFont; }
-		SDL_Color getTextColor() { return textColor; }
-		SDL_Color getTitleColor() { return titleColor; }
-		unordered_map<string, SDL_Color> getColors() { return colors; }
+		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
 		Panel createMainMenuPanel();
 
 
@@ -77,17 +75,7 @@ export class UI {
 		UI() {
 			cout << "UI created\n";
 			initialized = initialize();
-
-			// set our colors for later use
-			colors["BTN_HOVER_BG"] = { 255,214, 10 }; // "gold" bright
-			colors["BTN_HOVER_BRDR"] = { 255, 195, 0 }; // "mikado yellow" maybe orange
-			colors["BTN_BG"] = { 0, 53, 102}; // "yale blue" lighter blue
-			colors["BTN_BRDR"] = { 0, 29, 61}; // "oxford blue" darker blue
-			colors["DARK_TEXT"] = { 0, 8, 20}; // "rich black" (dark)
-			colors["DARKER_TEXT"] = { 3, 3, 3 };
-			colors["LIGHT_TEXT"] = { 253, 240, 213}; // "papaya whip" off-white
-			colors["WARNING_RED"] = { 193, 18, 31}; // "fire brick" red
-			colors["GREEN"] = { 79, 119, 45}; // "fern green"
+			prepareColors();
 		}
 
 		// Private destructor to prevent deletion through a pointer to the base class
@@ -110,15 +98,14 @@ export class UI {
 		TTF_Font* bodyFont = NULL;
 		TTF_Font* dialogFont = NULL;
 
-		SDL_Color textColor = { 14, 14, 14 };
-		SDL_Color titleColor = { 242, 222, 6 };
-
 		PreButtonStruct buildPreButtonStruct(string text);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
+		void prepareColors();
 
-		// a map of colors
-		unordered_map<string, SDL_Color> colors;
+		// color maps
+		unordered_map<string, SDL_Color> colorsByFunction; // colors by function, which reference colors by name
+		unordered_map<string, SDL_Color> colorsByName; // raw colors
 
 		bool initialize() {
 
@@ -299,7 +286,7 @@ export class Button {
 
 			// make the text surfaces
 			SDL_Surface* hoverButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["DARK_TEXT"]);
-			SDL_Surface* normalButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["LIGHT_TEXT"]);
+			SDL_Surface* normalButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["BTN_TEXT"]);
 
 			// make two button surfaces with the correct BG colors, to blit the text surfaces onto
 			SDL_Surface* hoverButtonSurface = SDL_CreateRGBSurface(0, buttonRect.w, buttonRect.h, 32, 0, 0, 0, 0xFF000000);
@@ -465,7 +452,7 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 			preButtonStructs[i].textRectHeight
 		};
 
-		Button thisButton = Button(thisButtonRect, thisTextRect, preButtonStructs[i].text, buttonFont, colors, mainRenderer);
+		Button thisButton = Button(thisButtonRect, thisTextRect, preButtonStructs[i].text, buttonFont, colorsByFunction, mainRenderer);
 		buttons.push_back(thisButton);
 
 		// increment heightSoFar
@@ -517,4 +504,41 @@ Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) 
 		color.r,
 		color.g,
 		color.b);
+}
+
+void UI::prepareColors() {
+	/*	NESTED COLOR SCHEME:
+	*		colors are stored internally by name.
+	*		colorsByFunction access the colorsByName values.
+	*		colorsByFunction are accessible to the outside.
+	*		This allows to easily change the colors in this function, without having to change
+	*		the accessors at all.
+	*/
+
+	colorsByName["GOLD"] = { 255,214, 10 }; // bright yellowish
+	colorsByName["ONYX"] = { 14, 14, 14 }; // almost black
+	colorsByName["FERN_GREEN"] = { 79, 119, 45 };
+	colorsByName["PERIDOT"] = { 242, 222, 6 }; // yellow orangey
+	colorsByName["MIKADO_YELLOW"] = { 255, 195, 0 };
+	colorsByName["YALE_BLUE"] = { 0, 53, 102 }; // slightly lighter blue
+	colorsByName["OXFORD_BLUE"] = { 0, 29, 61 }; // slightly darker blue
+	colorsByName["FRENCH_BLUE"] = { 0, 99, 191 }; // almost light (normal) blue-green
+	colorsByName["RICH_BLACK"] = { 0, 8, 20 }; // blue tinted dark
+	colorsByName["BLACK"] = { 3, 3, 3 }; // almost absolute... not quite
+	colorsByName["WHITE"] = { 250, 250, 250 }; // almost white
+	colorsByName["PAPAYA_WHIP"] = { 253, 240, 213 }; // beige
+	colorsByName["SCARLET"] = { 193, 18, 31 }; // red
+	colorsByName["WOODLAND"] = { 97, 89, 30 }; // brown-green
+	colorsByName["SMOKEY_GREY"] = { 117, 117, 113 };
+
+	colorsByFunction["BTN_HOVER_BG"] = colorsByName["PERIDOT"];
+	colorsByFunction["BTN_BG"] = colorsByName["FRENCH_BLUE"];
+	colorsByFunction["BTN_BRDR"] = colorsByName["YALE_BLUE"];
+	colorsByFunction["DARK_TEXT"] = colorsByName["BLACK"];
+	colorsByFunction["LIGHT_TEXT"] = colorsByName["WHITE"];
+	colorsByFunction["WARNING_RED"] = colorsByName["SCARLET"];
+	colorsByFunction["LOGO_COLOR"] = colorsByName["PERIDOT"];
+	colorsByFunction["OK_GREEN"] = colorsByName["FERN_GREEN"];
+	colorsByFunction["BTN_TEXT"] = colorsByName["GOLD"];
+
 }
