@@ -15,10 +15,8 @@
 * Maybe we make our own event queue?
 * 
 * TO DO:
-* - make window resizable.
-* - minimum limit for size (set as consts).
-* - panel resizes based on window.
-* - SDL_SetRenderDrawColor should be hidden behind another function where I can send in a saved color (instead of writing each R/G/B int)
+* - Add "EXIT" button to main menu.
+* - modular design for buttons (and possibly background... LATER... number of modular rects depend on height & width of rect)
 */
 
 module;
@@ -70,12 +68,27 @@ export class UI {
 		TTF_Font* getTitleFont() { return titleFont; }
 		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
 		Panel createMainMenuPanel();
+		int getWindowHeight() { return windowHeight; }
+		int getWindowWidth() { return windowWidth; }
+		void setWindowSize(int x, int y) {
+			windowWidth = x;
+			windowHeight = y;
+		}
 
 
 	private:
 		// Constructor is PRIVATE to prevent instantiation from outside the class
 		UI() {
-			cout << "UI created\n";
+			// set screen size (for dev purposes)
+			if (windowResType == WindowResType::Mobile) {
+				setWindowSize(360, 800);
+			} else if (windowResType == WindowResType::Tablet) {
+				setWindowSize(810, 1080);
+			} else if (windowResType == WindowResType::Desktop) {
+				setWindowSize(1600, 900);
+			}
+			// fullscreen will be dealt with in initialize()
+
 			initialized = initialize();
 			prepareColors();
 		}
@@ -83,11 +96,13 @@ export class UI {
 		// Private destructor to prevent deletion through a pointer to the base class
 		~UI() = default;
 
-		const int SCREEN_WIDTH = 720;
-		const int SCREEN_HEIGHT = 960;
+		const WindowResType windowResType = WindowResType::Desktop;
 
 		const int BUTTON_PADDING = 20;
 		const int PANEL_PADDING = 20;
+
+		int windowWidth = 720;
+		int windowHeight = 960;
 
 		int initialized = false;
 
@@ -103,6 +118,7 @@ export class UI {
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 		void prepareColors();
+		void setWindowSizeIntsBasedOnWindow();
 
 		// color maps
 		unordered_map<string, SDL_Color> colorsByFunction; // colors by function, which reference colors by name
@@ -372,7 +388,7 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 	return {
 		/* x is always 0 */
 		0,
-		SCREEN_HEIGHT - panelHeight,
+		windowHeight - panelHeight,
 		/* panel is just wide enough to accomodate the longest button */
 		longestButtonTextLength + (BUTTON_PADDING * 2) + (PANEL_PADDING * 2),
 		panelHeight
@@ -467,6 +483,13 @@ void UI::prepareColors() {
 	colorsByFunction["BTN_TEXT"] = colorsByName["GOLD"];
 }
 
+void UI::setWindowSizeIntsBasedOnWindow() {
+	// set screen size ints based on new resolution, for the sake of building the UI.
+	int w, h;
+	SDL_GetWindowSize(mainWindow, &w, &h);
+	setWindowSize(w, h);
+}
+
 /* Initialize all the SDL */
 bool UI::initialize() {
 
@@ -487,14 +510,29 @@ bool UI::initialize() {
 		return false;
 	}
 
-	// Load main window, surface, and renderer
-	mainWindow = SDL_CreateWindow("Main Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+	/* Load main window, surface, and renderer
+	* GAME will be FULL SCREEN when finished. NOT RESIZABLE!!!
+	* Keeping two versions of the function here to set pre-defined size OR to make full-screen.
+	* PURPOSE: so I can develop for desktop and mobile, faking a mobile resolution.
+	* TO DO: make a MOBILE flag to switch between these without having to comment/uncomment like a chump.
+	 */
+	if (windowResType == WindowResType::Fullscreen) {
+		mainWindow = SDL_CreateWindow("Land of Limbs", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+		setWindowSizeIntsBasedOnWindow();
+	} else {
+		mainWindow = SDL_CreateWindow("Land of Limbs", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
+	}
+	
+
 
 	if (!mainWindow) {
 		SDL_Log("Window failed to load. SDL_Error: %s\n", SDL_GetError());
 		cerr << "Window failed to load. SDL_Error: " << SDL_GetError() << std::endl;
 		return false;
 	}
+
+	// make window resizable
+	SDL_SetWindowResizable(mainWindow, SDL_FALSE);
 
 	mainRenderer = SDL_CreateRenderer(mainWindow, -1, SDL_RENDERER_ACCELERATED);
 

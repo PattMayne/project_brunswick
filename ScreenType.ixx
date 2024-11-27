@@ -9,6 +9,13 @@ export enum class MapType {
 	World, Building, Dungeon
 };
 
+
+/* values to flag for resolutions. Mostly for development purposes. Final release should always be fullscreen. */
+export enum class WindowResType {
+	Mobile, Tablet, Desktop, Fullscreen
+};
+
+
 /* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens.
 	id refers to the id of the Map or Battle object in the database */
 export struct ScreenToLoadStruct {
@@ -35,7 +42,7 @@ export ScreenToLoadStruct closingScreenStruct() {
 export enum class ButtonOption {
 	NoOption,
 	// Main Menu panel buttons
-	NewGame, LoadGame, Settings, About,
+	NewGame, LoadGame, Settings, About, Exit,
 	// TO COME: more options for Map, Battle, and Character Creation screens
 };
 

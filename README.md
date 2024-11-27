@@ -51,6 +51,8 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 - [ ] When closing program close each font with TTF_CloseFont()
 - [ ] incorporate SQLite database
     - [ ] must download the sqlite3.h header file (#include <sqlite3.h>)
+- [ ] MOBILE proportions are wack. Must unwack. Maybe this will be about SCALING.
+    - [ ] Button size and Font size are the main issue. Button size is based on font size. So **font size should adjust automatically based on screen size.**
 
 ### Long-Range Notes & Plans
 
