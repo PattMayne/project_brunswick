@@ -42,6 +42,7 @@ class Button;
 struct PreButtonStruct;
 
 Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color);
+bool isInRect(SDL_Rect rect, int mouseX, int mouseY);
 
 /* UI (singleton) class holds basic reusable SDL objects.
 * It's also responsible for creating panels and buttons,
@@ -111,18 +112,10 @@ export class UI {
 };
 
 
-export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
-	// check horizontal
-	if (mouseX >= rect.x && mouseX <= rect.x + rect.w) {
-		// check vertical
-		if (mouseY >= rect.y && mouseY <= rect.y + rect.h) {
-			return true;
-		}
-	}
-	return false;
-}
 
-/*  Buttons contain a Rect, but also must contain their (anonymous) action function.
+/* BUTTON CLASS */
+
+/*  Buttons contain a Rect, but also must contain clickStruct data to send to the calling Screen.
 	 Buttons make a Rect clickable and allow us to perform other actions on them.
 	 text texture should be saved in the button */
 export class Button {
@@ -168,7 +161,7 @@ export class Button {
 			//SDL_FreeSurface(buttonTextSurface);
 		}
 
-		/* Constructor for when we already have both SDL_Rects (used when buttons have pre-set sizes) */
+		/* Constructor for when we already have both SDL_Rects (used buttons have pre-set sizes) */
 		Button(
 			SDL_Rect buttonRect,
 			SDL_Rect textRect,
@@ -183,50 +176,7 @@ export class Button {
 			rect = buttonRect;
 			text = incomingText;
 
-
-			/*
-			* 
-						TODO:
-						TO DO HERE:
-							1. make a function to make BACKGROUND of button...
-								for this loop (where they're all the same size)(the loop CALLING this constructor)
-									make one texture and send it into this function...
-										refactor this function to accept a background texture so I don't have to remake it each time.
-								That function can also be used for the variable-sized constructor (would be used in the constructor itself)
-										YES
-								This would ALSO allow me to swap out colors with background images, OR add borders, or whatever.
-								Compartmentalize!
-			
-			*/
-
-
-			// Make textures for button and mouseover button
-
-			// make the text surfaces
-			SDL_Surface* hoverButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["DARK_TEXT"]);
-			SDL_Surface* normalButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["BTN_TEXT"]);
-
-			// make two button surfaces with the correct BG colors, to blit the text surfaces onto
-			SDL_Surface* hoverButtonSurface = SDL_CreateRGBSurface(0, buttonRect.w, buttonRect.h, 32, 0, 0, 0, 0xFF000000);
-			SDL_Surface* normalButtonSurface = SDL_CreateRGBSurface(0, buttonRect.w, buttonRect.h, 32, 0, 0, 0, 0xFF000000);
-
-			// fill the rects with beautiful color
-			const SDL_PixelFormat* format = hoverButtonSurface->format;
-			SDL_FillRect(normalButtonSurface, NULL, convertSDL_ColorToUint32(format, colors["BTN_BG"]));
-			SDL_FillRect(hoverButtonSurface, NULL, convertSDL_ColorToUint32(format, colors["BTN_HOVER_BG"]));
-
-			// do the blitting
-			SDL_BlitSurface(hoverButtonTextSurface, NULL, hoverButtonSurface, &textRect);
-			SDL_BlitSurface(normalButtonTextSurface, NULL, normalButtonSurface, &textRect);
-
-			hoverTexture = SDL_CreateTextureFromSurface(mainRenderer, hoverButtonSurface);
-			normalTexture = SDL_CreateTextureFromSurface(mainRenderer, normalButtonSurface);
-
-			// free the surfaces
-			SDL_FreeSurface(hoverButtonTextSurface);
-			SDL_FreeSurface(normalButtonTextSurface);
-			SDL_FreeSurface(hoverButtonSurface);
-			SDL_FreeSurface(normalButtonSurface);
+			createButtonTextures(buttonRect, textRect, incomingText, buttonFont, colors, mainRenderer);
 
 			cout << "button made\n";
 		}
@@ -252,27 +202,75 @@ export class Button {
 		string text = "";
 		bool mouseOver;
 		ButtonClickStruct clickStruct;
-
-		/* build inner textRect based on other button information */
-		SDL_Rect createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont) {
-			rect = buttonRect;
-
-			// get height and width of textRect
-			int textRectWidth, textRectHeight;
-			TTF_SizeUTF8(buttonFont, buttonText.c_str(), &textRectWidth, &textRectHeight);
-
-			int xPadding = (buttonRect.w - textRectWidth) / 2;
-			int yPadding = (buttonRect.h - textRectHeight) / 2;
-
-			// finally make the textRect with the appropriate borders
-			return {
-				buttonRect.x + xPadding,
-				buttonRect.y + yPadding,
-				textRectWidth,
-				textRectHeight
-			};
-		}
+		SDL_Rect createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont);
+		SDL_Surface* createButtonSurfaceBG(SDL_Rect buttonRect, SDL_Color color, SDL_Renderer* mainRenderer);
+		void createButtonTextures(SDL_Rect buttonRect, SDL_Rect textRect, string incomingText, TTF_Font* buttonFont, unordered_map<string, SDL_Color> colors, SDL_Renderer* mainRenderer);
 };
+
+/* build inner textRect based on other button information */
+SDL_Rect Button::createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont) {
+	rect = buttonRect;
+
+	// get height and width of textRect
+	int textRectWidth, textRectHeight;
+	TTF_SizeUTF8(buttonFont, buttonText.c_str(), &textRectWidth, &textRectHeight);
+
+	int xPadding = (buttonRect.w - textRectWidth) / 2;
+	int yPadding = (buttonRect.h - textRectHeight) / 2;
+
+	// finally make the textRect with the appropriate borders
+	return {
+		buttonRect.x + xPadding,
+		buttonRect.y + yPadding,
+		textRectWidth,
+		textRectHeight
+	};
+}
+
+/* Button textures must start with a surface. Create and get it here. */
+SDL_Surface* Button::createButtonSurfaceBG(
+	SDL_Rect buttonRect,
+	SDL_Color color,
+	SDL_Renderer* mainRenderer
+) {
+	SDL_Surface* buttonSurface = SDL_CreateRGBSurface(0, buttonRect.w, buttonRect.h, 32, 0, 0, 0, 0xFF000000);
+	// fill the rects with beautiful color
+	SDL_FillRect(buttonSurface, NULL, convertSDL_ColorToUint32(buttonSurface->format, color));
+	// TODO: CAN ADD BORDERS or just load an IMAGE INSTEAD (for later)
+	return buttonSurface;
+}
+
+/* A button must have both NORMAL and HOVER textures. Create them both here. */
+void Button::createButtonTextures(
+	SDL_Rect buttonRect,
+	SDL_Rect textRect,
+	string incomingText,
+	TTF_Font* buttonFont,
+	unordered_map<string, SDL_Color> colors,
+	SDL_Renderer* mainRenderer
+) {
+	SDL_Surface* hoverButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["DARK_TEXT"]);
+	SDL_Surface* normalButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["BTN_TEXT"]);
+
+	// make two button surfaces with the correct BG colors, to blit the text surfaces onto
+	SDL_Surface* hoverButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_HOVER_BG"], mainRenderer);
+	SDL_Surface* normalButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_BG"], mainRenderer);
+
+	// do the blitting
+	SDL_BlitSurface(hoverButtonTextSurface, NULL, hoverButtonSurface, &textRect);
+	SDL_BlitSurface(normalButtonTextSurface, NULL, normalButtonSurface, &textRect);
+
+	hoverTexture = SDL_CreateTextureFromSurface(mainRenderer, hoverButtonSurface);
+	normalTexture = SDL_CreateTextureFromSurface(mainRenderer, normalButtonSurface);
+
+	// free the surfaces
+	SDL_FreeSurface(hoverButtonTextSurface);
+	SDL_FreeSurface(normalButtonTextSurface);
+	SDL_FreeSurface(hoverButtonSurface);
+	SDL_FreeSurface(normalButtonSurface);
+}
+
+/* PANEL CLASS */
 
 /* Panels contain buttons. There can be no buttons without a Panel container. */
 export class Panel {
@@ -323,8 +321,9 @@ export class Panel {
 		SDL_Rect rect;
 		vector<Button> buttons;
 		bool mouseOver;
-		// color? bg image?
+		// color? bg image? No. If a panel needs a BG image we can do that in the screen. Most will NOT have it.
 };
+
 
 /* Stores initial data to assist construction of the panel.
 * Panel uses this data to help construct itself.
@@ -408,6 +407,8 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 			preButtonStructs[i].textRectHeight
 		};
 
+		// HERE we need to make the SURFACE and send it in.
+
 		Button thisButton = Button(
 			thisButtonRect,
 			thisTextRect,
@@ -426,7 +427,10 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 	return buttons;
 }
 
+/* UI EXTRA FUNCTIONS */
 
+
+/* Prepare the color scheme for the whole app to use */
 void UI::prepareColors() {
 	/*	NESTED COLOR SCHEME:
 	*		colors are stored internally by name.
@@ -461,9 +465,9 @@ void UI::prepareColors() {
 	colorsByFunction["LOGO_COLOR"] = colorsByName["PERIDOT"];
 	colorsByFunction["OK_GREEN"] = colorsByName["FERN_GREEN"];
 	colorsByFunction["BTN_TEXT"] = colorsByName["GOLD"];
-
 }
 
+/* Initialize all the SDL */
 bool UI::initialize() {
 
 	// Initialize SDL
@@ -580,12 +584,7 @@ Panel UI::createMainMenuPanel() {
 	return Panel(panelRect, buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect));
 }
 
-/*
-* STILL TO COME:
-*	Main Menu Sub-Panels : Settings Menu & Load Game Menu
-*	Battle Panel (and possibly battle Sub-Panels)
-*	Map Panel (no idea what will go in here!)
-*/
+
 
 // because SDL2 is very picky about its colors (and there are a trillion color formats)
 Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) {
@@ -595,3 +594,24 @@ Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) 
 		color.g,
 		color.b);
 }
+
+/* Check if an x/y location falls within a rect */
+export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
+	// check horizontal
+	if (mouseX >= rect.x && mouseX <= rect.x + rect.w) {
+		// check vertical
+		if (mouseY >= rect.y && mouseY <= rect.y + rect.h) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+/*
+* STILL TO COME:
+*	Main Menu Sub-Panels : Settings Menu & Load Game Menu
+*	Battle Panel (and possibly battle Sub-Panels)
+*	Map Panel (no idea what will go in here!)
+*	Character Creation Panels
+*/

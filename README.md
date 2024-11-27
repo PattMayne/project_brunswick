@@ -1,5 +1,18 @@
 # Land of Limbs
 
+This is a very early **work in progress.**
+
+Currently I'm setting up the absolute basic UI framework.
+
+I already worked out the basic game mechanics with Java for Android. I'll rewrite those behaviors for C++ for this desktop app.
+
+Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/PattMayne/LimbsCyberpunk)
+
+### Technologies:
+
+**Language:** C++
+
+**Libraries:** SDL2, SDL_TTF, SDL_Image
  
 ## TO DO:
 
@@ -41,7 +54,6 @@
 
 ### Long-Range Notes & Plans
 
-* In the Character table, the Player Character is always #1
 * A map has a type (in the DB). So when a Screen object loads a Map object, it creates a sub-type depending on the value of its type.
 * Title Screen: have random limbs snapping onto each other and coming apart in an animation.
 *   As one snaps on, another comes off and flies off-screen, while yet another flies on-screen to snap on... forever!

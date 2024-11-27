@@ -7,14 +7,7 @@
 
 /*
 * NEXT:
-* - refactor drawing panels, so that the UI object draws the panel (takes a panel as a parameter) (really? I'm not sure... have to think about this)
-* - make Screen module
-*	- enum of screen types
-* 
-* DESGIN PATTERS TO USE:
-*	- Singleton (for GameState and UI)
-*	- Factory (for Screens, Panels, and Buttons) (nope, turned out to be a bad idea) (but maybe later for characters, etc)
-*	- Observer (allow resizing of screens and propagating the size down to Panels and Buttons)
+* - clicking button opens new screen
 * 
 */
 
