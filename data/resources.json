@@ -1,0 +1,24 @@
+{
+  "title": [ "Land", "of", "Limbs" ],
+  "window": {
+    "defaults": {
+      "width": {
+        "mobile": 360,
+        "tablet": 810,
+        "desktop": 1600
+      },
+      "height": {
+        "mobile": 800,
+        "tablet": 1080,
+        "desktop": 900
+      }
+    }
+  },
+  "buttonText": {
+    "ABOUT": "ABOUT",
+    "LOAD_GAME": "LOAD GAME",
+    "SETTINGS": "SETTINGS",
+    "NEW_GAME": "NEW GAME",
+    "EXIT": "EXIT"
+  }
+}

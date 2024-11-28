@@ -7,11 +7,14 @@
 
 /*
 * NEXT:
-* - clicking button opens new screen
-* 
+* - clicking button opens new screen.
+* - every screen must have "resize" function.
+* - - this will require abstracting out certain things.
+* - - make font sizes depend on resolution.
+* - Resolution is available in the SETTINGS
 */
 
-
+#include "include/json.hpp"
 #include "SDL.h"
 #include "SDL_image.h"
 #include <stdio.h>
@@ -23,11 +26,11 @@
 
 using namespace std;
 
-//import GameState;
 import UI;
 import GameState;
 import MenuScreen;
 import ScreenType;
+import Resources;
 using namespace std;
 const bool DEBUG = false;
 

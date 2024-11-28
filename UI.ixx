@@ -21,6 +21,7 @@
 
 module;
 
+#include "include/json.hpp"
 #include "SDL.h"
 #include "SDL_image.h"
 #include "SDL_ttf.h"
@@ -29,12 +30,13 @@ module;
 #include <iostream>
 #include <vector>
 #include <unordered_map>
-//#include <functional>
 
 export module UI;
-using namespace std;
-import ScreenType;
 
+using namespace std;
+
+import Resources;
+import ScreenType;
 class Panel;
 class Button;
 struct PreButtonStruct;
@@ -70,27 +72,29 @@ export class UI {
 		Panel createMainMenuPanel();
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
-		void setWindowSize(int x, int y) {
-			windowWidth = x;
-			windowHeight = y;
-		}
 
 
 	private:
-		// Constructor is PRIVATE to prevent instantiation from outside the class
+		// Constructor is private to prevent instantiation from outside the class
 		UI() {
-			// set screen size (for dev purposes)
+			/* DEV BLOCK START. set screen size (for dev purposes) */
 			if (windowResType == WindowResType::Mobile) {
 				setWindowSize(360, 800);
-			} else if (windowResType == WindowResType::Tablet) {
+			}
+			else if (windowResType == WindowResType::Tablet) {
 				setWindowSize(810, 1080);
-			} else if (windowResType == WindowResType::Desktop) {
+			}
+			else if (windowResType == WindowResType::Desktop) {
 				setWindowSize(1600, 900);
 			}
+			/* DEV BLOCK OVER. we assume res type is Fullscreen */
+			
 			// fullscreen will be dealt with in initialize()
-
 			initialized = initialize();
 			prepareColors();
+
+			/* set the height and width values for items depending on those values */
+			getAndStoreWindowSize();
 		}
 
 		// Private destructor to prevent deletion through a pointer to the base class
@@ -101,6 +105,7 @@ export class UI {
 		const int BUTTON_PADDING = 20;
 		const int PANEL_PADDING = 20;
 
+		/* Window will actually be full size.These make the numbers available for the UI to calculate things. */
 		int windowWidth = 720;
 		int windowHeight = 960;
 
@@ -118,7 +123,13 @@ export class UI {
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 		void prepareColors();
-		void setWindowSizeIntsBasedOnWindow();
+		void getAndStoreWindowSize();
+		/* when you need to dictate dimensions (for dev purposes) */
+		void setWindowSize(int x, int y) {
+			windowWidth = x;
+			windowHeight = y;
+		}
+
 
 		// color maps
 		unordered_map<string, SDL_Color> colorsByFunction; // colors by function, which reference colors by name
@@ -483,7 +494,7 @@ void UI::prepareColors() {
 	colorsByFunction["BTN_TEXT"] = colorsByName["GOLD"];
 }
 
-void UI::setWindowSizeIntsBasedOnWindow() {
+void UI::getAndStoreWindowSize() {
 	// set screen size ints based on new resolution, for the sake of building the UI.
 	int w, h;
 	SDL_GetWindowSize(mainWindow, &w, &h);
@@ -511,14 +522,15 @@ bool UI::initialize() {
 	}
 
 	/* Load main window, surface, and renderer
-	* GAME will be FULL SCREEN when finished. NOT RESIZABLE!!!
+	* GAME will be FULL SCREEN when finished.
+	* We will offer WINDOW MODE in the settings, and various resolutions.
 	* Keeping two versions of the function here to set pre-defined size OR to make full-screen.
 	* PURPOSE: so I can develop for desktop and mobile, faking a mobile resolution.
-	* TO DO: make a MOBILE flag to switch between these without having to comment/uncomment like a chump.
+	* FULL SCREEN is the DEFAULT.
 	 */
 	if (windowResType == WindowResType::Fullscreen) {
 		mainWindow = SDL_CreateWindow("Land of Limbs", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
-		setWindowSizeIntsBasedOnWindow();
+		getAndStoreWindowSize();
 	} else {
 		mainWindow = SDL_CreateWindow("Land of Limbs", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
 	}
@@ -609,13 +621,14 @@ bool UI::initialize() {
 */
 Panel UI::createMainMenuPanel() {
 	vector<PreButtonStruct> preButtonStructs;
-
+	Resources& resources = Resources::getInstance();
 	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
 	preButtonStructs = {
-		buildPreButtonStruct("NEW GAME", ButtonOption::NewGame),
-		buildPreButtonStruct("LOAD GAME", ButtonOption::LoadGame),
-		buildPreButtonStruct("SETTINGS", ButtonOption::Settings),
-		buildPreButtonStruct("ABOUT", ButtonOption::About)
+		buildPreButtonStruct(resources.getButtonText("NEW_GAME"), ButtonOption::NewGame),
+		buildPreButtonStruct(resources.getButtonText("LOAD_GAME"), ButtonOption::LoadGame),
+		buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings),
+		buildPreButtonStruct(resources.getButtonText("ABOUT"), ButtonOption::About),
+		buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit)
 	};
 
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);

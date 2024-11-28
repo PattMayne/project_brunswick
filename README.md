@@ -53,6 +53,12 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
     - [ ] must download the sqlite3.h header file (#include <sqlite3.h>)
 - [ ] MOBILE proportions are wack. Must unwack. Maybe this will be about SCALING.
     - [ ] Button size and Font size are the main issue. Button size is based on font size. So **font size should adjust automatically based on screen size.**
+- [ ]  Possibly install conanfile or vcpkg to handle libraries (SDL2 or SDL3, json)
+- [ ] Make a Resources module to encapsulate string and int resources
+    - [ ] Make a JSON file
+    - [ ] Put all strings in JSON file
+    - [ ] Make a singleton for accessing the JSON file
+        - [ ] Singleton will read gamestate (or something) to know which variations to access (window size affects font size, etc)
 
 ### Long-Range Notes & Plans
 

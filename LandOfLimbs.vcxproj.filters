@@ -21,17 +21,28 @@
     <ClCompile Include="GameState.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="UI.ixx">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MenuScreen.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
     <ClCompile Include="ScreenType.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
+    <ClCompile Include="Resources.ixx">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UI.ixx">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
+    <None Include="data\resources.json">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\json.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

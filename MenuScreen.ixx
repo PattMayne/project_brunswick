@@ -277,9 +277,14 @@ void MenuScreen::handleEvent(SDL_Event& e, Panel& menuPanel, bool& running) {
 				case ButtonOption::Settings:
 					cout << "SETTINGS";
 					break;
+				case ButtonOption::Exit:
+					cout << "EXIT";
+					running = false;
+					break;
 				default:
 					cout << "ERROR";
 				}
+				cout << "\n";
 
 				/*
 				* NOW replace the "cout" calls with FUNCTION calls.
