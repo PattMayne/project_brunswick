@@ -16,7 +16,7 @@
 */
 
 module;
-
+#include "include/json.hpp"
 #include "SDL.h"
 #include "SDL_image.h"
 #include <stdio.h>
@@ -33,6 +33,7 @@ export module MenuScreen;
 using namespace std;
 
 import ScreenType;
+import Resources;
 import UI;
 
 // This will get its own module. Each screen needs its own module.
@@ -135,6 +136,7 @@ export class MenuScreen {
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
 		void handleEvent(SDL_Event &e, bool& running, Panel& menuPanel, Panel& settingsPanel);
+		void rebuildDisplay(Panel& menuPanel, Panel& settingsPanel);
 };
 
 /* Specific Draw functions for each Screen */
@@ -191,12 +193,13 @@ void MenuScreen::getBackgroundTexture(UI& ui) {
 }
 
 void MenuScreen::createTitleTexture(UI& ui) {
+	Resources& resources = Resources::getInstance();
 	// YELLOW text with BLACK offset underlay
 	unordered_map<string, SDL_Color> colors = ui.getColors();
 	SDL_Color logoColor = colors["LOGO_COLOR"];
 	SDL_Color textColor = colors["DARK_TEXT"];
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), logoColor.r, logoColor.g, logoColor.b, 1);
-	string titleText = "Land of Limbs";
+	string titleText = resources.getTitle();
 
 	// make one yellow, one black, blit them onto a slightly larger one so the black is beneath but offset by 10px
 	SDL_Surface* titleTextSurfaceFG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), logoColor);
@@ -248,6 +251,17 @@ void MenuScreen::createTitleTexture(UI& ui) {
 		titleTextWidth,
 		titleTextHeight
 	};
+
+	cout << "\n\n" << "WINDOW SURFACE WIDTH = " << mainWindowSurface->w << "\n\n";
+	cout << "\n\n" << "TITLE RECT X = " << titleRect.x << "\n\n";
+}
+
+void MenuScreen::rebuildDisplay(Panel& menuPanel, Panel& settingsPanel) {
+	UI& ui = UI::getInstance();
+	getBackgroundTexture(ui);
+	createTitleTexture(ui);
+	ui.rebuildSettingsPanel(settingsPanel);
+	ui.rebuildMainMenuPanel(menuPanel);
 }
 
 void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Panel& settingsPanel) {
@@ -304,22 +318,22 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 				case ButtonOption::Mobile:
 					cout << "Mobile";
 					ui.resizeWindow(WindowResType::Mobile);
-					/* rebuild panels */
+					rebuildDisplay(menuPanel, settingsPanel);
 					break;
 				case ButtonOption::Tablet:
 					cout << "Tablet";
 					ui.resizeWindow(WindowResType::Tablet);
-					/* rebuild panels */
+					rebuildDisplay(menuPanel, settingsPanel);
 					break;
 				case ButtonOption::Desktop:
 					cout << "Desktop";
 					ui.resizeWindow(WindowResType::Desktop);
-					/* rebuild panels */
+					rebuildDisplay(menuPanel, settingsPanel);
 					break;
 				case ButtonOption::Fullscreen:
 					cout << "Fullscreen";
 					ui.resizeWindow(WindowResType::Fullscreen);
-					/* rebuild panels */
+					rebuildDisplay(menuPanel, settingsPanel);
 					break;
 				case ButtonOption::Back:
 					// switch to other panel

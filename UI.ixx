@@ -69,11 +69,17 @@ export class UI {
 		TTF_Font* getButtonFont() { return buttonFont; }
 		TTF_Font* getTitleFont() { return titleFont; }
 		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
+
 		Panel createMainMenuPanel();
+		void rebuildMainMenuPanel(Panel& mainMenuPanel);
+
 		Panel createSettingsPanel();
+		void rebuildSettingsPanel(Panel& settingsPanel);
+
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
 		void resizeWindow(WindowResType newResType);
+
 
 
 	private:
@@ -121,9 +127,19 @@ export class UI {
 		TTF_Font* buttonFont = NULL;
 		TTF_Font* bodyFont = NULL;
 		TTF_Font* dialogFont = NULL;
+
 		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
+
+		// settings panel building functions
+		tuple<SDL_Rect, vector<Button>> createSettingsPanelComponents();
+		vector<PreButtonStruct> getSettingsPreButtonStructs();
+
+		// main menu panel building functions
+		tuple<SDL_Rect, vector<Button>> createMainMenuPanelComponents();
+		vector<PreButtonStruct> getMainMenuPreButtonStructs();
+
 		void prepareColors();
 		void getAndStoreWindowSize();
 		/* when you need to dictate dimensions (for dev purposes) */
@@ -131,7 +147,6 @@ export class UI {
 			windowWidth = x;
 			windowHeight = y;
 		}
-
 
 		// color maps
 		unordered_map<string, SDL_Color> colorsByFunction; // colors by function, which reference colors by name
@@ -350,6 +365,11 @@ export class Panel {
 			return ButtonClickStruct();
 		}
 
+		void rebuildSelf(SDL_Rect incomingRect, vector<Button> incomingButtons) {
+			rect = incomingRect;
+			buttons = incomingButtons;
+		}
+
 	private:
 		SDL_Rect rect;
 		vector<Button> buttons;
@@ -402,6 +422,12 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 			longestButtonTextLength = preButtonStruct.textRectWidth;
 		}
 	}
+
+	cout << "BUILDING VERTICAL PANELL!!";
+
+	cout << "\n\n BUILDING PANEL STRUCT and WINDOW HEIGHT IS:::   " << windowHeight;
+	cout << "\n\n";
+
 
 	return {
 		/* x is always 0 */
@@ -641,6 +667,12 @@ void UI::resizeWindow(WindowResType newResType) {
 		SDL_SetWindowSize(mainWindow, newRes.w, newRes.h);
 		SDL_SetWindowResizable(mainWindow, SDL_FALSE);
 	}
+	// destroy old surface and get new one with correct size
+	SDL_FreeSurface(mainWindowSurface);
+	mainWindowSurface = SDL_GetWindowSurface(mainWindow);
+	/* update dimension data for rebuilding the interface */
+	getAndStoreWindowSize();
+	// build FONTS again!
 }
 
 /* 
@@ -652,34 +684,54 @@ void UI::resizeWindow(WindowResType newResType) {
 * and HORIZONTAL panels (2x buttons stacked up from the bottom)
 */
 
-
-/*
+/* MENU PANEL CREATION AND RE-BUILDING 
 * Panel for the Main Menu Screen.
 */
-Panel UI::createMainMenuPanel() {
-	vector<PreButtonStruct> preButtonStructs;
+
+/* build and deliver basic info for main menu panel buttons */
+vector<PreButtonStruct> UI::getMainMenuPreButtonStructs() {
 	Resources& resources = Resources::getInstance();
 	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
-	preButtonStructs = {
+	return {
 		buildPreButtonStruct(resources.getButtonText("NEW_GAME"), ButtonOption::NewGame),
 		buildPreButtonStruct(resources.getButtonText("LOAD_GAME"), ButtonOption::LoadGame),
 		buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings),
 		buildPreButtonStruct(resources.getButtonText("ABOUT"), ButtonOption::About),
 		buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit)
 	};
+}
 
+/* create all the components for the settings panel */
+tuple<SDL_Rect, vector<Button>> UI::createMainMenuPanelComponents() {
+	vector<PreButtonStruct> preButtonStructs = getMainMenuPreButtonStructs();
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
-	return Panel(panelRect, buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect));
+	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	return { panelRect, buttons };
 }
 
 /*
-* Settings available in every screen.
+* Main screen, main menu
 */
-Panel UI::createSettingsPanel() {
-	vector<PreButtonStruct> preButtonStructs;
+Panel UI::createMainMenuPanel() {
+	auto [panelRect, buttons] = createMainMenuPanelComponents();
+	return Panel(panelRect, buttons);
+}
+
+
+/* rebuild the main menu panel after resize */
+void UI::rebuildMainMenuPanel(Panel& mainMenuPanel) {
+	auto [panelRect, buttons] = createMainMenuPanelComponents();
+	mainMenuPanel.rebuildSelf(panelRect, buttons);
+}
+
+/* SETTINGS PANEL CREATION AND RE-BUILDING */
+
+
+/* build and deliver basic info for settings panel buttons */
+vector<PreButtonStruct> UI::getSettingsPreButtonStructs() {
 	Resources& resources = Resources::getInstance();
 	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
-	preButtonStructs = {
+	vector<PreButtonStruct> preButtonStructs = {
 		buildPreButtonStruct(resources.getButtonText("MOBILE"), ButtonOption::Mobile),
 		buildPreButtonStruct(resources.getButtonText("TABLET"), ButtonOption::Tablet),
 		buildPreButtonStruct(resources.getButtonText("DESKTOP"), ButtonOption::Desktop),
@@ -687,10 +739,31 @@ Panel UI::createSettingsPanel() {
 		buildPreButtonStruct(resources.getButtonText("BACK"), ButtonOption::Back)
 	};
 
-	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
-	return Panel(panelRect, buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect));
+	return preButtonStructs;
 }
 
+/* create all the components for the settings panel */
+tuple<SDL_Rect, vector<Button>> UI::createSettingsPanelComponents() {
+	vector<PreButtonStruct> preButtonStructs = getSettingsPreButtonStructs();
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	return { panelRect, buttons};
+}
+
+/*
+* Settings available in every screen.
+*/
+Panel UI::createSettingsPanel() {
+	auto [panelRect, buttons] = createSettingsPanelComponents();
+	return Panel(panelRect, buttons);
+}
+
+
+/* rebuild the settings panel after resize */
+void UI::rebuildSettingsPanel(Panel& settingsPanel) {
+	auto [panelRect, buttons] = createSettingsPanelComponents();
+	settingsPanel.rebuildSelf(panelRect, buttons);
+}
 
 
 // because SDL2 is very picky about its colors (and there are a trillion color formats)
