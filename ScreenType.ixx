@@ -15,6 +15,17 @@ export enum class WindowResType {
 	Mobile, Tablet, Desktop, Fullscreen
 };
 
+/* width and height data */
+export struct Resolution {
+	int w;
+	int h;
+
+	Resolution(int x, int y) {
+		w = x;
+		h = y;
+	}
+};
+
 
 /* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens.
 	id refers to the id of the Map or Battle object in the database */

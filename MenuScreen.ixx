@@ -294,29 +294,32 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 					cout << "ERROR";
 				}
 				cout << "\n";
-
-				/*
-				* NOW replace the "cout" calls with FUNCTION calls.
-				*/
-
 			} else if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
 
 				// panel has a function to return which ButtonOption was clicked, and an ID (in the ButtonClickStruct).
 				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
-
+				UI& ui = UI::getInstance();
 				// see what button might have been clicked:
 				switch (clickStruct.buttonOption) {
 				case ButtonOption::Mobile:
 					cout << "Mobile";
+					ui.resizeWindow(WindowResType::Mobile);
+					/* rebuild panels */
 					break;
 				case ButtonOption::Tablet:
 					cout << "Tablet";
+					ui.resizeWindow(WindowResType::Tablet);
+					/* rebuild panels */
 					break;
 				case ButtonOption::Desktop:
 					cout << "Desktop";
+					ui.resizeWindow(WindowResType::Desktop);
+					/* rebuild panels */
 					break;
 				case ButtonOption::Fullscreen:
 					cout << "Fullscreen";
+					ui.resizeWindow(WindowResType::Fullscreen);
+					/* rebuild panels */
 					break;
 				case ButtonOption::Back:
 					// switch to other panel
@@ -328,22 +331,14 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 					cout << "ERROR";
 				}
 				cout << "\n";
-
-				/*
-				* NOW replace the "cout" calls with FUNCTION calls.
-				*/
-
 			}
-		}
-
-		// check for mouse over (for button hover)
-		if (e.type == SDL_MOUSEMOTION) {
+		} else if (e.type == SDL_MOUSEMOTION) {
+			// check for mouse over (for button hover)
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
 			// send the x and y to the panel and its buttons to change the color
 			if (menuPanel.getShow()) { menuPanel.checkMouseOver(mouseX, mouseY); }
-			if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
-			
+			if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }			
 		}
 	}
 }

@@ -7,6 +7,7 @@ module;
 
 export module Resources;
 
+import ScreenType;
 using json = nlohmann::json;
 using namespace std;
 
@@ -34,6 +35,7 @@ export class Resources {
         string getTitle();
         vector<string> getTitleWords();
         string getButtonText(string buttonLabel);
+        Resolution getDefaultDimensions(WindowResType restype);
 
     private:
         // constructors
@@ -106,4 +108,41 @@ string Resources::getButtonText(string buttonLabel) {
         cerr << "Key does not exist";
         return "BUTTON";
     }
+}
+
+Resolution Resources::getDefaultDimensions(WindowResType resType) {
+    int width = 200;
+    int height = 200;
+
+    if (
+        jsonData.contains("window") &&
+        jsonData["window"].contains("defaults") &&
+        jsonData["window"]["defaults"].contains("width") &&
+        jsonData["window"]["defaults"].contains("height")
+    ) {
+
+        cout << "\n data exists \n";
+        json widthData = jsonData["window"]["defaults"]["width"];
+        json heightData = jsonData["window"]["defaults"]["height"];
+        /* mobile first */
+
+        if (resType == WindowResType::Mobile) {
+            if (widthData.contains("mobile")) {
+                width = widthData["mobile"];
+                height = heightData["mobile"];
+            }
+        } else if (resType == WindowResType::Tablet) {
+            if (widthData.contains("tablet")) {
+                width = widthData["tablet"];
+                height = heightData["tablet"];
+            }
+        }
+        else if (resType == WindowResType::Desktop) {
+            if (widthData.contains("desktop")) {
+                width = widthData["desktop"];
+                height = heightData["desktop"];
+            }
+        }
+    }
+    return Resolution(width, height);
 }

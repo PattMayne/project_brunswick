@@ -73,6 +73,7 @@ export class UI {
 		Panel createSettingsPanel();
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
+		void resizeWindow(WindowResType newResType);
 
 
 	private:
@@ -536,13 +537,18 @@ bool UI::initialize() {
 	* FULL SCREEN is the DEFAULT.
 	 */
 	if (windowResType == WindowResType::Fullscreen) {
-		mainWindow = SDL_CreateWindow(resources.getTitle().c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+		mainWindow = SDL_CreateWindow(
+			resources.getTitle().c_str(),
+			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			windowWidth,
+			windowHeight,
+			SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
 		getAndStoreWindowSize();
 	} else {
 		mainWindow = SDL_CreateWindow(resources.getTitle().c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
 	}
 	
-
+	SDL_SetWindowResizable(mainWindow, SDL_FALSE);
 
 	if (!mainWindow) {
 		SDL_Log("Window failed to load. SDL_Error: %s\n", SDL_GetError());
@@ -551,7 +557,7 @@ bool UI::initialize() {
 	}
 
 	// make window resizable
-	SDL_SetWindowResizable(mainWindow, SDL_FALSE);
+	//SDL_SetWindowResizable(mainWindow, SDL_TRUE);
 
 	mainRenderer = SDL_CreateRenderer(mainWindow, -1, SDL_RENDERER_ACCELERATED);
 
@@ -611,6 +617,30 @@ bool UI::initialize() {
 		return false;
 	}
 	return true;
+}
+
+/* Prevent arbitrary resizing by selecting from a list of possible resolutions.
+	Fullscreen is always an arbitrary option, but won't be done randomly all the time.
+	Screen object will take care of recalculating objects on the screen.
+	This is only about resizing the window itself.
+*/
+void UI::resizeWindow(WindowResType newResType) {
+	if (newResType == WindowResType::Fullscreen) {
+		SDL_SetWindowFullscreen(mainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);	}
+	else {
+		/* turn OFF fullscreen in case it's already set (0 means windowed mode) */
+		SDL_SetWindowFullscreen(mainWindow, 0);
+
+		/* get new requested dimensions */
+		Resources& resources = Resources::getInstance();
+		Resolution newRes = resources.getDefaultDimensions(newResType);
+
+		/* set new requested dimensions to the window.
+		Make window resizable, then resize, then make it NOT resizable */
+		SDL_SetWindowResizable(mainWindow, SDL_TRUE);
+		SDL_SetWindowSize(mainWindow, newRes.w, newRes.h);
+		SDL_SetWindowResizable(mainWindow, SDL_FALSE);
+	}
 }
 
 /* 
