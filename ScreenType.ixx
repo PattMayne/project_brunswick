@@ -41,8 +41,12 @@ export ScreenToLoadStruct closingScreenStruct() {
 
 export enum class ButtonOption {
 	NoOption,
-	// Main Menu panel buttons
+	Back, /* for any submenu */
+	MainMenu, /* quit back to main menu from any screen */
+	/* Main Menu panel buttons */
 	NewGame, LoadGame, Settings, About, Exit,
+	/* Settings buttons */
+	Mobile, Tablet, Desktop, Fullscreen,
 	// TO COME: more options for Map, Battle, and Character Creation screens
 };
 

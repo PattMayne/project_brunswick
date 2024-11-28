@@ -77,6 +77,9 @@ export class MenuScreen {
 			// Get reference to UI singleton for the loop
 			UI& ui = UI::getInstance();
 			Panel menuPanel = ui.createMainMenuPanel();
+			Panel settingsPanel = ui.createSettingsPanel();
+			menuPanel.setShow(true);
+			settingsPanel.setShow(false);
 
 			// Timeout data
 			const int TARGET_FPS = 60;
@@ -94,10 +97,11 @@ export class MenuScreen {
 
 				// Check for events in queue, and handle them (really just checking for X close now
 				while (SDL_PollEvent(&e) != 0) {
-					handleEvent(e, menuPanel, running);
+					handleEvent(e, running, menuPanel, settingsPanel);
 				}
 
 				draw(ui, menuPanel);
+				draw(ui, settingsPanel);
 
 				// Delay so the app doesn't just crash
 				frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -130,12 +134,14 @@ export class MenuScreen {
 		SDL_Rect bgDestinationRect;
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
-		void handleEvent(SDL_Event &e, Panel& menuPanel, bool& running);
+		void handleEvent(SDL_Event &e, bool& running, Panel& menuPanel, Panel& settingsPanel);
 };
 
 /* Specific Draw functions for each Screen */
 
 void MenuScreen::draw(UI& ui, Panel& panel) {
+	if (!panel.getShow()) { return; }
+
 	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 14, 14, 14, 1);
 	SDL_RenderClear(ui.getMainRenderer());
@@ -244,7 +250,7 @@ void MenuScreen::createTitleTexture(UI& ui) {
 	};
 }
 
-void MenuScreen::handleEvent(SDL_Event& e, Panel& menuPanel, bool& running) {
+void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Panel& settingsPanel) {
 	// User pressed X to close
 	if (e.type == SDL_QUIT) { running = false; }
 	else {
@@ -255,7 +261,7 @@ void MenuScreen::handleEvent(SDL_Event& e, Panel& menuPanel, bool& running) {
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
 
-			if (menuPanel.isInPanel(mouseX, mouseY)) {
+			if (menuPanel.getShow() && menuPanel.isInPanel(mouseX, mouseY)) {
 
 				// panel has a function to return which ButtonOption was clicked, and an ID (in the ButtonClickStruct).
 				ButtonClickStruct clickStruct = menuPanel.checkButtonClick(mouseX, mouseY);
@@ -275,11 +281,48 @@ void MenuScreen::handleEvent(SDL_Event& e, Panel& menuPanel, bool& running) {
 					cout << "LOAD GAME";
 					break;
 				case ButtonOption::Settings:
+					// switch to other panel
+					settingsPanel.setShow(true);
+					menuPanel.setShow(false);
 					cout << "SETTINGS";
 					break;
 				case ButtonOption::Exit:
 					cout << "EXIT";
 					running = false;
+					break;
+				default:
+					cout << "ERROR";
+				}
+				cout << "\n";
+
+				/*
+				* NOW replace the "cout" calls with FUNCTION calls.
+				*/
+
+			} else if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
+
+				// panel has a function to return which ButtonOption was clicked, and an ID (in the ButtonClickStruct).
+				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
+
+				// see what button might have been clicked:
+				switch (clickStruct.buttonOption) {
+				case ButtonOption::Mobile:
+					cout << "Mobile";
+					break;
+				case ButtonOption::Tablet:
+					cout << "Tablet";
+					break;
+				case ButtonOption::Desktop:
+					cout << "Desktop";
+					break;
+				case ButtonOption::Fullscreen:
+					cout << "Fullscreen";
+					break;
+				case ButtonOption::Back:
+					// switch to other panel
+					settingsPanel.setShow(false);
+					menuPanel.setShow(true);
+					cout << "BACK";
 					break;
 				default:
 					cout << "ERROR";
@@ -298,7 +341,9 @@ void MenuScreen::handleEvent(SDL_Event& e, Panel& menuPanel, bool& running) {
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
 			// send the x and y to the panel and its buttons to change the color
-			menuPanel.checkMouseOver(mouseX, mouseY);
+			if (menuPanel.getShow()) { menuPanel.checkMouseOver(mouseX, mouseY); }
+			if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
+			
 		}
 	}
 }

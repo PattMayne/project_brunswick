@@ -70,6 +70,7 @@ export class UI {
 		TTF_Font* getTitleFont() { return titleFont; }
 		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
 		Panel createMainMenuPanel();
+		Panel createSettingsPanel();
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
 
@@ -299,7 +300,9 @@ void Button::createButtonTextures(
 
 /* PANEL CLASS */
 
-/* Panels contain buttons. There can be no buttons without a Panel container. */
+/* Panels contain buttons. There can be no buttons without a Panel container. 
+* Panels do not belong to a screen. They are created inside the screen's run() function.
+*/
 export class Panel {
 	public:
 		// constructor
@@ -307,6 +310,7 @@ export class Panel {
 			rect = incomingRect;
 			buttons = incomingButtons;
 			mouseOver = false;
+			show = false;
 		}
 
 		SDL_Rect getRect() { return rect; }
@@ -315,7 +319,8 @@ export class Panel {
 		// check if mouse location has hit the panel
 		bool isInPanel(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
 		void setMouseOver(bool incomingMouseOver) { mouseOver = incomingMouseOver; }
-
+		bool getShow() { return show; }
+		void setShow(bool incomingShow) { show = incomingShow; }
 		void checkMouseOver(int mouseX, int mouseY) {		
 			if (isInRect(getRect(), mouseX, mouseY)) {
 				// Panel mouseOver helps manage button mouseOver
@@ -348,6 +353,7 @@ export class Panel {
 		SDL_Rect rect;
 		vector<Button> buttons;
 		bool mouseOver;
+		bool show;
 		// color? bg image? No. If a panel needs a BG image we can do that in the screen. Most will NOT have it.
 };
 
@@ -503,6 +509,7 @@ void UI::getAndStoreWindowSize() {
 
 /* Initialize all the SDL */
 bool UI::initialize() {
+	Resources& resources = Resources::getInstance();
 
 	// Initialize SDL
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -529,10 +536,10 @@ bool UI::initialize() {
 	* FULL SCREEN is the DEFAULT.
 	 */
 	if (windowResType == WindowResType::Fullscreen) {
-		mainWindow = SDL_CreateWindow("Land of Limbs", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+		mainWindow = SDL_CreateWindow(resources.getTitle().c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
 		getAndStoreWindowSize();
 	} else {
-		mainWindow = SDL_CreateWindow("Land of Limbs", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
+		mainWindow = SDL_CreateWindow(resources.getTitle().c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
 	}
 	
 
@@ -629,6 +636,25 @@ Panel UI::createMainMenuPanel() {
 		buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings),
 		buildPreButtonStruct(resources.getButtonText("ABOUT"), ButtonOption::About),
 		buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit)
+	};
+
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+	return Panel(panelRect, buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect));
+}
+
+/*
+* Settings available in every screen.
+*/
+Panel UI::createSettingsPanel() {
+	vector<PreButtonStruct> preButtonStructs;
+	Resources& resources = Resources::getInstance();
+	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
+	preButtonStructs = {
+		buildPreButtonStruct(resources.getButtonText("MOBILE"), ButtonOption::Mobile),
+		buildPreButtonStruct(resources.getButtonText("TABLET"), ButtonOption::Tablet),
+		buildPreButtonStruct(resources.getButtonText("DESKTOP"), ButtonOption::Desktop),
+		buildPreButtonStruct(resources.getButtonText("FULLSCREEN"), ButtonOption::Fullscreen),
+		buildPreButtonStruct(resources.getButtonText("BACK"), ButtonOption::Back)
 	};
 
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);

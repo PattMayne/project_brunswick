@@ -19,6 +19,14 @@
     "LOAD_GAME": "LOAD GAME",
     "SETTINGS": "SETTINGS",
     "NEW_GAME": "NEW GAME",
-    "EXIT": "EXIT"
+    "EXIT": "EXIT",
+
+
+    "BACK": "BACK",
+
+    "MOBILE": "360x800",
+    "TABLET": "810x1080",
+    "DESKTOP": "1600x900",
+    "FULLSCREEN": "FULLSCREEN"
   }
 }

@@ -18,7 +18,6 @@ using namespace std;
 * 
 * Each "get" function must be a member function of the singleton. That way we can keep the file object alive.
 */
-
 export class Resources {
     public:
         // Deleted copy constructor and assignment operator to prevent copies
@@ -84,8 +83,6 @@ export string Resources::getTitle() {
         title.append(jsonData["title"][i]);
         if (i < jsonData["title"].size() - 1) {  title.append(" "); }
     }
-
-    cout << title;
     return title;
 }
 
