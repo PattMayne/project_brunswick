@@ -3,6 +3,7 @@ module;
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cstdint>
 #include "include/json.hpp"
 
 export module Resources;
@@ -36,6 +37,8 @@ export class Resources {
         vector<string> getTitleWords();
         string getButtonText(string buttonLabel);
         Resolution getDefaultDimensions(WindowResType restype);
+        int getFontSize(FontContext fontContext, int windowWidth);
+        int getButtonBorder(int windowWidth);
 
     private:
         // constructors
@@ -81,9 +84,9 @@ export string Resources::getTitle() {
     string title = "";
 
     // build string from title words
-    for (int i = 0; i < jsonData["title"].size(); ++i) {
-        title.append(jsonData["title"][i]);
-        if (i < jsonData["title"].size() - 1) {  title.append(" "); }
+    for (int i = 0; i < jsonData["TITLE"].size(); ++i) {
+        title.append(jsonData["TITLE"][i]);
+        if (i < jsonData["TITLE"].size() - 1) {  title.append(" "); }
     }
     return title;
 }
@@ -92,7 +95,7 @@ export string Resources::getTitle() {
 vector<string> Resources::getTitleWords() {
     vector<string> titleWords;
 
-    for (const string word : jsonData["title"]) {
+    for (const string word : jsonData["TITLE"]) {
         titleWords.push_back(word);
     }
 
@@ -101,8 +104,8 @@ vector<string> Resources::getTitleWords() {
 
 /* Get string values for buttons */
 string Resources::getButtonText(string buttonLabel) {
-    if (jsonData.contains("buttonText") && jsonData["buttonText"].contains(buttonLabel)) {
-        return jsonData["buttonText"][buttonLabel];
+    if (jsonData.contains("BUTTON_TEXT") && jsonData["BUTTON_TEXT"].contains(buttonLabel)) {
+        return jsonData["BUTTON_TEXT"][buttonLabel];
     }
     else {
         cerr << "Key does not exist";
@@ -110,39 +113,103 @@ string Resources::getButtonText(string buttonLabel) {
     }
 }
 
+/* Default Dimensions are the width & height of our pre-defined WINDOW size options
+    returns a struct containing integers: w, h
+*/
 Resolution Resources::getDefaultDimensions(WindowResType resType) {
     int width = 200;
     int height = 200;
 
     if (
-        jsonData.contains("window") &&
-        jsonData["window"].contains("defaults") &&
-        jsonData["window"]["defaults"].contains("width") &&
-        jsonData["window"]["defaults"].contains("height")
+        jsonData.contains("WINDOW") &&
+        jsonData["WINDOW"].contains("DEFAULTS") &&
+        jsonData["WINDOW"]["DEFAULTS"].contains("WIDTH") &&
+        jsonData["WINDOW"]["DEFAULTS"].contains("HEIGHT")
     ) {
 
         cout << "\n data exists \n";
-        json widthData = jsonData["window"]["defaults"]["width"];
-        json heightData = jsonData["window"]["defaults"]["height"];
+        json widthData = jsonData["WINDOW"]["DEFAULTS"]["WIDTH"];
+        json heightData = jsonData["WINDOW"]["DEFAULTS"]["HEIGHT"];
         /* mobile first */
 
         if (resType == WindowResType::Mobile) {
-            if (widthData.contains("mobile")) {
-                width = widthData["mobile"];
-                height = heightData["mobile"];
+            if (widthData.contains("MOBILE")) {
+                width = widthData["MOBILE"];
+                height = heightData["MOBILE"];
             }
         } else if (resType == WindowResType::Tablet) {
-            if (widthData.contains("tablet")) {
-                width = widthData["tablet"];
-                height = heightData["tablet"];
+            if (widthData.contains("TABLET")) {
+                width = widthData["TABLET"];
+                height = heightData["TABLET"];
             }
         }
         else if (resType == WindowResType::Desktop) {
-            if (widthData.contains("desktop")) {
-                width = widthData["desktop"];
-                height = heightData["desktop"];
+            if (widthData.contains("DESKTOP")) {
+                width = widthData["DESKTOP"];
+                height = heightData["DESKTOP"];
             }
         }
     }
     return Resolution(width, height);
+}
+
+/* Get font size for specified context and screen width */
+int Resources::getFontSize(FontContext fontContext, int windowWidth) {
+    cout << "\n\nGETTING FONT\n\n";
+    if (jsonData.contains("FONT_SIZES")) {
+        json fontData = jsonData["FONT_SIZES"];
+
+        if (jsonData.contains("MEDIA_MIN_WIDTHS")) {
+            json mediaMinWidths = jsonData["MEDIA_MIN_WIDTHS"];
+
+            if (mediaMinWidths.contains("X_SMALL") && mediaMinWidths.contains("SMALL") && mediaMinWidths.contains("MEDIUM") && mediaMinWidths.contains("LARGE")) {
+                /* Get the string label under which the fonts are stored in the JSON data,
+            based on the chosen context */
+                string fontContextLabel = fontContext == FontContext::Title ? "TITLE" :
+                    fontContext == FontContext::Body ? "BODY" :
+                    fontContext == FontContext::Dialog ? "DIALOG" :
+                    fontContext == FontContext::Button ? "BUTTON" : "ERROR";
+
+                if (fontContextLabel != "ERROR") {
+                    if (fontData.contains(fontContextLabel)) {
+                        json fontDataWithContext = fontData[fontContextLabel];
+                        // Now we are in the correct context. Get the correct size label.
+                        string sizeLabel = windowWidth > mediaMinWidths["LARGE"] ? "LARGE" :
+                            windowWidth > mediaMinWidths["MEDIUM"] ? "MEDIUM" :
+                            windowWidth > mediaMinWidths["SMALL"] ? "SMALL" : "X_SMALL";
+
+                        if (fontDataWithContext.contains(sizeLabel)) {
+                            int fontSize = static_cast<int>(fontDataWithContext[sizeLabel]);
+                            cout << "\n\n" << "WINDOW WIDTH FOR FONT: " << fontSize << "\n\n";
+                            return fontSize;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // if we reach here there was an error
+    cout << "Could not retrieve font size";
+
+    return 16;
+}
+
+/* small or large button border */
+int Resources::getButtonBorder(int windowWidth) {
+    if (jsonData.contains("BUTTON_BORDER")) {
+        json bordersData = jsonData["BUTTON_BORDER"];
+
+        if (jsonData.contains("MEDIA_MIN_WIDTHS")) {
+            json mediaMinWidths = jsonData["MEDIA_MIN_WIDTHS"];
+
+            string sizeLabel = windowWidth > mediaMinWidths["MEDIUM"] ? "LARGE" : "SMALL";
+
+            if (bordersData.contains(sizeLabel)) {
+                return bordersData[sizeLabel];
+            }
+        }
+    }
+
+    return 15;
 }

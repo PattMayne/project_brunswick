@@ -9,6 +9,9 @@ export enum class MapType {
 	World, Building, Dungeon
 };
 
+export enum class FontContext {
+	Title, Body, Button, Dialog
+};
 
 /* values to flag for resolutions. Mostly for development purposes. Final release should always be fullscreen. */
 export enum class WindowResType {

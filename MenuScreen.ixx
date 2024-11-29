@@ -251,9 +251,6 @@ void MenuScreen::createTitleTexture(UI& ui) {
 		titleTextWidth,
 		titleTextHeight
 	};
-
-	cout << "\n\n" << "WINDOW SURFACE WIDTH = " << mainWindowSurface->w << "\n\n";
-	cout << "\n\n" << "TITLE RECT X = " << titleRect.x << "\n\n";
 }
 
 void MenuScreen::rebuildDisplay(Panel& menuPanel, Panel& settingsPanel) {

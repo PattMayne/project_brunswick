@@ -44,6 +44,19 @@ struct PreButtonStruct;
 Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color);
 bool isInRect(SDL_Rect rect, int mouseX, int mouseY);
 
+/*
+*
+*
+*
+*
+*						UI CLASS
+*
+*
+*
+*
+*
+*/
+
 /* UI (singleton) class holds basic reusable SDL objects.
 * It's also responsible for creating panels and buttons,
 * but does not HOLD panels and buttons.
@@ -79,6 +92,7 @@ export class UI {
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
 		void resizeWindow(WindowResType newResType);
+		void refreshFonts(Resources& resources);
 
 
 
@@ -110,8 +124,8 @@ export class UI {
 
 		const WindowResType windowResType = WindowResType::Desktop;
 
-		const int BUTTON_PADDING = 20;
-		const int PANEL_PADDING = 20;
+		int buttonPadding = 10;
+		const int PANEL_PADDING = 10;
 
 		/* Window will actually be full size.These make the numbers available for the UI to calculate things. */
 		int windowWidth = 720;
@@ -153,11 +167,23 @@ export class UI {
 		unordered_map<string, SDL_Color> colorsByName; // raw colors
 
 		bool initialize();
+		bool initializeFonts(Resources& resources);
 };
 
 
 
-/* BUTTON CLASS */
+/*
+*
+*
+*
+*
+*						BUTTON CLASS
+*
+*
+*
+*
+*
+*/
 
 /*  Buttons contain a Rect, but also must contain clickStruct data to send to the calling Screen.
 	 Buttons make a Rect clickable and allow us to perform other actions on them.
@@ -221,8 +247,6 @@ export class Button {
 			text = incomingText;
 
 			createButtonTextures(buttonRect, textRect, incomingText, buttonFont, colors, mainRenderer);
-
-			cout << "button made\n";
 		}
 
 		// Might turn this private since we should only operate on it internally
@@ -314,7 +338,18 @@ void Button::createButtonTextures(
 	SDL_FreeSurface(normalButtonSurface);
 }
 
-/* PANEL CLASS */
+/* 
+* 
+* 
+* 
+* 
+*						PANEL CLASS
+* 
+* 
+* 
+* 
+* 
+*/
 
 /* Panels contain buttons. There can be no buttons without a Panel container. 
 * Panels do not belong to a screen. They are created inside the screen's run() function.
@@ -397,7 +432,18 @@ struct PreButtonStruct {
 };
 
 
-/* Extra UI member functions */
+/*
+*
+*
+*
+*
+*						EXTRA MEMBER FUNCTIONS FOR UI CLASS
+*
+*
+*
+*
+*
+*/
 
 /* Buttons need their parent panel rect before they can be built.
 * Yet panel rects need information about their child buttons before they can be built.
@@ -415,7 +461,7 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 	int longestButtonTextLength = 0;
 	for (PreButtonStruct preButtonStruct : preButtonStructs) {
 		// add up the heights of the buttons plus padding
-		panelHeight += preButtonStruct.textRectHeight + (BUTTON_PADDING * 2) + PANEL_PADDING;
+		panelHeight += preButtonStruct.textRectHeight + (buttonPadding * 2) + PANEL_PADDING;
 
 		// set the longest text length
 		if (preButtonStruct.textRectWidth > longestButtonTextLength) {
@@ -423,18 +469,12 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 		}
 	}
 
-	cout << "BUILDING VERTICAL PANELL!!";
-
-	cout << "\n\n BUILDING PANEL STRUCT and WINDOW HEIGHT IS:::   " << windowHeight;
-	cout << "\n\n";
-
-
 	return {
 		/* x is always 0 */
 		0,
 		windowHeight - panelHeight,
 		/* panel is just wide enough to accomodate the longest button */
-		longestButtonTextLength + (BUTTON_PADDING * 2) + (PANEL_PADDING * 2),
+		longestButtonTextLength + (buttonPadding * 2) + (PANEL_PADDING * 2),
 		panelHeight
 	};
 }
@@ -455,14 +495,14 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 			xForAll,
 			heightSoFar,
 			widthForAll,
-			preButtonStructs[i].textRectHeight + (BUTTON_PADDING * 2)
+			preButtonStructs[i].textRectHeight + (buttonPadding * 2)
 		};
 
 		/* RELATIVE rect to be later painted onto the button itself (when fed into the constructor)*/
 		SDL_Rect thisTextRect = {
 			// text x position is HALF of the difference b/w button width and text width
 			(thisButtonRect.w - preButtonStructs[i].textRectWidth) / 2,
-			BUTTON_PADDING,
+			buttonPadding,
 			preButtonStructs[i].textRectWidth,
 			preButtonStructs[i].textRectHeight
 		};
@@ -601,6 +641,21 @@ bool UI::initialize() {
 		return false;
 	}
 
+	
+	return initializeFonts(resources);
+}
+
+/* load the fonts in the correct sizes for their various contexts */
+bool UI::initializeFonts(Resources& resources) {
+	buttonPadding = resources.getButtonBorder(mainWindowSurface->w);
+
+	int titleFontSize = resources.getFontSize(FontContext::Title, mainWindowSurface->w);
+	int bodyFontSize = resources.getFontSize(FontContext::Body, mainWindowSurface->w);
+	int buttonFontSize = resources.getFontSize(FontContext::Button, mainWindowSurface->w);
+	int dialogFontSize = resources.getFontSize(FontContext::Dialog, mainWindowSurface->w);
+
+	cout << "\n\n FONT SIZE: " << buttonFontSize << "\n\n";
+
 	// Initialize TTF font library
 	if (TTF_Init() == -1) {
 		SDL_Log("WTTF failed to initialize. TTF_Error: %s\n", TTF_GetError());
@@ -608,10 +663,9 @@ bool UI::initialize() {
 		return false;
 	}
 
-
 	// Load the fonts
 
-	titleFont = TTF_OpenFont("assets/ander_hedge.ttf", 84);
+	titleFont = TTF_OpenFont("assets/ander_hedge.ttf", titleFontSize);
 
 	if (!titleFont) {
 		SDL_Log("Font (ander_hedge) failed to load. TTF_Error: %s\n", TTF_GetError());
@@ -619,7 +673,7 @@ bool UI::initialize() {
 		return false;
 	}
 
-	buttonFont = TTF_OpenFont("assets/alte_haas_bold.ttf", 36);
+	buttonFont = TTF_OpenFont("assets/alte_haas_bold.ttf", buttonFontSize);
 
 	if (!buttonFont) {
 		SDL_Log("Font (alte_haas_bold) failed to load. TTF_Error: %s\n", TTF_GetError());
@@ -627,7 +681,7 @@ bool UI::initialize() {
 		return false;
 	}
 
-	bodyFont = TTF_OpenFont("assets/alte_haas.ttf", 18);
+	bodyFont = TTF_OpenFont("assets/alte_haas.ttf", bodyFontSize);
 
 	if (!bodyFont) {
 		SDL_Log("Font (alte_haas) failed to load. TTF_Error: %s\n", TTF_GetError());
@@ -635,14 +689,26 @@ bool UI::initialize() {
 		return false;
 	}
 
-	dialogFont = TTF_OpenFont("assets/la_belle_aurore.ttf", 18);
+	dialogFont = TTF_OpenFont("assets/la_belle_aurore.ttf", dialogFontSize);
 
 	if (!dialogFont) {
 		SDL_Log("Font failed to load. TTF_Error: %s\n", TTF_GetError());
 		cerr << "Font failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 		return false;
 	}
+
 	return true;
+}
+
+/* when screen is resized, reload the fonts with new sizes */
+void UI::refreshFonts(Resources& resources) {
+	/* close existing fonts */
+	TTF_CloseFont(titleFont);
+	TTF_CloseFont(buttonFont);
+	TTF_CloseFont(bodyFont);
+	TTF_CloseFont(dialogFont);
+	/* re-initialize based on new screen size */
+	initializeFonts(resources);
 }
 
 /* Prevent arbitrary resizing by selecting from a list of possible resolutions.
@@ -651,6 +717,7 @@ bool UI::initialize() {
 	This is only about resizing the window itself.
 */
 void UI::resizeWindow(WindowResType newResType) {
+	Resources& resources = Resources::getInstance();
 	if (newResType == WindowResType::Fullscreen) {
 		SDL_SetWindowFullscreen(mainWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);	}
 	else {
@@ -658,7 +725,6 @@ void UI::resizeWindow(WindowResType newResType) {
 		SDL_SetWindowFullscreen(mainWindow, 0);
 
 		/* get new requested dimensions */
-		Resources& resources = Resources::getInstance();
 		Resolution newRes = resources.getDefaultDimensions(newResType);
 
 		/* set new requested dimensions to the window.
@@ -672,19 +738,32 @@ void UI::resizeWindow(WindowResType newResType) {
 	mainWindowSurface = SDL_GetWindowSurface(mainWindow);
 	/* update dimension data for rebuilding the interface */
 	getAndStoreWindowSize();
-	// build FONTS again!
+	refreshFonts(resources);
 }
 
 /* 
 * PANEL CREATION FUNCTIONS
+* 
 * These are member functions of the UI class.
 * Defining them in the class definition would be too bulky.
 * 
 * We can have VERTICAL panels (going all up the side)
-* and HORIZONTAL panels (2x buttons stacked up from the bottom)
+* and HORIZONTAL panels (spread across the bottom)
 */
 
-/* MENU PANEL CREATION AND RE-BUILDING 
+
+
+/*
+* 
+* 
+* 
+* 
+*								MENU SCREEN PANELS CREATION AND RE-BUILDING 
+* 
+* 
+* 
+* 
+* 
 * Panel for the Main Menu Screen.
 */
 
@@ -766,6 +845,20 @@ void UI::rebuildSettingsPanel(Panel& settingsPanel) {
 }
 
 
+
+
+/*
+* 
+* 
+*			GENERAL HELPER FUNCTIONS
+* 
+* 
+* 
+* 
+*/
+
+
+
 // because SDL2 is very picky about its colors (and there are a trillion color formats)
 Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) {
 	return SDL_MapRGB(
@@ -790,7 +883,7 @@ export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
 
 /*
 * STILL TO COME:
-*	Main Menu Sub-Panels : Settings Menu & Load Game Menu
+*	Main Menu Sub-Panels : Load Game Menu & ABOUT panel (BACK button and TEXT display)
 *	Battle Panel (and possibly battle Sub-Panels)
 *	Map Panel (no idea what will go in here!)
 *	Character Creation Panels
