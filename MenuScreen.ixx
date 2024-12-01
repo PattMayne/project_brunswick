@@ -54,7 +54,6 @@ export class MenuScreen {
 
 		ScreenStruct getParentStruct() { return screenToLoadStruct; }
 
-		void draw(UI& ui, Panel& menuPanel, Panel& settingsPanel);
 		void getBackgroundTexture(UI& ui);
 		void createTitleTexture(UI& ui);
 		void run();
@@ -70,6 +69,7 @@ export class MenuScreen {
 		void handleEvent(SDL_Event &e, bool& running, Panel& menuPanel, Panel& settingsPanel, GameState& gameState);
 		void checkMouseLocation(SDL_Event& e, Panel& menuPanel, Panel& settingsPanel);
 		void rebuildDisplay(Panel& menuPanel, Panel& settingsPanel);
+		void draw(UI& ui, Panel& menuPanel, Panel& settingsPanel);
 		void drawPanel(UI& ui, Panel& panel);
 };
 
@@ -84,21 +84,21 @@ void MenuScreen::run() {
 	menuPanel.setShow(true);
 	settingsPanel.setShow(false);
 
-	// Timeout data
+	/* Timeout data */
 	const int TARGET_FPS = 60;
 	const int FRAME_DELAY = 600 / TARGET_FPS; // milliseconds per frame
 	Uint32 frameStartTime; // Tick count when this particular frame began
 	int frameTimeElapsed; // how much time has elapsed during this frame
 
-	// loop and event control
+	/* loop and event control */
 	SDL_Event e;
 	bool running = true;
 
 	while (running) {
-		// Get the total running time (tick count) at the beginning of the frame, for the frame timeout at the end
+		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
 		frameStartTime = SDL_GetTicks();
 
-		// Check for events in queue, and handle them (really just checking for X close now
+		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
 			handleEvent(e, running, menuPanel, settingsPanel, gameState);
 		}
@@ -108,9 +108,9 @@ void MenuScreen::run() {
 
 		draw(ui, menuPanel, settingsPanel);
 
-		// Delay so the app doesn't just crash
+		/* Delay so the app doesn't just crash */
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
-		// Delay loop
+		/* Delay loop */
 		if (frameTimeElapsed < FRAME_DELAY) {
 			SDL_Delay(FRAME_DELAY - frameTimeElapsed);
 		}
@@ -133,9 +133,7 @@ void MenuScreen::drawPanel(UI& ui, Panel& panel) {
 			ui.getMainRenderer(),
 			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
 			NULL, &rect,
-			0,
-			NULL,
-			SDL_FLIP_NONE
+			0, NULL, SDL_FLIP_NONE
 		);
 	}
 }
@@ -151,7 +149,7 @@ void MenuScreen::drawPanel(UI& ui, Panel& panel) {
 */
 void MenuScreen::draw(UI& ui, Panel& menuPanel, Panel& settingsPanel) {
 
-	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
+	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 14, 14, 14, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 

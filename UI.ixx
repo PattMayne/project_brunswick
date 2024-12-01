@@ -801,12 +801,16 @@ void UI::prepareColors() {
 	colorsByFunction["BTN_BG"] = colorsByName["OXFORD_BLUE"];
 	colorsByFunction["BTN_HOVER_BRDR"] = colorsByName["VIVID_YELLOW"];
 	colorsByFunction["BTN_BRDR"] = colorsByName["YALE_BLUE"];
+	/* STILL DECIDING */
 	colorsByFunction["DARK_TEXT"] = colorsByName["BLACK"];
 	colorsByFunction["LIGHT_TEXT"] = colorsByName["WHITE"];
 	colorsByFunction["WARNING_RED"] = colorsByName["SCARLET"];
 	colorsByFunction["LOGO_COLOR"] = colorsByName["PERIDOT"];
 	colorsByFunction["OK_GREEN"] = colorsByName["FERN_GREEN"];
 	colorsByFunction["BTN_TEXT"] = colorsByName["GOLD"];
+
+	colorsByFunction["BG_LIGHT"] = colorsByName["PAPAYA_WHIP"];
+	colorsByFunction["BG_MED"] = colorsByName["FRENCH_BLUE"];
 }
 
 void UI::getAndStoreWindowSize() {
@@ -1097,7 +1101,7 @@ void UI::rebuildSettingsPanel(Panel& settingsPanel) {
 
 
 // because SDL2 is very picky about its colors (and there are a trillion color formats)
-Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) {
+export Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) {
 	return SDL_MapRGB(
 		format,
 		color.r,
