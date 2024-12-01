@@ -141,6 +141,7 @@
   <ItemGroup>
     <ClCompile Include="GameState.ixx" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MapScreen.ixx" />
     <ClCompile Include="MenuScreen.ixx" />
     <ClCompile Include="Resources.ixx" />
     <ClCompile Include="ScreenType.ixx" />

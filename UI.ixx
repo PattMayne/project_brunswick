@@ -33,8 +33,8 @@ module;
 
 #include <cmath>
 #include <time.h>
-#include<cstdlib> // Needed for rand() and srand()
-#include<ctime>   // Needed for time()
+#include<cstdlib> /* Needed for rand() and srand() */
+#include<ctime>   /* Needed for time() */
 
 export module UI;
 
@@ -341,8 +341,6 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 	int blockWidth = bgRect.w / xRes;
 	int blockHeight = bgRect.h / yRes;
 
-	cout << "\n\n RECT WIDTH: " << bgRect.w << "\n\n";
-
 	/* create a map of false bools corresponding to a grid over the buttons */
 	vector<vector<bool>> rows(yRes);
 
@@ -596,7 +594,7 @@ void Button::createButtonTextures(
 */
 export class Panel {
 	public:
-		// constructor
+		/* constructor */
 		Panel(SDL_Rect incomingRect, vector<Button> incomingButtons) {
 			rect = incomingRect;
 			buttons = incomingButtons;
@@ -607,23 +605,23 @@ export class Panel {
 		SDL_Rect getRect() { return rect; }
 		vector<Button> getButtons() { return buttons; }
 
-		// check if mouse location has hit the panel
+		/* check if mouse location has hit the panel */
 		bool isInPanel(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
 		void setMouseOver(bool incomingMouseOver) { mouseOver = incomingMouseOver; }
 		bool getShow() { return show; }
 		void setShow(bool incomingShow) { show = incomingShow; }
 		void checkMouseOver(int mouseX, int mouseY) {		
 			if (isInRect(getRect(), mouseX, mouseY)) {
-				// Panel mouseOver helps manage button mouseOver
+				/* Panel mouseOver helps manage button mouseOver */
 				mouseOver = true;
 				for (Button &button : buttons) {
 					button.setMouseOver(button.isInButton(mouseX, mouseY));
 				}
 			}
 			else if (mouseOver) {
-				// this checks if mouse recently LEFT the panel, and resets all buttons to "false"
+				/* this checks if mouse recently LEFT the panel, and resets all buttons to "false" */
 				mouseOver = false;
-				// change button mouseOver to false.
+				/* change button mouseOver to false. */
 				for (Button &button : buttons) {
 					button.setMouseOver(false);
 				}
@@ -650,7 +648,6 @@ export class Panel {
 		vector<Button> buttons;
 		bool mouseOver;
 		bool show;
-		// color? bg image? No. If a panel needs a BG image we can do that in the screen. Most will NOT have it.
 };
 
 
@@ -728,8 +725,7 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 
 
 	for (int i = 0; i < preButtonStructs.size(); ++i) {
-		// PreButtonStruct preButtonStruct : preButtonStructs
-		// start at the top of the panelRect PLUS panelPadding
+		/* start at the top of the panelRect PLUS panelPadding */
 
 		SDL_Rect thisButtonRect = {
 			xForAll,
@@ -747,20 +743,17 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 			preButtonStructs[i].textRectHeight
 		};
 
-		// HERE we need to make the SURFACE and send it in.
+		buttons.push_back(
+			Button(
+				thisButtonRect,
+				thisTextRect,
+				preButtonStructs[i].text,
+				buttonFont,
+				colorsByFunction,
+				mainRenderer,
+				preButtonStructs[i].clickStruct));
 
-		Button thisButton = Button(
-			thisButtonRect,
-			thisTextRect,
-			preButtonStructs[i].text,
-			buttonFont,
-			colorsByFunction,
-			mainRenderer,
-			preButtonStructs[i].clickStruct
-		);
-		buttons.push_back(thisButton);
-
-		// increment heightSoFar
+		/* increment heightSoFar */
 		heightSoFar += thisButtonRect.h + PANEL_PADDING;
 	}
 
@@ -781,10 +774,9 @@ void UI::prepareColors() {
 	*/
 
 	/* THEME COLORS */
-	/* 
-	* Three yellows might seem crazy but it's good, actually.
-	* I will probably also add a third, lighter blue
-	*/
+
+	/*  Three yellows might seem crazy but it's good, actually.
+	* I will probably also add a third, lighter blue as well */
 	colorsByName["PERIDOT"] = { 242, 222, 6 };  /* THEME */ /* yellow orangey */
 	colorsByName["VIVID_YELLOW"] = { 217, 168, 6 }; /* THEME */ /* brighter yellow */
 	colorsByName["GOLD"] = { 255,214, 10 }; /* bright yellowish */
@@ -864,6 +856,7 @@ bool UI::initialize() {
 		mainWindow = SDL_CreateWindow(resources.getTitle().c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowWidth, windowHeight, SDL_WINDOW_SHOWN);
 	}
 	
+	/* Window cannot be arbitrarily resized by user. Only by clicking buttons in settings menu. */
 	SDL_SetWindowResizable(mainWindow, SDL_FALSE);
 
 	if (!mainWindow) {
@@ -871,9 +864,6 @@ bool UI::initialize() {
 		cerr << "Window failed to load. SDL_Error: " << SDL_GetError() << std::endl;
 		return false;
 	}
-
-	// make window resizable
-	//SDL_SetWindowResizable(mainWindow, SDL_TRUE);
 
 	mainRenderer = SDL_CreateRenderer(mainWindow, -1, SDL_RENDERER_ACCELERATED);
 
@@ -890,8 +880,7 @@ bool UI::initialize() {
 		cerr << "Window Surface failed to load. SDL_Error: " << SDL_GetError() << std::endl;
 		return false;
 	}
-
-	
+		
 	return initializeFonts(resources);
 }
 
@@ -904,16 +893,14 @@ bool UI::initializeFonts(Resources& resources) {
 	int buttonFontSize = resources.getFontSize(FontContext::Button, mainWindowSurface->w);
 	int dialogFontSize = resources.getFontSize(FontContext::Dialog, mainWindowSurface->w);
 
-	cout << "\n\n FONT SIZE: " << buttonFontSize << "\n\n";
-
-	// Initialize TTF font library
+	/* Initialize TTF font library */
 	if (TTF_Init() == -1) {
 		SDL_Log("WTTF failed to initialize. TTF_Error: %s\n", TTF_GetError());
 		std::cerr << "TTF failed to initialize. TTF_Error: " << TTF_GetError() << std::endl;
 		return false;
 	}
 
-	// Load the fonts
+	/* Load the fonts */
 
 	titleFont = TTF_OpenFont("assets/ander_hedge.ttf", titleFontSize);
 
@@ -983,7 +970,7 @@ void UI::resizeWindow(WindowResType newResType) {
 		SDL_SetWindowSize(mainWindow, newRes.w, newRes.h);
 		SDL_SetWindowResizable(mainWindow, SDL_FALSE);
 	}
-	// destroy old surface and get new one with correct size
+	/* destroy old surface and get new one with correct size */
 	SDL_FreeSurface(mainWindowSurface);
 	mainWindowSurface = SDL_GetWindowSurface(mainWindow);
 	/* update dimension data for rebuilding the interface */
@@ -1020,7 +1007,7 @@ void UI::resizeWindow(WindowResType newResType) {
 /* build and deliver basic info for main menu panel buttons */
 vector<PreButtonStruct> UI::getMainMenuPreButtonStructs() {
 	Resources& resources = Resources::getInstance();
-	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
+	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	return {
 		buildPreButtonStruct(resources.getButtonText("NEW_GAME"), ButtonOption::NewGame),
 		buildPreButtonStruct(resources.getButtonText("LOAD_GAME"), ButtonOption::LoadGame),
@@ -1059,7 +1046,7 @@ void UI::rebuildMainMenuPanel(Panel& mainMenuPanel) {
 /* build and deliver basic info for settings panel buttons */
 vector<PreButtonStruct> UI::getSettingsPreButtonStructs() {
 	Resources& resources = Resources::getInstance();
-	// preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical)
+	/* preButonStructs don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	vector<PreButtonStruct> preButtonStructs = {
 		buildPreButtonStruct(resources.getButtonText("MOBILE"), ButtonOption::Mobile),
 		buildPreButtonStruct(resources.getButtonText("TABLET"), ButtonOption::Tablet),

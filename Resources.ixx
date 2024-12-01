@@ -126,8 +126,6 @@ Resolution Resources::getDefaultDimensions(WindowResType resType) {
         jsonData["WINDOW"]["DEFAULTS"].contains("WIDTH") &&
         jsonData["WINDOW"]["DEFAULTS"].contains("HEIGHT")
     ) {
-
-        cout << "\n data exists \n";
         json widthData = jsonData["WINDOW"]["DEFAULTS"]["WIDTH"];
         json heightData = jsonData["WINDOW"]["DEFAULTS"]["HEIGHT"];
         /* mobile first */
@@ -155,7 +153,6 @@ Resolution Resources::getDefaultDimensions(WindowResType resType) {
 
 /* Get font size for specified context and screen width */
 int Resources::getFontSize(FontContext fontContext, int windowWidth) {
-    cout << "\n\nGETTING FONT\n\n";
     if (jsonData.contains("FONT_SIZES")) {
         json fontData = jsonData["FONT_SIZES"];
 
@@ -180,7 +177,6 @@ int Resources::getFontSize(FontContext fontContext, int windowWidth) {
 
                         if (fontDataWithContext.contains(sizeLabel)) {
                             int fontSize = static_cast<int>(fontDataWithContext[sizeLabel]);
-                            cout << "\n\n" << "WINDOW WIDTH FOR FONT: " << fontSize << "\n\n";
                             return fontSize;
                         }
                     }

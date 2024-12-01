@@ -31,18 +31,22 @@ export struct Resolution {
 
 
 /* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens.
-	id refers to the id of the Map or Battle object in the database */
-export struct ScreenToLoadStruct {
-	ScreenType screenType = ScreenType::NoScreen;
-	int id = -1;
+* id refers to the id of the Map or Battle object in the database.
+* Screens will have the power to set ScreenStruct in GameState, not relying on main.cpp to make the change.
+	*/
+export struct ScreenStruct {
+	ScreenType screenType;
+	int id;
+	ScreenStruct(ScreenType incomingType = ScreenType::NoScreen, int incomingId = -1) {
+		screenType = incomingType;
+		id = incomingId;
+	}
 };
 
 
 /* If this struct is returned to the main function, the program will shut down. */
-export ScreenToLoadStruct closingScreenStruct() {
-	ScreenToLoadStruct closingScreenStruct;
-	closingScreenStruct.screenType = ScreenType::NoScreen;
-	closingScreenStruct.id = -1;
+export ScreenStruct closingScreenStruct() {
+	ScreenStruct closingScreenStruct(ScreenType::NoScreen, -1);
 	return closingScreenStruct;
 }
 

@@ -32,6 +32,7 @@ using namespace std;
 import UI;
 import GameState;
 import MenuScreen;
+import MapScreen;
 import ScreenType;
 import Resources;
 using namespace std;
@@ -52,10 +53,9 @@ int main(int argc, char* args[]) {
 	UI& ui = UI::getInstance();
 	GameState& gameState = GameState::getInstance();
 
-	// For now just get the MenuScreen. Later we'll make it dynamic for other screens.
-	MenuScreen menuScreen = MenuScreen();
+	
 
-	ScreenToLoadStruct screenToLoadStruct = closingScreenStruct();
+	ScreenStruct screenToLoadStruct = closingScreenStruct();
 	bool running = true;
 	SDL_Event e;
 
@@ -72,13 +72,22 @@ int main(int argc, char* args[]) {
 
 		// run the chosen screen and receive the next screen to load
 		// if the screenToLoad is Map or Battle, we will send in the ID to the Run function
-		screenToLoadStruct =
-			gameState.getScreenType() == ScreenType::Menu ? menuScreen.run() :
-			closingScreenStruct();
 
-		// check for closingScreen type and close. Otherwise we will load the NEW screen on the next loop
-		if (screenToLoadStruct.screenType == ScreenType::NoScreen) { running = false; }
+		if (gameState.getScreenType() == ScreenType::Menu) {
+			cout << "\n\n MENU \n\n";
+			MenuScreen menuScreen = MenuScreen();
+			menuScreen.run();
+		}
+		else if (gameState.getScreenType() == ScreenType::Map) {
+			cout << "\nselected MAP\n";
+			MapScreen mapScreen = MapScreen();
+			mapScreen.run();
+		}
 
+		/* check for closingScreen type and close.Otherwise we will load the NEW screen on the next loop */
+		if (gameState.getScreenType() == ScreenType::NoScreen) {
+			cout << "\n\n WHY NO SCREEN?? \n\n";
+			running = false; }
 	}
 
 	exit(ui.getWindowSurface(), ui.getMainWindow());

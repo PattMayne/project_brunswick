@@ -33,115 +33,92 @@ export module MenuScreen;
 using namespace std;
 
 import ScreenType;
+import GameState;
 import Resources;
 import UI;
 
-// This will get its own module. Each screen needs its own module.
-export class MapScreen {
-	public:
-		MapScreen(ScreenType incomingScreenType, MapType incomingMapType, int incomingId) {
-			mapType = incomingMapType;
-			screenType = incomingScreenType;
-			id = incomingId;
-			screenToLoadStruct.id = 0;
-			screenToLoadStruct.screenType = ScreenType::Map;
-		}
-
-		ScreenType getScreenType() {
-			return screenType;
-		}
-
-	protected:
-		MapType mapType;
-		ScreenType screenType;
-		int id;
-		ScreenToLoadStruct screenToLoadStruct;
-};
-
-
 export class MenuScreen {
 	public:
-		// constructor
+		/* constructor */
 		MenuScreen() {
 			UI& ui = UI::getInstance();
-
 			screenType = ScreenType::Menu;
-			screenToLoadStruct.id = -1;
-			screenToLoadStruct.screenType = ScreenType::NoScreen;
-
+			screenToLoadStruct = ScreenStruct(ScreenType::NoScreen, -1);
 			getBackgroundTexture(ui);
 			createTitleTexture(ui);
 		}
 
-		ScreenToLoadStruct run() {
-			cout << "Menu Screen loaded\n";
-			// Get reference to UI singleton for the loop
-			UI& ui = UI::getInstance();
-			Panel menuPanel = ui.createMainMenuPanel();
-			Panel settingsPanel = ui.createSettingsPanel();
-			menuPanel.setShow(true);
-			settingsPanel.setShow(false);
-
-			// Timeout data
-			const int TARGET_FPS = 60;
-			const int FRAME_DELAY = 600 / TARGET_FPS; // milliseconds per frame
-			Uint32 frameStartTime; // Tick count when this particular frame began
-			int frameTimeElapsed; // how much time has elapsed during this frame
-
-			// loop and event control
-			SDL_Event e;
-			bool running = true;
-
-			while (running) {
-				// Get the total running time (tick count) at the beginning of the frame, for the frame timeout at the end
-				frameStartTime = SDL_GetTicks();
-
-				// Check for events in queue, and handle them (really just checking for X close now
-				while (SDL_PollEvent(&e) != 0) {
-					handleEvent(e, running, menuPanel, settingsPanel);
-				}
-
-				/* check mouse location in every frame (so buttons stay "hovered" after click */
-				checkMouseLocation(e, menuPanel, settingsPanel);
-
-				draw(ui, menuPanel, settingsPanel);
-
-				// Delay so the app doesn't just crash
-				frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
-				// Delay loop
-				if (frameTimeElapsed < FRAME_DELAY) {
-					SDL_Delay(FRAME_DELAY - frameTimeElapsed);
-				}
-			}
-
-			// we return the information to load the appropriate screen.
-			return screenToLoadStruct;
-		}
-
-		void setParentStruct(ScreenToLoadStruct incomingParentStruct) {
+		void setParentStruct(ScreenStruct incomingParentStruct) {
 			screenToLoadStruct = incomingParentStruct;
 		}
 
-		ScreenToLoadStruct getParentStruct() { return screenToLoadStruct; }
+		ScreenStruct getParentStruct() { return screenToLoadStruct; }
 
 		void draw(UI& ui, Panel& menuPanel, Panel& settingsPanel);
 		void getBackgroundTexture(UI& ui);
 		void createTitleTexture(UI& ui);
-
+		void run();
 
 	private:
 		ScreenType screenType;
-		ScreenToLoadStruct screenToLoadStruct;
+		ScreenStruct screenToLoadStruct;
 		SDL_Texture* bgTexture = NULL;
 		SDL_Rect bgSourceRect;
 		SDL_Rect bgDestinationRect;
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
-		void handleEvent(SDL_Event &e, bool& running, Panel& menuPanel, Panel& settingsPanel);
+		void handleEvent(SDL_Event &e, bool& running, Panel& menuPanel, Panel& settingsPanel, GameState& gameState);
 		void checkMouseLocation(SDL_Event& e, Panel& menuPanel, Panel& settingsPanel);
 		void rebuildDisplay(Panel& menuPanel, Panel& settingsPanel);
 		void drawPanel(UI& ui, Panel& panel);
 };
+
+/* The main function of the class. Contains the game loop. */
+void MenuScreen::run() {
+	cout << "Menu Screen loaded\n";
+	// Get reference to UI singleton for the loop
+	UI& ui = UI::getInstance();
+	GameState& gameState = GameState::getInstance();
+	Panel menuPanel = ui.createMainMenuPanel();
+	Panel settingsPanel = ui.createSettingsPanel();
+	menuPanel.setShow(true);
+	settingsPanel.setShow(false);
+
+	// Timeout data
+	const int TARGET_FPS = 60;
+	const int FRAME_DELAY = 600 / TARGET_FPS; // milliseconds per frame
+	Uint32 frameStartTime; // Tick count when this particular frame began
+	int frameTimeElapsed; // how much time has elapsed during this frame
+
+	// loop and event control
+	SDL_Event e;
+	bool running = true;
+
+	while (running) {
+		// Get the total running time (tick count) at the beginning of the frame, for the frame timeout at the end
+		frameStartTime = SDL_GetTicks();
+
+		// Check for events in queue, and handle them (really just checking for X close now
+		while (SDL_PollEvent(&e) != 0) {
+			handleEvent(e, running, menuPanel, settingsPanel, gameState);
+		}
+
+		/* check mouse location in every frame (so buttons stay "hovered" after click */
+		checkMouseLocation(e, menuPanel, settingsPanel);
+
+		draw(ui, menuPanel, settingsPanel);
+
+		// Delay so the app doesn't just crash
+		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
+		// Delay loop
+		if (frameTimeElapsed < FRAME_DELAY) {
+			SDL_Delay(FRAME_DELAY - frameTimeElapsed);
+		}
+	}
+
+	/* set the next screen to load */
+	gameState.setScreenStruct(screenToLoadStruct);
+}
 
 /* Specific Draw functions for each Screen */
 
@@ -281,7 +258,7 @@ void MenuScreen::rebuildDisplay(Panel& menuPanel, Panel& settingsPanel) {
 }
 
 /* Process user input */
-void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Panel& settingsPanel) {
+void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Panel& settingsPanel, GameState& gameState) {
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) { running = false; }
 	else {
@@ -306,6 +283,8 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 					cout << "NO OPTION\n";
 					break;
 				case ButtonOption::NewGame:
+					screenToLoadStruct.screenType = ScreenType::Map;
+					running = false;
 					cout << "NEW GAME\n";
 					break;
 				case ButtonOption::LoadGame:
@@ -318,6 +297,7 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 					cout << "SETTINGS\n";
 					break;
 				case ButtonOption::Exit:
+					gameState.setScreenType(ScreenType::NoScreen);
 					running = false;
 					break;
 				default:

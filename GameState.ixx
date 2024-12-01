@@ -15,28 +15,37 @@ import ScreenType;
 
 export class GameState {
 	public:
-		// Deleted copy constructor and assignment operator to prevent copies
+		/* Deleted copy constructor and assignment operator to prevent copies */
 		GameState(const GameState&) = delete;
 		GameState& operator=(const GameState&) = delete;
 
-		// static method to get instance of the singleton
+		/* static method to get instance of the singleton */
 		static GameState& getInstance() {
-			static GameState instance; // will be destroyed when program exits
+			static GameState instance; /* will be destroyed when program exits */
 			return instance;
 		}
 
-		ScreenType getScreenType() { return screenType; }
-		void setScreenType(ScreenType incomingScreenType) { screenType = incomingScreenType; }
+		/* getters */
+		ScreenStruct getScreenStruct() { return screenStruct; }
+		ScreenType getScreenType() { return screenStruct.screenType; }
+		int getScreenId() { return screenStruct.id;  }
+
+		/* setters */
+		void setScreenStruct(ScreenStruct incomingStruct) { screenStruct = incomingStruct; }
+		void setScreenId(int incomingId) { screenStruct.id = incomingId; }
+		void setScreenType(ScreenType incomingScreenType) { screenStruct.screenType = incomingScreenType; }
 
 	private:
-		// Constructor is private to prevent outside instantiation
+		/* Constructor is private to prevent outside instantiation */
 		GameState() {
 			cout << "GameState created\n";
-			screenType = ScreenType::Menu;
+			screenStruct.screenType = ScreenType::Menu;
+			screenStruct.id = -1;
 		}
 
-		// private destructor prevents deletion through a pointer to the base class
+		/* private destructor prevents deletion through a pointer to the base class */
 		~GameState() = default;
 
-		ScreenType screenType;
+		/* current screen data (main.cpp reads this for the screen to load) */
+		ScreenStruct screenStruct;
 };
