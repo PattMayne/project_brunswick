@@ -104,8 +104,7 @@ export class MenuScreen {
 				/* check mouse location in every frame (so buttons stay "hovered" after click */
 				checkMouseLocation(e, menuPanel, settingsPanel);
 
-				draw(ui, menuPanel);
-				draw(ui, settingsPanel);
+				draw(ui, menuPanel, settingsPanel);
 
 				// Delay so the app doesn't just crash
 				frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -125,7 +124,7 @@ export class MenuScreen {
 
 		ScreenToLoadStruct getParentStruct() { return screenToLoadStruct; }
 
-		void draw(UI& ui, Panel& panel);
+		void draw(UI& ui, Panel& menuPanel, Panel& settingsPanel);
 		void getBackgroundTexture(UI& ui);
 		void createTitleTexture(UI& ui);
 
@@ -141,9 +140,28 @@ export class MenuScreen {
 		void handleEvent(SDL_Event &e, bool& running, Panel& menuPanel, Panel& settingsPanel);
 		void checkMouseLocation(SDL_Event& e, Panel& menuPanel, Panel& settingsPanel);
 		void rebuildDisplay(Panel& menuPanel, Panel& settingsPanel);
+		void drawPanel(UI& ui, Panel& panel);
 };
 
 /* Specific Draw functions for each Screen */
+
+void MenuScreen::drawPanel(UI& ui, Panel& panel) {
+	if (!panel.getShow()) { return; }
+	for (Button button : panel.getButtons()) {
+		/* get the rect, send it a reference(to be converted to a pointer) */
+		SDL_Rect rect = button.getRect();
+
+		/* now draw the button texture */
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
+			NULL, &rect,
+			0,
+			NULL,
+			SDL_FLIP_NONE
+		);
+	}
+}
 
 /* 
 * All data has been updated. Time to draw a representation of the current state of things.
@@ -154,32 +172,20 @@ export class MenuScreen {
 * 
 * Send in a vector of panels.
 */
-void MenuScreen::draw(UI& ui, Panel& panel) {
-	if (!panel.getShow()) { return; }
+void MenuScreen::draw(UI& ui, Panel& menuPanel, Panel& settingsPanel) {
 
 	// draw panel ( make this a function of the UI object which takes a panel as a parameter )
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 14, 14, 14, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 
-	// print the BG image (just a section)
+	/* print the BG image(just a section) */
 	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
 
-	for (Button button: panel.getButtons()) {
-		// get the rect, send it a reference (to be converted to a pointer)
-		SDL_Rect rect = button.getRect();
+	/* draw the actual panels */
+	drawPanel(ui, settingsPanel);
+	drawPanel(ui, menuPanel);
 
-		// now draw the button texture
-		SDL_RenderCopyEx(
-			ui.getMainRenderer(),
-			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
-			NULL, &rect,
-			0,
-			NULL,
-			SDL_FLIP_NONE
-		);
-	}
-
-	// draw the logo
+	/* draw the logo */
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
@@ -189,7 +195,7 @@ void MenuScreen::getBackgroundTexture(UI& ui) {
 	SDL_Surface* bgImageRaw = IMG_Load("assets/field.png"); /* create BG surface*/
 
 	if (!bgImageRaw) {
-		std::cerr << "Image failed to load. SDL_image: " << IMG_GetError() << std::endl;
+		cerr << "Image failed to load. SDL_image: " << IMG_GetError() << std::endl;
 		// TODO: Make background from raw color
 	}
 	/* This is a big texture of the whole image.When drawing, we will draw from a rect which matches the window size. */
@@ -214,11 +220,11 @@ void MenuScreen::createTitleTexture(UI& ui) {
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), logoColor.r, logoColor.g, logoColor.b, 1);
 	string titleText = resources.getTitle();
 
-	// make one yellow, one black, blit them onto a slightly larger one so the black is beneath but offset by 10px
+	/* make one yellow, one black, blit them onto a slightly larger one so the black is beneath but offset by 10px */
 	SDL_Surface* titleTextSurfaceFG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), logoColor);
 	SDL_Surface* titleTextSurfaceBG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), textColor);
 
-	// blit them both onto the new surface, with the black at an offset
+	/* blit them both onto the new surface, with the black at an offset */
 
 	int xOffset = 6;
 	int yOffset = 6;
@@ -242,21 +248,20 @@ void MenuScreen::createTitleTexture(UI& ui) {
 		titleTextSurface->h
 	};
 
-	// do the blitting
-
+	/* blit */
 	SDL_BlitSurface(titleTextSurfaceBG, NULL, titleTextSurface, &bgRect);
 	SDL_BlitSurface(titleTextSurfaceFG, NULL, titleTextSurface, NULL);
 
 	titleTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), titleTextSurface);
 	SDL_FreeSurface(titleTextSurface);
 
-	// create title text rect
+	/* create title text rect */
 
-	// get the width and height of the title texture, calculate the x & y for the rect on which to draw it
+	/* get the width and height of the title texture, calculate the x& y for the rect on which to draw it */
 	int titleTextWidth, titleTextHeight;
 	SDL_QueryTexture(titleTexture, NULL, NULL, &titleTextWidth, &titleTextHeight);
 
-	// create the rect to draw the title
+	/* create the rect to draw the title */
 	SDL_Surface* mainWindowSurface = ui.getWindowSurface();
 	titleRect = {
 		(mainWindowSurface->w / 2) - (titleTextWidth / 2),
@@ -277,7 +282,7 @@ void MenuScreen::rebuildDisplay(Panel& menuPanel, Panel& settingsPanel) {
 
 /* Process user input */
 void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Panel& settingsPanel) {
-	// User pressed X to close
+	/* User pressed X to close */
 	if (e.type == SDL_QUIT) { running = false; }
 	else {
 		// user clicked
@@ -295,31 +300,29 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 				// see what button might have been clicked:
 				switch (clickStruct.buttonOption) {
 				case ButtonOption::About:
-					cout << "ABOUT";
+					cout << "ABOUT\n";
 					break;
 				case ButtonOption::NoOption:
-					cout << "NO OPTION";
+					cout << "NO OPTION\n";
 					break;
 				case ButtonOption::NewGame:
-					cout << "NEW GAME";
+					cout << "NEW GAME\n";
 					break;
 				case ButtonOption::LoadGame:
-					cout << "LOAD GAME";
+					cout << "LOAD GAME\n";
 					break;
 				case ButtonOption::Settings:
 					// switch to other panel
 					settingsPanel.setShow(true);
 					menuPanel.setShow(false);
-					cout << "SETTINGS";
+					cout << "SETTINGS\n";
 					break;
 				case ButtonOption::Exit:
-					cout << "EXIT";
 					running = false;
 					break;
 				default:
-					cout << "ERROR";
+					cout << "ERROR\n";
 				}
-				cout << "\n";
 			} else if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
 
 				// panel has a function to return which ButtonOption was clicked, and an ID (in the ButtonClickStruct).
@@ -328,22 +331,18 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 				// see what button might have been clicked:
 				switch (clickStruct.buttonOption) {
 				case ButtonOption::Mobile:
-					cout << "Mobile";
 					ui.resizeWindow(WindowResType::Mobile);
 					rebuildDisplay(menuPanel, settingsPanel);
 					break;
 				case ButtonOption::Tablet:
-					cout << "Tablet";
 					ui.resizeWindow(WindowResType::Tablet);
 					rebuildDisplay(menuPanel, settingsPanel);
 					break;
 				case ButtonOption::Desktop:
-					cout << "Desktop";
 					ui.resizeWindow(WindowResType::Desktop);
 					rebuildDisplay(menuPanel, settingsPanel);
 					break;
 				case ButtonOption::Fullscreen:
-					cout << "Fullscreen";
 					ui.resizeWindow(WindowResType::Fullscreen);
 					rebuildDisplay(menuPanel, settingsPanel);
 					break;
@@ -351,12 +350,10 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 					// switch to other panel
 					settingsPanel.setShow(false);
 					menuPanel.setShow(true);
-					cout << "BACK";
 					break;
 				default:
-					cout << "ERROR";
+					cout << "ERROR\n";
 				}
-				cout << "\n";
 			}
 		}
 	}

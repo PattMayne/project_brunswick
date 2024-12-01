@@ -780,14 +780,21 @@ void UI::prepareColors() {
 	*		the accessors at all.
 	*/
 
-	colorsByName["GOLD"] = { 255,214, 10 }; // bright yellowish
+	/* THEME COLORS */
+	/* 
+	* Three yellows might seem crazy but it's good, actually.
+	* I will probably also add a third, lighter blue
+	*/
+	colorsByName["PERIDOT"] = { 242, 222, 6 };  /* THEME */ /* yellow orangey */
+	colorsByName["VIVID_YELLOW"] = { 217, 168, 6 }; /* THEME */ /* brighter yellow */
+	colorsByName["GOLD"] = { 255,214, 10 }; /* bright yellowish */
+	colorsByName["YALE_BLUE"] = { 0, 53, 102 }; /* slightly lighter blue */
+	colorsByName["OXFORD_BLUE"] = { 0, 29, 61 }; /* slightly darker blue */
+
+	/* NOT SURE YET */
 	colorsByName["ONYX"] = { 14, 14, 14 }; // almost black
 	colorsByName["FERN_GREEN"] = { 79, 119, 45 };
-	colorsByName["PERIDOT"] = { 242, 222, 6 }; // yellow orangey
 	colorsByName["MIKADO_YELLOW"] = { 255, 195, 0 };
-	colorsByName["VIVID_YELLOW"] = { 217, 168, 6 };
-	colorsByName["YALE_BLUE"] = { 0, 53, 102 }; // slightly lighter blue
-	colorsByName["OXFORD_BLUE"] = { 0, 29, 61 }; // slightly darker blue
 	colorsByName["FRENCH_BLUE"] = { 0, 99, 191 }; // almost light (normal) blue-green
 	colorsByName["RICH_BLACK"] = { 0, 8, 20 }; // blue tinted dark
 	colorsByName["BLACK"] = { 3, 3, 3 }; // almost absolute... not quite
@@ -797,6 +804,7 @@ void UI::prepareColors() {
 	colorsByName["WOODLAND"] = { 97, 89, 30 }; // brown-green
 	colorsByName["SMOKEY_GREY"] = { 117, 117, 113 };
 
+	/* COLORS BY FUNCTION */
 	colorsByFunction["BTN_HOVER_BG"] = colorsByName["PERIDOT"];
 	colorsByFunction["BTN_BG"] = colorsByName["OXFORD_BLUE"];
 	colorsByFunction["BTN_HOVER_BRDR"] = colorsByName["VIVID_YELLOW"];
