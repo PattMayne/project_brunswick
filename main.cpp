@@ -23,6 +23,9 @@
 #include "SDL_ttf.h"
 #include <vector>
 #include <cstdlib>
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
 
 using namespace std;
 
@@ -41,6 +44,9 @@ void exit(SDL_Surface* surface, SDL_Window* window);
 // Main game loop manages particular screens, which do actual game logic.
 int main(int argc, char* args[]) {
 	cout << "Hello new world\n";
+
+	// seed the random number generator now for the whole game
+	srand((unsigned int)time(NULL));
 
 	// instantiate the UI instance, and hold the reference for eventual destruction in this file.
 	UI& ui = UI::getInstance();

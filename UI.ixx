@@ -31,6 +31,11 @@ module;
 #include <vector>
 #include <unordered_map>
 
+#include <cmath>
+#include <time.h>
+#include<cstdlib> // Needed for rand() and srand()
+#include<ctime>   // Needed for time()
+
 export module UI;
 
 using namespace std;
@@ -43,6 +48,8 @@ struct PreButtonStruct;
 
 Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color);
 bool isInRect(SDL_Rect rect, int mouseX, int mouseY);
+SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal);
+
 
 /*
 *
@@ -94,6 +101,8 @@ export class UI {
 		void resizeWindow(WindowResType newResType);
 		void refreshFonts(Resources& resources);
 
+		unordered_map<string, SDL_Color> getColorsByFunction() { return colorsByFunction; }
+		
 
 
 	private:
@@ -271,7 +280,7 @@ export class Button {
 		bool mouseOver;
 		ButtonClickStruct clickStruct;
 		SDL_Rect createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont);
-		SDL_Surface* createButtonSurfaceBG(SDL_Rect buttonRect, SDL_Color color, SDL_Renderer* mainRenderer);
+		SDL_Surface* createButtonSurfaceBG(SDL_Rect buttonRect, SDL_Color color, SDL_Color overlayColor, SDL_Renderer* mainRenderer, vector<SDL_Rect> overlayRects);
 		void createButtonTextures(SDL_Rect buttonRect, SDL_Rect textRect, string incomingText, TTF_Font* buttonFont, unordered_map<string, SDL_Color> colors, SDL_Renderer* mainRenderer);
 };
 
@@ -295,18 +304,248 @@ SDL_Rect Button::createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font
 	};
 }
 
+//SDL_Rect getRandomRect(int xBlock, int yBlock) {
+//	int maxWidth = 7 * xBlock;
+//	int maxHeight = 3 * yBlock;
+//	int width = (rand() * maxWidth) + xBlock;
+//	int height = (rand() * maxHeight) + yBlock;
+//	return { 0, 0, xBlock, yBlock };
+//}
+
+
+/* Generate a randomized overlay for button backgrounds */
+vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
+	/*
+	* TODO: Rework this to be useful for larger objects, including the background of the main menu.	
+	*/
+
+	/* two to five rects */
+	int numberOfRects = (rand() % 5) + 2;
+
+	/* we will store all the rects here and later draw them */
+	vector<SDL_Rect> rects;
+
+	// Pick a random starting point
+	enum StartingRect { WholeSide, Corner, Top };
+	int startingRectNumber = (rand() % 3) + 1;
+	StartingRect startingRect = startingRectNumber == 3 ? WholeSide :
+		startingRectNumber == 2 ? Corner : Top;
+
+	/* not totally random dimensions. Always in increments, defined as blocks (of pixels) based on resolution. */
+	int xRes = 10;
+	int yRes = 4;
+
+	/* resolution */
+
+	/* Minimum sizes */
+	int blockWidth = bgRect.w / xRes;
+	int blockHeight = bgRect.h / yRes;
+
+	cout << "\n\n RECT WIDTH: " << bgRect.w << "\n\n";
+
+	/* create a map of false bools corresponding to a grid over the buttons */
+	vector<vector<bool>> rows(yRes);
+
+	for (int i = 0; i < yRes; ++i) {
+		vector<bool> blocks(xRes);
+		for (int k = 0; k < xRes; ++k) {
+			blocks[k] = false;
+		}
+		rows[i] = blocks;
+	}
+
+	/* pick a max number of blocks to color (1/4th to 2/3rds of the map) */
+
+	int totalBlocks = xRes * yRes;
+
+	int minBlocks = totalBlocks / 2;
+	int maxBlocks = (totalBlocks / 4) * 3;
+	int seeds = (rand() % (totalBlocks - maxBlocks)) + minBlocks + 1;
+
+	/* get any remaining height & width to tack onto edge blocks */
+	int widthOfAllBlocks = xRes + blockWidth;
+	int heightOfAllBlocks = yRes * blockHeight;
+	int remainderX = bgRect.w - widthOfAllBlocks;
+	int remainderY = bgRect.h - heightOfAllBlocks;
+
+	int columnsToFill = 3;
+
+	/* NON-RANDOM START */
+	for (int i = 0; i < rows.size(); ++i) {
+		for (int k = 0; k < columnsToFill; ++k) {
+			/* add the block and decrement the seeds */
+			rows[i][k] = true;
+			SDL_Rect newRect = {
+				k * blockWidth,
+				i * blockHeight,
+				blockWidth,
+				blockHeight
+			};
+
+			/* If it's the last block, make sure it reaches the edge */
+
+			if (i == yRes - 1) {
+				newRect.h += remainderY;
+			}
+
+			if (k == xRes - 1) {
+				newRect.w += remainderX;
+			}
+
+			rects.push_back(newRect);
+			--seeds;
+		}
+	}
+
+	int currX = columnsToFill;
+	int currY = 0;
+
+	rows[currY][currX] = true;
+	SDL_Rect firstRect = {
+		currX * blockWidth,
+		currY * blockHeight,
+		blockWidth,
+		blockHeight
+	};
+	rects.push_back(firstRect);
+	--seeds;
+
+	/* create the rest of the rects by crawling around and turning blocks true */
+
+	enum Direction { Up, Down, Left, Right, NoDirection};
+
+	while (seeds > 0) {
+
+		/* check how many directions are available */
+		vector<Direction> availableDirections;
+		bool nowhereToGo = true;
+
+		/* look UP */
+		if (currY > 0 && rows[currY -1][currX] == false) {
+			availableDirections.push_back(Direction::Up);
+			nowhereToGo = false;
+		}
+
+		/* look DOWN */
+		if (currY < (yRes - 2) && rows[currY + 1][currX] == false) {
+			availableDirections.push_back(Direction::Down);
+			nowhereToGo = false;
+		}
+
+		/* look LEFT */
+		if (currX > 0 && rows[currY][currX - 1] == false) {
+			availableDirections.push_back(Direction::Left);
+			nowhereToGo = false;
+		}
+
+		/* look RIGHT */
+		if (currX < (xRes - 1) && rows[currY][currX + 1] == false) {
+			availableDirections.push_back(Direction::Right);
+			nowhereToGo = false;
+		}
+
+		/* If we can't move, break the loop */
+		if (nowhereToGo) {
+			seeds = 0;
+			break;
+		}
+
+		int numberOfAvailableDirections = (unsigned int)availableDirections.size();
+
+		Direction newDirection = Direction::NoDirection;
+
+		if (numberOfAvailableDirections == 1) {
+			newDirection = availableDirections[0];
+		}
+		else {
+			/* Pick a direction from those available */
+			int directionIndex = rand() % numberOfAvailableDirections;
+			newDirection = availableDirections[directionIndex];
+		}
+
+		/* If we can't move, break the loop */
+		if (newDirection == Direction::NoDirection) {
+			seeds = 0;
+			break;
+		}
+
+		
+
+		/* move in that direction (change current X and Y) */
+		switch (newDirection) {
+			case Direction::Up:
+				--currY;
+				break;
+			case Direction::Down:
+				++currY;
+				break;
+			case Direction::Right:
+				++currX;
+				break;
+			case Direction::Left:
+				--currX;
+				break;
+			default:
+				currY = -1;
+				currX = -1;
+				break;
+		}
+
+		/* just double check that we really moved */
+		if (currY < 0 || currX < 0) {
+			seeds = 0;
+			break;
+		}
+
+		/* add the block and decrement the seeds */
+		rows[currY][currX] = true;
+		SDL_Rect newRect = {
+			currX * blockWidth,
+			currY * blockHeight,
+			blockWidth,
+			blockHeight
+		};
+
+		/* If it's the last block, make sure it reaches the edge */
+
+		if (currY == yRes - 1) {
+			newRect.h += remainderY;
+		}
+
+		if (currX == xRes - 1) {
+			newRect.w += remainderX;
+		}
+
+		rects.push_back(newRect);
+		--seeds;
+	}
+
+	return rects;
+}
+
 /* Button textures must start with a surface. Create and get it here. */
 SDL_Surface* Button::createButtonSurfaceBG(
 	SDL_Rect buttonRect,
 	SDL_Color color,
-	SDL_Renderer* mainRenderer
+	SDL_Color overlayColor,
+	SDL_Renderer* mainRenderer,
+	vector<SDL_Rect> overlayRects
 ) {
+	UI& ui = UI::getInstance();
 	SDL_Surface* buttonSurface = SDL_CreateRGBSurface(0, buttonRect.w, buttonRect.h, 32, 0, 0, 0, 0xFF000000);
 	// fill the rects with beautiful color
 	SDL_FillRect(buttonSurface, NULL, convertSDL_ColorToUint32(buttonSurface->format, color));
-	// TODO: CAN ADD BORDERS or just load an IMAGE INSTEAD (for later)
+
+	/* draw the overlay */
+	if (overlayRects.size() > 0) {
+		for (SDL_Rect rect : overlayRects) {
+			SDL_FillRect(buttonSurface, &rect, convertSDL_ColorToUint32(buttonSurface->format, overlayColor));
+		}
+	}	
+
 	return buttonSurface;
 }
+
 
 /* A button must have both NORMAL and HOVER textures. Create them both here. */
 void Button::createButtonTextures(
@@ -320,17 +559,34 @@ void Button::createButtonTextures(
 	SDL_Surface* hoverButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["DARK_TEXT"]);
 	SDL_Surface* normalButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["BTN_TEXT"]);
 
-	// make two button surfaces with the correct BG colors, to blit the text surfaces onto
-	SDL_Surface* hoverButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_HOVER_BG"], mainRenderer);
-	SDL_Surface* normalButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_BG"], mainRenderer);
+	/* make the overlay which normal and hover buttons will share */
+	vector<SDL_Rect> overlayRects = createButtonSurfaceOverlay(buttonRect);
 
-	// do the blitting
+	/* make two button surfaces with the correct BG colors, to blit the text surfaces onto */
+	SDL_Surface* hoverButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_HOVER_BG"], colors["BTN_HOVER_BRDR"], mainRenderer, overlayRects);
+	SDL_Surface* normalButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_BG"], colors["BTN_BRDR"], mainRenderer, overlayRects);
+
+	/* possibility of flipping */
+	int hFlipInt = rand() % 2;
+	int vFlipInt = rand() % 2;
+
+	if (hFlipInt == 0) {
+		hoverButtonSurface = flipSurface(hoverButtonSurface, true);
+		normalButtonSurface = flipSurface(normalButtonSurface, true);
+	}
+
+	if (vFlipInt == 0) {
+		hoverButtonSurface = flipSurface(hoverButtonSurface, false);
+		normalButtonSurface = flipSurface(normalButtonSurface, false);
+	}
+
+	/* blit the text */
 	SDL_BlitSurface(hoverButtonTextSurface, NULL, hoverButtonSurface, &textRect);
 	SDL_BlitSurface(normalButtonTextSurface, NULL, normalButtonSurface, &textRect);
 
 	hoverTexture = SDL_CreateTextureFromSurface(mainRenderer, hoverButtonSurface);
 	normalTexture = SDL_CreateTextureFromSurface(mainRenderer, normalButtonSurface);
-
+	
 	// free the surfaces
 	SDL_FreeSurface(hoverButtonTextSurface);
 	SDL_FreeSurface(normalButtonTextSurface);
@@ -545,6 +801,7 @@ void UI::prepareColors() {
 	colorsByName["FERN_GREEN"] = { 79, 119, 45 };
 	colorsByName["PERIDOT"] = { 242, 222, 6 }; // yellow orangey
 	colorsByName["MIKADO_YELLOW"] = { 255, 195, 0 };
+	colorsByName["VIVID_YELLOW"] = { 217, 168, 6 };
 	colorsByName["YALE_BLUE"] = { 0, 53, 102 }; // slightly lighter blue
 	colorsByName["OXFORD_BLUE"] = { 0, 29, 61 }; // slightly darker blue
 	colorsByName["FRENCH_BLUE"] = { 0, 99, 191 }; // almost light (normal) blue-green
@@ -558,6 +815,7 @@ void UI::prepareColors() {
 
 	colorsByFunction["BTN_HOVER_BG"] = colorsByName["PERIDOT"];
 	colorsByFunction["BTN_BG"] = colorsByName["FRENCH_BLUE"];
+	colorsByFunction["BTN_HOVER_BRDR"] = colorsByName["VIVID_YELLOW"];
 	colorsByFunction["BTN_BRDR"] = colorsByName["YALE_BLUE"];
 	colorsByFunction["DARK_TEXT"] = colorsByName["BLACK"];
 	colorsByFunction["LIGHT_TEXT"] = colorsByName["WHITE"];
@@ -880,6 +1138,35 @@ export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
 	return false;
 }
 
+
+/* whenever we want to flip a surface */
+SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal) {
+	/* new surface onto which we'll flip the original surface */
+	SDL_Surface* flippedSurface = SDL_CreateRGBSurface(0, surface->w, surface->h, 32, 0, 0, 0, 0xFF000000);
+
+	/* error check */
+	if (!flippedSurface) {
+		cout << "\n\n\nERROR!!!\n\n\n";
+		cerr << "Failed to create surface: " << SDL_GetError() << endl;
+		return surface;
+	}
+
+	/* Pointer to the pixel data of the original and flipped surfaces */
+	Uint32* originalPixels = static_cast<Uint32*>(surface->pixels);
+	Uint32* flippedPixels = static_cast<Uint32*>(flippedSurface->pixels);
+
+	/* Loop through the original surface's pixels */
+	for (int y = 0; y < surface->h; ++y) { /* every row */
+		for (int x = 0; x < surface->w; ++x) { /* every column */
+			int srcX = horizontal ? (surface->w - 1 - x) : x;
+			int srcY = horizontal ? y : (surface->h - 1 - y);
+			flippedPixels[y * flippedSurface->w + x] = originalPixels[srcY * surface->w + srcX];
+		}
+	}
+
+	SDL_FreeSurface(surface);
+	return flippedSurface;
+}
 
 /*
 * STILL TO COME:
