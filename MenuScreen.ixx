@@ -101,6 +101,9 @@ export class MenuScreen {
 					handleEvent(e, running, menuPanel, settingsPanel);
 				}
 
+				/* check mouse location in every frame (so buttons stay "hovered" after click */
+				checkMouseLocation(e, menuPanel, settingsPanel);
+
 				draw(ui, menuPanel);
 				draw(ui, settingsPanel);
 
@@ -136,11 +139,21 @@ export class MenuScreen {
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
 		void handleEvent(SDL_Event &e, bool& running, Panel& menuPanel, Panel& settingsPanel);
+		void checkMouseLocation(SDL_Event& e, Panel& menuPanel, Panel& settingsPanel);
 		void rebuildDisplay(Panel& menuPanel, Panel& settingsPanel);
 };
 
 /* Specific Draw functions for each Screen */
 
+/* 
+* All data has been updated. Time to draw a representation of the current state of things.
+* We draw one panel at a time.
+* 
+* TODO: There is a problem here. We should NOT be drawing the background twice.
+* CLEAN THIS UP.
+* 
+* Send in a vector of panels.
+*/
 void MenuScreen::draw(UI& ui, Panel& panel) {
 	if (!panel.getShow()) { return; }
 
@@ -171,7 +184,6 @@ void MenuScreen::draw(UI& ui, Panel& panel) {
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
-
 void MenuScreen::getBackgroundTexture(UI& ui) {
 	// create background texture
 	SDL_Surface* bgImageRaw = IMG_Load("assets/field.png"); /* create BG surface*/
@@ -192,6 +204,7 @@ void MenuScreen::getBackgroundTexture(UI& ui) {
 	bgDestinationRect = { 0, 0, windowWidth, windowHeight };
 }
 
+/* Create the texture with the name of the game */
 void MenuScreen::createTitleTexture(UI& ui) {
 	Resources& resources = Resources::getInstance();
 	// YELLOW text with BLACK offset underlay
@@ -253,6 +266,7 @@ void MenuScreen::createTitleTexture(UI& ui) {
 	};
 }
 
+/* Screen has been resized. Rebuild! */
 void MenuScreen::rebuildDisplay(Panel& menuPanel, Panel& settingsPanel) {
 	UI& ui = UI::getInstance();
 	getBackgroundTexture(ui);
@@ -261,6 +275,7 @@ void MenuScreen::rebuildDisplay(Panel& menuPanel, Panel& settingsPanel) {
 	ui.rebuildMainMenuPanel(menuPanel);
 }
 
+/* Process user input */
 void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Panel& settingsPanel) {
 	// User pressed X to close
 	if (e.type == SDL_QUIT) { running = false; }
@@ -343,13 +358,15 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 				}
 				cout << "\n";
 			}
-		} else if (e.type == SDL_MOUSEMOTION) {
-			// check for mouse over (for button hover)
-			int mouseX, mouseY;
-			SDL_GetMouseState(&mouseX, &mouseY);
-			// send the x and y to the panel and its buttons to change the color
-			if (menuPanel.getShow()) { menuPanel.checkMouseOver(mouseX, mouseY); }
-			if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }			
 		}
 	}
+}
+
+void MenuScreen::checkMouseLocation(SDL_Event& e, Panel& menuPanel, Panel& settingsPanel) {
+	/* check for mouse over(for button hover) */
+	int mouseX, mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+	/* send the x and y to the panel and its buttons to change the color */
+	if (menuPanel.getShow()) { menuPanel.checkMouseOver(mouseX, mouseY); }
+	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
 }

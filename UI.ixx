@@ -354,10 +354,8 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 		rows[i] = blocks;
 	}
 
-	/* pick a max number of blocks to color (1/4th to 2/3rds of the map) */
-
+	/* pick a max number of blocks to color */
 	int totalBlocks = xRes * yRes;
-
 	int minBlocks = totalBlocks / 2;
 	int maxBlocks = (totalBlocks / 4) * 3;
 	int seeds = (rand() % (totalBlocks - maxBlocks)) + minBlocks + 1;
@@ -368,9 +366,8 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 	int remainderX = bgRect.w - widthOfAllBlocks;
 	int remainderY = bgRect.h - heightOfAllBlocks;
 
+	/* NON-RANDOM START: Fill a few blocks on the left. */
 	int columnsToFill = 3;
-
-	/* NON-RANDOM START */
 	for (int i = 0; i < rows.size(); ++i) {
 		for (int k = 0; k < columnsToFill; ++k) {
 			/* add the block and decrement the seeds */
@@ -383,20 +380,15 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 			};
 
 			/* If it's the last block, make sure it reaches the edge */
-
-			if (i == yRes - 1) {
-				newRect.h += remainderY;
-			}
-
-			if (k == xRes - 1) {
-				newRect.w += remainderX;
-			}
+			if (i == yRes - 1) { newRect.h += remainderY; }
+			if (k == xRes - 1) { newRect.w += remainderX; }
 
 			rects.push_back(newRect);
 			--seeds;
 		}
 	}
 
+	/* Start the path on the top left. */
 	int currX = columnsToFill;
 	int currY = 0;
 
@@ -467,9 +459,7 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 		if (newDirection == Direction::NoDirection) {
 			seeds = 0;
 			break;
-		}
-
-		
+		}		
 
 		/* move in that direction (change current X and Y) */
 		switch (newDirection) {
@@ -507,14 +497,8 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 		};
 
 		/* If it's the last block, make sure it reaches the edge */
-
-		if (currY == yRes - 1) {
-			newRect.h += remainderY;
-		}
-
-		if (currX == xRes - 1) {
-			newRect.w += remainderX;
-		}
+		if (currY == yRes - 1) { newRect.h += remainderY; }
+		if (currX == xRes - 1) { newRect.w += remainderX; }
 
 		rects.push_back(newRect);
 		--seeds;
@@ -814,7 +798,7 @@ void UI::prepareColors() {
 	colorsByName["SMOKEY_GREY"] = { 117, 117, 113 };
 
 	colorsByFunction["BTN_HOVER_BG"] = colorsByName["PERIDOT"];
-	colorsByFunction["BTN_BG"] = colorsByName["FRENCH_BLUE"];
+	colorsByFunction["BTN_BG"] = colorsByName["OXFORD_BLUE"];
 	colorsByFunction["BTN_HOVER_BRDR"] = colorsByName["VIVID_YELLOW"];
 	colorsByFunction["BTN_BRDR"] = colorsByName["YALE_BLUE"];
 	colorsByFunction["DARK_TEXT"] = colorsByName["BLACK"];
