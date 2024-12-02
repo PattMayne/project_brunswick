@@ -153,7 +153,7 @@ void MenuScreen::draw(UI& ui, Panel& menuPanel, Panel& settingsPanel) {
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 14, 14, 14, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 
-	/* print the BG image(just a section) */
+	/* print the BG image) */
 	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
 
 	/* draw the actual panels */
@@ -166,23 +166,11 @@ void MenuScreen::draw(UI& ui, Panel& menuPanel, Panel& settingsPanel) {
 }
 
 void MenuScreen::getBackgroundTexture(UI& ui) {
-	// create background texture
-	SDL_Surface* bgImageRaw = IMG_Load("assets/field.png"); /* create BG surface*/
-
-	if (!bgImageRaw) {
-		cerr << "Image failed to load. SDL_image: " << IMG_GetError() << std::endl;
-		// TODO: Make background from raw color
-	}
-	/* This is a big texture of the whole image.When drawing, we will draw from a rect which matches the window size. */
-	bgTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), bgImageRaw);
-	SDL_FreeSurface(bgImageRaw);
-
 	int windowHeight, windowWidth;
 	SDL_GetWindowSize(ui.getMainWindow(), &windowWidth, &windowHeight);
-
-	// for now, don't resize or center. Just print.
 	bgSourceRect = { 0, 0, windowWidth, windowHeight };
 	bgDestinationRect = { 0, 0, windowWidth, windowHeight };
+	bgTexture = ui.createBackgroundTexture();
 }
 
 /* Create the texture with the name of the game */
@@ -286,7 +274,9 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 					cout << "NEW GAME\n";
 					break;
 				case ButtonOption::LoadGame:
-					cout << "LOAD GAME\n";
+					screenToLoadStruct.screenType = ScreenType::Battle;
+					running = false;
+					cout << "LOAD GAME (currently battle screen)\n";
 					break;
 				case ButtonOption::Settings:
 					// switch to other panel

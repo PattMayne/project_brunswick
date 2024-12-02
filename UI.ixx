@@ -49,7 +49,7 @@ struct PreButtonStruct;
 Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color);
 bool isInRect(SDL_Rect rect, int mouseX, int mouseY);
 SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal);
-
+vector<SDL_Rect> createSurfaceOverlay(SDL_Rect bgRect);
 
 /*
 *
@@ -104,7 +104,10 @@ export class UI {
 		void resizeWindow(WindowResType newResType);
 		void refreshFonts(Resources& resources);
 
-		unordered_map<string, SDL_Color> getColorsByFunction() { return colorsByFunction; }		
+		/* Background with overlay */
+		SDL_Texture* createBackgroundTexture();
+
+		unordered_map<string, SDL_Color> getColorsByFunction() { return colorsByFunction; }
 
 
 	private:
@@ -311,36 +314,30 @@ SDL_Rect Button::createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font
 	};
 }
 
-//SDL_Rect getRandomRect(int xBlock, int yBlock) {
-//	int maxWidth = 7 * xBlock;
-//	int maxHeight = 3 * yBlock;
-//	int width = (rand() * maxWidth) + xBlock;
-//	int height = (rand() * maxHeight) + yBlock;
-//	return { 0, 0, xBlock, yBlock };
-//}
-
 
 /* Generate a randomized overlay for button backgrounds */
-vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
+vector<SDL_Rect> createSurfaceOverlay(SDL_Rect bgRect) {
 	/*
-	* TODO: Rework this to be useful for larger objects, including the background of the main menu.	
+	* TODO: Simplify the variable sized blocks.
 	*/
-
-	/* two to five rects */
-	int numberOfRects = (rand() % 5) + 2;
 
 	/* we will store all the rects here and later draw them */
 	vector<SDL_Rect> rects;
 
-	// Pick a random starting point
+	/* Pick a random starting point */
 	enum StartingRect { WholeSide, Corner, Top };
 	int startingRectNumber = (rand() % 3) + 1;
 	StartingRect startingRect = startingRectNumber == 3 ? WholeSide :
 		startingRectNumber == 2 ? Corner : Top;
 
-	/* not totally random dimensions. Always in increments, defined as blocks (of pixels) based on resolution. */
-	int xRes = 10;
-	int yRes = 4;
+	float whRatio = (float)bgRect.w / (float)bgRect.h;
+
+	/* not totally random dimensions. Always in increments, defined as blocks (of pixels) based on resolution.
+	* Resolution variable based on dimensions. */
+	int xRes = bgRect.w < 350 ? 10 : bgRect.w < 800 ? 6 : 8;
+	//int yRes = bgRect.h < 200 ? 4 : bgRect.h < 350 ? 10 : bgRect.h < 800 ? 6 : bgRect.h < 900 ? 15 : 12;
+	float yResFloat = xRes / whRatio;
+	int yRes = (int)yResFloat;
 
 	/* resolution */
 
@@ -372,7 +369,7 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 	int remainderY = bgRect.h - heightOfAllBlocks;
 
 	/* NON-RANDOM START: Fill a few blocks on the left. */
-	int columnsToFill = 3;
+	int columnsToFill = bgRect.w < 350 ? 3 : 0;
 	for (int i = 0; i < rows.size(); ++i) {
 		for (int k = 0; k < columnsToFill; ++k) {
 			/* add the block and decrement the seeds */
@@ -410,6 +407,7 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 	/* create the rest of the rects by crawling around and turning blocks true */
 
 	enum Direction { Up, Down, Left, Right, NoDirection};
+	int reStarts = bgRect.w < 350 ? 0 : bgRect.w < 1000 ? 2 :3;
 
 	while (seeds > 0) {
 
@@ -441,14 +439,35 @@ vector<SDL_Rect> createButtonSurfaceOverlay(SDL_Rect bgRect) {
 			nowhereToGo = false;
 		}
 
-		/* If we can't move, break the loop */
+		/* If we can't move, break the loop (try to find a new place first) */
 		if (nowhereToGo) {
-			seeds = 0;
-			break;
+			/* don't restart if it's close to the end anyway */
+			if (reStarts < 1 || seeds < 5) {
+				seeds = 0;
+				break;
+			}
+
+			/* make some attempt to pick a random false block */
+
+			int attempts = 5;
+			while (attempts > 0) {
+				/* get random X and Y */
+				int randX = rand() % rows[0].size();
+				int randY = rand() % rows.size();
+
+				if (!rows[randY][randX]) {
+					currY = randY;
+					currX = randX;
+					rows[randY][randX] = true;
+					++seeds; /* give this new cluster a little extra */
+				}
+				--attempts;
+			}
+			--reStarts;
+			continue;
 		}
 
 		int numberOfAvailableDirections = (unsigned int)availableDirections.size();
-
 		Direction newDirection = Direction::NoDirection;
 
 		if (numberOfAvailableDirections == 1) {
@@ -549,7 +568,7 @@ void Button::createButtonTextures(
 	SDL_Surface* normalButtonTextSurface = TTF_RenderUTF8_Blended(buttonFont, text.c_str(), colors["BTN_TEXT"]);
 
 	/* make the overlay which normal and hover buttons will share */
-	vector<SDL_Rect> overlayRects = createButtonSurfaceOverlay(buttonRect);
+	vector<SDL_Rect> overlayRects = createSurfaceOverlay(buttonRect);
 
 	/* make two button surfaces with the correct BG colors, to blit the text surfaces onto */
 	SDL_Surface* hoverButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_HOVER_BG"], colors["BTN_HOVER_BRDR"], mainRenderer, overlayRects);
@@ -789,19 +808,21 @@ void UI::prepareColors() {
 	colorsByName["GOLD"] = { 255,214, 10 }; /* bright yellowish */
 	colorsByName["YALE_BLUE"] = { 0, 53, 102 }; /* slightly lighter blue */
 	colorsByName["OXFORD_BLUE"] = { 0, 29, 61 }; /* slightly darker blue */
+	colorsByName["FRENCH_BLUE"] = { 0, 99, 191 }; // almost light (normal) blue-green
 
 	/* NOT SURE YET */
 	colorsByName["ONYX"] = { 14, 14, 14 }; // almost black
 	colorsByName["FERN_GREEN"] = { 79, 119, 45 };
 	colorsByName["MIKADO_YELLOW"] = { 255, 195, 0 };
-	colorsByName["FRENCH_BLUE"] = { 0, 99, 191 }; // almost light (normal) blue-green
 	colorsByName["RICH_BLACK"] = { 0, 8, 20 }; // blue tinted dark
 	colorsByName["BLACK"] = { 3, 3, 3 }; // almost absolute... not quite
 	colorsByName["WHITE"] = { 250, 250, 250 }; // almost white
 	colorsByName["PAPAYA_WHIP"] = { 253, 240, 213 }; // beige
+	colorsByName["DESAT_ORANGE"] = { 213, 194, 154 }; // Slightly desaturated orange.
 	colorsByName["SCARLET"] = { 193, 18, 31 }; // red
 	colorsByName["WOODLAND"] = { 97, 89, 30 }; // brown-green
 	colorsByName["SMOKEY_GREY"] = { 117, 117, 113 };
+	colorsByName["DARKISH_GRAYISH_BLUE"] = {142, 146, 169};
 
 	/* COLORS BY FUNCTION */
 	colorsByFunction["BTN_HOVER_BG"] = colorsByName["PERIDOT"];
@@ -816,8 +837,8 @@ void UI::prepareColors() {
 	colorsByFunction["OK_GREEN"] = colorsByName["FERN_GREEN"];
 	colorsByFunction["BTN_TEXT"] = colorsByName["GOLD"];
 
-	colorsByFunction["BG_LIGHT"] = colorsByName["PAPAYA_WHIP"];
-	colorsByFunction["BG_MED"] = colorsByName["FRENCH_BLUE"];
+	colorsByFunction["BG_LIGHT"] = colorsByName["FRENCH_BLUE"];
+	colorsByFunction["BG_MED"] = colorsByName["YALE_BLUE"];
 }
 
 void UI::getAndStoreWindowSize() {
@@ -911,13 +932,13 @@ bool UI::initializeFonts(Resources& resources) {
 		return false;
 	}
 
-	/* Load the fonts */
+	/* Load the fontss */
 
-	titleFont = TTF_OpenFont("assets/ander_hedge.ttf", titleFontSize);
+	titleFont = TTF_OpenFont("assets/pr_viking.ttf", titleFontSize);
 
 	if (!titleFont) {
-		SDL_Log("Font (ander_hedge) failed to load. TTF_Error: %s\n", TTF_GetError());
-		cerr << "Font (ander_hedge) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		SDL_Log("Font (pr_viking) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (pr_viking) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 		return false;
 	}
 
@@ -1210,3 +1231,32 @@ SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal) {
 *	Map Panel (no idea what will go in here!)
 *	Character Creation Panels
 */
+
+SDL_Texture* UI::createBackgroundTexture() {
+	int w = mainWindowSurface->w;
+	int h = mainWindowSurface->h;
+
+	SDL_Rect bgRect = { 0, 0, w, h };
+	vector<SDL_Rect> overlayRects = createSurfaceOverlay(bgRect);
+	SDL_Surface* bgSurface = SDL_CreateRGBSurface(0, w, h, 32, 0, 0, 0, 0xFF000000);
+	SDL_FillRect(bgSurface, NULL, convertSDL_ColorToUint32(bgSurface->format, colorsByFunction["BG_MED"]));
+
+	/* draw the overlay */
+	if (overlayRects.size() > 0) {
+		for (SDL_Rect rect : overlayRects) {
+			SDL_FillRect(bgSurface, &rect, convertSDL_ColorToUint32(bgSurface->format, colorsByFunction["BG_LIGHT"]));
+		}
+	}
+
+	/* possibility of flipping */
+	int hFlipInt = rand() % 2;
+	int vFlipInt = rand() % 2;
+
+	if (hFlipInt == 0) { bgSurface = flipSurface(bgSurface, true); }
+	if (vFlipInt == 0) { bgSurface = flipSurface(bgSurface, false); }
+
+	SDL_Texture* bgTexture = SDL_CreateTextureFromSurface(mainRenderer, bgSurface);
+	SDL_FreeSurface(bgSurface);
+
+	return bgTexture;
+}

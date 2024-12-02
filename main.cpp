@@ -33,6 +33,7 @@ import UI;
 import GameState;
 import MenuScreen;
 import MapScreen;
+import BattleScreen;
 import ScreenType;
 import Resources;
 using namespace std;
@@ -52,9 +53,7 @@ int main(int argc, char* args[]) {
 	// instantiate the UI instance, and hold the reference for eventual destruction in this file.
 	UI& ui = UI::getInstance();
 	GameState& gameState = GameState::getInstance();
-
 	
-
 	ScreenStruct screenToLoadStruct = closingScreenStruct();
 	bool running = true;
 	SDL_Event e;
@@ -82,6 +81,10 @@ int main(int argc, char* args[]) {
 			cout << "\nselected MAP\n";
 			MapScreen mapScreen = MapScreen();
 			mapScreen.run();
+		}else if (gameState.getScreenType() == ScreenType::Battle) {
+			cout << "\nselected BATTLE\n";
+			BattleScreen battleScreen = BattleScreen();
+			battleScreen.run();
 		}
 
 		/* check for closingScreen type and close.Otherwise we will load the NEW screen on the next loop */

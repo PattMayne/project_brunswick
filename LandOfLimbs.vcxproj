@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BattleScreen.ixx" />
     <ClCompile Include="GameState.ixx" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MapScreen.ixx" />
