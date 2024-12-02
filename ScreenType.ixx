@@ -66,6 +66,7 @@ export enum class ButtonOption {
 	/* Settings buttons */
 	Mobile, Tablet, Desktop, Fullscreen,
 	// TO COME: more options for Map, Battle, and Character Creation screens
+	MapOptions,
 };
 
 /* When a button is clicked it must send back one of these Structs.

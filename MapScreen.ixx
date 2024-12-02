@@ -21,7 +21,6 @@ import Resources;
 import UI;
 
 
-
 class Block {
 	public:
 		/* constructor */
@@ -78,30 +77,7 @@ export class MapScreen {
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
 			hResolution = 10; /* LATER user can update this to zoom in or out. */
-
-			UI& ui = UI::getInstance();
-			SDL_Surface* mainSurface = ui.getWindowSurface();
-
-			blockWidth = (mainSurface->w / hResolution);
-			vBlocksVisible = (mainSurface->h / blockWidth) + 1; /* adding one to fill any gap on the bottom. (Will always add 1 to hResolution when drawing) */
-
-			/* make wall and floor textures (move into function(s) later) */
-
-			unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
-
-			SDL_Surface* wallSurface = IMG_Load("assets/door_400_400.png");
-			SDL_Surface* floorSurface = IMG_Load("assets/open_door_400_400.png");
-
-			wallTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), wallSurface);
-			floorTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), floorSurface);
-
-			if (!floorTexture || !wallTexture) {
-				cout << "\n\n ERROR! \n\n";
-			}
-
-			SDL_FreeSurface(wallSurface);
-			SDL_FreeSurface(floorSurface);
-
+			buildMapDisplay();
 			map = Map();
 		}
 
@@ -117,7 +93,14 @@ export class MapScreen {
 		int id;
 		ScreenStruct screenToLoadStruct;
 		void drawMap(UI& ui);
-		void draw(UI& ui, Panel& settingsPanel);
+		void draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel);
+		void drawPanel(UI& ui, Panel& panel);
+
+		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& mapMenuPanel, GameState& gameState);
+		void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& mapMenuPanel);
+
+		void buildMapDisplay();
+		void rebuildDisplay(Panel& settingsPanel, Panel& mapMenuPanel);
 
 		void buildMap();
 
@@ -140,13 +123,40 @@ export class MapScreen {
 
 };
 
+void MapScreen::buildMapDisplay() {
+	UI& ui = UI::getInstance();
+	SDL_Surface* mainSurface = ui.getWindowSurface();
+
+	blockWidth = (mainSurface->w / hResolution);
+	vBlocksVisible = (mainSurface->h / blockWidth) + 1; /* adding one to fill any gap on the bottom. (Will always add 1 to hResolution when drawing) */
+
+	/* make wall and floor textures (move into function(s) later) */
+
+	unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
+
+	SDL_Surface* wallSurface = IMG_Load("assets/wall.png");
+	SDL_Surface* floorSurface = IMG_Load("assets/floor.png");
+
+	wallTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), wallSurface);
+	floorTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), floorSurface);
+
+	if (!floorTexture || !wallTexture) {
+		cout << "\n\n ERROR! \n\n";
+	}
+
+	SDL_FreeSurface(wallSurface);
+	SDL_FreeSurface(floorSurface);
+}
+
 export void MapScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
 	/* panels */
-	Panel settingsPanel = ui.createSettingsPanel();
+	Panel settingsPanel = ui.createSettingsPanel(ScreenType::Map);
+	Panel mapMenuPanel = ui.createMapMenuPanel();
 	settingsPanel.setShow(false);
+	mapMenuPanel.setShow(true);
 
 	/*
 	* PANELS TO COME:
@@ -172,12 +182,8 @@ export void MapScreen::run() {
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
-			// handleEvent(e, running, menuPanel, settingsPanel, gameState);
-			
-
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
-				cout << "\n\nevent happened CLICK\n\n";
-				running = false;
+				handleEvent(e, running, settingsPanel, mapMenuPanel, gameState);
 			}
 		}
 
@@ -191,10 +197,10 @@ export void MapScreen::run() {
 		* handleEvent
 		* checkMouseLocation
 		* rebuildDisplay
-		* drawPanel
 		*/
 
-		draw(ui, settingsPanel);
+		checkMouseLocation(e, settingsPanel, mapMenuPanel);
+		draw(ui, settingsPanel, mapMenuPanel);
 
 		/* Delay so the app doesn't just crash */
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -208,53 +214,17 @@ export void MapScreen::run() {
 	gameState.setScreenStruct(screenToLoadStruct);
 }
 
-void MapScreen::draw(UI& ui, Panel& settingsPanel) {
+void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel) {
 	unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	//SDL_SetRenderDrawColor(ui.getMainRenderer(), 140, 140, 140, 1);
-	SDL_SetRenderDrawColor(ui.getMainRenderer(),
-		colorsByFunction["BTN_TEXT"].r,
-		colorsByFunction["BTN_TEXT"].g,
-		colorsByFunction["BTN_TEXT"].b,
-		1);
-
-
+	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 
-
-	/* TEST DRAW */
-
-	SDL_Rect targetRect = { 0,0, 55, 55 };
-
-	SDL_RenderCopyEx(
-		ui.getMainRenderer(),
-		getWallTexture(),
-		NULL, &targetRect,
-		0, NULL, SDL_FLIP_NONE);
-
-
-	SDL_Surface* bgImageRaw = IMG_Load("assets/door_400_400.png"); /* create BG surface*/
-	if (bgImageRaw == NULL) {
-		printf("Failed to load image: %s\n", IMG_GetError());
-		return;
-	}
-	SDL_Texture* bgTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), bgImageRaw);
-	SDL_FreeSurface(bgImageRaw);
-
-	if (bgTexture == NULL) {
-		printf("Failed to create texture: %s\n", SDL_GetError());
-		return;
-	}
-
-	SDL_RenderCopyEx(
-		ui.getMainRenderer(),
-		bgTexture,
-		NULL, NULL,
-		0, NULL, SDL_FLIP_NONE);
-
 	drawMap(ui);
+	drawPanel(ui, settingsPanel);
+	drawPanel(ui, mapMenuPanel);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
-	SDL_DestroyTexture(bgTexture);
 }
 
 
@@ -284,18 +254,10 @@ void MapScreen::drawMap(UI& ui) {
 		vector<Block> blocks = rows[y];
 
 		for (int x = 0; x < blocks.size(); ++x) {
-			if (!getFloorTexture() || !getWallTexture()) {
-				cout << "\n\n DRAWING ERROR \n\n";
 
-			}else{
-				cout << "\n\nDrawing bLOCK\n\n";
-				cout << "\n\nBLOCK WIDTH: " << blockWidth << "\n\n";
-			}
-
-			Block block = blocks[x];
-			
-			targetRect.x = (x + 1) * blockWidth;
-			targetRect.y = (y + 1) * blockWidth;
+			Block block = blocks[x];			
+			targetRect.x = x * blockWidth;
+			targetRect.y = y * blockWidth;
 
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
@@ -305,6 +267,22 @@ void MapScreen::drawMap(UI& ui) {
 		}
 	}
 	
+}
+
+void MapScreen::drawPanel(UI& ui, Panel& panel) {
+	if (!panel.getShow()) { return; }
+	for (Button button : panel.getButtons()) {
+		/* get the rect, send it a reference(to be converted to a pointer) */
+		SDL_Rect rect = button.getRect();
+
+		/* now draw the button texture */
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
+			NULL, &rect,
+			0, NULL, SDL_FLIP_NONE
+		);
+	}
 }
 
 
@@ -332,7 +310,7 @@ Map::Map() {
 
 	/* replace with reading from DB */
 	bool makeFloor = true;
-	for (int i = 0; i < 11; ++i) {
+	for (int i = 0; i < 25; ++i) {
 
 		vector<Block> blocks;
 
@@ -346,4 +324,96 @@ Map::Map() {
 	}
 
 	cout << "\n\n Map is made! \n\n";
+}
+
+/* Screen has been resized. Rebuild! */
+void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& mapMenuPanel) {
+	UI& ui = UI::getInstance();
+	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
+	ui.rebuildMapMenuPanel(mapMenuPanel);
+	buildMapDisplay();
+}
+
+
+/* Process user input */
+void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& mapMenuPanel, GameState& gameState) {
+	/* User pressed X to close */
+	if (e.type == SDL_QUIT) {
+		cout << "\nQUIT\n";
+		running = false;
+		return;
+	}
+	else {
+		// user clicked
+		if (e.type == SDL_MOUSEBUTTONDOWN) {
+			cout << "user clicked mouse\n";
+			// These events might change the value of screenToLoad
+			int mouseX, mouseY;
+			SDL_GetMouseState(&mouseX, &mouseY);
+
+			if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
+
+				/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
+				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
+				UI& ui = UI::getInstance();
+				/* see what button might have been clicked : */
+				switch (clickStruct.buttonOption) {
+					case ButtonOption::Mobile:
+						ui.resizeWindow(WindowResType::Mobile);
+						rebuildDisplay(settingsPanel, mapMenuPanel);
+						break;
+					case ButtonOption::Tablet:
+						ui.resizeWindow(WindowResType::Tablet);
+						rebuildDisplay(settingsPanel, mapMenuPanel);
+						break;
+					case ButtonOption::Desktop:
+						ui.resizeWindow(WindowResType::Desktop);
+						rebuildDisplay(settingsPanel, mapMenuPanel);
+						break;
+					case ButtonOption::Fullscreen:
+						ui.resizeWindow(WindowResType::Fullscreen);
+						rebuildDisplay(settingsPanel, mapMenuPanel);
+						break;
+					case ButtonOption::Back:
+						// switch to other panel
+						settingsPanel.setShow(false);
+						mapMenuPanel.setShow(true);
+						break;
+					case ButtonOption::Exit:
+						/* back to menu screen */
+						running = false;
+						break;
+					default:
+						cout << "ERROR\n";
+				}
+			}
+			else if (mapMenuPanel.getShow() && mapMenuPanel.isInPanel(mouseX, mouseY)) {
+				cout << "\n\nCLICK MAP MENU \n\n";
+				ButtonClickStruct clickStruct = mapMenuPanel.checkButtonClick(mouseX, mouseY);
+				UI& ui = UI::getInstance();
+				/* see what button might have been clicked : */
+				switch (clickStruct.buttonOption) {
+				case ButtonOption::MapOptions:
+					cout << "\nMAP OPTIONS\n";
+					break;
+				case ButtonOption::Settings:
+					settingsPanel.setShow(true);
+					mapMenuPanel.setShow(false);
+					break;
+				default:
+					cout << "ERROR\n";
+
+				}
+			}
+		}
+	}
+}
+
+void MapScreen::checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& mapMenuPanel) {
+	/* check for mouse over(for button hover) */
+	int mouseX, mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+	/* send the x and y to the panel and its buttons to change the color */
+	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
+	if (mapMenuPanel.getShow()) { mapMenuPanel.checkMouseOver(mouseX, mouseY); }
 }

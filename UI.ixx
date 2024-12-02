@@ -93,16 +93,18 @@ export class UI {
 		Panel createMainMenuPanel();
 		void rebuildMainMenuPanel(Panel& mainMenuPanel);
 
-		Panel createSettingsPanel();
-		void rebuildSettingsPanel(Panel& settingsPanel);
+		Panel createSettingsPanel(ScreenType context = ScreenType::Menu);
+		void rebuildSettingsPanel(Panel& settingsPanel, ScreenType context = ScreenType::Menu);
+
+		Panel createMapMenuPanel();
+		void rebuildMapMenuPanel(Panel& mapMenuPanel);
 
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
 		void resizeWindow(WindowResType newResType);
 		void refreshFonts(Resources& resources);
 
-		unordered_map<string, SDL_Color> getColorsByFunction() { return colorsByFunction; }
-		
+		unordered_map<string, SDL_Color> getColorsByFunction() { return colorsByFunction; }		
 
 
 	private:
@@ -131,6 +133,7 @@ export class UI {
 		// Private destructor to prevent deletion through a pointer to the base class
 		~UI() = default;
 
+		/* Only for initial display. */
 		const WindowResType windowResType = WindowResType::Desktop;
 
 		int buttonPadding = 10;
@@ -155,13 +158,17 @@ export class UI {
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 
-		// settings panel building functions
-		tuple<SDL_Rect, vector<Button>> createSettingsPanelComponents();
-		vector<PreButtonStruct> getSettingsPreButtonStructs();
+		/* settings panel building functions */
+		tuple<SDL_Rect, vector<Button>> createSettingsPanelComponents(ScreenType context = ScreenType::Menu);
+		vector<PreButtonStruct> getSettingsPreButtonStructs(ScreenType context = ScreenType::Menu);
 
-		// main menu panel building functions
+		/* main menu panel building functions */
 		tuple<SDL_Rect, vector<Button>> createMainMenuPanelComponents();
 		vector<PreButtonStruct> getMainMenuPreButtonStructs();
+
+		/* Map Menu panel building functions */
+		tuple<SDL_Rect, vector<Button>> createMapMenuPanelComponents();
+		vector<PreButtonStruct> getMapMenuPreButtonStructs();
 
 		void prepareColors();
 		void getAndStoreWindowSize();
@@ -1021,7 +1028,7 @@ vector<PreButtonStruct> UI::getMainMenuPreButtonStructs() {
 	};
 }
 
-/* create all the components for the settings panel */
+/* create all the components for the main menu panel */
 tuple<SDL_Rect, vector<Button>> UI::createMainMenuPanelComponents() {
 	vector<PreButtonStruct> preButtonStructs = getMainMenuPreButtonStructs();
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
@@ -1048,23 +1055,32 @@ void UI::rebuildMainMenuPanel(Panel& mainMenuPanel) {
 
 
 /* build and deliver basic info for settings panel buttons */
-vector<PreButtonStruct> UI::getSettingsPreButtonStructs() {
+vector<PreButtonStruct> UI::getSettingsPreButtonStructs(ScreenType context) {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	vector<PreButtonStruct> preButtonStructs = {
 		buildPreButtonStruct(resources.getButtonText("MOBILE"), ButtonOption::Mobile),
 		buildPreButtonStruct(resources.getButtonText("TABLET"), ButtonOption::Tablet),
 		buildPreButtonStruct(resources.getButtonText("DESKTOP"), ButtonOption::Desktop),
-		buildPreButtonStruct(resources.getButtonText("FULLSCREEN"), ButtonOption::Fullscreen),
-		buildPreButtonStruct(resources.getButtonText("BACK"), ButtonOption::Back)
+		buildPreButtonStruct(resources.getButtonText("FULLSCREEN"), ButtonOption::Fullscreen)		
 	};
+
+	/* Some items might only be available in certain screens */
+
+	if (context == ScreenType::Map) {
+		/* to EXIT the screen (and the game) back to the main menu. */
+		preButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit));
+	}
+
+	/* BACK from this menu to the original on-screen menu */
+	preButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("BACK"), ButtonOption::Back));
 
 	return preButtonStructs;
 }
 
 /* create all the components for the settings panel */
-tuple<SDL_Rect, vector<Button>> UI::createSettingsPanelComponents() {
-	vector<PreButtonStruct> preButtonStructs = getSettingsPreButtonStructs();
+tuple<SDL_Rect, vector<Button>> UI::createSettingsPanelComponents(ScreenType context) {
+	vector<PreButtonStruct> preButtonStructs = getSettingsPreButtonStructs(context);
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
 	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
 	return { panelRect, buttons};
@@ -1073,16 +1089,52 @@ tuple<SDL_Rect, vector<Button>> UI::createSettingsPanelComponents() {
 /*
 * Settings available in every screen.
 */
-Panel UI::createSettingsPanel() {
-	auto [panelRect, buttons] = createSettingsPanelComponents();
+Panel UI::createSettingsPanel(ScreenType context) {
+	auto [panelRect, buttons] = createSettingsPanelComponents(context);
 	return Panel(panelRect, buttons);
 }
 
 
 /* rebuild the settings panel after resize */
-void UI::rebuildSettingsPanel(Panel& settingsPanel) {
-	auto [panelRect, buttons] = createSettingsPanelComponents();
+void UI::rebuildSettingsPanel(Panel& settingsPanel, ScreenType context) {
+	auto [panelRect, buttons] = createSettingsPanelComponents(context);
 	settingsPanel.rebuildSelf(panelRect, buttons);
+}
+
+
+
+/* MAP MENU COMPONENTS */
+
+/* build and deliver basic info for main menu panel buttons */
+vector<PreButtonStruct> UI::getMapMenuPreButtonStructs() {
+	Resources& resources = Resources::getInstance();
+	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
+	return {
+		buildPreButtonStruct(resources.getButtonText("OPTIONS"), ButtonOption::MapOptions),
+		buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings)
+	};
+}
+
+/* create all the components for the main menu panel */
+tuple<SDL_Rect, vector<Button>> UI::createMapMenuPanelComponents() {
+	vector<PreButtonStruct> preButtonStructs = getMapMenuPreButtonStructs();
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	return { panelRect, buttons };
+}
+
+/*
+* Settings available in every screen.
+*/
+Panel UI::createMapMenuPanel() {
+	auto [panelRect, buttons] = createMapMenuPanelComponents();
+	return Panel(panelRect, buttons);
+}
+
+/* rebuild the settings panel after resize */
+void UI::rebuildMapMenuPanel(Panel& mapMenuPanel) {
+	auto [panelRect, buttons] = createMapMenuPanelComponents();
+	mapMenuPanel.rebuildSelf(panelRect, buttons);
 }
 
 
