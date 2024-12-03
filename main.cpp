@@ -5,15 +5,6 @@
 *
 */
 
-/*
-* NEXT:
-* - clicking button opens new screen.
-* - every screen must have "resize" function.
-* - - this will require abstracting out certain things.
-* - - make font sizes depend on resolution.
-* - Resolution is available in the SETTINGS
-*/
-
 #include "include/json.hpp"
 #include "SDL.h"
 #include "SDL_image.h"
@@ -41,17 +32,17 @@ using namespace std;
 const bool DEBUG = false;
 
 
-// declarations
+/* declarations */
 void exit(SDL_Surface* surface, SDL_Window* window);
 
-// Main game loop manages particular screens, which do actual game logic.
+/* Main game loop manages particular screens, which do actual game logic. */
 int main(int argc, char* args[]) {
 	cout << "Hello new world\n";
 
-	// seed the random number generator now for the whole game
+	/* seed the random number generator now for the whole game */
 	srand((unsigned int)time(NULL));
 
-	// instantiate the UI instance, and hold the reference for eventual destruction in this file.
+	/* instantiate the UI instance, and hold the reference for eventual destruction in this file. */
 	UI& ui = UI::getInstance();
 	GameState& gameState = GameState::getInstance();
 	
@@ -70,8 +61,8 @@ int main(int argc, char* args[]) {
 			if (e.type == SDL_QUIT) { running = false; }
 		}
 
-		// run the chosen screen and receive the next screen to load
-		// if the screenToLoad is Map or Battle, we will send in the ID to the Run function
+		/* run the chosen screen and receive the next screen to load
+		 * if the screenToLoad is Map or Battle, we will send in the ID to the Run function */
 
 		if (gameState.getScreenType() == ScreenType::Menu) {
 			cout << "\n\n MENU \n\n";
@@ -102,9 +93,8 @@ int main(int argc, char* args[]) {
 	return 0;
 }
 
-// Free SDL resources and quit
-void exit(SDL_Surface* surface, SDL_Window* window)
-{
+/* Free SDL resources and quit */
+void exit(SDL_Surface* surface, SDL_Window* window) {
 	SDL_FreeSurface(surface);
 	surface = NULL;
 
