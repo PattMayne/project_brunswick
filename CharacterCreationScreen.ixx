@@ -11,7 +11,7 @@ module;
 #include <time.h>
 #include <unordered_map>
 
-export module BattleScreen;
+export module CharacterCreationScreen;
 
 using namespace std;
 
@@ -21,12 +21,12 @@ import Resources;
 import UI;
 
 /* Map Screen class: where we navigate worlds, dungeons, and buildings. */
-export class BattleScreen {
+export class CharacterCreationScreen {
 public:
 	/* constructor */
-	BattleScreen() {
-		cout << "\nLoading Battle Screen\n\n";
-		screenType = ScreenType::Battle;
+	CharacterCreationScreen() {
+		cout << "\nLoading Character Creation Screen\n\n";
+		screenType = ScreenType::CharacterCreation;
 		id = 0;
 		screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 		UI& ui = UI::getInstance();
@@ -61,7 +61,7 @@ private:
 	void createTitleTexture(UI& ui);
 };
 
-void BattleScreen::getBackgroundTexture(UI& ui) {
+void CharacterCreationScreen::getBackgroundTexture(UI& ui) {
 	int windowHeight, windowWidth;
 	SDL_GetWindowSize(ui.getMainWindow(), &windowWidth, &windowHeight);
 	bgSourceRect = { 0, 0, windowWidth, windowHeight };
@@ -69,7 +69,7 @@ void BattleScreen::getBackgroundTexture(UI& ui) {
 	bgTexture = ui.createBackgroundTexture();
 }
 
-export void BattleScreen::run() {
+export void CharacterCreationScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
@@ -116,7 +116,7 @@ export void BattleScreen::run() {
 }
 
 
-void BattleScreen::draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel) {
+void CharacterCreationScreen::draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel) {
 	//unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
@@ -124,7 +124,7 @@ void BattleScreen::draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel) {
 
 	/* draw BG for now */
 	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
-	
+
 	/* draw the title */
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 
@@ -134,7 +134,7 @@ void BattleScreen::draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel) {
 }
 
 
-void BattleScreen::drawPanel(UI& ui, Panel& panel) {
+void CharacterCreationScreen::drawPanel(UI& ui, Panel& panel) {
 	if (!panel.getShow()) { return; }
 	for (Button button : panel.getButtons()) {
 		/* get the rect, send it a reference(to be converted to a pointer) */
@@ -152,16 +152,16 @@ void BattleScreen::drawPanel(UI& ui, Panel& panel) {
 
 
 /* Create the texture with the name of the game */
-void BattleScreen::createTitleTexture(UI& ui) {
+void CharacterCreationScreen::createTitleTexture(UI& ui) {
 	Resources& resources = Resources::getInstance();
-	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture("Battle!");
+	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture("Character Creation!");
 	titleTexture = incomingTitleTexture;
 	titleRect = incomingTitleRect;
 }
 
 
 /* Screen has been resized. Rebuild! */
-void BattleScreen::rebuildDisplay(Panel& settingsPanel, Panel& mapMenuPanel) {
+void CharacterCreationScreen::rebuildDisplay(Panel& settingsPanel, Panel& mapMenuPanel) {
 	UI& ui = UI::getInstance();
 	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
 	ui.rebuildMapMenuPanel(mapMenuPanel);
@@ -171,7 +171,7 @@ void BattleScreen::rebuildDisplay(Panel& settingsPanel, Panel& mapMenuPanel) {
 
 
 /* Process user input */
-void BattleScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& mapMenuPanel, GameState& gameState) {
+void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& mapMenuPanel, GameState& gameState) {
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) {
 		cout << "\nQUIT\n";
@@ -244,7 +244,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel
 	}
 }
 
-void BattleScreen::checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& mapMenuPanel) {
+void CharacterCreationScreen::checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& mapMenuPanel) {
 	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);

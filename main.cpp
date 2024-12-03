@@ -34,6 +34,7 @@ import GameState;
 import MenuScreen;
 import MapScreen;
 import BattleScreen;
+import CharacterCreationScreen;
 import ScreenType;
 import Resources;
 using namespace std;
@@ -85,6 +86,10 @@ int main(int argc, char* args[]) {
 			cout << "\nselected BATTLE\n";
 			BattleScreen battleScreen = BattleScreen();
 			battleScreen.run();
+		}else if (gameState.getScreenType() == ScreenType::CharacterCreation) {
+			cout << "\nselected CHARACTER CREATION\n";
+			CharacterCreationScreen characterCreationScreen = CharacterCreationScreen();
+			characterCreationScreen.run();
 		}
 
 		/* check for closingScreen type and close.Otherwise we will load the NEW screen on the next loop */

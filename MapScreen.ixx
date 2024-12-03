@@ -76,9 +76,12 @@ export class MapScreen {
 			id = 0;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
+			UI& ui = UI::getInstance();
+
 			hResolution = 10; /* LATER user can update this to zoom in or out. */
 			buildMapDisplay();
 			map = Map();
+			createTitleTexture(ui);
 		}
 
 		ScreenType getScreenType() {
@@ -116,12 +119,24 @@ export class MapScreen {
 		SDL_Texture* getWallTexture() { return wallTexture; }
 		SDL_Texture* getFloorTexture() { return floorTexture; }
 
+		void createTitleTexture(UI& ui);
+
+		SDL_Texture* titleTexture;
+		SDL_Rect titleRect;
 
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
 		*/
 
 };
+
+/* Create the texture with the name of the game */
+void MapScreen::createTitleTexture(UI& ui) {
+	Resources& resources = Resources::getInstance();
+	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture("Map!");
+	titleTexture = incomingTitleTexture;
+	titleRect = incomingTitleRect;
+}
 
 void MapScreen::buildMapDisplay() {
 	UI& ui = UI::getInstance();
@@ -222,6 +237,10 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel) {
 	SDL_RenderClear(ui.getMainRenderer());
 
 	drawMap(ui);
+
+	/* draw the title */
+	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
+
 	drawPanel(ui, settingsPanel);
 	drawPanel(ui, mapMenuPanel);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
@@ -332,6 +351,7 @@ void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& mapMenuPanel) {
 	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
 	ui.rebuildMapMenuPanel(mapMenuPanel);
 	buildMapDisplay();
+	createTitleTexture(ui);
 }
 
 

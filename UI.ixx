@@ -107,6 +107,9 @@ export class UI {
 		/* Background with overlay */
 		SDL_Texture* createBackgroundTexture();
 
+		/* get title texture for any screen */
+		tuple<SDL_Texture*, SDL_Rect> createTitleTexture(string title);
+
 		unordered_map<string, SDL_Color> getColorsByFunction() { return colorsByFunction; }
 
 
@@ -1232,6 +1235,7 @@ SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal) {
 *	Character Creation Panels
 */
 
+/* The default BG texture for any screen. */
 SDL_Texture* UI::createBackgroundTexture() {
 	int w = mainWindowSurface->w;
 	int h = mainWindowSurface->h;
@@ -1259,4 +1263,142 @@ SDL_Texture* UI::createBackgroundTexture() {
 	SDL_FreeSurface(bgSurface);
 
 	return bgTexture;
+}
+
+/* Title texture for any screen */
+tuple<SDL_Texture*, SDL_Rect> UI::createTitleTexture(string title) {
+	Resources& resources = Resources::getInstance();
+	// YELLOW text with BLACK offset underlay
+	unordered_map<string, SDL_Color> colors = getColors();
+	SDL_Color logoColor = colors["LOGO_COLOR"];
+	SDL_Color textColor = colors["DARK_TEXT"];
+	SDL_SetRenderDrawColor(mainRenderer, logoColor.r, logoColor.g, logoColor.b, 1);
+	string titleText = title;
+
+	/* make one yellow, one black, blit them onto a slightly larger one so the black is beneath but offset by 10px */
+	SDL_Surface* titleTextSurfaceFG = TTF_RenderUTF8_Blended(getTitleFont(), titleText.c_str(), logoColor);
+	SDL_Surface* titleTextSurfaceBG = TTF_RenderUTF8_Blended(getTitleFont(), titleText.c_str(), textColor);
+
+	int xOffset = 6;
+	int yOffset = 6;
+
+	/* If text won't fit on screen, this is how we wrap and center it. */
+	if (titleTextSurfaceFG->w > mainWindowSurface->w - (xOffset * 3)) {
+
+		vector<string> words;
+		vector<SDL_Surface*> wordSurfacesFG;
+		vector<SDL_Surface*> wordSurfacesBG;
+
+		int widestSurfaceWidth = 0;
+		int tallestSurfaceHeight = 0;
+
+		istringstream iss(title);
+		string word;
+
+		/* make a vector of words from the string */
+		while (getline(iss, word, ' ')) { words.push_back(word); }
+
+		/* make two vectors (FG & BG) of text surfaces from the words */
+		for (string word: words) {
+			SDL_Surface* newFG = TTF_RenderUTF8_Blended(getTitleFont(), word.c_str(), logoColor);
+			SDL_Surface* newBG = TTF_RenderUTF8_Blended(getTitleFont(), word.c_str(), textColor);
+
+			wordSurfacesFG.push_back(newFG);
+			wordSurfacesBG.push_back(newBG);
+
+			if (newFG->w > widestSurfaceWidth) { widestSurfaceWidth = newFG->w; }
+			if (newFG->h > tallestSurfaceHeight) { tallestSurfaceHeight = newFG->h; }
+		}
+
+		int newSurfaceWidth = widestSurfaceWidth + (xOffset * 2);
+		int newSurfaceHeight = (tallestSurfaceHeight + yOffset) * words.size();
+
+		SDL_FreeSurface(titleTextSurfaceFG);
+		SDL_FreeSurface(titleTextSurfaceBG);
+
+		titleTextSurfaceFG = SDL_CreateRGBSurface(
+			0,
+			newSurfaceWidth,
+			newSurfaceHeight,
+			32,  // bits per pixel
+			0x00FF0000, // Red mask
+			0x0000FF00, // Green mask
+			0x000000FF, // Blue mask
+			0xFF000000  // Alpha mask
+		);
+
+		titleTextSurfaceBG = SDL_CreateRGBSurface(
+			0,
+			newSurfaceWidth,
+			newSurfaceHeight,
+			32,  // bits per pixel
+			0x00FF0000, // Red mask
+			0x0000FF00, // Green mask
+			0x000000FF, // Blue mask
+			0xFF000000  // Alpha mask
+		);
+
+		for (int i = 0; i < wordSurfacesFG.size(); i++) {
+
+			/* blit each surface onto the new surfaces */
+			int wordWidth = wordSurfacesFG[i]->w;
+			int wordHeight = wordSurfacesFG[i]->h;
+
+			SDL_Rect wordRect = {
+				(newSurfaceWidth - wordWidth) / 2,
+				(wordHeight * i) + (yOffset * i),
+				wordWidth,
+				wordHeight
+			};
+
+			SDL_BlitSurface(wordSurfacesFG[i], NULL, titleTextSurfaceFG, &wordRect);
+			SDL_BlitSurface(wordSurfacesBG[i], NULL, titleTextSurfaceBG, &wordRect);
+
+			SDL_FreeSurface(wordSurfacesFG[i]);
+			SDL_FreeSurface(wordSurfacesBG[i]);
+		}
+	}
+
+
+	// create a blank surface
+	SDL_Surface* titleTextSurface = SDL_CreateRGBSurface(
+		0,
+		titleTextSurfaceFG->w + xOffset,
+		titleTextSurfaceFG->h + yOffset,
+		32,  // bits per pixel
+		0x00FF0000, // Red mask
+		0x0000FF00, // Green mask
+		0x000000FF, // Blue mask
+		0xFF000000  // Alpha mask
+	);
+
+	SDL_Rect bgRect = {
+		xOffset,
+		yOffset,
+		titleTextSurface->w,
+		titleTextSurface->h
+	};
+
+	/* blit */
+	SDL_BlitSurface(titleTextSurfaceBG, NULL, titleTextSurface, &bgRect);
+	SDL_BlitSurface(titleTextSurfaceFG, NULL, titleTextSurface, NULL);
+
+	SDL_Texture* titleTexture = SDL_CreateTextureFromSurface(mainRenderer, titleTextSurface);
+	SDL_FreeSurface(titleTextSurface);
+
+	/* create title text rect */
+
+	/* get the width and height of the title texture, calculate the x& y for the rect on which to draw it */
+	int titleTextWidth, titleTextHeight;
+	SDL_QueryTexture(titleTexture, NULL, NULL, &titleTextWidth, &titleTextHeight);
+
+	/* create the rect to draw the title */
+	SDL_Rect titleRect = {
+		(mainWindowSurface->w / 2) - (titleTextWidth / 2),
+		titleTextHeight,
+		titleTextWidth,
+		titleTextHeight
+	};
+
+	return { titleTexture, titleRect };
 }

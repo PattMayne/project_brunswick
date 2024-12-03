@@ -176,62 +176,9 @@ void MenuScreen::getBackgroundTexture(UI& ui) {
 /* Create the texture with the name of the game */
 void MenuScreen::createTitleTexture(UI& ui) {
 	Resources& resources = Resources::getInstance();
-	// YELLOW text with BLACK offset underlay
-	unordered_map<string, SDL_Color> colors = ui.getColors();
-	SDL_Color logoColor = colors["LOGO_COLOR"];
-	SDL_Color textColor = colors["DARK_TEXT"];
-	SDL_SetRenderDrawColor(ui.getMainRenderer(), logoColor.r, logoColor.g, logoColor.b, 1);
-	string titleText = resources.getTitle();
-
-	/* make one yellow, one black, blit them onto a slightly larger one so the black is beneath but offset by 10px */
-	SDL_Surface* titleTextSurfaceFG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), logoColor);
-	SDL_Surface* titleTextSurfaceBG = TTF_RenderUTF8_Blended(ui.getTitleFont(), titleText.c_str(), textColor);
-
-	/* blit them both onto the new surface, with the black at an offset */
-
-	int xOffset = 6;
-	int yOffset = 6;
-
-	// create a blank surface
-	SDL_Surface* titleTextSurface = SDL_CreateRGBSurface(
-		0,
-		titleTextSurfaceFG->w + xOffset,
-		titleTextSurfaceFG->h + yOffset,
-		32,  // bits per pixel
-		0x00FF0000, // Red mask
-		0x0000FF00, // Green mask
-		0x000000FF, // Blue mask
-		0xFF000000  // Alpha mask
-	);
-
-	SDL_Rect bgRect = {
-		xOffset,
-		yOffset,
-		titleTextSurface->w,
-		titleTextSurface->h
-	};
-
-	/* blit */
-	SDL_BlitSurface(titleTextSurfaceBG, NULL, titleTextSurface, &bgRect);
-	SDL_BlitSurface(titleTextSurfaceFG, NULL, titleTextSurface, NULL);
-
-	titleTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), titleTextSurface);
-	SDL_FreeSurface(titleTextSurface);
-
-	/* create title text rect */
-
-	/* get the width and height of the title texture, calculate the x& y for the rect on which to draw it */
-	int titleTextWidth, titleTextHeight;
-	SDL_QueryTexture(titleTexture, NULL, NULL, &titleTextWidth, &titleTextHeight);
-
-	/* create the rect to draw the title */
-	SDL_Surface* mainWindowSurface = ui.getWindowSurface();
-	titleRect = {
-		(mainWindowSurface->w / 2) - (titleTextWidth / 2),
-		titleTextHeight,
-		titleTextWidth,
-		titleTextHeight
-	};
+	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture(resources.getTitle());
+	titleTexture = incomingTitleTexture;
+	titleRect = incomingTitleRect;
 }
 
 /* Screen has been resized. Rebuild! */
@@ -263,6 +210,8 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 				// see what button might have been clicked:
 				switch (clickStruct.buttonOption) {
 				case ButtonOption::About:
+					screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+					running = false;
 					cout << "ABOUT\n";
 					break;
 				case ButtonOption::NoOption:
