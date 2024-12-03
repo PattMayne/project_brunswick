@@ -48,6 +48,12 @@ export class MenuScreen {
 			createTitleTexture(ui);
 		}
 
+		/* Destructor */
+		~MenuScreen() {
+			SDL_DestroyTexture(bgTexture);
+			SDL_DestroyTexture(titleTexture);
+		}
+
 		void setParentStruct(ScreenStruct incomingParentStruct) {
 			screenToLoadStruct = incomingParentStruct;
 		}

@@ -97,8 +97,8 @@ export class UI {
 		Panel createSettingsPanel(ScreenType context = ScreenType::Menu);
 		void rebuildSettingsPanel(Panel& settingsPanel, ScreenType context = ScreenType::Menu);
 
-		Panel createMapMenuPanel();
-		void rebuildMapMenuPanel(Panel& mapMenuPanel);
+		Panel createGameMenuPanel();
+		void rebuildGameMenuPanel(Panel& gameMenuPanel);
 
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
@@ -174,8 +174,8 @@ export class UI {
 		vector<PreButtonStruct> getMainMenuPreButtonStructs();
 
 		/* Map Menu panel building functions */
-		tuple<SDL_Rect, vector<Button>> createMapMenuPanelComponents();
-		vector<PreButtonStruct> getMapMenuPreButtonStructs();
+		tuple<SDL_Rect, vector<Button>> createGameMenuPanelComponents();
+		vector<PreButtonStruct> getGameMenuPreButtonStructs();
 
 		void prepareColors();
 		void getAndStoreWindowSize();
@@ -1131,7 +1131,7 @@ void UI::rebuildSettingsPanel(Panel& settingsPanel, ScreenType context) {
 /* MAP MENU COMPONENTS */
 
 /* build and deliver basic info for main menu panel buttons */
-vector<PreButtonStruct> UI::getMapMenuPreButtonStructs() {
+vector<PreButtonStruct> UI::getGameMenuPreButtonStructs() {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	return {
@@ -1141,27 +1141,24 @@ vector<PreButtonStruct> UI::getMapMenuPreButtonStructs() {
 }
 
 /* create all the components for the main menu panel */
-tuple<SDL_Rect, vector<Button>> UI::createMapMenuPanelComponents() {
-	vector<PreButtonStruct> preButtonStructs = getMapMenuPreButtonStructs();
+tuple<SDL_Rect, vector<Button>> UI::createGameMenuPanelComponents() {
+	vector<PreButtonStruct> preButtonStructs = getGameMenuPreButtonStructs();
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
 	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
 	return { panelRect, buttons };
 }
 
-/*
-* Settings available in every screen.
-*/
-Panel UI::createMapMenuPanel() {
-	auto [panelRect, buttons] = createMapMenuPanelComponents();
+/*  Settings available in every screen. */
+Panel UI::createGameMenuPanel() {
+	auto [panelRect, buttons] = createGameMenuPanelComponents();
 	return Panel(panelRect, buttons);
 }
 
 /* rebuild the settings panel after resize */
-void UI::rebuildMapMenuPanel(Panel& mapMenuPanel) {
-	auto [panelRect, buttons] = createMapMenuPanelComponents();
-	mapMenuPanel.rebuildSelf(panelRect, buttons);
+void UI::rebuildGameMenuPanel(Panel& gameMenuPanel) {
+	auto [panelRect, buttons] = createGameMenuPanelComponents();
+	gameMenuPanel.rebuildSelf(panelRect, buttons);
 }
-
 
 
 
@@ -1176,7 +1173,6 @@ void UI::rebuildMapMenuPanel(Panel& mapMenuPanel) {
 */
 
 
-
 // because SDL2 is very picky about its colors (and there are a trillion color formats)
 export Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color) {
 	return SDL_MapRGB(
@@ -1188,9 +1184,9 @@ export Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color 
 
 /* Check if an x/y location falls within a rect */
 export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
-	// check horizontal
+	/* check horizontal */
 	if (mouseX >= rect.x && mouseX <= rect.x + rect.w) {
-		// check vertical
+		/* check vertical */
 		if (mouseY >= rect.y && mouseY <= rect.y + rect.h) {
 			return true;
 		}
@@ -1206,7 +1202,6 @@ SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal) {
 
 	/* error check */
 	if (!flippedSurface) {
-		cout << "\n\n\nERROR!!!\n\n\n";
 		cerr << "Failed to create surface: " << SDL_GetError() << endl;
 		return surface;
 	}
@@ -1357,8 +1352,12 @@ tuple<SDL_Texture*, SDL_Rect> UI::createTitleTexture(string title) {
 	SDL_BlitSurface(titleTextSurfaceBG, NULL, titleTextSurface, &bgRect);
 	SDL_BlitSurface(titleTextSurfaceFG, NULL, titleTextSurface, NULL);
 
+	/* Finally create the texture */
 	SDL_Texture* titleTexture = SDL_CreateTextureFromSurface(mainRenderer, titleTextSurface);
+
 	SDL_FreeSurface(titleTextSurface);
+	SDL_FreeSurface(titleTextSurfaceBG);
+	SDL_FreeSurface(titleTextSurfaceFG);
 
 	/* create title text rect */
 

@@ -84,10 +84,15 @@ export class MapScreen {
 			createTitleTexture(ui);
 		}
 
-		ScreenType getScreenType() {
-			return screenType;
+		/* Destructor */
+		~MapScreen() {
+			SDL_DestroyTexture(floorTexture);
+			SDL_DestroyTexture(wallTexture);
+			SDL_DestroyTexture(titleTexture);
 		}
 
+		ScreenType getScreenType() { return screenType; }
+		MapType getMapType() { return mapType; }
 		void run();
 
 	private:
@@ -96,14 +101,14 @@ export class MapScreen {
 		int id;
 		ScreenStruct screenToLoadStruct;
 		void drawMap(UI& ui);
-		void draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel);
+		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 		void drawPanel(UI& ui, Panel& panel);
 
-		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& mapMenuPanel, GameState& gameState);
-		void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& mapMenuPanel);
+		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
+		void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel);
 
 		void buildMapDisplay();
-		void rebuildDisplay(Panel& settingsPanel, Panel& mapMenuPanel);
+		void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
 
 		void buildMap();
 
@@ -169,9 +174,9 @@ export void MapScreen::run() {
 	UI& ui = UI::getInstance();
 	/* panels */
 	Panel settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-	Panel mapMenuPanel = ui.createMapMenuPanel();
+	Panel gameMenuPanel = ui.createGameMenuPanel();
 	settingsPanel.setShow(false);
-	mapMenuPanel.setShow(true);
+	gameMenuPanel.setShow(true);
 
 	/*
 	* PANELS TO COME:
@@ -198,7 +203,7 @@ export void MapScreen::run() {
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
-				handleEvent(e, running, settingsPanel, mapMenuPanel, gameState);
+				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
 			}
 		}
 
@@ -214,8 +219,8 @@ export void MapScreen::run() {
 		* rebuildDisplay
 		*/
 
-		checkMouseLocation(e, settingsPanel, mapMenuPanel);
-		draw(ui, settingsPanel, mapMenuPanel);
+		checkMouseLocation(e, settingsPanel, gameMenuPanel);
+		draw(ui, settingsPanel, gameMenuPanel);
 
 		/* Delay so the app doesn't just crash */
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -229,7 +234,7 @@ export void MapScreen::run() {
 	gameState.setScreenStruct(screenToLoadStruct);
 }
 
-void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel) {
+void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	//SDL_SetRenderDrawColor(ui.getMainRenderer(), 140, 140, 140, 1);
@@ -242,7 +247,7 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& mapMenuPanel) {
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 
 	drawPanel(ui, settingsPanel);
-	drawPanel(ui, mapMenuPanel);
+	drawPanel(ui, gameMenuPanel);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
@@ -346,17 +351,17 @@ Map::Map() {
 }
 
 /* Screen has been resized. Rebuild! */
-void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& mapMenuPanel) {
+void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 	UI& ui = UI::getInstance();
 	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
-	ui.rebuildMapMenuPanel(mapMenuPanel);
+	ui.rebuildGameMenuPanel(gameMenuPanel);
 	buildMapDisplay();
 	createTitleTexture(ui);
 }
 
 
 /* Process user input */
-void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& mapMenuPanel, GameState& gameState) {
+void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState) {
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) {
 		cout << "\nQUIT\n";
@@ -380,24 +385,24 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 				switch (clickStruct.buttonOption) {
 					case ButtonOption::Mobile:
 						ui.resizeWindow(WindowResType::Mobile);
-						rebuildDisplay(settingsPanel, mapMenuPanel);
+						rebuildDisplay(settingsPanel, gameMenuPanel);
 						break;
 					case ButtonOption::Tablet:
 						ui.resizeWindow(WindowResType::Tablet);
-						rebuildDisplay(settingsPanel, mapMenuPanel);
+						rebuildDisplay(settingsPanel, gameMenuPanel);
 						break;
 					case ButtonOption::Desktop:
 						ui.resizeWindow(WindowResType::Desktop);
-						rebuildDisplay(settingsPanel, mapMenuPanel);
+						rebuildDisplay(settingsPanel, gameMenuPanel);
 						break;
 					case ButtonOption::Fullscreen:
 						ui.resizeWindow(WindowResType::Fullscreen);
-						rebuildDisplay(settingsPanel, mapMenuPanel);
+						rebuildDisplay(settingsPanel, gameMenuPanel);
 						break;
 					case ButtonOption::Back:
 						// switch to other panel
 						settingsPanel.setShow(false);
-						mapMenuPanel.setShow(true);
+						gameMenuPanel.setShow(true);
 						break;
 					case ButtonOption::Exit:
 						/* back to menu screen */
@@ -407,9 +412,9 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 						cout << "ERROR\n";
 				}
 			}
-			else if (mapMenuPanel.getShow() && mapMenuPanel.isInPanel(mouseX, mouseY)) {
+			else if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
 				cout << "\n\nCLICK MAP MENU \n\n";
-				ButtonClickStruct clickStruct = mapMenuPanel.checkButtonClick(mouseX, mouseY);
+				ButtonClickStruct clickStruct = gameMenuPanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
 				switch (clickStruct.buttonOption) {
@@ -418,7 +423,7 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 					break;
 				case ButtonOption::Settings:
 					settingsPanel.setShow(true);
-					mapMenuPanel.setShow(false);
+					gameMenuPanel.setShow(false);
 					break;
 				default:
 					cout << "ERROR\n";
@@ -429,11 +434,11 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 	}
 }
 
-void MapScreen::checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& mapMenuPanel) {
+void MapScreen::checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel) {
 	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 	/* send the x and y to the panel and its buttons to change the color */
 	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
-	if (mapMenuPanel.getShow()) { mapMenuPanel.checkMouseOver(mouseX, mouseY); }
+	if (gameMenuPanel.getShow()) { gameMenuPanel.checkMouseOver(mouseX, mouseY); }
 }
