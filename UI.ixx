@@ -50,6 +50,7 @@ Uint32 convertSDL_ColorToUint32(const SDL_PixelFormat* format, SDL_Color color);
 bool isInRect(SDL_Rect rect, int mouseX, int mouseY);
 SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal);
 vector<SDL_Rect> createSurfaceOverlay(SDL_Rect bgRect);
+SDL_Surface* createTransparentSurface(int w, int h);
 
 /*
 *
@@ -1316,27 +1317,8 @@ tuple<SDL_Texture*, SDL_Rect> UI::createTitleTexture(string title) {
 		SDL_FreeSurface(titleTextSurfaceFG);
 		SDL_FreeSurface(titleTextSurfaceBG);
 
-		titleTextSurfaceFG = SDL_CreateRGBSurface(
-			0,
-			newSurfaceWidth,
-			newSurfaceHeight,
-			32,  // bits per pixel
-			0x00FF0000, // Red mask
-			0x0000FF00, // Green mask
-			0x000000FF, // Blue mask
-			0xFF000000  // Alpha mask
-		);
-
-		titleTextSurfaceBG = SDL_CreateRGBSurface(
-			0,
-			newSurfaceWidth,
-			newSurfaceHeight,
-			32,  // bits per pixel
-			0x00FF0000, // Red mask
-			0x0000FF00, // Green mask
-			0x000000FF, // Blue mask
-			0xFF000000  // Alpha mask
-		);
+		titleTextSurfaceFG = createTransparentSurface(newSurfaceWidth, newSurfaceHeight);
+		titleTextSurfaceBG = createTransparentSurface(newSurfaceWidth, newSurfaceHeight);
 
 		for (int i = 0; i < wordSurfacesFG.size(); i++) {
 
@@ -1359,18 +1341,10 @@ tuple<SDL_Texture*, SDL_Rect> UI::createTitleTexture(string title) {
 		}
 	}
 
-
-	// create a blank surface
-	SDL_Surface* titleTextSurface = SDL_CreateRGBSurface(
-		0,
+	/* create a blank surface */
+	SDL_Surface* titleTextSurface = createTransparentSurface(
 		titleTextSurfaceFG->w + xOffset,
-		titleTextSurfaceFG->h + yOffset,
-		32,  // bits per pixel
-		0x00FF0000, // Red mask
-		0x0000FF00, // Green mask
-		0x000000FF, // Blue mask
-		0xFF000000  // Alpha mask
-	);
+		titleTextSurfaceFG->h + yOffset);
 
 	SDL_Rect bgRect = {
 		xOffset,
@@ -1401,4 +1375,16 @@ tuple<SDL_Texture*, SDL_Rect> UI::createTitleTexture(string title) {
 	};
 
 	return { titleTexture, titleRect };
+}
+
+/* create a blank surface */
+export SDL_Surface* createTransparentSurface(int w, int h) {
+	SDL_Surface* transparentSurface = SDL_CreateRGBSurface(
+		0, w, h, 32,  // bits per pixel
+		0x00FF0000, // Red mask
+		0x0000FF00, // Green mask
+		0x000000FF, // Blue mask
+		0xFF000000  // Alpha mask
+	);
+	return transparentSurface;
 }
