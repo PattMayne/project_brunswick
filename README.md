@@ -26,11 +26,11 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
     - [x] Background for main menu screen
 - [x] Make main menu screen
   - [x] UI module to process buttons and panels
-    - [ ] Buttons light up on-hover
-    - [ ] Panels can be resized based on screen size.
+    - [x] Buttons light up on-hover
+    - [x] Panels can be resized based on screen size.
     - [x] Buttons relative to panels.
     - [x] No buttons without panels! Every button is in a panel.
-- [ ] Make other screens as DUMMY screens
+- [x] Make other screens as DUMMY screens
   - [ ] Map screen
     - [ ] outside/main (world / non-safe by default, until solved) screen
     - [ ] inside (building / safe) screen
@@ -54,10 +54,10 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 - [ ] MOBILE proportions are wack. Must unwack. Maybe this will be about SCALING.
     - [ ] Button size and Font size are the main issue. Button size is based on font size. So **font size should adjust automatically based on screen size.**
 - [ ]  Possibly install conanfile or vcpkg to handle libraries (SDL2 or SDL3, json)
-- [ ] Make a Resources module to encapsulate string and int resources
-    - [ ] Make a JSON file
-    - [ ] Put all strings in JSON file
-    - [ ] Make a singleton for accessing the JSON file
+- [x] Make a Resources module to encapsulate string and int resources
+    - [x] Make a JSON file
+    - [x] Put all strings in JSON file
+    - [x] Make a singleton for accessing the JSON file
         - [ ] Singleton will read gamestate (or something) to know which variations to access (window size affects font size, etc)
 
 ### Long-Range Notes & Plans
