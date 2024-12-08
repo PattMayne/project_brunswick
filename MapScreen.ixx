@@ -173,6 +173,7 @@ void MapScreen::buildMapDisplay() {
 	SDL_FreeSurface(floorSurface);
 }
 
+
 export void MapScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
@@ -298,6 +299,7 @@ void MapScreen::drawMap(UI& ui) {
 	
 }
 
+
 void MapScreen::drawPanel(UI& ui, Panel& panel) {
 	if (!panel.getShow()) { return; }
 	for (Button button : panel.getButtons()) {
@@ -338,8 +340,8 @@ void MapScreen::buildMap() {
 
 	int mapWidth = 100;
 	map = Map(mapWidth);
-
 }
+
 
 /* Map class constructor */
 Map::Map(int mapWidth) {
@@ -354,23 +356,86 @@ Map::Map(int mapWidth) {
 	rows = vector<vector<Block>>(mapWidth);
 
 	/* replace with reading from DB */
-	bool makeFloor = true;
 	for (int i = 0; i < rows.size(); ++i) {
 
 		vector<Block> blocks(mapWidth);
 
 		for (int k = 0; k < blocks.size(); ++k) {
-
-			Block block = Block(makeFloor);
+			Block block = Block(false);
 			blocks[k] = block;
-			makeFloor = !makeFloor;
 		}
 
 		rows[i] = blocks;
 	}
 
 	cout << "\n\n Map is made! \n\n";
+
+	// Now make the PATH
+	// 
+	// get a random x starting point, but the y will be mapWidth - 1
+
+	int pathX = rand() % mapWidth;
+	int pathY = rows.size() - 1;
+
+	Block& startingBlock = rows[pathY][pathX];
+	startingBlock.setIsFloor(true);
+
+	// make the path
+
+	// MOVE THIS ENUM somewhere (maybe just at the top of the file?)
+	enum Direction { Up, Down, Left, Right, Total };
+	int directionInt = Direction::Up;
+
+	while (pathY > 0) {		
+
+		switch (directionInt) {
+		case Direction::Up:
+			if (pathY > 0) {
+				--pathY;
+			}
+			else {
+				++pathY;
+			}
+			
+			break;
+		case Direction::Down:
+			if (pathY < rows.size() - 1) {
+				++pathY;
+			}
+			else {
+				--pathY;
+			}
+			break;
+		case Direction::Left:
+			if (pathX > 0) {
+				--pathX;
+			}
+			else {
+				++pathX;
+			}
+			break;
+		case Direction::Right:
+			if (pathX < rows[pathY].size() - 1) {
+				++pathX;
+			}
+			else {
+				--pathX;
+			}
+			
+			break;
+		}
+
+		cout << "pathY is: " << pathY << "\n";
+
+		rows[pathY][pathX].setIsFloor(true);
+
+		directionInt = rand() % Direction::Total;		
+	}
+
+	// Make the above more complicated by offering random lengths of sub-paths
+
 }
+
 
 /* Screen has been resized. Rebuild! */
 void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
