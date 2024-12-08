@@ -55,7 +55,7 @@ class Block {
 class Map {
 	public:
 		/* constructor */
-		Map();
+		Map(int mapWidth);
 
 		vector<vector<Block>> getRows() { return rows; }
 
@@ -68,8 +68,14 @@ class Map {
 /* Map Screen class: where we navigate worlds, dungeons, and buildings. */
 export class MapScreen {
 	public:
-		/* constructor */
-		MapScreen() {
+		/* 
+		* constructor:
+		* 
+		* For now we are sending in the WIDTH.
+		* Later we'll send in the ID of the database object
+		* and/or the reference to a JSON file.
+		*/
+		MapScreen(int mapWidth): map(mapWidth) {
 			cout << "\nLoading Map Screen\n\n";
 			mapType = MapType::World; /* TODO: once we get the MAP object from the DB (based on the id) we can read its attribute to get its MapType. */
 			screenType = ScreenType::Map;
@@ -80,7 +86,6 @@ export class MapScreen {
 
 			hResolution = 10; /* LATER user can update this to zoom in or out. */
 			buildMapDisplay();
-			map = Map();
 			createTitleTexture(ui);
 		}
 
@@ -279,7 +284,7 @@ void MapScreen::drawMap(UI& ui) {
 
 		for (int x = 0; x < blocks.size(); ++x) {
 
-			Block block = blocks[x];			
+			Block block = blocks[x];
 			targetRect.x = x * blockWidth;
 			targetRect.y = y * blockWidth;
 
@@ -320,10 +325,24 @@ void MapScreen::buildMap() {
 	* Might instead be a member of the Map object.
 	*/
 
+	/*			DEVELOPMENT STAGES:
+	*	1. Build a map with ALL WALLS
+	*	2. Draw a PATH through those walls
+	*	3. Navigate around the map with arrows (no character)
+	*	4. Put a "character" (struct) in the map and navigate around like a maze
+	*	5. When you reach the other end you go back to the other screen
+	*	6. Save the generated screen to a database.
+	*	7. Read map paramaters from a JSON
+	*	8. Delete map entirely from database
+	*/
+
+	int mapWidth = 100;
+	map = Map(mapWidth);
+
 }
 
 /* Map class constructor */
-Map::Map() {
+Map::Map(int mapWidth) {
 	/*
 	* When loading from DB we will not care about MapScreen's resolution.
 	* This will be raw map data from the DB.
@@ -332,19 +351,22 @@ Map::Map() {
 	* FOR NOW we want hardcoded numbers for temporary display purposes.
 	*/
 
+	rows = vector<vector<Block>>(mapWidth);
+
 	/* replace with reading from DB */
 	bool makeFloor = true;
-	for (int i = 0; i < 25; ++i) {
+	for (int i = 0; i < rows.size(); ++i) {
 
-		vector<Block> blocks;
+		vector<Block> blocks(mapWidth);
 
-		for (int k = 0; k < 11; ++k) {
+		for (int k = 0; k < blocks.size(); ++k) {
+
 			Block block = Block(makeFloor);
-			blocks.push_back(block);
+			blocks[k] = block;
 			makeFloor = !makeFloor;
 		}
 
-		rows.push_back(blocks);
+		rows[i] = blocks;
 	}
 
 	cout << "\n\n Map is made! \n\n";
