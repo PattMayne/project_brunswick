@@ -62,6 +62,7 @@ class Map {
 
 	private:
 		vector<vector<Block>> rows;
+		void floorize(int x, int y, int radius);
 };
 
 
@@ -84,7 +85,7 @@ export class MapScreen {
 
 			UI& ui = UI::getInstance();
 
-			hResolution = 10; /* LATER user can update this to zoom in or out. */
+			hResolution = mapWidth; /* LATER user can update this to zoom in or out. */
 			buildMapDisplay();
 			createTitleTexture(ui);
 		}
@@ -351,6 +352,11 @@ Map::Map(int mapWidth) {
 	* So our numbers of rows and blocks will be from the DB.
 	*
 	* FOR NOW we want hardcoded numbers for temporary display purposes.
+	* 
+	* Right now this makes insane maps.
+	* We will tweak it to make more sensible maps when we have the JSON ready.
+	* 
+	* BUT FIRST: Navigation.
 	*/
 
 	rows = vector<vector<Block>>(mapWidth);
@@ -371,10 +377,9 @@ Map::Map(int mapWidth) {
 	cout << "\n\n Map is made! \n\n";
 
 	// Now make the PATH
-	// 
 	// get a random x starting point, but the y will be mapWidth - 1
 
-	int pathX = rand() % mapWidth;
+	int pathX = (rand() % (mapWidth - 10)) + 5;
 	int pathY = rows.size() - 1;
 
 	Block& startingBlock = rows[pathY][pathX];
@@ -384,42 +389,70 @@ Map::Map(int mapWidth) {
 
 	// MOVE THIS ENUM somewhere (maybe just at the top of the file?)
 	enum Direction { Up, Down, Left, Right, Total };
+
+	/* 
+	*  create smaller paths so we aren't moving around totally randomly.
+* 	*/
+	struct SubPath {
+		int seed;
+		Direction direction;
+		int radius;
+
+		SubPath(int iSeed, Direction iDirection, int iRadius) {
+			direction = iDirection;
+			seed = iSeed;
+			radius = iRadius;
+		}
+	};
+
+	SubPath subPath = SubPath(
+		(rand() % 5) + 2,
+		Direction::Up,
+		(rand() % 3) +1
+	);
+
 	int directionInt = Direction::Up;
 
+	/* while loop makes the path */
 	while (pathY > 0) {		
 
-		switch (directionInt) {
+		/* choose the next block to floorize */
+		switch (subPath.direction) {
 		case Direction::Up:
-			if (pathY > 0) {
+			if (pathY > 0) { /* We ARE allowed to hit the ceiling (FOR NOW this ends the pathmaking) */
 				--pathY;
 			}
 			else {
 				++pathY;
+				subPath.seed = 0;
 			}
 			
 			break;
 		case Direction::Down:
-			if (pathY < rows.size() - 1) {
+			if (pathY < rows.size() - 2) { /* We are NOT allowed to hit the bottom again. */
 				++pathY;
 			}
 			else {
 				--pathY;
+				subPath.seed = 0;
 			}
 			break;
 		case Direction::Left:
-			if (pathX > 0) {
+			if (pathX > 3) { /* We are NOT allowed to hit the left wall. */
 				--pathX;
 			}
 			else {
 				++pathX;
+				subPath.seed = 0;
 			}
 			break;
 		case Direction::Right:
-			if (pathX < rows[pathY].size() - 1) {
+			if (pathX < rows[pathY].size() - 2) { /* We are NOT allowed to hit the right wall. */
 				++pathX;
 			}
 			else {
 				--pathX;
+				subPath.seed = 0;
 			}
 			
 			break;
@@ -427,13 +460,100 @@ Map::Map(int mapWidth) {
 
 		cout << "pathY is: " << pathY << "\n";
 
-		rows[pathY][pathX].setIsFloor(true);
+		floorize(pathX, pathY, subPath.radius);
 
-		directionInt = rand() % Direction::Total;		
+		--subPath.seed;
+
+		if (subPath.seed < 1) {
+			subPath.direction = static_cast<Direction>(rand() % Direction::Total);
+			subPath.seed = (rand() % 12) + 1;
+			subPath.radius = rand() % 4;
+		}
+	}
+}
+
+/*
+* When we create a path we want to clear a radius around each block of the central path.
+* There's the opportunity here to draw an actual "path" block (different than a floor block... maybe non-diggable?).
+* But only certain paths are *actual* paths... many are just normal floor blocks.
+*/
+void Map::floorize(int x, int y, int radius) {
+	if (rows[y][x].getIsFloor()) { return; }
+	rows[y][x].setIsFloor(true);
+
+	/* increment counters (to help reach radius) */
+	int upInc = 0;
+	int leftInc = 0;
+	int downInc = 0;
+	int rightInc = 0;
+
+	/* clear ABOVE */
+	while (y - upInc >= 0 && upInc < radius) {
+
+		/* directly above */
+		rows[y - upInc][x].setIsFloor(true);
+
+		/* up and to the left */
+		while (x - leftInc > 0 && leftInc < radius) {
+			rows[y - upInc][x - leftInc].setIsFloor(true);
+			++leftInc;
+		}
+		leftInc = 0;
+
+		/* up and to the right */
+		while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
+			rows[y - upInc][x + rightInc].setIsFloor(true);
+			++rightInc;
+		}
+		rightInc = 0;
+
+		++upInc;
 	}
 
-	// Make the above more complicated by offering random lengths of sub-paths
+	/* reset increment counters */
+	upInc = 0;
+	leftInc = 0;
+	downInc = 0;
+	rightInc = 0;
 
+	/* Clear BELOW */
+	while (y + downInc < rows.size() - 2 && downInc < radius) {
+
+		/* directly below */
+		rows[y + downInc][x].setIsFloor(true);
+
+		/* down and to the left */
+		while (x - leftInc > 0 && leftInc < radius) {
+			rows[y + downInc][x - leftInc].setIsFloor(true);
+			++leftInc;
+		}
+		leftInc = 0;
+
+		/* up and to the right */
+		while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
+			rows[y + downInc][x + rightInc].setIsFloor(true);
+			++rightInc;
+		}
+		rightInc = 0;
+
+		++downInc;
+	}
+
+	/* reset increment counters */
+	upInc = 0;
+	leftInc = 0;
+
+	/* Clear LEFT */
+	while (x - leftInc > 0 && leftInc < radius) {
+		rows[y][x - leftInc].setIsFloor(true);
+		++leftInc;
+	}
+
+	/* Clear RIGHT */
+	while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
+		rows[y][x + rightInc].setIsFloor(true);
+		++rightInc;
+	}
 }
 
 
