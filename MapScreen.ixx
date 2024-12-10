@@ -75,6 +75,7 @@ export class MapScreen {
 		* For now we are sending in the WIDTH.
 		* Later we'll send in the ID of the database object
 		* and/or the reference to a JSON file.
+		* mapWidth refers to the number of blocks to CREATE.
 		*/
 		MapScreen(int mapWidth): map(mapWidth) {
 			cout << "\nLoading Map Screen\n\n";
@@ -85,7 +86,15 @@ export class MapScreen {
 
 			UI& ui = UI::getInstance();
 
-			hResolution = mapWidth; /* LATER user can update this to zoom in or out. */
+			hResolution = 20; /* LATER user can update this to zoom in or out. Function to update must also updated yResolution */
+
+			/* get and set y resolution... must be updated whenever hResolution is updated. PUT THIS IN FUNCTION LATER. */
+			int blockPixelWidth = ui.getWindowWidth() / hResolution;
+			yResolution = (ui.getWindowHeight() / blockPixelWidth) + 1; // TO DO: Change this so it really matches the height... must be compared to the side?
+
+			drawStartX = 0;
+			drawStartY = 0;
+
 			buildMapDisplay();
 			createTitleTexture(ui);
 		}
@@ -119,6 +128,7 @@ export class MapScreen {
 		void buildMap();
 
 		int hResolution; /* Horizontal Resolution of the map ( # of blocks across the top) */
+		int yResolution; /* Vertical Resolution of the map ( # of vertical blocks, depends on hResolution) */
 		int blockWidth; /* depends on mapResolution */
 		int vBlocksVisible;
 
@@ -134,6 +144,14 @@ export class MapScreen {
 
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
+
+		void requestUp();
+		void requestDown();
+		void requestLeft();
+		void requestRight();
+
+		int drawStartX = 0;
+		int drawStartY = 0;
 
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
@@ -209,7 +227,7 @@ export void MapScreen::run() {
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
-			if (e.type == SDL_MOUSEBUTTONDOWN) {
+			if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_KEYDOWN) {
 				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
 			}
 		}
@@ -281,22 +299,49 @@ void MapScreen::drawMap(UI& ui) {
 	//SDL_Surface* mainSurface = ui.getWindowSurface();
 	SDL_Rect targetRect = { 0, 0, blockWidth, blockWidth };
 
-	for (int y = 0; y < rows.size(); ++y) {
-		vector<Block> blocks = rows[y];
+	bool newWay = true;
 
-		for (int x = 0; x < blocks.size(); ++x) {
+	if (newWay) {
+		/* start with the TOP ROW that we want to draw, then work our way down */
+		for (int y = drawStartY; y < drawStartY + yResolution; ++y) {			
+			vector<Block> blocks = rows[y];
 
-			Block block = blocks[x];
-			targetRect.x = x * blockWidth;
-			targetRect.y = y * blockWidth;
+			for (int x = drawStartX; x < drawStartX + hResolution; ++x) {
 
-			SDL_RenderCopyEx(
-				ui.getMainRenderer(),
-				block.getIsFloor() ? getFloorTexture() : getWallTexture(),
-				NULL, &targetRect,
-				0, NULL, SDL_FLIP_NONE);
+				Block block = blocks[x];
+				targetRect.x = (x - drawStartX)*blockWidth;
+				targetRect.y = (y - drawStartY)*blockWidth;
+
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					NULL, &targetRect,
+					0, NULL, SDL_FLIP_NONE);
+			}
 		}
 	}
+	else {
+		for (int y = 0; y < rows.size(); ++y) {
+			vector<Block> blocks = rows[y];
+
+			for (int x = 0; x < blocks.size(); ++x) {
+
+				Block block = blocks[x];
+				targetRect.x = x * blockWidth;
+				targetRect.y = y * blockWidth;
+
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					NULL, &targetRect,
+					0, NULL, SDL_FLIP_NONE);
+			}
+		}
+	}
+
+
+
+
 	
 }
 
@@ -357,13 +402,25 @@ Map::Map(int mapWidth) {
 	* We will tweak it to make more sensible maps when we have the JSON ready.
 	* 
 	* BUT FIRST: Navigation.
+	* 
+	* 
+	* NAVIGATION PLAN:
+	* 
+	* -- create a startDraw block to be the top left block.
+	* ---- moving around changes both character location AND startDraw block
+	* ---- when you reach either edge, player still moves but startDraw does NOT.
+	* ---- HOW do we know if the player has moved away from the center?
+	* ------ choose a centreBlock (which updates each time)
+	* ------ if user is away from center block, don't move map until user is back on center block
+	* -------- MORE:::: -->  if userX != centerX act accordingly (same with userY != centerY)... until user is back on centerBlock
+	* 
+	* 
 	*/
 
 	rows = vector<vector<Block>>(mapWidth);
 
 	/* replace with reading from DB */
 	for (int i = 0; i < rows.size(); ++i) {
-
 		vector<Block> blocks(mapWidth);
 
 		for (int k = 0; k < blocks.size(); ++k) {
@@ -376,8 +433,8 @@ Map::Map(int mapWidth) {
 
 	cout << "\n\n Map is made! \n\n";
 
-	// Now make the PATH
-	// get a random x starting point, but the y will be mapWidth - 1
+	/* Now make the PATH */
+	/* get a random x starting point, but the y will be mapWidth - 1 */
 
 	int pathX = (rand() % (mapWidth - 10)) + 5;
 	int pathY = rows.size() - 1;
@@ -566,6 +623,38 @@ void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 	createTitleTexture(ui);
 }
 
+/* NAVIGATION FUNCTIONS
+*	We must check:
+*		A)	if we are moving out of bounds.
+*		B)	if the player character has hit a wall.
+*		C)	if the player character has hit a door, or another character.
+* 
+*		TODO:	Make an "out of bounds" function
+*				Make a "hit a wall" function (to play a sound)
+*				Do an animated transition for these moves (maybe).
+*/
+
+void MapScreen::requestUp() {
+	if (drawStartY > 0) {
+		--drawStartY;
+	} else { cout << "OUT OF BOUNDS\n"; }
+}
+void MapScreen::requestDown() {
+	if (drawStartY + yResolution < map.getRows().size()) {
+		++drawStartY;
+	} else { cout << "OUT OF BOUNDS\n"; }
+}
+void MapScreen::requestLeft() {
+	if (drawStartX > 0) {
+		--drawStartX;
+	} else { cout << "OUT OF BOUNDS\n"; }
+}
+void MapScreen::requestRight() {
+	if (drawStartX + hResolution < map.getRows()[0].size()) {
+		++drawStartX;
+	} else { cout << "OUT OF BOUNDS\n"; }
+}
+
 
 /* Process user input */
 void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState) {
@@ -576,10 +665,34 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 		return;
 	}
 	else {
-		// user clicked
-		if (e.type == SDL_MOUSEBUTTONDOWN) {
-			cout << "user clicked mouse\n";
-			// These events might change the value of screenToLoad
+		if (e.type == SDL_KEYDOWN) {
+			switch (e.key.keysym.sym)
+			{
+			case SDLK_UP:
+			case SDLK_w:
+				requestUp();
+				break;
+
+			case SDLK_DOWN:
+			case SDLK_s:
+				requestDown();
+				break;
+
+			case SDLK_LEFT:
+			case SDLK_a:
+				requestLeft();
+				break;
+
+			case SDLK_RIGHT:
+			case SDLK_d:
+				requestRight();
+				break;
+			default:
+				cout << e.key.keysym.sym << "\n";
+			}
+		}
+		/*  user clicked */
+		else if (e.type == SDL_MOUSEBUTTONDOWN) {
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
 
@@ -620,7 +733,7 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 				}
 			}
 			else if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICK MAP MENU \n\n";
+				cout << "\n\n CLICK MAP MENU \n\n";
 				ButtonClickStruct clickStruct = gameMenuPanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
@@ -638,6 +751,7 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 				}
 			}
 		}
+		
 	}
 }
 
