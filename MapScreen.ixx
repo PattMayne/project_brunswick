@@ -15,6 +15,13 @@
 * But this will only be possible on the entrance block, because it's the only FLOOR.
 * 
 * 
+* MAP vs MAP SCREEN
+* 
+* The MAP contains grid data about the map itself, its landmarks, and characters and limbs on the map.
+* None of this should be affected by changes to the display (zoom in/out, or which location we're viewing).
+* 
+* The MAP SCREEN controls the user's interaction with the map, and our view onto the map.
+* 
 */
 
 module;
@@ -73,7 +80,6 @@ class Landmark {
 
 		/* destructor */
 		~Landmark() { }
-
 
 		int getX() { return x; }
 		int getY() { return y; }
@@ -154,11 +160,11 @@ export class MapScreen {
 
 			UI& ui = UI::getInstance();
 
-			hResolution = 20; /* LATER user can update this to zoom in or out. Function to update must also updated yResolution */
+			hViewRes = 20; /* LATER user can update this to zoom in or out. Function to update must also updated yViewRes */
 
-			/* get and set y resolution... must be updated whenever hResolution is updated. PUT THIS IN FUNCTION LATER. */
-			int blockPixelWidth = ui.getWindowWidth() / hResolution;
-			yResolution = (ui.getWindowHeight() / blockPixelWidth) + 1;
+			/* get and set y resolution... must be updated whenever hViewRes is updated. PUT THIS IN FUNCTION LATER. */
+			int blockPixelWidth = ui.getWindowWidth() / hViewRes;
+			yViewRes = (ui.getWindowHeight() / blockPixelWidth) + 1;
 
 			drawStartX = 0;
 			drawStartY = 0;
@@ -192,6 +198,8 @@ export class MapScreen {
 		int id;
 		ScreenStruct screenToLoadStruct;
 		void drawMap(UI& ui);
+		void drawLandmarks(UI& ui);
+		void drawCharacters(UI& ui);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 		void drawPanel(UI& ui, Panel& panel);
 
@@ -201,9 +209,9 @@ export class MapScreen {
 		void buildMapDisplay();
 		void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
 
-		int hResolution; /* Horizontal Resolution of the map ( # of blocks across the top) */
-		int yResolution; /* Vertical Resolution of the map ( # of vertical blocks, depends on hResolution) */
-		int blockWidth; /* depends on mapResolution */
+		int hViewRes; /* Horizontal Resolution of the screen ( # of blocks displayed across the top) */
+		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on hViewRes) */
+		int blockWidth; /* actual pixel dimensions of the block. depends on horizontal resolution */
 		int vBlocksVisible;
 
 		Map map;
@@ -244,8 +252,8 @@ void MapScreen::buildMapDisplay() {
 	UI& ui = UI::getInstance();
 	SDL_Surface* mainSurface = ui.getWindowSurface();
 
-	blockWidth = (mainSurface->w / hResolution);
-	vBlocksVisible = (mainSurface->h / blockWidth) + 1; /* adding one to fill any gap on the bottom. (Will always add 1 to hResolution when drawing) */
+	blockWidth = (mainSurface->w / hViewRes);
+	vBlocksVisible = (mainSurface->h / blockWidth) + 1; /* adding one to fill any gap on the bottom. (Will always add 1 to hViewRes when drawing) */
 
 	/* make wall and floor textures (move into function(s) later) */
 
@@ -333,11 +341,12 @@ export void MapScreen::run() {
 void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
-	//SDL_SetRenderDrawColor(ui.getMainRenderer(), 140, 140, 140, 1);
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 
 	drawMap(ui);
+	drawLandmarks(ui);
+	//drawCharacters(ui);
 
 	/* draw the title */
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
@@ -345,6 +354,43 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	drawPanel(ui, settingsPanel);
 	drawPanel(ui, gameMenuPanel);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
+}
+
+void MapScreen::drawLandmarks(UI& ui) {
+	/* NOW draw all LANDMARKS */
+	/* This is SIMPLISTIC FOR NOW. Real buildings come LATER. (new algorithms for each building TYPE!! */
+
+	SDL_Rect targetRect = { 0, 0, blockWidth, blockWidth };
+	vector<Landmark>& landmarks = map.getLandmarks();
+	int lX = 0;
+	int lY = 0;
+
+	/* Draw any landmarks that are in bounds */
+	for (int i = 0; i < landmarks.size(); i++) {
+		Landmark& landmark = landmarks[i];
+		lX = landmark.getX();
+		lY = landmark.getY();
+
+		if (
+			lX >= drawStartX &&
+			lX <= (drawStartX + hViewRes) &&
+			lY >= drawStartY &&
+			lY <= (drawStartY + yViewRes)
+		) {
+			targetRect.x = (landmark.getX() - drawStartX) * blockWidth;
+			targetRect.y = (landmark.getY() - drawStartY) * blockWidth;
+
+			SDL_RenderCopyEx(
+				ui.getMainRenderer(),
+				landmark.getTexture(),
+				NULL, &targetRect,
+				0, NULL, SDL_FLIP_NONE);
+		}
+	}
+}
+
+void MapScreen::drawCharacters(UI& ui) {
+	/* cycle through the characters list and draw them */
 }
 
 
@@ -363,16 +409,14 @@ void MapScreen::drawMap(UI& ui) {
 	* and only parts of them will be displayed. This will NOT give errors.
 	*/
 
-	/* FOR NOW just draw a checkerboard. */
-
 	vector<vector<Block>>& rows = map.getRows();
 	SDL_Rect targetRect = { 0, 0, blockWidth, blockWidth };
 
 	/* start with the TOP ROW that we want to draw, then work our way down */
-	for (int y = drawStartY; y < drawStartY + yResolution; ++y) {
+	for (int y = drawStartY; y < drawStartY + yViewRes; ++y) {
 		vector<Block>& blocks = rows[y];
 
-		for (int x = drawStartX; x < drawStartX + hResolution; ++x) {
+		for (int x = drawStartX; x < drawStartX + hViewRes; ++x) {
 
 			Block& block = blocks[x];
 			targetRect.x = (x - drawStartX) * blockWidth;
@@ -381,35 +425,6 @@ void MapScreen::drawMap(UI& ui) {
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
 				block.getIsFloor() ? getFloorTexture() : getWallTexture(),
-				NULL, &targetRect,
-				0, NULL, SDL_FLIP_NONE);
-		}
-	}
-	/* NOW draw all LANDMARKS */
-	/* This is SIMPLISTIC FOR NOW. Real buildings come LATER. (new algorithms for each building TYPE!! */
-
-	vector<Landmark>& landmarks = map.getLandmarks();
-	int lX = 0;
-	int lY = 0;
-
-	/* Draw any landmarks that are in bounds */
-	for (int i = 0; i < landmarks.size(); i++) {
-		Landmark& landmark = landmarks[i];
-		lX = landmark.getX();
-		lY = landmark.getY();
-
-		if (
-			lX >= drawStartX &&
-			lX <= (drawStartX + hResolution) &&
-			lY >= drawStartY &&
-			lY <= (drawStartY + yResolution)
-		) {
-			targetRect.x = (landmark.getX() - drawStartX) * blockWidth;
-			targetRect.y = (landmark.getY() - drawStartY) * blockWidth;
-
-			SDL_RenderCopyEx(
-				ui.getMainRenderer(),
-				landmark.getTexture(),
 				NULL, &targetRect,
 				0, NULL, SDL_FLIP_NONE);
 		}
@@ -463,14 +478,9 @@ void Map::buildMap(int mapWidth) {
 		vector<Block> blocks(mapWidth);
 
 		for (int k = 0; k < blocks.size(); ++k) {
-			Block block = Block(false);
-			blocks[k] = block;
-		}
-
+			blocks[k] = Block(false); }
 		rows[i] = blocks;
 	}
-
-	cout << "\n\n Map is made! \n\n";
 
 	/* Now make the PATH */
 	/* get a random x starting point, but the y will be map's height - 2 */
@@ -483,24 +493,20 @@ void Map::buildMap(int mapWidth) {
 
 	/* make the path */
 
-
 	SubPath subPath = SubPath(
 		(rand() % 5) + 2,
 		Direction::Up,
-		(rand() % 3) + 1
-	);
+		(rand() % 3) + 1);
 
-	// getting the textures for entrance/exit (store elsewhere later)
+	/* 
+	* getting the textures for entrance / exit
+	* Store elsewhere later. Possible store a pointer in each block.
+	*/
 
 	UI& ui = UI::getInstance();
-
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	/* Entrance landmark */
 	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
-
-	cout << "pathX is " << pathX << ", and pathY is " << pathY << " ENTRANCE\n\n";
-
-	int directionInt = Direction::Up;
 
 	/* while loop makes the path */
 	while (pathY > 0) {
@@ -588,8 +594,11 @@ Map::Map(int mapWidth) {
 	* -------- MORE:::: -->  if userX != centerX act accordingly (same with userY != centerY)... until user is back on centerBlock
 	* 
 	* 
+	* 
 	*/
 	buildMap(mapWidth);
+
+	// populate characters and limbs after building the map (and its landmarks).
 }
 
 /*
@@ -600,7 +609,7 @@ Map::Map(int mapWidth) {
 void Map::floorize(int x, int y, int radius) {
 	if (rows[y][x].getIsFloor()) { return; }
 	rows[y][x].setIsFloor(true);
-	if (y < (radius + 2)) { return; }
+	if (y < (radius + 2)) { return; } /* don't clear top blocks (except exit block, which is already cleared) */
 
 	/* increment counters (to help reach radius) */
 	int upInc = 0;
@@ -706,7 +715,7 @@ void MapScreen::requestUp() {
 	} else { cout << "OUT OF BOUNDS\n"; }
 }
 void MapScreen::requestDown() {
-	if (drawStartY + yResolution < map.getRows().size()) {
+	if (drawStartY + yViewRes < map.getRows().size()) {
 		++drawStartY;
 	} else { cout << "OUT OF BOUNDS\n"; }
 }
@@ -716,7 +725,7 @@ void MapScreen::requestLeft() {
 	} else { cout << "OUT OF BOUNDS\n"; }
 }
 void MapScreen::requestRight() {
-	if (drawStartX + hResolution < map.getRows()[0].size()) {
+	if (drawStartX + hViewRes < map.getRows()[0].size()) {
 		++drawStartX;
 	} else { cout << "OUT OF BOUNDS\n"; }
 }
@@ -767,6 +776,7 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 				/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
 				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
+
 				/* see what button might have been clicked : */
 				switch (clickStruct.buttonOption) {
 					case ButtonOption::Mobile:
