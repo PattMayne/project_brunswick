@@ -10,6 +10,11 @@
 * We'll create an ENTRANCE and EXIT... but we need some way to access them explicitly
 * 
 * 
+* Buildings will turn their underlying Block objects into WALL objects... EXCEPT for the entrance.
+* So when a player is ON a building block, they "enter" the building (load the building map)
+* But this will only be possible on the entrance block, because it's the only FLOOR.
+* 
+* 
 */
 
 module;
@@ -39,16 +44,22 @@ enum class LandmarkType { Entrance, Exit, Building, Shrine };
 class Landmark {
 	public:
 		/* constructor */
-		Landmark(int x, int y, SDL_Texture* texture, LandmarkType landmarkType)
-			: x(x), y(y), texture(texture), landmarkType(landmarkType) { }
+		Landmark(int iX, int iY, SDL_Texture* iTexture, LandmarkType iLandmarkType) : x(iX), y(iY), texture(iTexture), landmarkType(iLandmarkType) {
+			if (landmarkType == LandmarkType::Exit) {
+				cout << "creating EXIT LANDMARK\n\n";
+			}
+			else if (landmarkType == LandmarkType::Entrance) {
+				cout << "creating ENTRANCE LANDMARK\n\n";
+			}
+		}
 
 		/* destructor */
-		~Landmark() {
-			SDL_DestroyTexture(texture);
-		}
+		~Landmark() { }
+
 
 		int getX() { return x; }
 		int getY() { return y; }
+		SDL_Texture* getTexture() { return texture; }
 
 	private:
 		/* x and y refer to the block grid, not the pixels */
@@ -96,8 +107,6 @@ class Map {
 		Map(int mapWidth);
 		vector<vector<Block>>& getRows() { return rows; }
 		vector<Landmark>& getLandmarks() { return landmarks; }
-		void addLandmark(Landmark landmark) {
-			landmarks.push_back(landmark); }
 
 	private:
 		vector<vector<Block>> rows;
@@ -144,6 +153,14 @@ export class MapScreen {
 			SDL_DestroyTexture(floorTexture);
 			SDL_DestroyTexture(wallTexture);
 			SDL_DestroyTexture(titleTexture);
+
+			/* Destroy all the textures in the Landmarks */
+			for (int i = 0; i < map.getLandmarks().size(); i++) {
+				SDL_Texture* textureToDestroy = map.getLandmarks()[i].getTexture();
+				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); }				
+			}
+
+			/* Destroy all the textures in the Characters */
 		}
 
 		ScreenType getScreenType() { return screenType; }
@@ -351,6 +368,35 @@ void MapScreen::drawMap(UI& ui) {
 				0, NULL, SDL_FLIP_NONE);
 		}
 	}
+	/* NOW draw all LANDMARKS */
+	/* This is SIMPLISTIC FOR NOW. Real buildings come LATER. (new algorithms for each building TYPE!! */
+
+	vector<Landmark>& landmarks = map.getLandmarks();
+	int lX = 0;
+	int lY = 0;
+
+	/* Draw any landmarks that are in bounds */
+	for (int i = 0; i < landmarks.size(); i++) {
+		Landmark& landmark = landmarks[i];
+		lX = landmark.getX();
+		lY = landmark.getY();
+
+		if (
+			lX >= drawStartX &&
+			lX <= (drawStartX + hResolution) &&
+			lY >= drawStartY &&
+			lY <= (drawStartY + yResolution)
+		) {
+			targetRect.x = (landmark.getX() - drawStartX) * blockWidth;
+			targetRect.y = (landmark.getY() - drawStartY) * blockWidth;
+
+			SDL_RenderCopyEx(
+				ui.getMainRenderer(),
+				landmark.getTexture(),
+				NULL, &targetRect,
+				0, NULL, SDL_FLIP_NONE);
+		}
+	}
 }
 
 
@@ -397,6 +443,7 @@ void MapScreen::buildMap() {
 }
 
 
+
 /* Map class constructor */
 Map::Map(int mapWidth) {
 	/*
@@ -425,6 +472,8 @@ Map::Map(int mapWidth) {
 	* 
 	*/
 
+	cout << "CREATING MAP !!!!!!!!!\n\n";
+
 	rows = vector<vector<Block>>(mapWidth);
 
 	/* replace with reading from DB */
@@ -445,7 +494,7 @@ Map::Map(int mapWidth) {
 	/* get a random x starting point, but the y will be mapWidth - 1 */
 
 	int pathX = (rand() % (mapWidth - 10)) + 5;
-	int pathY = rows.size() - 1;
+	int pathY = static_cast<int>(rows.size()) - 2;
 
 	Block& startingBlock = rows[pathY][pathX];
 	startingBlock.setIsFloor(true);
@@ -482,30 +531,10 @@ Map::Map(int mapWidth) {
 	UI& ui = UI::getInstance();
 
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
-	SDL_Texture* exitTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
-	SDL_Texture* entranceTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), flipSurface(gateSurface, false));
+	/* Entrance landmark */
+	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
 
-	if (!exitTexture || !entranceTexture) { cout << "\n\n TEXTURE ERROR! \n\n"; }
-
-	SDL_FreeSurface(gateSurface);	
-
-	/*
-	* 
-	* 
-	* 
-	* 
-	* 
-	* 
-	* 
-	* ENTRANCE must be the FIRST block in this FIRST SUB-PATH!!!
-	* 
-	* 
-	* 
-	* 
-	* 
-	* 
-	* 
-	*/
+	cout << "pathX is " << pathX << ", and pathY is " << pathY << " ENTRANCE\n\n";
 
 	int directionInt = Direction::Up;
 
@@ -561,20 +590,11 @@ Map::Map(int mapWidth) {
 			subPath.seed = (rand() % 12) + 1;
 			subPath.radius = rand() % 4;
 		}
-
-		/*
-		* 
-		* 
-		* HERE we must add the EXIT to the FINAL FLOORIZED BLOCK
-		* 
-		* 
-		*/
-
-		if (pathY == 1) {
-			// PUT THE EXIT IN THE LAST BLOCK NOW
-			landmarks.push_back(Landmark(pathX, pathY, exitTexture, LandmarkType::Exit));
-		}
 	}
+
+	/* Exit landmark */
+	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
+	SDL_FreeSurface(gateSurface);
 }
 
 /*
