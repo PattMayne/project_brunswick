@@ -129,7 +129,7 @@ export class MapScreen {
 
 			/* get and set y resolution... must be updated whenever hResolution is updated. PUT THIS IN FUNCTION LATER. */
 			int blockPixelWidth = ui.getWindowWidth() / hResolution;
-			yResolution = (ui.getWindowHeight() / blockPixelWidth) + 1; // TO DO: Change this so it really matches the height... must be compared to the side?
+			yResolution = (ui.getWindowHeight() / blockPixelWidth) + 1;
 
 			drawStartX = 0;
 			drawStartY = 0;
@@ -195,7 +195,6 @@ export class MapScreen {
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
 		*/
-
 };
 
 /* Create the texture with the name of the game */
@@ -392,8 +391,8 @@ void MapScreen::buildMap() {
 	*	8. Delete map entirely from database
 	*/
 
-	int mapWidth = 100;
-	map = Map(mapWidth);
+	//int mapWidth = 100;
+	//map = Map(mapWidth); // I DID THIS TWICE???
 }
 
 
@@ -453,10 +452,11 @@ Map::Map(int mapWidth) {
 	// make the path
 
 	// MOVE THIS ENUM somewhere (maybe just at the top of the file?)
+	// It's similar to the one we use in UI. Maybe belongs in ScreenType (which might just be a HELPER file?)
 	enum Direction { Up, Down, Left, Right, Total };
 
 	/* 
-	*  create smaller paths so we aren't moving around totally randomly.
+	*  create smaller sub-paths so we aren't moving around totally randomly.
 * 	*/
 	struct SubPath {
 		int seed;
@@ -476,10 +476,28 @@ Map::Map(int mapWidth) {
 		(rand() % 3) +1
 	);
 
+	/*
+	* 
+	* 
+	* 
+	* 
+	* 
+	* 
+	* 
+	* ENTRANCE must be the FIRST block in this FIRST SUB-PATH!!!
+	* 
+	* 
+	* 
+	* 
+	* 
+	* 
+	* 
+	*/
+
 	int directionInt = Direction::Up;
 
 	/* while loop makes the path */
-	while (pathY > 0) {		
+	while (pathY > 0) {
 
 		/* choose the next block to floorize */
 		switch (subPath.direction) {
@@ -490,8 +508,7 @@ Map::Map(int mapWidth) {
 			else {
 				++pathY;
 				subPath.seed = 0;
-			}
-			
+			}			
 			break;
 		case Direction::Down:
 			if (pathY < rows.size() - 2) { /* We are NOT allowed to hit the bottom again. */
@@ -518,21 +535,30 @@ Map::Map(int mapWidth) {
 			else {
 				--pathX;
 				subPath.seed = 0;
-			}
-			
+			}			
 			break;
 		}
 
-		cout << "pathY is: " << pathY << "\n";
-
 		floorize(pathX, pathY, subPath.radius);
-
 		--subPath.seed;
 
 		if (subPath.seed < 1) {
+			/* refresh seed */
 			subPath.direction = static_cast<Direction>(rand() % Direction::Total);
 			subPath.seed = (rand() % 12) + 1;
 			subPath.radius = rand() % 4;
+		}
+
+		/*
+		* 
+		* 
+		* HERE we must add the EXIT to the FINAL FLOORIZED BLOCK
+		* 
+		* 
+		*/
+
+		if (pathY == 1) {
+			// PUT THE EXIT IN THE LAST BLOCK NOW
 		}
 	}
 }
@@ -563,6 +589,7 @@ void Map::floorize(int x, int y, int radius) {
 			rows[y - upInc][x - leftInc].setIsFloor(true);
 			++leftInc;
 		}
+
 		leftInc = 0;
 
 		/* up and to the right */
@@ -570,8 +597,8 @@ void Map::floorize(int x, int y, int radius) {
 			rows[y - upInc][x + rightInc].setIsFloor(true);
 			++rightInc;
 		}
-		rightInc = 0;
 
+		rightInc = 0;
 		++upInc;
 	}
 
@@ -592,6 +619,7 @@ void Map::floorize(int x, int y, int radius) {
 			rows[y + downInc][x - leftInc].setIsFloor(true);
 			++leftInc;
 		}
+
 		leftInc = 0;
 
 		/* up and to the right */
@@ -599,8 +627,8 @@ void Map::floorize(int x, int y, int radius) {
 			rows[y + downInc][x + rightInc].setIsFloor(true);
 			++rightInc;
 		}
-		rightInc = 0;
 
+		rightInc = 0;
 		++downInc;
 	}
 
@@ -759,7 +787,6 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 				}
 			}
 		}
-		
 	}
 }
 
