@@ -1,3 +1,17 @@
+/*
+* GAME TIME:
+*	1.	Create an ENTRANCE and an EXIT.
+*			We check landmarks on each CHANGE of user location / animate/move.
+*	2.	Paint a "character" on the ENTRANCE at game start.
+*	3.	When the character reaches the exit, lead back to the main loop.
+* 
+* 
+* The MAP has a vector of LANDMARK objects.
+* We'll create an ENTRANCE and EXIT... but we need some way to access them explicitly
+* 
+* 
+*/
+
 module;
 #include "include/json.hpp"
 #include "SDL.h"
@@ -20,13 +34,34 @@ import GameState;
 import Resources;
 import UI;
 
+enum class LandmarkType { Entrance, Exit, Building, Shrine };
+
+class Landmark {
+	public:
+		/* constructor */
+		Landmark(int x, int y, SDL_Texture* texture, LandmarkType landmarkType)
+			: x(x), y(y), texture(texture), landmarkType(landmarkType) { }
+
+		/* destructor */
+		~Landmark() {
+			SDL_DestroyTexture(texture);
+		}
+
+		int getX() { return x; }
+		int getY() { return y; }
+
+	private:
+		int x;
+		int y;
+		SDL_Texture* texture;
+		LandmarkType landmarkType;
+};
 
 class Block {
 	public:
 		/* constructor */
-		Block(bool incomingIsFloor = true) {
-			isFloor = incomingIsFloor;
-		}
+		Block(bool isFloor = true)
+			: isFloor(isFloor) { }
 
 		/* getters */
 		bool getIsFloor() { return isFloor; }
@@ -42,6 +77,8 @@ class Block {
 			*
 			* Also... maybe it won't return it... because you can destroy a wall from afar
 			* and the Limb objects will scatter nearby.
+			* 
+			* Maybe we need an isPath boolean, to draw a different kind of floor.
 			*/
 		}
 
@@ -56,13 +93,15 @@ class Map {
 	public:
 		/* constructor */
 		Map(int mapWidth);
-
-		vector<vector<Block>> getRows() { return rows; }
-
+		vector<vector<Block>>& getRows() { return rows; }
+		vector<Landmark>& getLandmarks() { return landmarks; }
+		void addLandmark(Landmark landmark) {
+			landmarks.push_back(landmark); }
 
 	private:
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
+		vector<Landmark> landmarks;
 };
 
 
@@ -184,9 +223,7 @@ void MapScreen::buildMapDisplay() {
 	wallTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), wallSurface);
 	floorTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), floorSurface);
 
-	if (!floorTexture || !wallTexture) {
-		cout << "\n\n ERROR! \n\n";
-	}
+	if (!floorTexture || !wallTexture) { cout << "\n\n ERROR! \n\n"; }
 
 	SDL_FreeSurface(wallSurface);
 	SDL_FreeSurface(floorSurface);
@@ -294,55 +331,26 @@ void MapScreen::drawMap(UI& ui) {
 
 	/* FOR NOW just draw a checkerboard. */
 
-	vector<vector<Block>> rows = map.getRows();
-
-	//SDL_Surface* mainSurface = ui.getWindowSurface();
+	vector<vector<Block>>& rows = map.getRows();
 	SDL_Rect targetRect = { 0, 0, blockWidth, blockWidth };
 
-	bool newWay = true;
+	/* start with the TOP ROW that we want to draw, then work our way down */
+	for (int y = drawStartY; y < drawStartY + yResolution; ++y) {
+		vector<Block>& blocks = rows[y];
 
-	if (newWay) {
-		/* start with the TOP ROW that we want to draw, then work our way down */
-		for (int y = drawStartY; y < drawStartY + yResolution; ++y) {			
-			vector<Block> blocks = rows[y];
+		for (int x = drawStartX; x < drawStartX + hResolution; ++x) {
 
-			for (int x = drawStartX; x < drawStartX + hResolution; ++x) {
+			Block& block = blocks[x];
+			targetRect.x = (x - drawStartX) * blockWidth;
+			targetRect.y = (y - drawStartY) * blockWidth;
 
-				Block block = blocks[x];
-				targetRect.x = (x - drawStartX)*blockWidth;
-				targetRect.y = (y - drawStartY)*blockWidth;
-
-				SDL_RenderCopyEx(
-					ui.getMainRenderer(),
-					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
-					NULL, &targetRect,
-					0, NULL, SDL_FLIP_NONE);
-			}
+			SDL_RenderCopyEx(
+				ui.getMainRenderer(),
+				block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+				NULL, &targetRect,
+				0, NULL, SDL_FLIP_NONE);
 		}
 	}
-	else {
-		for (int y = 0; y < rows.size(); ++y) {
-			vector<Block> blocks = rows[y];
-
-			for (int x = 0; x < blocks.size(); ++x) {
-
-				Block block = blocks[x];
-				targetRect.x = x * blockWidth;
-				targetRect.y = y * blockWidth;
-
-				SDL_RenderCopyEx(
-					ui.getMainRenderer(),
-					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
-					NULL, &targetRect,
-					0, NULL, SDL_FLIP_NONE);
-			}
-		}
-	}
-
-
-
-
-	
 }
 
 
