@@ -51,6 +51,7 @@ class Landmark {
 		int getY() { return y; }
 
 	private:
+		/* x and y refer to the block grid, not the pixels */
 		int x;
 		int y;
 		SDL_Texture* texture;
@@ -476,6 +477,18 @@ Map::Map(int mapWidth) {
 		(rand() % 3) +1
 	);
 
+	// getting the textures for entrance/exit (store elsewhere later)
+
+	UI& ui = UI::getInstance();
+
+	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
+	SDL_Texture* exitTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
+	SDL_Texture* entranceTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), flipSurface(gateSurface, false));
+
+	if (!exitTexture || !entranceTexture) { cout << "\n\n TEXTURE ERROR! \n\n"; }
+
+	SDL_FreeSurface(gateSurface);	
+
 	/*
 	* 
 	* 
@@ -559,6 +572,7 @@ Map::Map(int mapWidth) {
 
 		if (pathY == 1) {
 			// PUT THE EXIT IN THE LAST BLOCK NOW
+			landmarks.push_back(Landmark(pathX, pathY, exitTexture, LandmarkType::Exit));
 		}
 	}
 }

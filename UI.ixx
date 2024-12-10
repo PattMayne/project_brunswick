@@ -1196,7 +1196,7 @@ export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
 
 
 /* whenever we want to flip a surface */
-SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal) {
+export SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal) {
 	/* new surface onto which we'll flip the original surface */
 	SDL_Surface* flippedSurface = SDL_CreateRGBSurface(0, surface->w, surface->h, 32, 0, 0, 0, 0xFF000000);
 
