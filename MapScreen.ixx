@@ -40,6 +40,24 @@ import Resources;
 import UI;
 
 enum class LandmarkType { Entrance, Exit, Building, Shrine };
+enum Direction { Up, Down, Left, Right, Total };
+
+
+/*
+* SubPath helps draw paths of floors through the blockmap.
+* Create smaller sub-paths so we aren't moving around totally randomly.
+*/
+struct SubPath {
+	int seed;
+	Direction direction;
+	int radius;
+
+	SubPath(int iSeed, Direction iDirection, int iRadius) {
+		direction = iDirection;
+		seed = iSeed;
+		radius = iRadius;
+	}
+};
 
 class Landmark {
 	public:
@@ -112,6 +130,7 @@ class Map {
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
 		vector<Landmark> landmarks;
+		void buildMap(int mapWidth);
 };
 
 
@@ -181,8 +200,6 @@ export class MapScreen {
 
 		void buildMapDisplay();
 		void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
-
-		void buildMap();
 
 		int hResolution; /* Horizontal Resolution of the map ( # of blocks across the top) */
 		int yResolution; /* Vertical Resolution of the map ( # of vertical blocks, depends on hResolution) */
@@ -417,7 +434,7 @@ void MapScreen::drawPanel(UI& ui, Panel& panel) {
 }
 
 
-void MapScreen::buildMap() {
+void Map::buildMap(int mapWidth) {
 	/* 
 	* This WILL get the DB object and build the entire map as data.
 	* To draw the map will mean to review this data and draw the local blocks.
@@ -438,10 +455,111 @@ void MapScreen::buildMap() {
 	*	8. Delete map entirely from database
 	*/
 
-	//int mapWidth = 100;
-	//map = Map(mapWidth); // I DID THIS TWICE???
-}
 
+	rows = vector<vector<Block>>(mapWidth);
+
+	/* replace with reading from DB */
+	for (int i = 0; i < rows.size(); ++i) {
+		vector<Block> blocks(mapWidth);
+
+		for (int k = 0; k < blocks.size(); ++k) {
+			Block block = Block(false);
+			blocks[k] = block;
+		}
+
+		rows[i] = blocks;
+	}
+
+	cout << "\n\n Map is made! \n\n";
+
+	/* Now make the PATH */
+	/* get a random x starting point, but the y will be map's height - 2 */
+
+	int pathX = (rand() % (mapWidth - 10)) + 5;
+	int pathY = static_cast<int>(rows.size()) - 2;
+
+	Block& startingBlock = rows[pathY][pathX];
+	startingBlock.setIsFloor(true);
+
+	/* make the path */
+
+
+	SubPath subPath = SubPath(
+		(rand() % 5) + 2,
+		Direction::Up,
+		(rand() % 3) + 1
+	);
+
+	// getting the textures for entrance/exit (store elsewhere later)
+
+	UI& ui = UI::getInstance();
+
+	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
+	/* Entrance landmark */
+	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
+
+	cout << "pathX is " << pathX << ", and pathY is " << pathY << " ENTRANCE\n\n";
+
+	int directionInt = Direction::Up;
+
+	/* while loop makes the path */
+	while (pathY > 0) {
+
+		/* choose the next block to floorize */
+		switch (subPath.direction) {
+		case Direction::Up:
+			if (pathY > 0) { /* We ARE allowed to hit the ceiling (FOR NOW this ends the pathmaking) */
+				--pathY;
+			}
+			else {
+				++pathY;
+				subPath.seed = 0;
+			}
+			break;
+		case Direction::Down:
+			if (pathY < rows.size() - 2) { /* We are NOT allowed to hit the bottom again. */
+				++pathY;
+			}
+			else {
+				--pathY;
+				subPath.seed = 0;
+			}
+			break;
+		case Direction::Left:
+			if (pathX > 3) { /* We are NOT allowed to hit the left wall. */
+				--pathX;
+			}
+			else {
+				++pathX;
+				subPath.seed = 0;
+			}
+			break;
+		case Direction::Right:
+			if (pathX < rows[pathY].size() - 2) { /* We are NOT allowed to hit the right wall. */
+				++pathX;
+			}
+			else {
+				--pathX;
+				subPath.seed = 0;
+			}
+			break;
+		}
+
+		floorize(pathX, pathY, subPath.radius);
+		--subPath.seed;
+
+		if (subPath.seed < 1) {
+			/* refresh seed */
+			subPath.direction = static_cast<Direction>(rand() % Direction::Total);
+			subPath.seed = (rand() % 12) + 1;
+			subPath.radius = rand() % 4;
+		}
+	}
+
+	/* Exit landmark */
+	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
+	SDL_FreeSurface(gateSurface);
+}
 
 
 /* Map class constructor */
@@ -471,130 +589,7 @@ Map::Map(int mapWidth) {
 	* 
 	* 
 	*/
-
-	cout << "CREATING MAP !!!!!!!!!\n\n";
-
-	rows = vector<vector<Block>>(mapWidth);
-
-	/* replace with reading from DB */
-	for (int i = 0; i < rows.size(); ++i) {
-		vector<Block> blocks(mapWidth);
-
-		for (int k = 0; k < blocks.size(); ++k) {
-			Block block = Block(false);
-			blocks[k] = block;
-		}
-
-		rows[i] = blocks;
-	}
-
-	cout << "\n\n Map is made! \n\n";
-
-	/* Now make the PATH */
-	/* get a random x starting point, but the y will be mapWidth - 1 */
-
-	int pathX = (rand() % (mapWidth - 10)) + 5;
-	int pathY = static_cast<int>(rows.size()) - 2;
-
-	Block& startingBlock = rows[pathY][pathX];
-	startingBlock.setIsFloor(true);
-
-	// make the path
-
-	// MOVE THIS ENUM somewhere (maybe just at the top of the file?)
-	// It's similar to the one we use in UI. Maybe belongs in ScreenType (which might just be a HELPER file?)
-	enum Direction { Up, Down, Left, Right, Total };
-
-	/* 
-	*  create smaller sub-paths so we aren't moving around totally randomly.
-* 	*/
-	struct SubPath {
-		int seed;
-		Direction direction;
-		int radius;
-
-		SubPath(int iSeed, Direction iDirection, int iRadius) {
-			direction = iDirection;
-			seed = iSeed;
-			radius = iRadius;
-		}
-	};
-
-	SubPath subPath = SubPath(
-		(rand() % 5) + 2,
-		Direction::Up,
-		(rand() % 3) +1
-	);
-
-	// getting the textures for entrance/exit (store elsewhere later)
-
-	UI& ui = UI::getInstance();
-
-	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
-	/* Entrance landmark */
-	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
-
-	cout << "pathX is " << pathX << ", and pathY is " << pathY << " ENTRANCE\n\n";
-
-	int directionInt = Direction::Up;
-
-	/* while loop makes the path */
-	while (pathY > 0) {
-
-		/* choose the next block to floorize */
-		switch (subPath.direction) {
-		case Direction::Up:
-			if (pathY > 0) { /* We ARE allowed to hit the ceiling (FOR NOW this ends the pathmaking) */
-				--pathY;
-			}
-			else {
-				++pathY;
-				subPath.seed = 0;
-			}			
-			break;
-		case Direction::Down:
-			if (pathY < rows.size() - 2) { /* We are NOT allowed to hit the bottom again. */
-				++pathY;
-			}
-			else {
-				--pathY;
-				subPath.seed = 0;
-			}
-			break;
-		case Direction::Left:
-			if (pathX > 3) { /* We are NOT allowed to hit the left wall. */
-				--pathX;
-			}
-			else {
-				++pathX;
-				subPath.seed = 0;
-			}
-			break;
-		case Direction::Right:
-			if (pathX < rows[pathY].size() - 2) { /* We are NOT allowed to hit the right wall. */
-				++pathX;
-			}
-			else {
-				--pathX;
-				subPath.seed = 0;
-			}			
-			break;
-		}
-
-		floorize(pathX, pathY, subPath.radius);
-		--subPath.seed;
-
-		if (subPath.seed < 1) {
-			/* refresh seed */
-			subPath.direction = static_cast<Direction>(rand() % Direction::Total);
-			subPath.seed = (rand() % 12) + 1;
-			subPath.radius = rand() % 4;
-		}
-	}
-
-	/* Exit landmark */
-	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
-	SDL_FreeSurface(gateSurface);
+	buildMap(mapWidth);
 }
 
 /*
@@ -605,6 +600,7 @@ Map::Map(int mapWidth) {
 void Map::floorize(int x, int y, int radius) {
 	if (rows[y][x].getIsFloor()) { return; }
 	rows[y][x].setIsFloor(true);
+	if (y < (radius + 2)) { return; }
 
 	/* increment counters (to help reach radius) */
 	int upInc = 0;
@@ -613,7 +609,7 @@ void Map::floorize(int x, int y, int radius) {
 	int rightInc = 0;
 
 	/* clear ABOVE */
-	while (y - upInc >= 0 && upInc < radius) {
+	while (y - upInc > 0 && upInc < radius) {
 
 		/* directly above */
 		rows[y - upInc][x].setIsFloor(true);
