@@ -32,6 +32,29 @@
 *			--- we WANT to draw (hRes / 2) and (yRes / 2) from the character
 *			--- BUT, if the character is less than (hRes / 2) or (yRes / 2) FROM either edge,
 *					then we must recalculate...
+* 
+* 
+* ANIMATING MOVES:
+* 
+* -- Player Move Animation is different from NPC Move Animation
+* -----	Animation Lock
+* -----	enum AnimationType { Player, NPC }
+* -----	Poll_Event removes the events from the que... so we should STILL POLL, but don't handle the event during animation
+* -----	set a countdown of 10 (10 frames) which also moves player's DRAW position and each block's DRAW position 10% per tick
+* ---------- At the END of the countdown, THEN we move the player
+* ---------- LIMBS and CHARACTERS have "previousBlock" X and Y and we do "increment percent" * countdown FROM the PREVIOUS to the current XY
+* 
+* -- Extra SPEED will allow SOME NPCs to move multiple blocks at a time!
+* -- This is made possible by storing PREVIOUS BLOCK (instead of just letting the draw functions increment by one block automatically)
+* -- The PLAYER CHARACTER can ALSO move in multiple blocks IF they have enough speed.
+* -----	They can SET how many moves they WANT to make just by pressing that number... and it stays until they change it!
+* ----- They can also click on the block they want to go to, and they'll move as far in that direction as their speed allows.
+* 
+* -- So the MAP SCREEN must ALSO have a previous DRAW START X and DRAW START Y
+* 
+* -- Let's START with multiple block moves (max 5 no matter what!) and add the LIMIT later!
+* 
+* 
 */
 
 module;
@@ -57,8 +80,9 @@ import Resources;
 import UI;
 
 enum class LandmarkType { Entrance, Exit, Building, Shrine };
-enum Direction { Up, Down, Left, Right, Total };
-enum CharacterType { Player, Hostile, Friendly };
+enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
+enum CharacterType { Player, Hostile, Friendly }; /* THIS will go in the CHARACTER MODULE. NOT a CLASS because we want to use it as int. */
+enum class AnimationType { Player, NPC };
 
 class Character {
 	public:
@@ -241,8 +265,19 @@ export class MapScreen {
 			}
 
 			/* Destroy all the textures in the Characters */
-
 			SDL_DestroyTexture(map.getPlayerCharacter().getTexture());
+		}
+
+		int getAnimationIncrementPercent() { return animationIncrementPercent; }
+		int getAnimationCountdown() { return animationCountdown; }
+		void startAnimationCountdown(int countdown) { animationCountdown = animationIncrementPercent; }
+		void decrementCountdown() {
+			if (animationCountdown > 0) {
+				--animationCountdown;
+			}
+			else {
+				animationCountdown = 0;
+			}
 		}
 
 		ScreenType getScreenType() { return screenType; }
@@ -278,6 +313,9 @@ export class MapScreen {
 
 		int hBlocksTotal;
 		int vBlocksTotal;
+
+		const int animationIncrementPercent = 10;
+		int animationCountdown;
 
 		Map map;
 
@@ -330,7 +368,6 @@ void MapScreen::buildMapDisplay() {
 	/* make wall and floor textures (move into function(s) later) */
 
 	unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
-
 	SDL_Surface* wallSurface = IMG_Load("assets/wall.png");
 	SDL_Surface* floorSurface = IMG_Load("assets/floor.png");
 
@@ -389,6 +426,7 @@ export void MapScreen::run() {
 	/* loop and event control */
 	SDL_Event e;
 	bool running = true;
+	bool animate = false;
 
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
@@ -400,6 +438,10 @@ export void MapScreen::run() {
 				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
 			}
 		}
+
+		/* check if we're animating anything */
+		if (animationCountdown > 0) { animate = true; }
+		else if (animate) { animate = false; }
 
 		/* here we will load the actual MAP screen.
 		* For now just a big checker board and a settings menu

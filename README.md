@@ -17,7 +17,7 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 ## TO DO:
 
 - [x] TO DO list
-- [ ] BASIC STUFF:
+- [x] BASIC STUFF:
     - [x] FONTS:
         - [x] Logo (decorative)
         - [x] UI (sans serif)
