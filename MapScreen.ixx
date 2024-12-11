@@ -217,6 +217,9 @@ export class MapScreen {
 			id = 0;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
+			hBlocksTotal = mapWidth;
+			vBlocksTotal = mapWidth;
+
 			UI& ui = UI::getInstance();
 			setViewResAndBlockWidth(ui);
 			setMaxDrawBlock();
@@ -258,6 +261,8 @@ export class MapScreen {
 		void drawPanel(UI& ui, Panel& panel);
 
 		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
+		void handleMousedown(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel);
+		void handleKeydown(SDL_Event& e);
 		void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel);
 
 		void buildMapDisplay();
@@ -270,6 +275,9 @@ export class MapScreen {
 		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on hViewRes) */
 		int blockWidth; /* actual pixel dimensions of the block. depends on horizontal resolution */
 		int vBlocksVisible;
+
+		int hBlocksTotal;
+		int vBlocksTotal;
 
 		Map map;
 
@@ -554,7 +562,7 @@ void MapScreen::drawPanel(UI& ui, Panel& panel) {
 * cannot be more than end-of-list minus resolution.
 */
 void MapScreen::setDrawStartBlock() {
-	Character playerCharacter = map.getPlayerCharacter();
+	Character& playerCharacter = map.getPlayerCharacter();
 	int playerX = playerCharacter.getBlockX();
 	int playerY = playerCharacter.getBlockY();
 
@@ -836,21 +844,58 @@ void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 *				Do an animated transition for these moves (maybe).
 */
 
+/* destailed documentation for the first function. Other functions follow same process. */
 void MapScreen::requestUp() {
-	map.getPlayerCharacter().move(Direction::Up);
-	setDrawStartBlock();
+	/* Get player character */
+	Character& playerCharacter = map.getPlayerCharacter();
+	/* get the NEW index of the block they want to move to (along the dimension of change) */
+	int destinationBlockY = playerCharacter.getBlockY() - 1;
+	/* Make sure they're not going to move out of bounds */
+	if (destinationBlockY >= 0) {
+		/* get the new block they want to move to */
+		Block& destinationBlock = map.getRows()[destinationBlockY][playerCharacter.getBlockX()];
+		/* If the new block is a floor, move there */
+		if (destinationBlock.getIsFloor()) {
+			map.getPlayerCharacter().move(Direction::Up);
+			setDrawStartBlock();
+		}
+	}	
 }
+
 void MapScreen::requestDown() {
-	map.getPlayerCharacter().move(Direction::Down);
-	setDrawStartBlock();
+	Character& playerCharacter = map.getPlayerCharacter();
+	int destinationBlockY = playerCharacter.getBlockY() + 1;
+	if (destinationBlockY < vBlocksTotal) {
+		Block& destinationBlock = map.getRows()[destinationBlockY][playerCharacter.getBlockX()];
+		if (destinationBlock.getIsFloor()) {
+			map.getPlayerCharacter().move(Direction::Down);
+			setDrawStartBlock();
+		}
+	}
 }
+
 void MapScreen::requestLeft() {
-	map.getPlayerCharacter().move(Direction::Left);
-	setDrawStartBlock();
+	Character& playerCharacter = map.getPlayerCharacter();
+	int destinationBlockX = playerCharacter.getBlockX() - 1;
+	if (destinationBlockX < hBlocksTotal) {
+		Block& destinationBlock = map.getRows()[playerCharacter.getBlockY()][destinationBlockX];
+		if (destinationBlock.getIsFloor()) {
+			map.getPlayerCharacter().move(Direction::Left);
+			setDrawStartBlock();
+		}
+	}
 }
+
 void MapScreen::requestRight() {
-	map.getPlayerCharacter().move(Direction::Right);
-	setDrawStartBlock();
+	Character& playerCharacter = map.getPlayerCharacter();
+	int destinationBlockX = playerCharacter.getBlockX() + 1;
+	if (destinationBlockX < hBlocksTotal) {
+		Block& destinationBlock = map.getRows()[playerCharacter.getBlockY()][destinationBlockX];
+		if (destinationBlock.getIsFloor()) {
+			map.getPlayerCharacter().move(Direction::Right);
+			setDrawStartBlock();
+		}
+	}
 }
 
 
@@ -864,91 +909,99 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 	}
 	else {
 		if (e.type == SDL_KEYDOWN) {
-			switch (e.key.keysym.sym)
-			{
-			case SDLK_UP:
-			case SDLK_w:
-				requestUp();
-				break;
-
-			case SDLK_DOWN:
-			case SDLK_s:
-				requestDown();
-				break;
-
-			case SDLK_LEFT:
-			case SDLK_a:
-				requestLeft();
-				break;
-
-			case SDLK_RIGHT:
-			case SDLK_d:
-				requestRight();
-				break;
-			default:
-				cout << e.key.keysym.sym << "\n";
-			}
+			handleKeydown(e);
 		}
-		/*  user clicked */
 		else if (e.type == SDL_MOUSEBUTTONDOWN) {
-			int mouseX, mouseY;
-			SDL_GetMouseState(&mouseX, &mouseY);
+			handleMousedown(e, running, settingsPanel, gameMenuPanel);
+		}
+	}
+}
 
-			if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
+/* User pressed a keyboard button. */
+void MapScreen::handleKeydown(SDL_Event& e) {
+	switch (e.key.keysym.sym)
+	{
+	case SDLK_UP:
+	case SDLK_w:
+		requestUp();
+		break;
 
-				/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
-				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
-				UI& ui = UI::getInstance();
+	case SDLK_DOWN:
+	case SDLK_s:
+		requestDown();
+		break;
 
-				/* see what button might have been clicked : */
-				switch (clickStruct.buttonOption) {
-					case ButtonOption::Mobile:
-						ui.resizeWindow(WindowResType::Mobile);
-						rebuildDisplay(settingsPanel, gameMenuPanel);
-						break;
-					case ButtonOption::Tablet:
-						ui.resizeWindow(WindowResType::Tablet);
-						rebuildDisplay(settingsPanel, gameMenuPanel);
-						break;
-					case ButtonOption::Desktop:
-						ui.resizeWindow(WindowResType::Desktop);
-						rebuildDisplay(settingsPanel, gameMenuPanel);
-						break;
-					case ButtonOption::Fullscreen:
-						ui.resizeWindow(WindowResType::Fullscreen);
-						rebuildDisplay(settingsPanel, gameMenuPanel);
-						break;
-					case ButtonOption::Back:
-						// switch to other panel
-						settingsPanel.setShow(false);
-						gameMenuPanel.setShow(true);
-						break;
-					case ButtonOption::Exit:
-						/* back to menu screen */
-						running = false;
-						break;
-					default:
-						cout << "ERROR\n";
-				}
-			}
-			else if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\n CLICK MAP MENU \n\n";
-				ButtonClickStruct clickStruct = gameMenuPanel.checkButtonClick(mouseX, mouseY);
-				UI& ui = UI::getInstance();
-				/* see what button might have been clicked : */
-				switch (clickStruct.buttonOption) {
-				case ButtonOption::MapOptions:
-					cout << "\nMAP OPTIONS\n";
-					break;
-				case ButtonOption::Settings:
-					settingsPanel.setShow(true);
-					gameMenuPanel.setShow(false);
-					break;
-				default:
-					cout << "ERROR\n";
+	case SDLK_LEFT:
+	case SDLK_a:
+		requestLeft();
+		break;
 
-				}
-			}
+	case SDLK_RIGHT:
+	case SDLK_d:
+		requestRight();
+		break;
+	default:
+		cout << e.key.keysym.sym << "\n";
+	}
+}
+
+
+/* User clicked the mouse. */
+void MapScreen::handleMousedown(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel) {
+	int mouseX, mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+
+	if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
+
+		/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
+		ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
+		UI& ui = UI::getInstance();
+
+		/* see what button might have been clicked : */
+		switch (clickStruct.buttonOption) {
+		case ButtonOption::Mobile:
+			ui.resizeWindow(WindowResType::Mobile);
+			rebuildDisplay(settingsPanel, gameMenuPanel);
+			break;
+		case ButtonOption::Tablet:
+			ui.resizeWindow(WindowResType::Tablet);
+			rebuildDisplay(settingsPanel, gameMenuPanel);
+			break;
+		case ButtonOption::Desktop:
+			ui.resizeWindow(WindowResType::Desktop);
+			rebuildDisplay(settingsPanel, gameMenuPanel);
+			break;
+		case ButtonOption::Fullscreen:
+			ui.resizeWindow(WindowResType::Fullscreen);
+			rebuildDisplay(settingsPanel, gameMenuPanel);
+			break;
+		case ButtonOption::Back:
+			// switch to other panel
+			settingsPanel.setShow(false);
+			gameMenuPanel.setShow(true);
+			break;
+		case ButtonOption::Exit:
+			/* back to menu screen */
+			running = false;
+			break;
+		default:
+			cout << "ERROR\n";
+		}
+	}
+	else if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
+		ButtonClickStruct clickStruct = gameMenuPanel.checkButtonClick(mouseX, mouseY);
+		UI& ui = UI::getInstance();
+		/* see what button might have been clicked : */
+		switch (clickStruct.buttonOption) {
+		case ButtonOption::MapOptions:
+			break;
+		case ButtonOption::Settings:
+			settingsPanel.setShow(true);
+			gameMenuPanel.setShow(false);
+			break;
+		default:
+			cout << "ERROR\n";
+
 		}
 	}
 }
