@@ -22,6 +22,16 @@
 * 
 * The MAP SCREEN controls the user's interaction with the map, and our view onto the map.
 * 
+* 
+* 
+* NEXT:
+* -- START the game with the player character on the screen.
+* -- "move" buttons actually move the player primarily.
+* ---- THEN we re-calculate where the drawStartX/drawStartY should be
+* ---- The player SHOULD be in the center... so:
+*			--- we WANT to draw (hRes / 2) and (yRes / 2) from the character
+*			--- BUT, if the character is less than (hRes / 2) or (yRes / 2) FROM either edge,
+*					then we must recalculate...
 */
 
 module;
@@ -48,7 +58,29 @@ import UI;
 
 enum class LandmarkType { Entrance, Exit, Building, Shrine };
 enum Direction { Up, Down, Left, Right, Total };
+enum CharacterType { Player, Hostile, Friendly };
 
+class Character {
+	public:
+		SDL_Texture* getTexture() { return texture; }
+		int getBlockX() { return blockX; }
+		int getBlockY() { return blockY; }
+		int getType() { return characterType; }
+
+		Character() { }
+
+		Character(CharacterType characterType, SDL_Texture* texture, int x, int y) :
+			blockX(x), blockY(y), texture(texture), characterType(characterType) { }
+
+		~Character() { }
+
+	private:
+		SDL_Texture* texture;
+		int blockX;
+		int blockY;
+		CharacterType characterType;
+
+};
 
 /*
 * SubPath helps draw paths of floors through the blockmap.
@@ -71,11 +103,9 @@ class Landmark {
 		/* constructor */
 		Landmark(int iX, int iY, SDL_Texture* iTexture, LandmarkType iLandmarkType) : x(iX), y(iY), texture(iTexture), landmarkType(iLandmarkType) {
 			if (landmarkType == LandmarkType::Exit) {
-				cout << "creating EXIT LANDMARK\n\n";
-			}
+				cout << "creating EXIT LANDMARK\n\n"; }
 			else if (landmarkType == LandmarkType::Entrance) {
-				cout << "creating ENTRANCE LANDMARK\n\n";
-			}
+				cout << "creating ENTRANCE LANDMARK\n\n"; }
 		}
 
 		/* destructor */
@@ -131,12 +161,15 @@ class Map {
 		Map(int mapWidth);
 		vector<vector<Block>>& getRows() { return rows; }
 		vector<Landmark>& getLandmarks() { return landmarks; }
+		Character& getPlayerCharacter() { return playerCharacter; }
 
 	private:
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
 		vector<Landmark> landmarks;
 		void buildMap(int mapWidth);
+		vector<Character> NPCs;
+		Character playerCharacter;
 };
 
 
@@ -152,7 +185,6 @@ export class MapScreen {
 		* mapWidth refers to the number of blocks to CREATE.
 		*/
 		MapScreen(int mapWidth): map(mapWidth) {
-			cout << "\nLoading Map Screen\n\n";
 			mapType = MapType::World; /* TODO: once we get the MAP object from the DB (based on the id) we can read its attribute to get its MapType. */
 			screenType = ScreenType::Map;
 			id = 0;
@@ -163,8 +195,8 @@ export class MapScreen {
 			hViewRes = 20; /* LATER user can update this to zoom in or out. Function to update must also updated yViewRes */
 
 			/* get and set y resolution... must be updated whenever hViewRes is updated. PUT THIS IN FUNCTION LATER. */
-			int blockPixelWidth = ui.getWindowWidth() / hViewRes;
-			yViewRes = (ui.getWindowHeight() / blockPixelWidth) + 1;
+			blockWidth = ui.getWindowWidth() / hViewRes;
+			yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
 
 			drawStartX = 0;
 			drawStartY = 0;
@@ -186,6 +218,8 @@ export class MapScreen {
 			}
 
 			/* Destroy all the textures in the Characters */
+
+			SDL_DestroyTexture(map.getPlayerCharacter().getTexture());
 		}
 
 		ScreenType getScreenType() { return screenType; }
@@ -252,7 +286,6 @@ void MapScreen::buildMapDisplay() {
 	UI& ui = UI::getInstance();
 	SDL_Surface* mainSurface = ui.getWindowSurface();
 
-	blockWidth = (mainSurface->w / hViewRes);
 	vBlocksVisible = (mainSurface->h / blockWidth) + 1; /* adding one to fill any gap on the bottom. (Will always add 1 to hViewRes when drawing) */
 
 	/* make wall and floor textures (move into function(s) later) */
@@ -346,7 +379,7 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 
 	drawMap(ui);
 	drawLandmarks(ui);
-	//drawCharacters(ui);
+	drawCharacters(ui);
 
 	/* draw the title */
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
@@ -390,13 +423,31 @@ void MapScreen::drawLandmarks(UI& ui) {
 }
 
 void MapScreen::drawCharacters(UI& ui) {
+
+	/* use this rect for all the characters. Just change the X Y each time. */
+	SDL_Rect characterRect = { 0, 0, blockWidth, blockWidth };
+
 	/* cycle through the characters list and draw them */
+
+	/* ONLY draw the ones in the screen */
+
+	/* Draw Player Character last */
+
+	Character& playerCharacter = map.getPlayerCharacter();
+
+	characterRect.x = (playerCharacter.getBlockX() - drawStartX) * blockWidth;
+	characterRect.y = (playerCharacter.getBlockY() - drawStartY) * blockWidth;
+
+	SDL_RenderCopyEx(
+		ui.getMainRenderer(),
+		playerCharacter.getTexture(),
+		NULL, &characterRect,
+		0, NULL, SDL_FLIP_NONE
+	);
 }
 
 
 void MapScreen::drawMap(UI& ui) {
-	// cout << "\n\nDrawing Map\n\n";
-
 	/*
 	* FOR EACH FRAME:
 	* 
@@ -457,9 +508,9 @@ void Map::buildMap(int mapWidth) {
 	* 
 	* Might not be a member of the MapScreen object.
 	* Might instead be a member of the Map object.
-	*/
-
-	/*			DEVELOPMENT STAGES:
+	* 
+	* 
+	*		DEVELOPMENT STAGES:
 	*	1. Build a map with ALL WALLS
 	*	2. Draw a PATH through those walls
 	*	3. Navigate around the map with arrows (no character)
@@ -470,7 +521,7 @@ void Map::buildMap(int mapWidth) {
 	*	8. Delete map entirely from database
 	*/
 
-
+	UI& ui = UI::getInstance();
 	rows = vector<vector<Block>>(mapWidth);
 
 	/* replace with reading from DB */
@@ -488,6 +539,9 @@ void Map::buildMap(int mapWidth) {
 	int pathX = (rand() % (mapWidth - 10)) + 5;
 	int pathY = static_cast<int>(rows.size()) - 2;
 
+	int playerX = pathX;
+	int playerY = pathY;
+
 	Block& startingBlock = rows[pathY][pathX];
 	startingBlock.setIsFloor(true);
 
@@ -503,7 +557,6 @@ void Map::buildMap(int mapWidth) {
 	* Store elsewhere later. Possible store a pointer in each block.
 	*/
 
-	UI& ui = UI::getInstance();
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	/* Entrance landmark */
 	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
@@ -565,6 +618,14 @@ void Map::buildMap(int mapWidth) {
 	/* Exit landmark */
 	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
 	SDL_FreeSurface(gateSurface);
+
+	/* create Player Character */
+
+	/* get character texture */
+	SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
+	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
+	playerCharacter = Character(CharacterType::Player, characterTexture, playerX, playerY);
+	SDL_FreeSurface(characterSurface);
 }
 
 
