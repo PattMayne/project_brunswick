@@ -218,17 +218,9 @@ export class MapScreen {
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
 			UI& ui = UI::getInstance();
-
-			hViewRes = 20; /* LATER user can update this to zoom in or out. Function to update must also updated yViewRes */
-
-			/* get and set y resolution... must be updated whenever hViewRes is updated. PUT THIS IN FUNCTION LATER. */
-			blockWidth = ui.getWindowWidth() / hViewRes;
-			yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
-			
-			/* create a function to SET drawStart */
-
+			setViewResAndBlockWidth(ui);
+			setMaxDrawBlock();
 			setDrawStartBlock();
-
 			buildMapDisplay();
 			createTitleTexture(ui);
 		}
@@ -271,6 +263,8 @@ export class MapScreen {
 		void buildMapDisplay();
 		void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
 		void setDrawStartBlock();
+		void setMaxDrawBlock();
+		void setViewResAndBlockWidth(UI& ui);
 
 		int hViewRes; /* Horizontal Resolution of the screen ( # of blocks displayed across the top) */
 		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on hViewRes) */
@@ -298,6 +292,9 @@ export class MapScreen {
 		int drawStartX = 0;
 		int drawStartY = 0;
 
+		int maxDrawStartX = 0;
+		int maxDrawStartY = 0;
+
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
 		*/
@@ -313,6 +310,11 @@ void MapScreen::createTitleTexture(UI& ui) {
 
 void MapScreen::buildMapDisplay() {
 	UI& ui = UI::getInstance();
+
+	setViewResAndBlockWidth(ui);
+	setMaxDrawBlock();
+	setDrawStartBlock();
+
 	SDL_Surface* mainSurface = ui.getWindowSurface();
 
 	vBlocksVisible = (mainSurface->h / blockWidth) + 1; /* adding one to fill any gap on the bottom. (Will always add 1 to hViewRes when drawing) */
@@ -331,6 +333,24 @@ void MapScreen::buildMapDisplay() {
 
 	SDL_FreeSurface(wallSurface);
 	SDL_FreeSurface(floorSurface);
+
+	setMaxDrawBlock();
+}
+
+/* get the maximum allowed map position of top left block on-screen. */
+void MapScreen::setMaxDrawBlock() {
+	maxDrawStartX = map.getRows().size() - hViewRes;
+	maxDrawStartY = map.getRows().size() - yViewRes;
+}
+
+
+/* set when screen loads or resizes */
+void MapScreen::setViewResAndBlockWidth(UI& ui) {
+	hViewRes = 20; /* LATER user can update this to zoom in or out. Function to update must also updated yViewRes */
+
+	/* get and set y resolution... must be updated whenever hViewRes is updated. PUT THIS IN FUNCTION LATER. */
+	blockWidth = ui.getWindowWidth() / hViewRes;
+	yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
 }
 
 
@@ -475,30 +495,6 @@ void MapScreen::drawCharacters(UI& ui) {
 	);
 }
 
-/* 
-* Sets the top left block for the camera.Cannot be less than 0,0.
-* cannot be less than 0,0.
-* cannot be more than end-of-list minus resolution.
-*/
-void MapScreen::setDrawStartBlock() {
-	Character playerCharacter = map.getPlayerCharacter();
-	int playerX = playerCharacter.getBlockX();
-	int playerY = playerCharacter.getBlockY();
-
-	/* get the IDEAL position for the camera (with the player in the center) */
-	int idealX = playerX - (hViewRes / 2);
-	int idealY = playerY - (yViewRes / 2);
-
-	/* get the maximum allowed values for X and Y 
-	* (should be calculated on screen load & resize, set in the MapScreen object, not calculated here every time)
-	*/
-	int maxX = map.getRows().size() - hViewRes;
-	int maxY = map.getRows().size() - yViewRes;
-
-	drawStartX = idealX >= 0 && idealX <= maxX ? idealX : idealX > maxX ? maxX : 0;
-	drawStartY = idealY >= 0 && idealY <= maxY ? idealY : idealY > maxY ? maxY : 0;
-}
-
 void MapScreen::drawMap(UI& ui) {
 	/*
 	* FOR EACH FRAME:
@@ -549,6 +545,25 @@ void MapScreen::drawPanel(UI& ui, Panel& panel) {
 			0, NULL, SDL_FLIP_NONE
 		);
 	}
+}
+
+
+/*
+* Sets the top left block for the camera.Cannot be less than 0,0.
+* cannot be less than 0,0.
+* cannot be more than end-of-list minus resolution.
+*/
+void MapScreen::setDrawStartBlock() {
+	Character playerCharacter = map.getPlayerCharacter();
+	int playerX = playerCharacter.getBlockX();
+	int playerY = playerCharacter.getBlockY();
+
+	/* get the IDEAL position for the camera (with the player in the center) */
+	int idealX = playerX - (hViewRes / 2);
+	int idealY = playerY - (yViewRes / 2);
+
+	drawStartX = idealX >= 0 && idealX <= maxDrawStartX ? idealX : idealX > maxDrawStartX ? maxDrawStartX : 0;
+	drawStartY = idealY >= 0 && idealY <= maxDrawStartY ? idealY : idealY > maxDrawStartY ? maxDrawStartY : 0;
 }
 
 
@@ -813,12 +828,11 @@ void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 
 /* NAVIGATION FUNCTIONS
 *	We must check:
-*		A)	if we are moving out of bounds.
+*		A)	if we are moving out of bounds. DONE
 *		B)	if the player character has hit a wall.
 *		C)	if the player character has hit a door, or another character.
 * 
-*		TODO:	Make an "out of bounds" function
-*				Make a "hit a wall" function (to play a sound)
+*		TODO:	Make a "hit a wall" function (to play a sound)
 *				Do an animated transition for these moves (maybe).
 */
 
