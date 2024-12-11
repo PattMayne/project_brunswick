@@ -74,12 +74,39 @@ class Character {
 
 		~Character() { }
 
+		bool move(Direction direction) {
+			bool moved = false;
+			/* This will become more complicated when we do animations. */
+			/* Checking for obstacles must be done by MapScreen object.
+			* When this is called, we follow blindly.
+			*/
+
+			switch(direction) {
+			case Direction:: Up:
+				--blockY;
+				moved = true;
+				break;
+			case Direction::Down:
+				++blockY;
+				moved = true;
+				break;
+			case Direction::Left:
+				--blockX;
+				moved = true;
+				break;
+			case Direction::Right:
+				++blockX;
+				moved = true;
+				break;
+			}
+			return moved;
+		}
+
 	private:
 		SDL_Texture* texture;
 		int blockX;
 		int blockY;
 		CharacterType characterType;
-
 };
 
 /*
@@ -197,9 +224,10 @@ export class MapScreen {
 			/* get and set y resolution... must be updated whenever hViewRes is updated. PUT THIS IN FUNCTION LATER. */
 			blockWidth = ui.getWindowWidth() / hViewRes;
 			yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
+			
+			/* create a function to SET drawStart */
 
-			drawStartX = 0;
-			drawStartY = 0;
+			setDrawStartBlock();
 
 			buildMapDisplay();
 			createTitleTexture(ui);
@@ -242,6 +270,7 @@ export class MapScreen {
 
 		void buildMapDisplay();
 		void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
+		void setDrawStartBlock();
 
 		int hViewRes; /* Horizontal Resolution of the screen ( # of blocks displayed across the top) */
 		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on hViewRes) */
@@ -446,6 +475,29 @@ void MapScreen::drawCharacters(UI& ui) {
 	);
 }
 
+/* 
+* Sets the top left block for the camera.Cannot be less than 0,0.
+* cannot be less than 0,0.
+* cannot be more than end-of-list minus resolution.
+*/
+void MapScreen::setDrawStartBlock() {
+	Character playerCharacter = map.getPlayerCharacter();
+	int playerX = playerCharacter.getBlockX();
+	int playerY = playerCharacter.getBlockY();
+
+	/* get the IDEAL position for the camera (with the player in the center) */
+	int idealX = playerX - (hViewRes / 2);
+	int idealY = playerY - (yViewRes / 2);
+
+	/* get the maximum allowed values for X and Y 
+	* (should be calculated on screen load & resize, set in the MapScreen object, not calculated here every time)
+	*/
+	int maxX = map.getRows().size() - hViewRes;
+	int maxY = map.getRows().size() - yViewRes;
+
+	drawStartX = idealX >= 0 && idealX <= maxX ? idealX : idealX > maxX ? maxX : 0;
+	drawStartY = idealY >= 0 && idealY <= maxY ? idealY : idealY > maxY ? maxY : 0;
+}
 
 void MapScreen::drawMap(UI& ui) {
 	/*
@@ -771,24 +823,20 @@ void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 */
 
 void MapScreen::requestUp() {
-	if (drawStartY > 0) {
-		--drawStartY;
-	} else { cout << "OUT OF BOUNDS\n"; }
+	map.getPlayerCharacter().move(Direction::Up);
+	setDrawStartBlock();
 }
 void MapScreen::requestDown() {
-	if (drawStartY + yViewRes < map.getRows().size()) {
-		++drawStartY;
-	} else { cout << "OUT OF BOUNDS\n"; }
+	map.getPlayerCharacter().move(Direction::Down);
+	setDrawStartBlock();
 }
 void MapScreen::requestLeft() {
-	if (drawStartX > 0) {
-		--drawStartX;
-	} else { cout << "OUT OF BOUNDS\n"; }
+	map.getPlayerCharacter().move(Direction::Left);
+	setDrawStartBlock();
 }
 void MapScreen::requestRight() {
-	if (drawStartX + hViewRes < map.getRows()[0].size()) {
-		++drawStartX;
-	} else { cout << "OUT OF BOUNDS\n"; }
+	map.getPlayerCharacter().move(Direction::Right);
+	setDrawStartBlock();
 }
 
 
