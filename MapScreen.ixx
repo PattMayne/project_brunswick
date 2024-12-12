@@ -56,40 +56,6 @@
 * --- When the PLAYER has that speed, they just get MULTIPLE TURNS before the NPCs get to move.
 *			THAT WAY we only have to animate ONE BLOCK at a time.
 * 
-* 
-* -- So the MAP SCREEN must ALSO have a previous DRAW START X and DRAW START Y
-* 
-* -- Let's START with multiple block moves (max 5 no matter what!) and add the LIMIT later!
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-*					IMPORTANT REFACTOR
-* 
-* 
-*		drawStartX and drawStartY should ALWAYS draw an EXTRA one on EACH edge.
-*		That's a lot of work to refactor... but it's necessary!
-* 
-* 
-*			The hRes must INCLUDE the OUTSIDE BLOCKS.
-*					Buffer Blocks.
-*			And then we start DRAWING INSIDE them, and STOP DRAWING inside them too.
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
-* 
 */
 
 module;
@@ -679,16 +645,18 @@ void MapScreen::drawMap(UI& ui) {
 		}
 	}
 
+	/*
+	* During animations, we need to add extra blocks to the side that's about to get cut off.
+	*/
 	if (animate) {
-
-		/* Add blocks at the TOP when scrolling DOWN */
+		/* Add blocks at the TOP */
 		if (drawStartY > lastDrawStartY) {
 			vector<Block>& blocks = rows[lastDrawStartY];
 
 			for (int x = 0; x < blocks.size(); ++x) {
 				Block& block = blocks[x];
 				targetRect.x = (x - drawStartX) * blockWidth;
-				targetRect.y = ((lastDrawStartY - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
+				targetRect.y = 0 - blockAnimationIncrement;
 
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
@@ -697,7 +665,7 @@ void MapScreen::drawMap(UI& ui) {
 					0, NULL, SDL_FLIP_NONE);
 			}
 		} else if (drawStartY < lastDrawStartY && lastDrawStartY < vBlocksTotal - yViewRes) {
-			/* Add blocks at the BOTTOM when scrolling UP */
+			/* Add blocks at the BOTTOM */
 			int bottomRowIndex = drawStartY + yViewRes;
 			vector<Block>& blocks = rows[bottomRowIndex];
 
@@ -713,26 +681,26 @@ void MapScreen::drawMap(UI& ui) {
 					0, NULL, SDL_FLIP_NONE);
 			}
 		}
-
-
-
-		/* BUGGY AND BROKEN */
-		if (drawStartY != lastDrawStartY && false) {
-			vector<Block>& blocks = drawStartY > lastDrawStartY ? rows[lastDrawStartY] : rows[drawStartY + yViewRes + 1];
-
-			for (int x = 0; x < blocks.size(); ++x) {
-				Block& block = blocks[x];
-				targetRect.x = (x - drawStartX) * blockWidth;
-				targetRect.y = (lastDrawStartY - drawStartY) * blockWidth;
-
-				/* Shifting DOWN or UP. */
-				if (drawStartY > lastDrawStartY) {
-					targetRect.y = ((lastDrawStartY - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
-				}
-				else if (drawStartY < lastDrawStartY) {
-					targetRect.y = ((lastDrawStartY - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
-				}
-
+		else if (drawStartX > lastDrawStartX) {
+			/* moving character to the right,  shifting map to the left, add a column on the left */
+			for (int y = drawStartY; y < drawStartY + yViewRes; ++y) {
+				Block& block = rows[y][lastDrawStartX];
+				targetRect.x = 0 - blockAnimationIncrement;
+				targetRect.y = (y - drawStartY) * blockWidth;
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					NULL, &targetRect,
+					0, NULL, SDL_FLIP_NONE);
+			}
+		}
+		else if (drawStartX < lastDrawStartX) {
+			/* shifting map to the right, add a column on the right */
+			int rightColumnIndex = lastDrawStartX + hViewRes - 1;
+			for (int y = drawStartY; y < drawStartY + yViewRes; ++y) {
+				Block& block = rows[y][rightColumnIndex];
+				targetRect.x = ((hViewRes * blockWidth) - blockWidth) + blockAnimationIncrement;
+				targetRect.y = (y - drawStartY) * blockWidth;
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
 					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
