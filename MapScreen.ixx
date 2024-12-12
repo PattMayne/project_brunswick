@@ -48,8 +48,10 @@
 * 
 * NEXT:
 * 
-* -----	Animate the player character when close to the edge. (then BREAK for Christmas gifts & USB stuff)
+* -----	Animate the player character when close to the edge.
+* -----	Animate landmarks.
 * -----	hitting the EXIT exits the screen
+* ---------- (then BREAK for Christmas gifts & USB stuff)
 * -----	JSON for other landmarks.
 * -----	Paths between other landmarks.
 * ---------- Side-paths.
@@ -167,7 +169,7 @@ class Landmark {
 	public:
 		/* constructor */
 		Landmark(int iX, int iY, SDL_Texture* iTexture, LandmarkType iLandmarkType) :
-			x(iX), y(iY), texture(iTexture), landmarkType(iLandmarkType) {
+			blockX(iX), blockY(iY), texture(iTexture), landmarkType(iLandmarkType) {
 			if (landmarkType == LandmarkType::Exit) {
 				cout << "creating EXIT LANDMARK\n\n"; }
 			else if (landmarkType == LandmarkType::Entrance) {
@@ -177,14 +179,14 @@ class Landmark {
 		/* destructor */
 		~Landmark() { }
 
-		int getX() { return x; }
-		int getY() { return y; }
+		int getX() { return blockX; }
+		int getY() { return blockY; }
 		SDL_Texture* getTexture() { return texture; }
 
 	private:
 		/* x and y refer to the block grid, not the pixels */
-		int x;
-		int y;
+		int blockX;
+		int blockY;
 		SDL_Texture* texture;
 		LandmarkType landmarkType;
 };
@@ -578,6 +580,25 @@ void MapScreen::drawLandmarks(UI& ui) {
 			targetRect.x = (landmark.getX() - drawStartX) * blockWidth;
 			targetRect.y = (landmark.getY() - drawStartY) * blockWidth;
 
+			if (animate) {
+
+				/* Shifting DOWN or UP. */
+				if (drawStartY > lastDrawStartY) {
+					targetRect.y = ((lY - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
+				}
+				else if (drawStartY < lastDrawStartY) {
+					targetRect.y = ((lY - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
+				}
+
+				/* Shifting RIGHT or LEFT. */
+				if (drawStartX > lastDrawStartX) {
+					targetRect.x = ((lX - lastDrawStartX) * blockWidth) - blockAnimationIncrement;
+				}
+				else if (drawStartX < lastDrawStartX) {
+					targetRect.x = ((lX - lastDrawStartX) * blockWidth) + blockAnimationIncrement;
+				}
+			}
+
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
 				landmark.getTexture(),
@@ -729,7 +750,7 @@ void MapScreen::drawMap(UI& ui) {
 					NULL, &targetRect,
 					0, NULL, SDL_FLIP_NONE);
 			}
-		} else if (drawStartY < lastDrawStartY && lastDrawStartY < vBlocksTotal - yViewRes) {
+		} else if (drawStartY < lastDrawStartY && lastDrawStartY <= vBlocksTotal - yViewRes) {
 			/* Add blocks at the BOTTOM */
 			int bottomRowIndex = drawStartY + yViewRes;
 			vector<Block>& blocks = rows[bottomRowIndex];
