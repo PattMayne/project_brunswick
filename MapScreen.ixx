@@ -23,17 +23,6 @@
 * The MAP SCREEN controls the user's interaction with the map, and our view onto the map.
 * 
 * 
-* 
-* NEXT:
-* -- START the game with the player character on the screen.
-* -- "move" buttons actually move the player primarily.
-* ---- THEN we re-calculate where the drawStartX/drawStartY should be
-* ---- The player SHOULD be in the center... so:
-*			--- we WANT to draw (hRes / 2) and (yRes / 2) from the character
-*			--- BUT, if the character is less than (hRes / 2) or (yRes / 2) FROM either edge,
-*					then we must recalculate...
-* 
-* 
 * ANIMATING MOVES:
 * 
 * -- Player Move Animation is different from NPC Move Animation
@@ -55,6 +44,17 @@
 * 
 * --- When the PLAYER has that speed, they just get MULTIPLE TURNS before the NPCs get to move.
 *			THAT WAY we only have to animate ONE BLOCK at a time.
+* 
+* 
+* NEXT:
+* 
+* -----	Animate the player character when close to the edge. (then BREAK for Christmas gifts & USB stuff)
+* -----	hitting the EXIT exits the screen
+* -----	JSON for other landmarks.
+* -----	Paths between other landmarks.
+* ---------- Side-paths.
+* -----	NPCs roaming around, defined in the JSON
+* ----- SQLite.
 * 
 */
 
