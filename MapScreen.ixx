@@ -87,17 +87,17 @@ enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN
 
 class Character {
 	public:
-		SDL_Texture* getTexture() { return texture; }
-		int getBlockX() { return blockX; }
-		int getBlockY() { return blockY; }
-		int getType() { return characterType; }		
-
 		Character() { }
 
 		Character(CharacterType characterType, SDL_Texture* texture, int x, int y) :
 			blockX(x), blockY(y), texture(texture), characterType(characterType), lastX(x), lastY(y) { }
 
 		~Character() { }
+
+		SDL_Texture* getTexture() { return texture; }
+		int getBlockX() { return blockX; }
+		int getBlockY() { return blockY; }
+		int getType() { return characterType; }
 
 		int getLastX() { return lastX; }
 		int getLastY() { return lastY; }
@@ -313,6 +313,7 @@ export class MapScreen {
 		void drawMap(UI& ui);
 		void drawLandmarks(UI& ui);
 		void drawCharacters(UI& ui);
+		void drawPlayerCharacter(UI& ui);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 		void drawPanel(UI& ui, Panel& panel);
 
@@ -336,7 +337,7 @@ export class MapScreen {
 		int vBlocksTotal;
 
 		bool animate;
-		const int animationIncrementPercent = 10;
+		const int animationIncrementPercent = 16;
 		int animationCountdown;
 		int blockAnimationIncrement;
 		AnimationType animationType;
@@ -577,12 +578,62 @@ void MapScreen::drawCharacters(UI& ui) {
 
 	/* ONLY draw the ones in the screen */
 
-	/* Draw Player Character last */
+	/* 
+	* Draw Player Character last
+	* --- ACTUALLY... if the NPC moves onto YOU then they should be drawn OVER the player.
+	*					(figure that out later)
+	*/
+	drawPlayerCharacter(ui);
+}
 
+void MapScreen::drawPlayerCharacter(UI& ui) {
+	SDL_Rect characterRect = { 0, 0, blockWidth, blockWidth };
 	Character& playerCharacter = map.getPlayerCharacter();
+	int blockX = playerCharacter.getBlockX();
+	int blockY = playerCharacter.getBlockY();
+	characterRect.x = (blockX - drawStartX) * blockWidth;
+	characterRect.y = (blockY - drawStartY) * blockWidth;
 
-	characterRect.x = (playerCharacter.getBlockX() - drawStartX) * blockWidth;
-	characterRect.y = (playerCharacter.getBlockY() - drawStartY) * blockWidth;
+	/* Check if we are animating AND close to an edge.
+	* If close to a vertical edge, and moving vertically, animate the character.
+	* If close to a horizontal edge, and moving horizontally, animate the character.
+	*/
+
+	if (animate) {
+
+		int lastBlockX = playerCharacter.getLastX();
+		int lastBlockY = playerCharacter.getLastY();
+		int rightLimit = maxDrawStartX + (hViewRes / 2);
+		int leftLimit = hViewRes / 2;
+		int topLimit = yViewRes / 2;
+		int bottomLimit = maxDrawStartY + (yViewRes / 2);
+
+		/* are we close to a horizontal edge and moving horizontally? */
+		if (blockX > rightLimit || lastBlockX > rightLimit || blockX < leftLimit || lastBlockX < leftLimit) {
+			/* are we moving left or moving right? */
+			if (blockX > lastBlockX) {
+				/* we are moving right */
+				characterRect.x = ((lastBlockX - drawStartX) * blockWidth) + blockAnimationIncrement;
+			}
+			else if (blockX < lastBlockX) {
+				/* we are moving left */
+				characterRect.x = ((lastBlockX - drawStartX) * blockWidth) - blockAnimationIncrement;
+			}
+		}
+
+		/* are we close to a vertical edge and moving vertically? */
+		if (blockY > bottomLimit || lastBlockY > bottomLimit || blockY < topLimit || lastBlockY < topLimit) {
+			/* are we moving up or down? */
+			if (blockY > lastBlockY) {
+				/* we are moving down */
+				characterRect.y = ((lastBlockY - drawStartY) * blockWidth) + blockAnimationIncrement;
+			}
+			else if (blockY < lastBlockY) {
+				/* we're moving up */
+				characterRect.y = ((lastBlockY - drawStartY) * blockWidth) - blockAnimationIncrement;
+			}
+		}
+	}
 
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
