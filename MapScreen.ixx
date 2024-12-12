@@ -53,6 +53,10 @@
 * -----	They can SET how many moves they WANT to make just by pressing that number... and it stays until they change it!
 * ----- They can also click on the block they want to go to, and they'll move as far in that direction as their speed allows.
 * 
+* --- When the PLAYER has that speed, they just get MULTIPLE TURNS before the NPCs get to move.
+*			THAT WAY we only have to animate ONE BLOCK at a time.
+* 
+* 
 * -- So the MAP SCREEN must ALSO have a previous DRAW START X and DRAW START Y
 * 
 * -- Let's START with multiple block moves (max 5 no matter what!) and add the LIMIT later!
@@ -672,6 +676,69 @@ void MapScreen::drawMap(UI& ui) {
 				block.getIsFloor() ? getFloorTexture() : getWallTexture(),
 				NULL, &targetRect,
 				0, NULL, SDL_FLIP_NONE);
+		}
+	}
+
+	if (animate) {
+
+		/* Add blocks at the TOP when scrolling DOWN */
+		if (drawStartY > lastDrawStartY) {
+			vector<Block>& blocks = rows[lastDrawStartY];
+
+			for (int x = 0; x < blocks.size(); ++x) {
+				Block& block = blocks[x];
+				targetRect.x = (x - drawStartX) * blockWidth;
+				targetRect.y = ((lastDrawStartY - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
+
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					NULL, &targetRect,
+					0, NULL, SDL_FLIP_NONE);
+			}
+		} else if (drawStartY < lastDrawStartY && lastDrawStartY < vBlocksTotal - yViewRes) {
+			/* Add blocks at the BOTTOM when scrolling UP */
+			int bottomRowIndex = drawStartY + yViewRes;
+			vector<Block>& blocks = rows[bottomRowIndex];
+
+			for (int x = 0; x < blocks.size(); ++x) {
+				Block& block = blocks[x];
+				targetRect.x = (x - drawStartX) * blockWidth;
+				targetRect.y = ((bottomRowIndex - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
+
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					NULL, &targetRect,
+					0, NULL, SDL_FLIP_NONE);
+			}
+		}
+
+
+
+		/* BUGGY AND BROKEN */
+		if (drawStartY != lastDrawStartY && false) {
+			vector<Block>& blocks = drawStartY > lastDrawStartY ? rows[lastDrawStartY] : rows[drawStartY + yViewRes + 1];
+
+			for (int x = 0; x < blocks.size(); ++x) {
+				Block& block = blocks[x];
+				targetRect.x = (x - drawStartX) * blockWidth;
+				targetRect.y = (lastDrawStartY - drawStartY) * blockWidth;
+
+				/* Shifting DOWN or UP. */
+				if (drawStartY > lastDrawStartY) {
+					targetRect.y = ((lastDrawStartY - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
+				}
+				else if (drawStartY < lastDrawStartY) {
+					targetRect.y = ((lastDrawStartY - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
+				}
+
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					NULL, &targetRect,
+					0, NULL, SDL_FLIP_NONE);
+			}
 		}
 	}
 }
