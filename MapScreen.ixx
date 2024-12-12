@@ -327,11 +327,17 @@ export class MapScreen {
 		void setDrawStartBlock();
 		void setMaxDrawBlock();
 		void setViewResAndBlockWidth(UI& ui);
+		void setScrollLimits();
 
 		int hViewRes; /* Horizontal Resolution of the screen ( # of blocks displayed across the top) */
 		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on hViewRes) */
 		int blockWidth; /* actual pixel dimensions of the block. depends on horizontal resolution */
 		int vBlocksVisible;
+
+		int rightLimit;
+		int leftLimit;
+		int topLimit;
+		int bottomLimit;
 
 		int hBlocksTotal;
 		int vBlocksTotal;
@@ -408,6 +414,7 @@ void MapScreen::buildMapDisplay() {
 	SDL_FreeSurface(floorSurface);
 
 	setMaxDrawBlock();
+	setScrollLimits();
 }
 
 /* get the maximum allowed map position of top left block on-screen. */
@@ -419,11 +426,22 @@ void MapScreen::setMaxDrawBlock() {
 
 /* set when screen loads or resizes */
 void MapScreen::setViewResAndBlockWidth(UI& ui) {
-	hViewRes = 20; /* LATER user can update this to zoom in or out. Function to update must also updated yViewRes */
+	hViewRes = 18; /* LATER user can update this to zoom in or out. Function to update must also updated yViewRes */
 
 	/* get and set y resolution... must be updated whenever hViewRes is updated. PUT THIS IN FUNCTION LATER. */
 	blockWidth = ui.getWindowWidth() / hViewRes;
 	yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
+	++hViewRes; /* give hViewRes an extra block so there's never blank space on the side of the screen (when half blocks get cut off. */
+}
+
+/*
+* Beyond these limits the character scrolls across the screen, not the map.
+*/
+void MapScreen::setScrollLimits() {
+	rightLimit = maxDrawStartX + (hViewRes / 2);
+	leftLimit = hViewRes / 2;
+	topLimit = yViewRes / 2;
+	bottomLimit = maxDrawStartY + (yViewRes / 2);
 }
 
 
@@ -603,10 +621,6 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 
 		int lastBlockX = playerCharacter.getLastX();
 		int lastBlockY = playerCharacter.getLastY();
-		int rightLimit = maxDrawStartX + (hViewRes / 2);
-		int leftLimit = hViewRes / 2;
-		int topLimit = yViewRes / 2;
-		int bottomLimit = maxDrawStartY + (yViewRes / 2);
 
 		/* are we close to a horizontal edge and moving horizontally? */
 		if (blockX > rightLimit || lastBlockX > rightLimit || blockX < leftLimit || lastBlockX < leftLimit) {
