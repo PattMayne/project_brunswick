@@ -38,11 +38,14 @@
 * 
 * -- Player Move Animation is different from NPC Move Animation
 * -----	Animation Lock
-* -----	enum AnimationType { Player, NPC }
+* -----	enum AnimationTurnType { Player, NPC }
 * -----	Poll_Event removes the events from the que... so we should STILL POLL, but don't handle the event during animation
 * -----	set a countdown of 10 (10 frames) which also moves player's DRAW position and each block's DRAW position 10% per tick
 * ---------- At the END of the countdown, THEN we move the player
 * ---------- LIMBS and CHARACTERS have "previousBlock" X and Y and we do "increment percent" * countdown FROM the PREVIOUS to the current XY
+* 
+* -----	I only need to animate the CHARACTER when they're close to the edge. Otherwise I simply animate the map.
+* -----	When animating the map, I need to add extra blocks and rows.
 * 
 * -- Extra SPEED will allow SOME NPCs to move multiple blocks at a time!
 * -- This is made possible by storing PREVIOUS BLOCK (instead of just letting the draw functions increment by one block automatically)
@@ -53,6 +56,34 @@
 * -- So the MAP SCREEN must ALSO have a previous DRAW START X and DRAW START Y
 * 
 * -- Let's START with multiple block moves (max 5 no matter what!) and add the LIMIT later!
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+*					IMPORTANT REFACTOR
+* 
+* 
+*		drawStartX and drawStartY should ALWAYS draw an EXTRA one on EACH edge.
+*		That's a lot of work to refactor... but it's necessary!
+* 
+* 
+*			The hRes must INCLUDE the OUTSIDE BLOCKS.
+*					Buffer Blocks.
+*			And then we start DRAWING INSIDE them, and STOP DRAWING inside them too.
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
 * 
 * 
 */
@@ -82,15 +113,14 @@ import UI;
 enum class LandmarkType { Entrance, Exit, Building, Shrine };
 enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
 enum CharacterType { Player, Hostile, Friendly }; /* THIS will go in the CHARACTER MODULE. NOT a CLASS because we want to use it as int. */
-enum class AnimationType { Player, NPC };
+enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN it is. */
 
 class Character {
 	public:
 		SDL_Texture* getTexture() { return texture; }
 		int getBlockX() { return blockX; }
 		int getBlockY() { return blockY; }
-		int getType() { return characterType; }
-		
+		int getType() { return characterType; }		
 
 		Character() { }
 
@@ -259,6 +289,8 @@ export class MapScreen {
 			hBlocksTotal = mapWidth;
 			vBlocksTotal = mapWidth;
 
+			animationType = AnimationType::None;
+
 			UI& ui = UI::getInstance();
 			setViewResAndBlockWidth(ui);
 			setMaxDrawBlock();
@@ -285,9 +317,10 @@ export class MapScreen {
 
 		int getAnimationIncrementPercent() { return animationIncrementPercent; }
 		int getAnimationCountdown() { return animationCountdown; }
-		void startAnimationCountdown() {
+		void startAnimationCountdown(AnimationType iType) {
 			animate = true;
 			animationCountdown = animationIncrementPercent;
+			animationType = iType;
 		}
 		void decrementCountdown() {
 			if (animationCountdown > 0) {
@@ -333,8 +366,10 @@ export class MapScreen {
 		int vBlocksTotal;
 
 		bool animate;
-		const int animationIncrementPercent = 20;
+		const int animationIncrementPercent = 10;
 		int animationCountdown;
+		int blockAnimationIncrement;
+		AnimationType animationType;
 
 		Map map;
 
@@ -455,8 +490,18 @@ export void MapScreen::run() {
 		frameStartTime = SDL_GetTicks();
 
 		/* check if we're animating anything */
-		if (animationCountdown > 0) { animate = true; }
-		else if (animate) { animate = false; }
+		if (animationCountdown > 0) {
+			animate = true;
+			if (lastDrawStartX != drawStartX || lastDrawStartY != drawStartY) {
+				animationType = AnimationType::Map;
+			}
+		}
+		else if (animate) {
+			/* counter has run out. Reset lastDrawStart values. */
+			animate = false;
+			lastDrawStartX = drawStartX;
+			lastDrawStartY = drawStartY;
+		}
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
@@ -504,6 +549,9 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
 	SDL_RenderClear(ui.getMainRenderer());
+
+	/* Get the distance for the camera to travel in this iteration of the animation sequence. (used in multiple draw functions) */
+	blockAnimationIncrement = !animate ? 0 : ((blockWidth / animationIncrementPercent) * (animationIncrementPercent - animationCountdown));
 
 	drawMap(ui);
 	drawLandmarks(ui);
@@ -590,9 +638,6 @@ void MapScreen::drawMap(UI& ui) {
 	vector<vector<Block>>& rows = map.getRows();
 	SDL_Rect targetRect = { 0, 0, blockWidth, blockWidth };
 
-	/* Get the distance for the camera to travel in this iteration of the animation sequence. */
-	int increment = !animate ? 0 : ((blockWidth / animationIncrementPercent) * (animationIncrementPercent - animationCountdown));
-
 	/* start with the TOP ROW that we want to draw, then work our way down */
 	for (int y = drawStartY; y < drawStartY + yViewRes; ++y) {
 		vector<Block>& blocks = rows[y];
@@ -603,21 +648,22 @@ void MapScreen::drawMap(UI& ui) {
 			targetRect.x = (x - drawStartX) * blockWidth;
 			targetRect.y = (y - drawStartY) * blockWidth;
 
-
 			if (animate) {
 
+				/* Shifting DOWN or UP. */
 				if (drawStartY > lastDrawStartY) {
-					targetRect.y = ((y - lastDrawStartY) * blockWidth) - increment;
+					targetRect.y = ((y - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
 				}
 				else if (drawStartY < lastDrawStartY) {
-					targetRect.y = ((y - lastDrawStartY) * blockWidth) + increment;
+					targetRect.y = ((y - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
 				}
 
+				/* Shifting RIGHT or LEFT. */
 				if (drawStartX > lastDrawStartX) {
-					targetRect.x = ((x - lastDrawStartX) * blockWidth) - increment;
+					targetRect.x = ((x - lastDrawStartX) * blockWidth) - blockAnimationIncrement;
 				}
 				else if (drawStartX < lastDrawStartX) {
-					targetRect.x = ((x - lastDrawStartX) * blockWidth) + increment;
+					targetRect.x = ((x - lastDrawStartX) * blockWidth) + blockAnimationIncrement;
 				}
 			}
 
@@ -662,9 +708,12 @@ void MapScreen::setDrawStartBlock() {
 	int idealX = playerX - (hViewRes / 2);
 	int idealY = playerY - (yViewRes / 2);
 
+	/* save the camera's recent position (in case this function is called because it changed) */
 	lastDrawStartX = drawStartX;
 	lastDrawStartY = drawStartY;
 
+	/* New drawStart location should be half the screen away from character (to keep character in center)
+	* unless the character is close to either edge, in which case we use maxDrawStart or 0. */
 	drawStartX = idealX >= 0 && idealX <= maxDrawStartX ? idealX : idealX > maxDrawStartX ? maxDrawStartX : 0;
 	drawStartY = idealY >= 0 && idealY <= maxDrawStartY ? idealY : idealY > maxDrawStartY ? maxDrawStartY : 0;
 }
@@ -956,7 +1005,7 @@ void MapScreen::requestUp() {
 			/* Change the block to draw based on the character's new position. */
 			setDrawStartBlock();
 			/* Instead of immediately displaying the move, we start a move animation. */
-			startAnimationCountdown();
+			startAnimationCountdown(AnimationType::Player);
 		}
 	}	
 }
@@ -969,7 +1018,7 @@ void MapScreen::requestDown() {
 		if (destinationBlock.getIsFloor()) {
 			map.getPlayerCharacter().move(Direction::Down);
 			setDrawStartBlock();
-			startAnimationCountdown();
+			startAnimationCountdown(AnimationType::Player);
 		}
 	}
 }
@@ -982,7 +1031,7 @@ void MapScreen::requestLeft() {
 		if (destinationBlock.getIsFloor()) {
 			map.getPlayerCharacter().move(Direction::Left);
 			setDrawStartBlock();
-			startAnimationCountdown();
+			startAnimationCountdown(AnimationType::Player);
 		}
 	}
 }
@@ -995,7 +1044,7 @@ void MapScreen::requestRight() {
 		if (destinationBlock.getIsFloor()) {
 			map.getPlayerCharacter().move(Direction::Right);
 			setDrawStartBlock();
-			startAnimationCountdown();
+			startAnimationCountdown(AnimationType::Player);
 		}
 	}
 }
