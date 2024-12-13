@@ -22,17 +22,17 @@ using namespace std;
 */
 export class Resources {
     public:
-        // Deleted copy constructor and assignment operator to prevent copies
+        /* Deleted copy constructor and assignment operator to prevent copies */
         Resources(const Resources&) = delete;
         Resources& operator=(const Resources&) = delete;
 
         static Resources& getInstance() {
-            // create the actual object
+            /* create the actual object */
             static Resources instance;
             return instance;
         }
         
-        // get data functions
+        /* get data functions */
         string getTitle();
         vector<string> getTitleWords();
         string getButtonText(string buttonLabel);
@@ -41,31 +41,31 @@ export class Resources {
         int getButtonBorder(int windowWidth);
 
     private:
-        // constructors
+        /* constructors */
         Resources() {
             jsonData = loadJsonData();
         }
 
         ~Resources() = default;
 
-        // private functions
+        /* private functions */
         json loadJsonData();
 
-        // private variables
+        /* private variables  */
         json jsonData;
 };
 
 json Resources::loadJsonData() {
-    // Create an ifstream to read the JSON file
+    /* Create an ifstream to read the JSON file */
     std::ifstream file("data/resources.json");
     if (!file.is_open()) {
         cerr << "Could not open the file!" << endl;
     }
 
-    // Create a JSON object
+    /* Create a JSON object */
     json jsonData;
 
-    // Parse the JSON file
+    /* Parse the JSON file */
     try {
         file >> jsonData;
     }
@@ -74,16 +74,16 @@ json Resources::loadJsonData() {
         return jsonData;;
     }
 
-    // Close the file
+    /* Close the file */
     file.close();
     return jsonData;
 }
 
-// Get the whole title of the game as a string
+/* Get the whole title of the game as a string */
 export string Resources::getTitle() {
     string title = "";
 
-    // build string from title words
+    /* build string from title words */
     for (int i = 0; i < jsonData["TITLE"].size(); ++i) {
         title.append(jsonData["TITLE"][i]);
         if (i < jsonData["TITLE"].size() - 1) {  title.append(" "); }
@@ -91,7 +91,7 @@ export string Resources::getTitle() {
     return title;
 }
 
-// get a vector of the words in the title for dynamic display
+/* get a vector of the words in the title for dynamic display */
 vector<string> Resources::getTitleWords() {
     vector<string> titleWords;
 
@@ -170,7 +170,7 @@ int Resources::getFontSize(FontContext fontContext, int windowWidth) {
                 if (fontContextLabel != "ERROR") {
                     if (fontData.contains(fontContextLabel)) {
                         json fontDataWithContext = fontData[fontContextLabel];
-                        // Now we are in the correct context. Get the correct size label.
+                        /* Now we are in the correct context.Get the correct size label. */
                         string sizeLabel = windowWidth > mediaMinWidths["LARGE"] ? "LARGE" :
                             windowWidth > mediaMinWidths["MEDIUM"] ? "MEDIUM" :
                             windowWidth > mediaMinWidths["SMALL"] ? "SMALL" : "X_SMALL";
@@ -185,8 +185,8 @@ int Resources::getFontSize(FontContext fontContext, int windowWidth) {
         }
     }
 
-    // if we reach here there was an error
-    cout << "Could not retrieve font size";
+    /* if we reach here there was an error  */
+    cerr << "Could not retrieve font size";
 
     return 16;
 }
