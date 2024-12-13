@@ -58,7 +58,7 @@
 * ---------- Side-paths.
 * -----	NPCs roaming around, defined in the JSON
 * ----- SQLite.
-* ----- Possible replace all X,Y values with a struct Point {int x; int y; }
+* ----- Move Character to its own module and make a Character Decorator here to add map-specific attributes.
 * 
 */
 
@@ -100,6 +100,15 @@ struct Position {
 	}
 };
 
+/* This is what a Landmark's checkCollision function will return. */
+struct LandmarkCollisionInfo {
+	bool hasCollided;
+	int subject;
+	LandmarkType type;
+	/* constructor */
+	LandmarkCollisionInfo(bool iHasCollided, LandmarkType iType, int iSubject) :
+		hasCollided(iHasCollided), subject(iSubject), type(iType) {}
+};
 
 /*
 * SubPath helps draw paths of floors through the blockmap.
@@ -117,7 +126,12 @@ struct SubPath {
 	}
 };
 
-
+/* 
+* Character will eventually go in its own module, along with Limb, for use in Character Creation and Battle screens.
+* Some of the attributes are specific to the Map Screen. So we will have a Character Decorator in the Map Screen
+* which will add the map-related members and functions to the extended object.
+* Battle and Character Creation screens will have their own decorators, adding their own stuff.
+*/
 class Character {
 	public:
 		Character() { }
@@ -134,6 +148,7 @@ class Character {
 
 		int getLastX() { return lastBlockPosition.x; }
 		int getLastY() { return lastBlockPosition.y; }
+		Position getPosition() { return blockPosition; }
 
 		void updateLastBlock() {
 			lastBlockPosition.x = blockPosition.x;
@@ -177,24 +192,66 @@ class Character {
 		CharacterType characterType;
 };
 
+/*
+* How do we add FUNCTIONS to the Landmark objects?
+* This may be where we need lambdas
+*    [](){}
+*		[variables brought in from parent scope](parameters called at runtime){ logic which possibly returns something }
+* 
+* OR do we let MapScreen handle that, and just let the Landmark class detect collisions?
+* 
+*/
 class Landmark {
 	public:
 		/* constructor */
-		Landmark(int x, int y, SDL_Texture* iTexture, LandmarkType iLandmarkType) :
-			blockPosition(x, y), texture(iTexture), landmarkType(iLandmarkType) { }
+		Landmark(
+			int drawStartX,
+			int drawStartY,
+			int blocksW,
+			int blocksH,
+			SDL_Texture* iTexture,
+			LandmarkType iLandmarkType,
+			int iSubjectId = -1
+		) :
+			texture(iTexture),
+			landmarkType(iLandmarkType),
+			blocksWidth(blocksW),
+			blocksHeight(blocksH),
+			subjectId(iSubjectId)
+		{
+			/* [0] must be the drawStart position */
+			blockPositions.push_back({ drawStartX, drawStartY });
+		}
 
 		/* destructor */
-		~Landmark() { }
+		~Landmark() { /* Texture is managed by MapScreen and will be destroyed at the end of the run() function. */ }
 
-		int getX() { return blockPosition.x; }
-		int getY() { return blockPosition.y; }
+		int getDrawX() { return blockPositions[0].x; }
+		int getDrawY() { return blockPositions[0].y; }
+		int getBlocksWidth() { return blocksWidth; }
+		int getBlocksHeight() { return blocksHeight; }
 		SDL_Texture* getTexture() { return texture; }
+
+		LandmarkCollisionInfo checkCollision(Position pos) { return checkCollision(pos.x, pos.y); }
+
+		LandmarkCollisionInfo checkCollision(int x, int y) {
+			for (Position position: blockPositions) {
+				if (x == position.x && y == position.y) {
+					return {true, landmarkType, subjectId};
+				}
+			}
+			return { false, landmarkType, -1 };
+		}
 
 	private:
 		/* x and y refer to the block grid, not the pixels */
-		Position blockPosition;
+		vector<Position> blockPositions;
+		//Position blockPosition;
 		SDL_Texture* texture;
 		LandmarkType landmarkType;
+		int blocksWidth;
+		int blocksHeight;
+		int subjectId;
 };
 
 class Block {
@@ -506,10 +563,36 @@ export void MapScreen::run() {
 			}
 		}
 		else if (animate) {
-			/* counter has run out. Reset lastDrawStart values. */
+			/* counter has run out but animate is still true. Reset lastDrawStart values and check for collisions. */
 			animate = false;
 			lastDrawStartX = drawStartX;
 			lastDrawStartY = drawStartY;
+
+			/* check for collisions (animation is done, player is ON new block and/or NPCs have moved ONTO new blocks */
+
+			/* collisions with LANDMARK: */
+
+			Character& playerCharacter = map.getPlayerCharacter();
+
+			for (Landmark landmark : map.getLandmarks()) {
+				LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
+
+				if (collisionInfo.hasCollided) {
+					cout << "HIT LANDMARK\n";
+
+					if (collisionInfo.type == LandmarkType::Exit) {
+						cout << "EXITING\n";
+						running = false;
+					} else if (collisionInfo.type == LandmarkType::Entrance) {
+						cout << "YOU CANNOT LEAVE THIS WAY\n";
+						/* TO DO: animate PUSHING the character OFF the entrance??? */
+					}
+				}
+			}
+
+			/* Collisions with NPCs */
+
+			/* Collisions with LIMBs */
 		}
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
@@ -588,8 +671,10 @@ void MapScreen::drawLandmarks(UI& ui) {
 	/* Draw any landmarks that are in bounds */
 	for (int i = 0; i < landmarks.size(); i++) {
 		Landmark& landmark = landmarks[i];
-		lX = landmark.getX();
-		lY = landmark.getY();
+		lX = landmark.getDrawX();
+		lY = landmark.getDrawY();
+		targetRect.w = landmark.getBlocksWidth() * blockWidth;
+		targetRect.h = landmark.getBlocksHeight() * blockWidth;
 
 		if (
 			lX >= drawStartX &&
@@ -597,8 +682,8 @@ void MapScreen::drawLandmarks(UI& ui) {
 			lY >= drawStartY &&
 			lY <= (drawStartY + yViewRes)
 		) {
-			targetRect.x = (landmark.getX() - drawStartX) * blockWidth;
-			targetRect.y = (landmark.getY() - drawStartY) * blockWidth;
+			targetRect.x = (landmark.getDrawX() - drawStartX) * blockWidth;
+			targetRect.y = (landmark.getDrawY() - drawStartY) * blockWidth;
 
 			if (animate) {
 
@@ -955,7 +1040,7 @@ void Map::buildMap(int mapWidth) {
 
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	/* Entrance landmark */
-	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
+	landmarks.emplace_back(pathX, pathY, 1, 1, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
 
 	/* while loop makes the path */
 	while (pathY > 0) {
@@ -1012,7 +1097,7 @@ void Map::buildMap(int mapWidth) {
 	}
 
 	/* Exit landmark */
-	landmarks.emplace_back(pathX, pathY, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
+	landmarks.emplace_back(pathX, pathY, 1, 1, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
 	SDL_FreeSurface(gateSurface);
 
 	/* create Player Character */
