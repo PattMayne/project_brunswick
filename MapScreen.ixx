@@ -48,15 +48,17 @@
 * 
 * NEXT:
 * 
-* -----	Animate the player character when close to the edge.
-* -----	Animate landmarks.
+* ---------- (BREAK for Christmas gifts & USB stuff)
 * -----	hitting the EXIT exits the screen
-* ---------- (then BREAK for Christmas gifts & USB stuff)
+* ---------- This requires TURNS.
+* --------------- After the player moves, then we check if they hit (A) NPCs (B) Limbs (C) Landmarks.
+* --------------- Each landmark has a vector of int pairs (Position struct... not actually a point)
 * -----	JSON for other landmarks.
 * -----	Paths between other landmarks.
 * ---------- Side-paths.
 * -----	NPCs roaming around, defined in the JSON
 * ----- SQLite.
+* ----- Possible replace all X,Y values with a struct Point {int x; int y; }
 * 
 */
 
@@ -87,67 +89,17 @@ enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want 
 enum CharacterType { Player, Hostile, Friendly }; /* THIS will go in the CHARACTER MODULE. NOT a CLASS because we want to use it as int. */
 enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN it is. */
 
-class Character {
-	public:
-		Character() { }
-
-		Character(CharacterType characterType, SDL_Texture* texture, int x, int y) :
-			blockX(x), blockY(y), texture(texture), characterType(characterType), lastX(x), lastY(y) { }
-
-		~Character() { }
-
-		SDL_Texture* getTexture() { return texture; }
-		int getBlockX() { return blockX; }
-		int getBlockY() { return blockY; }
-		int getType() { return characterType; }
-
-		int getLastX() { return lastX; }
-		int getLastY() { return lastY; }
-
-		void updateLastBlock() {
-			lastX = blockX;
-			lastY = blockY;
-		}
-
-		bool move(Direction direction, int distance = 1) {
-			bool moved = false;
-			/* This will become more complicated when we do animations. */
-			/* Checking for obstacles must be done by MapScreen object.
-			* When this is called, we follow blindly. */
-
-			switch(direction) {
-			case Direction:: Up:
-				updateLastBlock();
-				blockY -= distance;
-				moved = true;
-				break;
-			case Direction::Down:
-				updateLastBlock();
-				blockY += distance;
-				moved = true;
-				break;
-			case Direction::Left:
-				updateLastBlock();
-				blockX -= distance;
-				moved = true;
-				break;
-			case Direction::Right:
-				updateLastBlock();
-				blockX += distance;
-				moved = true;
-				break;
-			}
-			return moved;
-		}
-
-	private:
-		SDL_Texture* texture;
-		int blockX;
-		int blockY;
-		int lastX;
-		int lastY;
-		CharacterType characterType;
+struct Position {
+	int x;
+	int y;
+	/* constructor */
+	Position(int iX, int iY) : x(iX), y(iY) {}
+	Position() {
+		x = 0;
+		y = 0;
+	}
 };
+
 
 /*
 * SubPath helps draw paths of floors through the blockmap.
@@ -165,28 +117,82 @@ struct SubPath {
 	}
 };
 
+
+class Character {
+	public:
+		Character() { }
+
+		Character(CharacterType characterType, SDL_Texture* texture, int x, int y) :
+			blockPosition(x, y), lastBlockPosition(x, y), texture(texture), characterType(characterType) { }
+
+		~Character() { }
+
+		SDL_Texture* getTexture() { return texture; }
+		int getBlockX() { return blockPosition.x; }
+		int getBlockY() { return blockPosition.y; }
+		int getType() { return characterType; }
+
+		int getLastX() { return lastBlockPosition.x; }
+		int getLastY() { return lastBlockPosition.y; }
+
+		void updateLastBlock() {
+			lastBlockPosition.x = blockPosition.x;
+			lastBlockPosition.y = blockPosition.y; }
+
+		bool move(Direction direction, int distance = 1) {
+			bool moved = false;
+			/* This will become more complicated when we do animations. */
+			/* Checking for obstacles must be done by MapScreen object.
+			* When this is called, we follow blindly. */
+
+			switch(direction) {
+			case Direction:: Up:
+				updateLastBlock();
+				blockPosition.y -= distance;
+				moved = true;
+				break;
+			case Direction::Down:
+				updateLastBlock();
+				blockPosition.y += distance;
+				moved = true;
+				break;
+			case Direction::Left:
+				updateLastBlock();
+				blockPosition.x -= distance;
+				moved = true;
+				break;
+			case Direction::Right:
+				updateLastBlock();
+				blockPosition.x += distance;
+				moved = true;
+				break;
+			}
+			return moved;
+		}
+
+	private:
+		SDL_Texture* texture;
+		Position blockPosition;
+		Position lastBlockPosition;
+		CharacterType characterType;
+};
+
 class Landmark {
 	public:
 		/* constructor */
-		Landmark(int iX, int iY, SDL_Texture* iTexture, LandmarkType iLandmarkType) :
-			blockX(iX), blockY(iY), texture(iTexture), landmarkType(iLandmarkType) {
-			if (landmarkType == LandmarkType::Exit) {
-				cout << "creating EXIT LANDMARK\n\n"; }
-			else if (landmarkType == LandmarkType::Entrance) {
-				cout << "creating ENTRANCE LANDMARK\n\n"; }
-		}
+		Landmark(int x, int y, SDL_Texture* iTexture, LandmarkType iLandmarkType) :
+			blockPosition(x, y), texture(iTexture), landmarkType(iLandmarkType) { }
 
 		/* destructor */
 		~Landmark() { }
 
-		int getX() { return blockX; }
-		int getY() { return blockY; }
+		int getX() { return blockPosition.x; }
+		int getY() { return blockPosition.y; }
 		SDL_Texture* getTexture() { return texture; }
 
 	private:
 		/* x and y refer to the block grid, not the pixels */
-		int blockX;
-		int blockY;
+		Position blockPosition;
 		SDL_Texture* texture;
 		LandmarkType landmarkType;
 };
@@ -289,19 +295,8 @@ export class MapScreen {
 
 		int getAnimationIncrementPercent() { return animationIncrementPercent; }
 		int getAnimationCountdown() { return animationCountdown; }
-		void startAnimationCountdown(AnimationType iType) {
-			animate = true;
-			animationCountdown = animationIncrementPercent;
-			animationType = iType;
-		}
-		void decrementCountdown() {
-			if (animationCountdown > 0) {
-				--animationCountdown;
-			}
-			else {
-				animationCountdown = 0;
-			}
-		}
+		void startAnimationCountdown(AnimationType iType);
+		void decrementCountdown();
 
 		ScreenType getScreenType() { return screenType; }
 		MapType getMapType() { return mapType; }
@@ -331,8 +326,8 @@ export class MapScreen {
 		void setViewResAndBlockWidth(UI& ui);
 		void setScrollLimits();
 
-		int hViewRes; /* Horizontal Resolution of the screen ( # of blocks displayed across the top) */
-		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on hViewRes) */
+		int xViewRes; /* Horizontal Resolution of the screen ( # of blocks displayed across the top) */
+		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on xViewRes) */
 		int blockWidth; /* actual pixel dimensions of the block. depends on horizontal resolution */
 		int vBlocksVisible;
 
@@ -345,7 +340,7 @@ export class MapScreen {
 		int vBlocksTotal;
 
 		bool animate;
-		const int animationIncrementPercent = 16;
+		const int animationIncrementPercent = 20;
 		int animationCountdown;
 		int blockAnimationIncrement;
 		AnimationType animationType;
@@ -382,6 +377,20 @@ export class MapScreen {
 		*/
 };
 
+
+/*
+* 
+* 
+* 
+* 
+*		MapScreen Functions
+* 
+* 
+* 
+* 
+*/
+
+
 /* Create the texture with the name of the game */
 void MapScreen::createTitleTexture(UI& ui) {
 	Resources& resources = Resources::getInstance();
@@ -392,21 +401,19 @@ void MapScreen::createTitleTexture(UI& ui) {
 
 void MapScreen::buildMapDisplay() {
 	UI& ui = UI::getInstance();
+	SDL_Surface* mainSurface = ui.getWindowSurface();
 
 	setViewResAndBlockWidth(ui);
 	setMaxDrawBlock();
-	setDrawStartBlock();
+	setDrawStartBlock();	
 
-	SDL_Surface* mainSurface = ui.getWindowSurface();
-
-	vBlocksVisible = (mainSurface->h / blockWidth) + 1; /* adding one to fill any gap on the bottom. (Will always add 1 to hViewRes when drawing) */
+	vBlocksVisible = (mainSurface->h / blockWidth) + 1; /* adding one to fill any gap on the bottom. (Will always add 1 to xViewRes when drawing) */
 
 	/* make wall and floor textures (move into function(s) later) */
 
 	unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	SDL_Surface* wallSurface = IMG_Load("assets/wall.png");
 	SDL_Surface* floorSurface = IMG_Load("assets/floor.png");
-
 	wallTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), wallSurface);
 	floorTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), floorSurface);
 
@@ -421,32 +428,43 @@ void MapScreen::buildMapDisplay() {
 
 /* get the maximum allowed map position of top left block on-screen. */
 void MapScreen::setMaxDrawBlock() {
-	maxDrawStartX = static_cast<int>(map.getRows().size()) - hViewRes;
+	maxDrawStartX = static_cast<int>(map.getRows().size()) - xViewRes;
 	maxDrawStartY = static_cast<int>(map.getRows().size()) - yViewRes;
 }
 
 
 /* set when screen loads or resizes */
 void MapScreen::setViewResAndBlockWidth(UI& ui) {
-	hViewRes = 18; /* LATER user can update this to zoom in or out. Function to update must also updated yViewRes */
+	xViewRes = 18; /* LATER user can update this to zoom in or out. Function to update must also updated yViewRes */
 
-	/* get and set y resolution... must be updated whenever hViewRes is updated. PUT THIS IN FUNCTION LATER. */
-	blockWidth = ui.getWindowWidth() / hViewRes;
+	/* get and set y resolution... must be updated whenever xViewRes is updated. PUT THIS IN FUNCTION LATER. */
+	blockWidth = ui.getWindowWidth() / xViewRes;
 	yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
-	++hViewRes; /* give hViewRes an extra block so there's never blank space on the side of the screen (when half blocks get cut off. */
+	++xViewRes; /* give xViewRes an extra block so there's never blank space on the side of the screen (when half blocks get cut off. */
 }
 
 /*
-* Beyond these limits the character scrolls across the screen, not the map.
+* Beyond these limits of the map, the character scrolls across the screen, not the map.
 */
 void MapScreen::setScrollLimits() {
-	rightLimit = maxDrawStartX + (hViewRes / 2);
-	leftLimit = hViewRes / 2;
+	rightLimit = maxDrawStartX + (xViewRes / 2);
+	leftLimit = xViewRes / 2;
 	topLimit = yViewRes / 2;
 	bottomLimit = maxDrawStartY + (yViewRes / 2);
 }
 
 
+/* Screen has been resized. Rebuild! */
+void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
+	UI& ui = UI::getInstance();
+	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
+	ui.rebuildGameMenuPanel(gameMenuPanel);
+	buildMapDisplay();
+	createTitleTexture(ui);
+}
+
+
+/* The main function of the module, containing the game loop. */
 export void MapScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
@@ -535,6 +553,7 @@ export void MapScreen::run() {
 	gameState.setScreenStruct(screenToLoadStruct);
 }
 
+/* The main DRAW function, which calls the more-specific Draw functions. */
 void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
@@ -556,6 +575,7 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
+/* Draw buildings, exits, shrines, and loot boxes. */
 void MapScreen::drawLandmarks(UI& ui) {
 	/* NOW draw all LANDMARKS */
 	/* This is SIMPLISTIC FOR NOW. Real buildings come LATER. (new algorithms for each building TYPE!! */
@@ -573,7 +593,7 @@ void MapScreen::drawLandmarks(UI& ui) {
 
 		if (
 			lX >= drawStartX &&
-			lX <= (drawStartX + hViewRes) &&
+			lX <= (drawStartX + xViewRes) &&
 			lY >= drawStartY &&
 			lY <= (drawStartY + yViewRes)
 		) {
@@ -608,6 +628,7 @@ void MapScreen::drawLandmarks(UI& ui) {
 	}
 }
 
+/* Draw NPCs and player character */
 void MapScreen::drawCharacters(UI& ui) {
 
 	/* use this rect for all the characters. Just change the X Y each time. */
@@ -698,7 +719,7 @@ void MapScreen::drawMap(UI& ui) {
 	for (int y = drawStartY; y < drawStartY + yViewRes; ++y) {
 		vector<Block>& blocks = rows[y];
 
-		for (int x = drawStartX; x < drawStartX + hViewRes; ++x) {
+		for (int x = drawStartX; x < drawStartX + xViewRes; ++x) {
 
 			Block& block = blocks[x];
 			targetRect.x = (x - drawStartX) * blockWidth;
@@ -782,10 +803,10 @@ void MapScreen::drawMap(UI& ui) {
 		}
 		else if (drawStartX < lastDrawStartX) {
 			/* shifting map to the right, add a column on the right */
-			int rightColumnIndex = lastDrawStartX + hViewRes - 1;
+			int rightColumnIndex = lastDrawStartX + xViewRes - 1;
 			for (int y = drawStartY; y < drawStartY + yViewRes; ++y) {
 				Block& block = rows[y][rightColumnIndex];
-				targetRect.x = ((hViewRes * blockWidth) - blockWidth) + blockAnimationIncrement;
+				targetRect.x = ((xViewRes * blockWidth) - blockWidth) + blockAnimationIncrement;
 				targetRect.y = (y - drawStartY) * blockWidth;
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
@@ -826,7 +847,7 @@ void MapScreen::setDrawStartBlock() {
 	int playerY = playerCharacter.getBlockY();
 
 	/* get the IDEAL position for the camera (with the player in the center) */
-	int idealX = playerX - (hViewRes / 2);
+	int idealX = playerX - (xViewRes / 2);
 	int idealY = playerY - (yViewRes / 2);
 
 	/* save the camera's recent position (in case this function is called because it changed) */
@@ -839,6 +860,41 @@ void MapScreen::setDrawStartBlock() {
 	drawStartY = idealY >= 0 && idealY <= maxDrawStartY ? idealY : idealY > maxDrawStartY ? maxDrawStartY : 0;
 }
 
+
+void MapScreen::startAnimationCountdown(AnimationType iType) {
+	animate = true;
+	animationCountdown = animationIncrementPercent;
+	animationType = iType;
+}
+
+void MapScreen::decrementCountdown() {
+	if (animationCountdown > 0) {
+		--animationCountdown;
+	}
+	else {
+		animationCountdown = 0;
+	}
+}
+
+
+
+/*
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+*		Map Functions
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+*/
 
 void Map::buildMap(int mapWidth) {
 	/* 
@@ -969,6 +1025,7 @@ void Map::buildMap(int mapWidth) {
 }
 
 
+
 /* Map class constructor */
 Map::Map(int mapWidth) {
 	/*
@@ -1090,14 +1147,24 @@ void Map::floorize(int x, int y, int radius) {
 }
 
 
-/* Screen has been resized. Rebuild! */
-void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
-	UI& ui = UI::getInstance();
-	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
-	ui.rebuildGameMenuPanel(gameMenuPanel);
-	buildMapDisplay();
-	createTitleTexture(ui);
-}
+
+/*
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+*	MORE MapScreen Functions ( Navigation )
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+*/
 
 /* NAVIGATION FUNCTIONS
 *	We must check:
