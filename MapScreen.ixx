@@ -90,11 +90,11 @@ using namespace std;
 import ScreenType;
 import GameState;
 import Resources;
+import Character;
 import UI;
 
 enum class LandmarkType { Entrance, Exit, Building, Shrine };
 enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
-enum CharacterType { Player, Hostile, Friendly }; /* THIS will go in the CHARACTER MODULE. NOT a CLASS because we want to use it as int. */
 enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN it is. */
 
 struct Position {
@@ -140,19 +140,17 @@ struct SubPath {
 * which will add the map-related members and functions to the extended object.
 * Battle and Character Creation screens will have their own decorators, adding their own stuff.
 */
-class Character {
+class MapCharacter : public Character {
 	public:
-		Character() { }
+		MapCharacter() : Character() { }
 
-		Character(CharacterType characterType, SDL_Texture* texture, int x, int y) :
-			blockPosition(x, y), lastBlockPosition(x, y), texture(texture), characterType(characterType) { }
+		MapCharacter(CharacterType characterType, SDL_Texture* texture, int x, int y) :
+			Character(texture, characterType), blockPosition(x, y), lastBlockPosition(x, y) { }
 
-		~Character() { }
+		~MapCharacter() { }
 
-		SDL_Texture* getTexture() { return texture; }
 		int getBlockX() { return blockPosition.x; }
 		int getBlockY() { return blockPosition.y; }
-		int getType() { return characterType; }
 
 		int getLastX() { return lastBlockPosition.x; }
 		int getLastY() { return lastBlockPosition.y; }
@@ -197,10 +195,8 @@ class Character {
 		}
 
 	private:
-		SDL_Texture* texture;
 		Position blockPosition;
 		Position lastBlockPosition;
-		CharacterType characterType;
 };
 
 /*
@@ -303,15 +299,15 @@ class Map {
 		Map(int mapWidth);
 		vector<vector<Block>>& getRows() { return rows; }
 		vector<Landmark>& getLandmarks() { return landmarks; }
-		Character& getPlayerCharacter() { return playerCharacter; }
+		MapCharacter& getPlayerCharacter() { return playerCharacter; }
 
 	private:
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
 		vector<Landmark> landmarks;
 		void buildMap(int mapWidth);
-		vector<Character> NPCs;
-		Character playerCharacter;
+		vector<MapCharacter> NPCs;
+		MapCharacter playerCharacter;
 };
 
 
@@ -603,7 +599,7 @@ export void MapScreen::run() {
 
 			/* collisions with LANDMARK: */
 
-			Character& playerCharacter = map.getPlayerCharacter();
+			MapCharacter& playerCharacter = map.getPlayerCharacter();
 
 			for (Landmark landmark : map.getLandmarks()) {
 				LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
@@ -764,7 +760,7 @@ void MapScreen::drawCharacters(UI& ui) {
 
 void MapScreen::drawPlayerCharacter(UI& ui) {
 	SDL_Rect characterRect = { 0, 0, blockWidth, blockWidth };
-	Character& playerCharacter = map.getPlayerCharacter();
+	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int blockX = playerCharacter.getBlockX();
 	int blockY = playerCharacter.getBlockY();
 	characterRect.x = (blockX - drawStartX) * blockWidth;
@@ -958,7 +954,7 @@ void MapScreen::drawPanel(UI& ui, Panel& panel) {
 * cannot be more than end-of-list minus resolution.
 */
 void MapScreen::setDrawStartBlock() {
-	Character& playerCharacter = map.getPlayerCharacter();
+	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int playerX = playerCharacter.getBlockX();
 	int playerY = playerCharacter.getBlockY();
 
@@ -1136,7 +1132,7 @@ void Map::buildMap(int mapWidth) {
 	/* get character texture */
 	SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
 	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
-	playerCharacter = Character(CharacterType::Player, characterTexture, playerX, playerY);
+	playerCharacter = MapCharacter(CharacterType::Player, characterTexture, playerX, playerY);
 	SDL_FreeSurface(characterSurface);
 }
 
@@ -1295,7 +1291,7 @@ void Map::floorize(int x, int y, int radius) {
 /* destailed documentation for the first function. Other functions follow same process. */
 void MapScreen::requestUp() {
 	/* Get player character */
-	Character& playerCharacter = map.getPlayerCharacter();
+	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	/* get the NEW index of the block they want to move to (along the dimension of change) */
 	int destinationBlockY = playerCharacter.getBlockY() - 1;
 	/* Make sure they're not going to move out of bounds */
@@ -1315,7 +1311,7 @@ void MapScreen::requestUp() {
 }
 
 void MapScreen::requestDown() {
-	Character& playerCharacter = map.getPlayerCharacter();
+	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int destinationBlockY = playerCharacter.getBlockY() + 1;
 	if (destinationBlockY < vBlocksTotal) {
 		Block& destinationBlock = map.getRows()[destinationBlockY][playerCharacter.getBlockX()];
@@ -1328,7 +1324,7 @@ void MapScreen::requestDown() {
 }
 
 void MapScreen::requestLeft() {
-	Character& playerCharacter = map.getPlayerCharacter();
+	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int destinationBlockX = playerCharacter.getBlockX() - 1;
 	if (destinationBlockX < hBlocksTotal) {
 		Block& destinationBlock = map.getRows()[playerCharacter.getBlockY()][destinationBlockX];
@@ -1341,7 +1337,7 @@ void MapScreen::requestLeft() {
 }
 
 void MapScreen::requestRight() {
-	Character& playerCharacter = map.getPlayerCharacter();
+	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int destinationBlockX = playerCharacter.getBlockX() + 1;
 	if (destinationBlockX < hBlocksTotal) {
 		Block& destinationBlock = map.getRows()[playerCharacter.getBlockY()][destinationBlockX];

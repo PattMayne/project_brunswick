@@ -140,6 +140,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="BattleScreen.ixx" />
+    <ClCompile Include="Character.ixx" />
     <ClCompile Include="CharacterCreationScreen.ixx" />
     <ClCompile Include="GameState.ixx" />
     <ClCompile Include="main.cpp" />
