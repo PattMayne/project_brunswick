@@ -182,6 +182,9 @@ class Character {
 				moved = true;
 				break;
 			}
+
+			cout << blockPosition.x << ", " << blockPosition.y << "\n";
+
 			return moved;
 		}
 
@@ -350,7 +353,7 @@ export class MapScreen {
 			SDL_DestroyTexture(map.getPlayerCharacter().getTexture());
 		}
 
-		int getAnimationIncrementPercent() { return animationIncrementPercent; }
+		int getAnimationIncrementPercent() { return animationIncrementFraction; }
 		int getAnimationCountdown() { return animationCountdown; }
 		void startAnimationCountdown(AnimationType iType);
 		void decrementCountdown();
@@ -397,7 +400,7 @@ export class MapScreen {
 		int vBlocksTotal;
 
 		bool animate;
-		const int animationIncrementPercent = 20;
+		int animationIncrementFraction = 20;
 		int animationCountdown;
 		int blockAnimationIncrement;
 		AnimationType animationType;
@@ -498,6 +501,31 @@ void MapScreen::setViewResAndBlockWidth(UI& ui) {
 	blockWidth = ui.getWindowWidth() / xViewRes;
 	yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
 	++xViewRes; /* give xViewRes an extra block so there's never blank space on the side of the screen (when half blocks get cut off. */
+
+	//animationIncrementFraction
+	/* make animationIncrementFraction work based on blockWidth (preferably something fully divisible) */
+
+	if (animationIncrementFraction > blockWidth) {
+		animationIncrementFraction = blockWidth;
+	}
+	else if (blockWidth % animationIncrementFraction > 4) {
+		/* do an algorithm to find something ALMOST divisible (it would be nice to prefer zero) */
+		int fractionFinderIncrement = 1;
+
+		while (fractionFinderIncrement < blockWidth) {
+			int divisibleFractionFinder = animationIncrementFraction + fractionFinderIncrement;
+			if (blockWidth % (animationIncrementFraction + fractionFinderIncrement) < 4) {
+				animationIncrementFraction = animationIncrementFraction + fractionFinderIncrement;
+				cout << "Found it and it's " << fractionFinderIncrement << "\n";
+				break;
+			} else if (blockWidth % (animationIncrementFraction - fractionFinderIncrement) < 4) {
+				animationIncrementFraction = animationIncrementFraction - fractionFinderIncrement;
+				cout << "Found it and it's " << fractionFinderIncrement << "\n";
+				break;
+			}
+			++fractionFinderIncrement;
+		}
+	}
 }
 
 /*
@@ -627,7 +655,7 @@ export void MapScreen::run() {
 			SDL_Delay(FRAME_DELAY - frameTimeElapsed); }
 
 		if (animate) {
-			cout << "ANIMATION: " << animationCountdown << "\n";
+			//cout << "ANIMATION: " << animationCountdown << "\n";
 			decrementCountdown();
 		}
 	}
@@ -644,7 +672,9 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	SDL_RenderClear(ui.getMainRenderer());
 
 	/* Get the distance for the camera to travel in this iteration of the animation sequence. (used in multiple draw functions) */
-	blockAnimationIncrement = !animate ? 0 : ((blockWidth / animationIncrementPercent) * (animationIncrementPercent - animationCountdown));
+	blockAnimationIncrement = !animate ? 0 : ((blockWidth / animationIncrementFraction) * (animationIncrementFraction - animationCountdown));
+
+	if (animate) { cout << "INCREMENT: " << blockAnimationIncrement << "\n"; }	
 
 	drawMap(ui);
 	drawLandmarks(ui);
@@ -948,7 +978,7 @@ void MapScreen::setDrawStartBlock() {
 
 void MapScreen::startAnimationCountdown(AnimationType iType) {
 	animate = true;
-	animationCountdown = animationIncrementPercent;
+	animationCountdown = animationIncrementFraction;
 	animationType = iType;
 }
 
@@ -1367,6 +1397,9 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 	default:
 		cout << e.key.keysym.sym << "\n";
 	}
+
+	cout << "Block Width: " << blockWidth << "\n";
+
 }
 
 
