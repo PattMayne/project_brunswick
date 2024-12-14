@@ -60,6 +60,14 @@
 * ----- SQLite.
 * ----- Move Character to its own module and make a Character Decorator here to add map-specific attributes.
 * 
+* 
+* TO DO when we implement ZOOM functionality.
+* Animation increments are BETTER but not necessarily precise enough.
+* They're good for every screen width & xViewRes I've tried.
+* But there might be some combos where it goes to quick or too fast.
+* 
+* setViewResAndBlockWidth() function decides this. RETURN TO IT LATER and make it better.
+* 
 */
 
 module;
@@ -502,25 +510,20 @@ void MapScreen::setViewResAndBlockWidth(UI& ui) {
 	yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
 	++xViewRes; /* give xViewRes an extra block so there's never blank space on the side of the screen (when half blocks get cut off. */
 
-	//animationIncrementFraction
 	/* make animationIncrementFraction work based on blockWidth (preferably something fully divisible) */
-
 	if (animationIncrementFraction > blockWidth) {
-		animationIncrementFraction = blockWidth;
-	}
-	else if (blockWidth % animationIncrementFraction > 4) {
-		/* do an algorithm to find something ALMOST divisible (it would be nice to prefer zero) */
+		animationIncrementFraction = blockWidth; }
+	else if (blockWidth % animationIncrementFraction > 3) {
+		/* do an algorithm to find something ALMOST divisible (it would be nice to prefer zero remainder) */
 		int fractionFinderIncrement = 1;
 
 		while (fractionFinderIncrement < blockWidth) {
 			int divisibleFractionFinder = animationIncrementFraction + fractionFinderIncrement;
-			if (blockWidth % (animationIncrementFraction + fractionFinderIncrement) < 4) {
+			if (blockWidth % (animationIncrementFraction + fractionFinderIncrement) <= 3) {
 				animationIncrementFraction = animationIncrementFraction + fractionFinderIncrement;
-				cout << "Found it and it's " << fractionFinderIncrement << "\n";
 				break;
-			} else if (blockWidth % (animationIncrementFraction - fractionFinderIncrement) < 4) {
+			} else if (blockWidth % (animationIncrementFraction - fractionFinderIncrement) <= 3) {
 				animationIncrementFraction = animationIncrementFraction - fractionFinderIncrement;
-				cout << "Found it and it's " << fractionFinderIncrement << "\n";
 				break;
 			}
 			++fractionFinderIncrement;
@@ -654,10 +657,7 @@ export void MapScreen::run() {
 		if (frameTimeElapsed < FRAME_DELAY) {
 			SDL_Delay(FRAME_DELAY - frameTimeElapsed); }
 
-		if (animate) {
-			//cout << "ANIMATION: " << animationCountdown << "\n";
-			decrementCountdown();
-		}
+		if (animate) { decrementCountdown(); }
 	}
 
 	/* set the next screen to load */
@@ -670,11 +670,12 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
 	SDL_RenderClear(ui.getMainRenderer());
-
-	/* Get the distance for the camera to travel in this iteration of the animation sequence. (used in multiple draw functions) */
-	blockAnimationIncrement = !animate ? 0 : ((blockWidth / animationIncrementFraction) * (animationIncrementFraction - animationCountdown));
-
-	if (animate) { cout << "INCREMENT: " << blockAnimationIncrement << "\n"; }	
+	
+	if (!animate) { blockAnimationIncrement = 0; }
+	else {
+		/* Get the distance for the camera to travel in this iteration of the animation sequence. (used in multiple draw functions) */
+		int baseIncrement = (blockWidth / animationIncrementFraction);
+		blockAnimationIncrement = (baseIncrement * (animationIncrementFraction - animationCountdown)) + baseIncrement; }
 
 	drawMap(ui);
 	drawLandmarks(ui);
