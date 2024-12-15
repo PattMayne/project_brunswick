@@ -24,6 +24,8 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
         - [x] Body (storytelling - serif / mono ?)
         - [x] dialog (script / handwriting)
     - [x] Background for main menu screen
+- [ ] Replace Lohmann with Glaze for JSON
+    - [ ] Make a new branch first.
 - [x] Make main menu screen
   - [x] UI module to process buttons and panels
     - [x] Buttons light up on-hover
@@ -31,18 +33,19 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
     - [x] Buttons relative to panels.
     - [x] No buttons without panels! Every button is in a panel.
 - [x] Make other screens as DUMMY screens
-  - [ ] Map screen
+  - [x] Map screen
     - [ ] outside/main (world / non-safe by default, until solved) screen
     - [ ] inside (building / safe) screen
     - [ ] inside (dungeon / unsafe by default, until solved) screen
   - [ ] Character Creation screen
   - [ ] Battle screen
-- [ ] Build actual MAP screen
-  - [ ] Represent STATIC maps
-    - [ ] Decide b/w auto-generated maps vs pre-designed maps
-    - [ ] Map designer screen?
-    - [ ] saves to SQLite? saves to JSON?
-    - [ ] store maps in SQLite???? store in json file???
+- [x] Build actual MAP screen
+  - [x] Represent STATIC maps
+    - [x] Decide b/w auto-generated maps vs pre-designed maps
+        - [x] Landmarks will be defined in JSON, scattered procedurally and saved to SQLite DB.
+    - [x] Map designer screen?
+        - [x] NO DESIGNER SCREEN
+    - [ ] Save generated map to SQLite DB
 - [ ] Build Character Creation Screen
 - [ ] Represent STATIC limbs (instantiated limb objects will be saved to the DB)
   - [ ] JSON?
@@ -51,14 +54,14 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 - [ ] When closing program close each font with TTF_CloseFont()
 - [ ] incorporate SQLite database
     - [ ] must download the sqlite3.h header file (#include <sqlite3.h>)
-- [ ] MOBILE proportions are wack. Must unwack. Maybe this will be about SCALING.
+- [x] MOBILE proportions are wack. Must unwack. Maybe this will be about SCALING.
     - [ ] Button size and Font size are the main issue. Button size is based on font size. So **font size should adjust automatically based on screen size.**
 - [ ]  Possibly install conanfile or vcpkg to handle libraries (SDL2 or SDL3, json)
 - [x] Make a Resources module to encapsulate string and int resources
     - [x] Make a JSON file
     - [x] Put all strings in JSON file
     - [x] Make a singleton for accessing the JSON file
-        - [ ] Singleton will read gamestate (or something) to know which variations to access (window size affects font size, etc)
+        - [x] Singleton will read gamestate (or something) to know which variations to access (window size affects font size, etc)
 
 ### Long-Range Notes & Plans
 

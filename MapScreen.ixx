@@ -61,12 +61,20 @@
 * ----- Move Character to its own module and make a Character Decorator here to add map-specific attributes.
 * 
 * 
-* TO DO when we implement ZOOM functionality.
+* TO DO: when we implement ZOOM functionality.
 * Animation increments are BETTER but not necessarily precise enough.
 * They're good for every screen width & xViewRes I've tried.
 * But there might be some combos where it goes to quick or too fast.
 * 
 * setViewResAndBlockWidth() function decides this. RETURN TO IT LATER and make it better.
+* 
+* TO DO: After drawing all the tiles on a map (the first time) we can add VARIATION tiles by drawing NEW PATHS
+* with wall_002 and wall_003.
+* Every map should have three walls and three floors, plus a path (floor) and a border (wall).
+* The BLOCK objects will SAVE (in the DB) which tile they own so we don't need to calculate it again.
+* 
+* TO DO: Wall tiles should be a little bigger, so the wall-thing (tree, or whatever) stick ABOVE the higher tile.
+* ALSO randomly paint them as FLIP (horizontal) or NO_FLIP (  use rand % 2 to get each FLIP or NO FLIP... save it somewhere... maybe the DB)
 * 
 */
 
