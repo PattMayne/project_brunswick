@@ -25,6 +25,8 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
         - [x] dialog (script / handwriting)
     - [x] Background for main menu screen
 - [ ] Switch to SDL3
+- [ ] Create JSON schema for Map files
+    - [ ] Validate each Map file based on the schema
 - [ ] Replace Lohmann with Glaze for JSON
     - [ ] Make a new branch first.
 - [x] Make main menu screen

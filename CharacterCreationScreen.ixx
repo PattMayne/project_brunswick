@@ -1,3 +1,14 @@
+/*
+* Load limbs from JSON
+* create a surface that's 1000x1000 (or more?)
+* --- snap limbs together on this surface, then generate a texture to resize & display on the screen, and free the surface.
+* ------- each time we change the limb setup, we will destroy the texture and replace it with a new texture from the new setup.
+* 
+* 
+* 
+*/
+
+
 module;
 #include "include/json.hpp"
 #include "SDL.h"

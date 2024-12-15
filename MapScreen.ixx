@@ -1,9 +1,14 @@
 /*
-* GAME TIME:
-*	1.	Create an ENTRANCE and an EXIT.
-*			We check landmarks on each CHANGE of user location / animate/move.
-*	2.	Paint a "character" on the ENTRANCE at game start.
-*	3.	When the character reaches the exit, lead back to the main loop.
+* 
+*  __  __               ____
+* |  \/  | __ _ _ __   / ___|  ___ _ __ ___  ___ _ __
+* | |\/| |/ _` | '_ \  \___ \ / __| '__/ _ \/ _ \ '_ \
+* | |  | | (_| | |_) |  ___) | (__| | |  __/  __/ | | |
+* |_|  |_|\__,_| .__/  |____/ \___|_|  \___|\___|_| |_|
+*              |_|
+* 
+* 
+* 
 * 
 * 
 * The MAP has a vector of LANDMARK objects.
