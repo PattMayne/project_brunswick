@@ -24,6 +24,7 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
         - [x] Body (storytelling - serif / mono ?)
         - [x] dialog (script / handwriting)
     - [x] Background for main menu screen
+- [ ] Switch to SDL3
 - [ ] Replace Lohmann with Glaze for JSON
     - [ ] Make a new branch first.
 - [x] Make main menu screen
