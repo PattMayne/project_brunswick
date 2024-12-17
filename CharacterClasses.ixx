@@ -120,6 +120,7 @@ export class Limb {
 			flipped(flipped),
 			joints(joints)
 		{}
+		Limb() {}
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
 		bool save() { /* SAVE this limb to the database. */ }

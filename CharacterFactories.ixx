@@ -21,6 +21,7 @@ module;
 #include <cstdlib>
 #include <time.h>
 #include <unordered_map>
+#include <functional>
 
 export module CharacterFactory;
 
@@ -75,6 +76,31 @@ export LimbData baseLimbData(string slug) {
 	* and finally deliver the right one?
 	* 
 	* DEEPAI suggests using an unordered_map. And apparently 500 items is not too many.
+	* 
+	* 
+	* BETTER IDEA:
+	* 
+	* The unordered_map will hold FUNCTIONS instead of objects.
+	* These functions will instantiate an object only when the key is accessed:
+				unordered_map<string, function<Limb()> baseLimbMap;
+	* 
+	* We can always check for the existence of a key like this:
+	
+
+		if (baseLimbMap.find("dolly") != baseLimbMap.end()) {
+			MyObject dolly = baseLimbMap["dolly"](); // Instantiate when accessing
+			dolly.display();
+		} else {
+			std::cout << "'dolly' not found.\n";
+		}
+
+
+	* 
+	* ALSO.... I don't want "magic strings" for slug names.
+	* There should be a master list of unordered_map<string, string>: "SLUG_NAME", "slug_name"
+	* That way they're always SET by something in the master list (though they can be accessed without accessing the slug list)
+	* 
+	* 
 	*/
 
 	if (slug == "deer_leg_4") {
@@ -86,7 +112,7 @@ export LimbData baseLimbData(string slug) {
 		data.weight = 7;
 		data.intelligence = 3;
 		data.dNode = DominanceNode::Green;
-		//data.texture = // get texture from IMG
+		//data.texture = // get texture from IMG // NO... this should only hold the path to the file.
 		data.joints = {
 			Point(144, 81)
 		};
@@ -94,4 +120,29 @@ export LimbData baseLimbData(string slug) {
 		return data;
 	}
 
+	unordered_map<string, Limb> baseLimbMap;
+
+	string name = "name";
+	vector<Point> joints = {
+		Point(3,3)
+	};
+
+	baseLimbMap["dolly"] = Limb(name, 5, 5, 5, 5, DominanceNode::Green, true, joints);
+
+	LimbData data;
+	data.slug = slug;
+	data.name = "Deer Leg 4";
+	data.attack = 5;
+	data.speed = 10;
+	data.weight = 7;
+	data.intelligence = 3;
+	data.dNode = DominanceNode::Green;
+	//data.texture = // get texture from IMG
+	data.joints = {
+		Point(144, 81)
+	};
+
+	return data;
+
 }
+
