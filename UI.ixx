@@ -41,7 +41,7 @@ export module UI;
 using namespace std;
 
 import Resources;
-import ScreenType;
+import TypeStorage;
 class Panel;
 class Button;
 struct PreButtonStruct;

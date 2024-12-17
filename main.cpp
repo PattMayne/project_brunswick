@@ -49,7 +49,7 @@ import MenuScreen;
 import MapScreen;
 import BattleScreen;
 import CharacterCreationScreen;
-import ScreenType;
+import TypeStorage;
 import Resources;
 using namespace std;
 const bool DEBUG = false;

@@ -11,7 +11,7 @@ export module GameState;
 
 using namespace std;
 
-import ScreenType;
+import TypeStorage;
 
 export class GameState {
 	public:

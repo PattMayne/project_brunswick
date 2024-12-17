@@ -15,7 +15,7 @@ export module BattleScreen;
 
 using namespace std;
 
-import ScreenType;
+import TypeStorage;
 import GameState;
 import Resources;
 import UI;

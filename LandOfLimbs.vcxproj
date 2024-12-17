@@ -143,11 +143,12 @@
     <ClCompile Include="Character.ixx" />
     <ClCompile Include="CharacterCreationScreen.ixx" />
     <ClCompile Include="GameState.ixx" />
+    <ClCompile Include="CharacterFactories.ixx" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MapScreen.ixx" />
     <ClCompile Include="MenuScreen.ixx" />
     <ClCompile Include="Resources.ixx" />
-    <ClCompile Include="ScreenType.ixx" />
+    <ClCompile Include="TypeStorage.ixx" />
     <ClCompile Include="UI.ixx" />
   </ItemGroup>
   <ItemGroup>

@@ -100,7 +100,7 @@ export module MapScreen;
 
 using namespace std;
 
-import ScreenType;
+import TypeStorage;
 import GameState;
 import Resources;
 import Character;

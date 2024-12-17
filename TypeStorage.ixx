@@ -1,4 +1,4 @@
-export module ScreenType;
+export module TypeStorage;
 
 export enum class ScreenType {
 	NoScreen, Menu, Map, Battle, CharacterCreation

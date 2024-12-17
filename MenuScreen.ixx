@@ -32,7 +32,7 @@ export module MenuScreen;
 
 using namespace std;
 
-import ScreenType;
+import TypeStorage;
 import GameState;
 import Resources;
 import UI;

@@ -38,6 +38,8 @@ export module Character;
 
 using namespace std;
 
+import TypeStorage;
+
 export enum CharacterType { Player, Hostile, Friendly }; /* NOT a CLASS because we want to use it as int. */
 /* Red beats Green (fire consumes life), Green beats Blue (life consumes water), Blue beats Red (water extinguishes fire) */
 export enum class DominanceNode { Red, Green, Blue };
@@ -51,6 +53,8 @@ export struct Point {
 	int x;
 	int y;
 };
+
+class Limb;
 
 /*
 * Very minimal parent class.

@@ -8,7 +8,7 @@ module;
 
 export module Resources;
 
-import ScreenType;
+import TypeStorage;
 using json = nlohmann::json;
 using namespace std;
 
