@@ -35,7 +35,7 @@ struct LimbData {
 	int attack;
 	int speed;
 	int weight;
-	//int intelligence;
+	int intelligence;
 	DominanceNode dNode;
 	vector<Point> joints;
 	SDL_Texture* texture;
@@ -45,17 +45,7 @@ struct LimbData {
 * 
 FUNCTIONS TO CREATE:
 
-TAKES a slug identifier and returns a limb object or struct DEFINED IN THE FUNCTION.
-OR: should each MAP be a function which contains all its objects, and can return EITHER the full map OR just its pieces?
-
-export Limb baseLimb(string slug) { }
-
-
-
-
 export SDL_Texture buildAvatarFromLimbs() {}
-
-
 
 each map definition will have it collection of Suits like:
 
@@ -66,3 +56,42 @@ vector<Character> suits = {
 }
 
 */
+
+/* 
+* TAKES a slug identifier and returns a limb object or struct DEFINED IN THE FUNCTION.
+* OR : should each MAP be a function which contains all its objects, and can return EITHER the full map OR just its pieces ?
+*/
+
+export LimbData baseLimbData(string slug) {
+
+	/*
+	* NEW METHOD. Forget defining them here.
+	* Make a huge unordered_map instead!
+	* The SLUG is the KEY in the UNORDERED_MAP.
+	* 
+	* Also, maybe each MAP has its own unordered_map of Limb objects?
+	* That way we don't need to load EVERY limb whenever we want to find ONE?
+	* And this function can cycle through the maps, check each of their lists,
+	* and finally deliver the right one?
+	* 
+	* DEEPAI suggests using an unordered_map. And apparently 500 items is not too many.
+	*/
+
+	if (slug == "deer_leg_4") {
+		LimbData data;
+		data.slug = slug;
+		data.name = "Deer Leg 4";
+		data.attack = 5;
+		data.speed = 10;
+		data.weight = 7;
+		data.intelligence = 3;
+		data.dNode = DominanceNode::Green;
+		//data.texture = // get texture from IMG
+		data.joints = {
+			Point(144, 81)
+		};
+
+		return data;
+	}
+
+}
