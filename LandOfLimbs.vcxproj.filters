@@ -45,7 +45,7 @@
     <ClCompile Include="CharacterCreationScreen.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="Character.ixx">
+    <ClCompile Include="CharacterClasses.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
     <ClCompile Include="CharacterFactories.ixx">

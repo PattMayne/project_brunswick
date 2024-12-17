@@ -103,7 +103,7 @@ using namespace std;
 import TypeStorage;
 import GameState;
 import Resources;
-import Character;
+import CharacterClasses;
 import UI;
 
 enum class LandmarkType { Entrance, Exit, Building, Shrine };
@@ -158,7 +158,7 @@ class MapCharacter : public Character {
 		MapCharacter() : Character() { }
 
 		MapCharacter(CharacterType characterType, SDL_Texture* texture, int x, int y) :
-			Character(texture, characterType), blockPosition(x, y), lastBlockPosition(x, y) { }
+			Character(characterType), texture(texture), blockPosition(x, y), lastBlockPosition(x, y) { }
 
 		~MapCharacter() { }
 
@@ -168,6 +168,14 @@ class MapCharacter : public Character {
 		int getLastX() { return lastBlockPosition.x; }
 		int getLastY() { return lastBlockPosition.y; }
 		Position getPosition() { return blockPosition; }
+
+		SDL_Texture* getTexture() { return texture; }
+		void setTexture(SDL_Texture* incomingTexture) {
+			if (texture) {
+				SDL_DestroyTexture(texture);
+				texture = incomingTexture;
+			}
+		}
 
 		void updateLastBlock() {
 			lastBlockPosition.x = blockPosition.x;
@@ -210,6 +218,7 @@ class MapCharacter : public Character {
 	private:
 		Position blockPosition;
 		Position lastBlockPosition;
+		SDL_Texture* texture;
 };
 
 /*

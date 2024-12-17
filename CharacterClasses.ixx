@@ -34,7 +34,7 @@ module;
 #include <string>
 #include <vector>
 
-export module Character;
+export module CharacterClasses;
 
 using namespace std;
 
@@ -44,15 +44,7 @@ export enum CharacterType { Player, Hostile, Friendly }; /* NOT a CLASS because 
 /* Red beats Green (fire consumes life), Green beats Blue (life consumes water), Blue beats Red (water extinguishes fire) */
 export enum class DominanceNode { Red, Green, Blue };
 export int const dominanceCycleAdvantage = 15;
-export enum class LimbState { Free, Owned, Equipped }; /* If it is OWNED or EQUIPPED, then there must be a character id. Every character should exist in the DB. */
-
-/* this POINT should be available everywhere. Where should it be stored? Should there be a Point module? */
-export struct Point {
-	Point() {}
-	Point(int x, int y) : x(x), y(y) {}
-	int x;
-	int y;
-};
+export enum class LimbState { Free, Owned, Equipped }; /* If it is OWNED or EQUIPPED, then there must be a character id. Every character should exist in the DB.*/
 
 class Limb;
 
@@ -62,20 +54,18 @@ class Limb;
 * We can't hold a vector of Limb objects here, because the derived Character classes must hold similarly derived Limb objects.
 * 
 * Maybe Character should hold a vector of Limbs, and its derived object can have a function to turn those Limbs into derived Limbs.
+* 
+* REMOVE TEXTURE.
+* Only screen-specific derivatives should have textures, created from limbs.
+* In fact, only the Map has a texture, since it's displayed as a collection of limbs everywhere else.
 */
 export class Character {
 	public:
 		Character() {}
 		~Character() {}
-		Character(SDL_Texture* texture, CharacterType characterType) :
-			texture(texture), characterType(characterType) { }
+		Character(CharacterType characterType) :
+			characterType(characterType) { }
 
-		SDL_Texture* getTexture() { return texture; }
-		void setTexture(SDL_Texture* incomingTexture) {
-			if (texture) {
-				SDL_DestroyTexture(texture);
-				texture = incomingTexture; }
-		}
 		int getType() { return characterType; }
 		void setId(int id) { this->id = id; }
 		virtual void setLimbs(vector<Limb> limbs) {
@@ -89,7 +79,6 @@ export class Character {
 		}
 
 	protected:
-		SDL_Texture* texture;
 		CharacterType characterType;
 		int id;
 		/*
@@ -102,6 +91,12 @@ export class Character {
 /*
 * Minimalistic class from which useful Limb classes will derive for their objects.
 * Every Limb object must be stored in the database. As soon as it exists it must have an ID.
+* 
+* Maybe "attack" should be "strength".
+* "Intelligence" can affect how precisely you hit a limb, vs how much the damage is spread around.
+* Certain Low-intelligence limbs can create a special power which spreads damage around intentionally.
+* Intelligence raises your chances of hitting at all. Or hitting the correct target.
+* Intelligence also raises your chance of being missed (make whole limb twirl around on a joint-pivot or something?)
 */
 export class Limb {
 	public:
@@ -138,5 +133,5 @@ export class Limb {
 		DominanceNode dNode;
 		bool flipped = false;
 		vector<Point> joints;
-		SDL_Texture* avatar = NULL;
+		SDL_Texture* texture = NULL;
 };

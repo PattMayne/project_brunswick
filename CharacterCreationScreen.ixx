@@ -26,6 +26,7 @@ export module CharacterCreationScreen;
 
 using namespace std;
 
+import CharacterClasses;
 import TypeStorage;
 import GameState;
 import Resources;
