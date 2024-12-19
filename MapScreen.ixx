@@ -373,8 +373,7 @@ export class MapScreen {
 			/* Destroy all the textures in the Landmarks */
 			for (int i = 0; i < map.getLandmarks().size(); i++) {
 				SDL_Texture* textureToDestroy = map.getLandmarks()[i].getTexture();
-				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); }				
-			}
+				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); } }
 
 			/* Destroy all the textures in the Characters */
 			SDL_DestroyTexture(map.getPlayerCharacter().getTexture());

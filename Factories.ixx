@@ -47,6 +47,7 @@ export module Factories;
 using namespace std;
 
 import CharacterClasses;
+import LimbFormMasterList;
 import TypeStorage;
 import UI;
 
@@ -71,17 +72,7 @@ import UI;
 * 
 */
 
-export struct LimbForm {
-	string name;
-	string slug;
-	int attack;
-	int speed;
-	int weight;
-	int intelligence;
-	DominanceNode dNode;
-	vector<Point> joints;
-	SDL_Texture* texture;
-};
+
 
 
 export struct SuitForm {
@@ -104,7 +95,7 @@ export struct LandmarkForm {
 export struct MapForm {
 	string name;
 	string slug;
-	vector<LimbForm> limbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
+	vector<LimbForm> nativeLimbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
 	vector<SuitForm> suits;
 	int blocksWidth;
 	int blocksHeight;
@@ -123,6 +114,13 @@ each Limb has a type) and then override them with Database information.
 FIRST GOAL:
 
 -- make a FOREST MAP form, complete with textures, use it to populate the actual Map Screen map.
+^^DONE^^
+
+SECOND GOAL:
+
+-- add two SUITS
+-- make SHRINES from those SUITS
+-- scatter LIMBS around
 
 For now we won't save anything to any Database.
 We'll just make everything a one-off, based on FORM DEFINITIONS.
@@ -135,18 +133,45 @@ Expand this later to lat them be RECTANGLES.
 
 /*
 *
-* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* ~ _____ ___  ____  __  __ ____  ~
-* ~|  ___/ _ \|  _ \|  \/  / ___| ~
-* ~| |_ | | | | |_) | |\/| \___ \ ~
-* ~|  _|| |_| |  _ <| |  | |___) |~
-* ~|_|   \___/|_| \_\_|  |_|____/ ~
-* ~								  ~
-* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~  _____ ___  ____  __  __                            ~
+* ~ |  ___/ _ \|  _ \|  \/  |                           ~
+* ~ | |_ | | | | |_) | |\/| |                           ~
+* ~ |  _|| |_| |  _ <| |  | |                           ~
+* ~ |_|_ _\___/|_|_\_\_|_ |_|                           ~
+* ~  ___ _   _ ____ _____  _    _   _  ____ _____ ____  ~
+* ~ |_ _| \ | / ___|_   _|/ \  | \ | |/ ___| ____/ ___| ~
+* ~  | ||  \| \___ \ | | / _ \ |  \| | |   |  _| \___ \ ~
+* ~  | || |\  |___) || |/ ___ \| |\  | |___| |___ ___) |~
+* ~ |___|_| \_|____/ |_/_/   \_\_| \_|\____|_____|____/ ~
+* ~                                                     ~
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * 
 * The functions which create the actual FORM structs for the levels of the game.
 * 
 */
+
+
+/*
+*			FOREST MAP STRUCTS
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~  _____ ___  ____  _____ ____ _____        ~
+* ~ |  ___/ _ \|  _ \| ____/ ___|_   _|       ~
+* ~ | |_ | | | | |_) |  _| \___ \ | |         ~
+* ~ |  _|| |_| |  _ <| |___ ___) || |         ~
+* ~ |_|  _\___/|_| \_\_____|____/ |_|         ~
+* ~ |  \/  |  / \  |  _ \                     ~
+* ~ | |\/| | / _ \ | |_) |                    ~
+* ~ | |  | |/ ___ \|  __/                     ~
+* ~ |_|__|_/_/_ _\_\_|_   _  ____ _____ ____  ~
+* ~ / ___|_   _|  _ \| | | |/ ___|_   _/ ___| ~
+* ~ \___ \ | | | |_) | | | | |     | | \___ \ ~
+* ~  ___) || | |  _ <| |_| | |___  | |  ___) |~
+* ~ |____/ |_| |_| \_\\___/ \____| |_| |____/ ~
+* ~                                           ~
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
 
 MapForm forestMap() {
 	UI& ui = UI::getInstance();
@@ -160,7 +185,9 @@ MapForm forestMap() {
 
 	SDL_Surface* wallSurface = IMG_Load("data/maps/forest/wall_001.png");
 	SDL_Surface* floorSurface = IMG_Load("data/maps/forest/floor_001.png");
+
 	/* DO ERROR CHECKS */
+
 	forestMap.wallTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), wallSurface);
 	forestMap.floorTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), floorSurface);
 
@@ -168,6 +195,10 @@ MapForm forestMap() {
 	SDL_FreeSurface(floorSurface);
 
 	// SUITS and LIMBS will come later.
+
+	//forestMap.nativeLimbs = {
+	//	LimbForm
+	//};
 
 	return forestMap;
 }
@@ -204,7 +235,7 @@ vector<Character> suits = {
 * OR : should each MAP be a function which contains all its objects, and can return EITHER the full map OR just its pieces ?
 */
 
-export LimbForm baseLimbData(string slug) {
+//export LimbForm baseLimbData(string slug) {
 
 	/*
 	* NEW METHOD. Forget defining them here.
@@ -244,46 +275,5 @@ export LimbForm baseLimbData(string slug) {
 	* 
 	*/
 
-	if (slug == "deer_leg_4") {
-		LimbForm data;
-		data.slug = slug;
-		data.name = "Deer Leg 4";
-		data.attack = 5;
-		data.speed = 10;
-		data.weight = 7;
-		data.intelligence = 3;
-		data.dNode = DominanceNode::Green;
-		//data.texture = // get texture from IMG // NO... this should only hold the path to the file.
-		data.joints = {
-			Point(144, 81)
-		};
-
-		return data;
-	}
-
-	unordered_map<string, Limb> baseLimbMap;
-
-	string name = "name";
-	vector<Point> joints = {
-		Point(3,3)
-	};
-
-	baseLimbMap["dolly"] = Limb(name, 5, 5, 5, 5, DominanceNode::Green, true, joints);
-
-	LimbForm data;
-	data.slug = slug;
-	data.name = "Deer Leg 4";
-	data.attack = 5;
-	data.speed = 10;
-	data.weight = 7;
-	data.intelligence = 3;
-	data.dNode = DominanceNode::Green;
-	//data.texture = // get texture from IMG
-	data.joints = {
-		Point(144, 81)
-	};
-
-	return data;
-
-}
+//}
 
