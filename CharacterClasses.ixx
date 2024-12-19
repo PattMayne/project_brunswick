@@ -47,6 +47,7 @@ export int const dominanceCycleAdvantage = 15;
 export enum class LimbState { Free, Owned, Equipped }; /* If it is OWNED or EQUIPPED, then there must be a character id. Every character should exist in the DB.*/
 
 class Limb;
+struct LimbPlacement;
 
 /*
 * Very minimal parent class.
@@ -135,4 +136,9 @@ export class Limb {
 		bool flipped = false;
 		vector<Point> joints;
 		SDL_Texture* texture = NULL;
+};
+
+export struct LimbPlacement {
+	string slug;
+	Point position;
 };

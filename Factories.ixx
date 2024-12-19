@@ -1,8 +1,13 @@
 /*
 * Specific maps (levels), limbs, and suits (pure unscrambled characters) will be hardcoded and defined here.
+* Map includes Blocks and Landmarks.
+* Blocks will ALWAYS come from the DB (no need for BlockData struct).
+* Landmarks never change, except for their position in the map.
 * Later if I want to use JSON instead (to let non-programmers make levels and characters) then I can just plug the JSON (or whatever) into this file.
 * The rest of the program won't have to care where this Factory gets its info.
 * Hard-coding for now lets me develop quicker. But it also guarantees type safety.
+* 
+* Whenever we actually load a Map (with its landmarks, blocks, limbs, and suits) we will FIRST load the BASE/VANILLA version, and then OVERRIDE it with DB data (if exists).
 */
 
 /*
@@ -10,6 +15,7 @@
 * 1 - STRUCTs defining data of LIMB, CHARACTER, and MAP. (does this make base classes useless? MAYBE... maybe not... we want the SAVE function... but structs can have that?)
 * 2 - DEFINITIONS of specific LIMBs, SUITs, and MAP.
 * 3 - Load these into the Character Creation Screen.
+* 
 */
 
 module;
@@ -30,7 +36,8 @@ using namespace std;
 import CharacterClasses;
 import TypeStorage;
 
-struct LimbData {
+
+export struct LimbData {
 	string name;
 	string slug;
 	int attack;
@@ -40,6 +47,24 @@ struct LimbData {
 	DominanceNode dNode;
 	vector<Point> joints;
 	SDL_Texture* texture;
+};
+
+
+export struct SuitData {
+	string name;
+	string slug;
+	bool unscrambled;
+	vector<LimbPlacement> limbPlacements; /* A suit is abstract. It is NOT a character. It holds information to build an abstract base character. */
+};
+
+
+export struct MapData {
+	string name;
+	string slug;
+	vector<LimbData> limbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
+	vector<SuitData> suits;
+	// WILL NEED A VECTOR OF BLOCKS. This will require moving Block class from MapScreen into this module.
+	// Then we will extend the block class (or include a struct.
 };
 
 /*

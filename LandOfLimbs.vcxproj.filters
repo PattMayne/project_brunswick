@@ -48,7 +48,7 @@
     <ClCompile Include="CharacterClasses.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="CharacterFactories.ixx">
+    <ClCompile Include="Factories.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>

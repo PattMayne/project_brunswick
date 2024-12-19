@@ -57,7 +57,7 @@
 * -----	hitting the EXIT exits the screen
 * ---------- This requires TURNS.
 * --------------- After the player moves, then we check if they hit (A) NPCs (B) Limbs (C) Landmarks.
-* --------------- Each landmark has a vector of int pairs (Position struct... not actually a point)
+* --------------- Each landmark has a vector of int pairs (Point struct... not actually a point)
 * -----	JSON for other landmarks.
 * -----	Paths between other landmarks.
 * ---------- Side-paths.
@@ -110,17 +110,6 @@ enum class LandmarkType { Entrance, Exit, Building, Shrine };
 enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
 enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN it is. */
 
-struct Position {
-	int x;
-	int y;
-	/* constructor */
-	Position(int iX, int iY) : x(iX), y(iY) {}
-	Position() {
-		x = 0;
-		y = 0;
-	}
-};
-
 /* This is what a Landmark's checkCollision function will return. */
 struct LandmarkCollisionInfo {
 	bool hasCollided;
@@ -167,7 +156,7 @@ class MapCharacter : public Character {
 
 		int getLastX() { return lastBlockPosition.x; }
 		int getLastY() { return lastBlockPosition.y; }
-		Position getPosition() { return blockPosition; }
+		Point getPosition() { return blockPosition; }
 
 		SDL_Texture* getTexture() { return texture; }
 		void setTexture(SDL_Texture* incomingTexture) {
@@ -216,8 +205,8 @@ class MapCharacter : public Character {
 		}
 
 	private:
-		Position blockPosition;
-		Position lastBlockPosition;
+		Point blockPosition;
+		Point lastBlockPosition;
 		SDL_Texture* texture;
 };
 
@@ -261,10 +250,10 @@ class Landmark {
 		int getBlocksHeight() { return blocksHeight; }
 		SDL_Texture* getTexture() { return texture; }
 
-		LandmarkCollisionInfo checkCollision(Position pos) { return checkCollision(pos.x, pos.y); }
+		LandmarkCollisionInfo checkCollision(Point pos) { return checkCollision(pos.x, pos.y); }
 
 		LandmarkCollisionInfo checkCollision(int x, int y) {
-			for (Position position: blockPositions) {
+			for (Point position: blockPositions) {
 				if (x == position.x && y == position.y) {
 					return {true, landmarkType, subjectId};
 				}
@@ -274,8 +263,8 @@ class Landmark {
 
 	private:
 		/* x and y refer to the block grid, not the pixels */
-		vector<Position> blockPositions;
-		//Position blockPosition;
+		vector<Point> blockPositions;
+		//Point blockPosition;
 		SDL_Texture* texture;
 		LandmarkType landmarkType;
 		int blocksWidth;
