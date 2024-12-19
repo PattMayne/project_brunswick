@@ -63,8 +63,8 @@ export struct MapData {
 	string slug;
 	vector<LimbData> limbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
 	vector<SuitData> suits;
-	// WILL NEED A VECTOR OF BLOCKS. This will require moving Block class from MapScreen into this module.
-	// Then we will extend the block class (or include a struct.
+	int width;
+	int height;
 };
 
 /*

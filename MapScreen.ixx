@@ -262,7 +262,7 @@ class Landmark {
 		}
 
 	private:
-		/* x and y refer to the block grid, not the pixels */
+		/* Point refers to the block grid, not the pixels */
 		vector<Point> blockPositions;
 		//Point blockPosition;
 		SDL_Texture* texture;
@@ -315,10 +315,16 @@ class Map {
 	private:
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
-		vector<Landmark> landmarks;
 		void buildMap(int mapWidth);
 		vector<MapCharacter> NPCs;
 		MapCharacter playerCharacter;
+
+		/* stuff sent in from MapData struct */
+
+		vector<Landmark> landmarks;
+		// list of nativeLimbs
+		// list of textures
+		/* Will need a list of nativeLimbs */
 };
 
 
