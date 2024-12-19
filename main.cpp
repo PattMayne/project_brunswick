@@ -94,7 +94,7 @@ int main(int argc, char* args[]) {
 		}
 		else if (gameState.getScreenType() == ScreenType::Map) {
 			cout << "\nselected MAP\n";
-			MapScreen mapScreen = MapScreen(100);
+			MapScreen mapScreen = MapScreen("forest");
 			mapScreen.run();
 		}else if (gameState.getScreenType() == ScreenType::Battle) {
 			cout << "\nselected BATTLE\n";

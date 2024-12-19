@@ -96,3 +96,5 @@ export struct Point {
 	int x;
 	int y;
 };
+
+export enum class LandmarkType { Entrance, Exit, Building, Shrine };

@@ -59,6 +59,9 @@ struct LimbPlacement;
 * REMOVE TEXTURE.
 * Only screen-specific derivatives should have textures, created from limbs.
 * In fact, only the Map has a texture, since it's displayed as a collection of limbs everywhere else.
+* 
+* I don't need MAP here, because MAP will only exist on the MapScreen screen, so it doesn't need derived classes.
+* The factories will include a Map factory, just to retrieve the basic Map data and send it to the MapScreen screen.
 */
 export class Character {
 	public:

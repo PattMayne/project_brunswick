@@ -1,7 +1,20 @@
 /*
-* Specific maps (levels), limbs, and suits (pure unscrambled characters) will be hardcoded and defined here.
+* 
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~  _____ _    ____ _____ ___  ____  ___ _____ ____  ~
+* ~ |  ___/ \  / ___|_   _/ _ \|  _ \|_ _| ____/ ___| ~
+* ~ | |_ / _ \| |     | || | | | |_) || ||  _| \___ \ ~
+* ~ |  _/ ___ \ |___  | || |_| |  _ < | || |___ ___) |~
+* ~ |_|/_/   \_\____| |_| \___/|_| \_\___|_____|____/ ~
+* ~                                                   ~
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* 
+* 
+* 
+* 
+* Specific, basic forms of maps (levels), limbs, and suits (pure unscrambled characters) will be hardcoded and defined here.
 * Map includes Blocks and Landmarks.
-* Blocks will ALWAYS come from the DB (no need for BlockData struct).
+* Blocks will ALWAYS come from the DB (no need for BlockForm struct).
 * Landmarks never change, except for their position in the map.
 * Later if I want to use JSON instead (to let non-programmers make levels and characters) then I can just plug the JSON (or whatever) into this file.
 * The rest of the program won't have to care where this Factory gets its info.
@@ -29,15 +42,36 @@ module;
 #include <unordered_map>
 #include <functional>
 
-export module CharacterFactory;
+export module Factories;
 
 using namespace std;
 
 import CharacterClasses;
 import TypeStorage;
+import UI;
 
 
-export struct LimbData {
+/*
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~  _____ ___  ____  __  __                  ~
+* ~ |  ___/ _ \|  _ \|  \/  |                 ~
+* ~ | |_ | | | | |_) | |\/| |                 ~
+* ~ |  _|| |_| |  _ <| |  | |                 ~
+* ~ |_|__ \___/|_|_\_\_|  |_|____ _____ ____  ~
+* ~ / ___|_   _|  _ \| | | |/ ___|_   _/ ___| ~
+* ~ \___ \ | | | |_) | | | | |     | | \___ \ ~
+* ~  ___) || | |  _ <| |_| | |___  | |  ___) |~
+* ~ |____/ |_| |_| \_\\___/ \____| |_| |____/ ~
+* ~                                           ~
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* 
+* These are the basic types holding core data of what will be objects.
+* Vanilla forms of objects, prior to being saved to (or retrieved from) the database.
+* 
+* 
+*/
+
+export struct LimbForm {
 	string name;
 	string slug;
 	int attack;
@@ -50,7 +84,7 @@ export struct LimbData {
 };
 
 
-export struct SuitData {
+export struct SuitForm {
 	string name;
 	string slug;
 	bool unscrambled;
@@ -58,14 +92,96 @@ export struct SuitData {
 };
 
 
-export struct MapData {
+export struct LandmarkForm {
+	int blocksWidth;
+	int blocksHeight;
+	vector<Point> blockPositions;
+	SDL_Texture* texture;
+	LandmarkType landmarkType;
+};
+
+
+export struct MapForm {
 	string name;
 	string slug;
-	vector<LimbData> limbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
-	vector<SuitData> suits;
-	int width;
-	int height;
+	vector<LimbForm> limbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
+	vector<SuitForm> suits;
+	int blocksWidth;
+	int blocksHeight;
+	SDL_Texture* wallTexture;
+	SDL_Texture* floorTexture;
 };
+
+/*
+
+This is the big, major push.
+The entire app changes now. I currently am using a default, vanilla, static "map" to just represent basic functionality.
+But now I'm setting up Dynamic Maps. I need to pull from basic Forms first, hard-coded yet dynamic (because each map is a level,
+each Limb has a type) and then override them with Database information.
+
+
+FIRST GOAL:
+
+-- make a FOREST MAP form, complete with textures, use it to populate the actual Map Screen map.
+
+For now we won't save anything to any Database.
+We'll just make everything a one-off, based on FORM DEFINITIONS.
+
+Right now the maps are all SQUARE.
+Expand this later to lat them be RECTANGLES.
+
+
+*/
+
+/*
+*
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~ _____ ___  ____  __  __ ____  ~
+* ~|  ___/ _ \|  _ \|  \/  / ___| ~
+* ~| |_ | | | | |_) | |\/| \___ \ ~
+* ~|  _|| |_| |  _ <| |  | |___) |~
+* ~|_|   \___/|_| \_\_|  |_|____/ ~
+* ~								  ~
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* 
+* The functions which create the actual FORM structs for the levels of the game.
+* 
+*/
+
+MapForm forestMap() {
+	UI& ui = UI::getInstance();
+	MapForm forestMap;
+	forestMap.name = "Enchanted Forest";
+	forestMap.slug = "forest";
+	forestMap.blocksWidth = 100;
+	forestMap.blocksHeight = 100;
+
+	/* create the TEXTURES */
+
+	SDL_Surface* wallSurface = IMG_Load("data/maps/forest/wall_001.png");
+	SDL_Surface* floorSurface = IMG_Load("data/maps/forest/floor_001.png");
+	/* DO ERROR CHECKS */
+	forestMap.wallTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), wallSurface);
+	forestMap.floorTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), floorSurface);
+
+	SDL_FreeSurface(wallSurface);
+	SDL_FreeSurface(floorSurface);
+
+	// SUITS and LIMBS will come later.
+
+	return forestMap;
+}
+
+
+export MapForm getMapFormFromSlug(string slug) {
+	if (slug == "forest") {
+		cout << "string check worked\n";
+		return forestMap();
+	}
+	cout << "string check FAILED\n";
+	return forestMap();
+}
+
 
 /*
 * 
@@ -88,7 +204,7 @@ vector<Character> suits = {
 * OR : should each MAP be a function which contains all its objects, and can return EITHER the full map OR just its pieces ?
 */
 
-export LimbData baseLimbData(string slug) {
+export LimbForm baseLimbData(string slug) {
 
 	/*
 	* NEW METHOD. Forget defining them here.
@@ -129,7 +245,7 @@ export LimbData baseLimbData(string slug) {
 	*/
 
 	if (slug == "deer_leg_4") {
-		LimbData data;
+		LimbForm data;
 		data.slug = slug;
 		data.name = "Deer Leg 4";
 		data.attack = 5;
@@ -154,7 +270,7 @@ export LimbData baseLimbData(string slug) {
 
 	baseLimbMap["dolly"] = Limb(name, 5, 5, 5, 5, DominanceNode::Green, true, joints);
 
-	LimbData data;
+	LimbForm data;
 	data.slug = slug;
 	data.name = "Deer Leg 4";
 	data.attack = 5;

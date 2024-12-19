@@ -104,9 +104,9 @@ import TypeStorage;
 import GameState;
 import Resources;
 import CharacterClasses;
+import Factories;
 import UI;
 
-enum class LandmarkType { Entrance, Exit, Building, Shrine };
 enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
 enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN it is. */
 
@@ -225,17 +225,17 @@ class Landmark {
 		Landmark(
 			int drawStartX,
 			int drawStartY,
-			int blocksW,
-			int blocksH,
-			SDL_Texture* iTexture,
-			LandmarkType iLandmarkType,
-			int iSubjectId = -1
+			int blocksWidth,
+			int blocksHeight,
+			SDL_Texture* texture,
+			LandmarkType landmarkType,
+			int subjectId = -1
 		) :
-			texture(iTexture),
-			landmarkType(iLandmarkType),
-			blocksWidth(blocksW),
-			blocksHeight(blocksH),
-			subjectId(iSubjectId)
+			texture(texture),
+			landmarkType(landmarkType),
+			blocksWidth(blocksWidth),
+			blocksHeight(blocksHeight),
+			subjectId(subjectId)
 		{
 			/* [0] must be the drawStart position */
 			blockPositions.push_back({ drawStartX, drawStartY });
@@ -264,12 +264,11 @@ class Landmark {
 	private:
 		/* Point refers to the block grid, not the pixels */
 		vector<Point> blockPositions;
-		//Point blockPosition;
 		SDL_Texture* texture;
 		LandmarkType landmarkType;
 		int blocksWidth;
 		int blocksHeight;
-		int subjectId;
+		int subjectId; /* This can be either the MAP id or the SUIT slug??? Needs re-thinking! */
 };
 
 class Block {
@@ -307,21 +306,26 @@ class Block {
 class Map {
 	public:
 		/* constructor */
-		Map(int mapWidth);
+		Map() {};
+		Map(MapForm mapForm);
 		vector<vector<Block>>& getRows() { return rows; }
 		vector<Landmark>& getLandmarks() { return landmarks; }
 		MapCharacter& getPlayerCharacter() { return playerCharacter; }
+		SDL_Texture* getFloorTexture() { return floorTexture; }
+		SDL_Texture* getWallTexture() { return wallTexture; }
 
 	private:
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
-		void buildMap(int mapWidth);
+		void buildMap(MapForm mapForm);
 		vector<MapCharacter> NPCs;
 		MapCharacter playerCharacter;
 
 		/* stuff sent in from MapData struct */
 
 		vector<Landmark> landmarks;
+		SDL_Texture* wallTexture;
+		SDL_Texture* floorTexture;
 		// list of nativeLimbs
 		// list of textures
 		/* Will need a list of nativeLimbs */
@@ -339,14 +343,16 @@ export class MapScreen {
 		* and/or the reference to a JSON file.
 		* mapWidth refers to the number of blocks to CREATE.
 		*/
-		MapScreen(int mapWidth): map(mapWidth) {
+		MapScreen(string mapSlug) {
+			mapForm = getMapFormFromSlug(mapSlug);
+			map = Map(mapForm);
 			mapType = MapType::World; /* TODO: once we get the MAP object from the DB (based on the id) we can read its attribute to get its MapType. */
 			screenType = ScreenType::Map;
 			id = 0;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
-			hBlocksTotal = mapWidth;
-			vBlocksTotal = mapWidth;
+			hBlocksTotal = mapForm.blocksWidth;
+			vBlocksTotal = mapForm.blocksHeight;
 
 			animationType = AnimationType::None;
 
@@ -372,6 +378,8 @@ export class MapScreen {
 
 			/* Destroy all the textures in the Characters */
 			SDL_DestroyTexture(map.getPlayerCharacter().getTexture());
+			SDL_DestroyTexture(wallTexture);
+			SDL_DestroyTexture(floorTexture);
 		}
 
 		int getAnimationIncrementPercent() { return animationIncrementFraction; }
@@ -381,6 +389,7 @@ export class MapScreen {
 
 		ScreenType getScreenType() { return screenType; }
 		MapType getMapType() { return mapType; }
+		MapForm mapForm;
 		void run();
 
 	private:
@@ -431,8 +440,8 @@ export class MapScreen {
 		SDL_Texture* floorTexture = NULL;
 		SDL_Texture* wallTexture = NULL;
 
-		SDL_Texture* getWallTexture() { return wallTexture; }
-		SDL_Texture* getFloorTexture() { return floorTexture; }
+		SDL_Texture* getWallTexture() { return map.getWallTexture(); }
+		SDL_Texture* getFloorTexture() { return map.getFloorTexture(); }
 
 		void createTitleTexture(UI& ui);
 
@@ -1025,7 +1034,7 @@ void MapScreen::decrementCountdown() {
 * 
 */
 
-void Map::buildMap(int mapWidth) {
+void Map::buildMap(MapForm mapForm) {
 	/* 
 	* This WILL get the DB object and build the entire map as data.
 	* To draw the map will mean to review this data and draw the local blocks.
@@ -1047,11 +1056,11 @@ void Map::buildMap(int mapWidth) {
 	*/
 
 	UI& ui = UI::getInstance();
-	rows = vector<vector<Block>>(mapWidth);
+	rows = vector<vector<Block>>(mapForm.blocksHeight);
 
 	/* replace with reading from DB */
 	for (int i = 0; i < rows.size(); ++i) {
-		vector<Block> blocks(mapWidth);
+		vector<Block> blocks(mapForm.blocksWidth);
 
 		for (int k = 0; k < blocks.size(); ++k) {
 			blocks[k] = Block(false); }
@@ -1061,7 +1070,7 @@ void Map::buildMap(int mapWidth) {
 	/* Now make the PATH */
 	/* get a random x starting point, but the y will be map's height - 2 */
 
-	int pathX = (rand() % (mapWidth - 10)) + 5;
+	int pathX = (rand() % (mapForm.blocksWidth - 10)) + 5;
 	int pathY = static_cast<int>(rows.size()) - 2;
 
 	int playerX = pathX;
@@ -1156,7 +1165,7 @@ void Map::buildMap(int mapWidth) {
 
 
 /* Map class constructor */
-Map::Map(int mapWidth) {
+Map::Map(MapForm mapForm) {
 	/*
 	* When loading from DB we will not care about MapScreen's resolution.
 	* This will be raw map data from the DB.
@@ -1183,7 +1192,9 @@ Map::Map(int mapWidth) {
 	* 
 	* 
 	*/
-	buildMap(mapWidth);
+	wallTexture = mapForm.wallTexture;
+	floorTexture = mapForm.floorTexture;
+	buildMap(mapForm);
 
 	// populate characters and limbs after building the map (and its landmarks).
 }
