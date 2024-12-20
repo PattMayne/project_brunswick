@@ -49,7 +49,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["deer_leg_4"] = []() {
 		return LimbForm(
 			"Deer Leg 4", "deer_leg_4",
-			6, 10, 3,
+			10, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_4.png",
 			{ Point(144, 81) });
 		};
@@ -57,7 +57,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["deer_leg_3"] = []() {
 		return LimbForm(
 			"Deer Leg 3", "deer_leg_3",
-			6, 10, 3,
+			10, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_3.png",
 			{ Point(131, 71) });
 		};
@@ -65,7 +65,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["deer_leg_2"] = []() {
 		return LimbForm(
 			"Deer Leg 2", "deer_leg_2",
-			6, 10, 3,
+			10, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_2.png",
 			{ Point(78, 46) });
 		};
@@ -73,7 +73,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["deer_leg_1"] = []() {
 		return LimbForm(
 			"Deer Leg 1", "deer_leg_1",
-			6, 10, 3,
+			10, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_1.png",
 			{ Point(52, 43) });
 		};

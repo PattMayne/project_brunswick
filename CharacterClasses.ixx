@@ -39,6 +39,7 @@ export module CharacterClasses;
 using namespace std;
 
 import TypeStorage;
+import UI;
 
 export enum CharacterType { Player, Hostile, Friendly }; /* NOT a CLASS because we want to use it as int. */
 /* Red beats Green (fire consumes life), Green beats Blue (life consumes water), Blue beats Red (water extinguishes fire) */
@@ -67,38 +68,46 @@ struct LimbPlacement;
 * These are the basic types holding core data of what will be objects.
 * Vanilla forms of objects, prior to being saved to (or retrieved from) the database.
 *
-*
+* Every value for a form struct must be a const.
 */
 export struct LimbForm {
-	string name;
-	string slug;
-	int strength;
-	int speed;
-	int intelligence;
-	DominanceNode dNode;
-	vector<Point> joints;
-	string texturePath;
+	const string name;
+	const string slug;
+	const  int hp;
+	const int strength;
+	const int speed;
+	const int intelligence;
+	const DominanceNode dNode;
+	const vector<Point> joints;
+	const string texturePath;
 
 	/* CONSTRUCTOR */
-	LimbForm(string name, string slug, int strength, int speed, int intelligence, DominanceNode dNode, string texturePath, vector<Point> joints) :
-		name(name), slug(slug), strength(strength), speed(speed), intelligence(intelligence), dNode(dNode), texturePath(texturePath), joints(joints) {
+	LimbForm(
+		string name, string slug,
+		int hp, int strength, int speed, int intelligence,
+		DominanceNode dNode, string texturePath, vector<Point> joints)
+		:
+		name(name), slug(slug),
+		hp(hp), strength(strength), speed(speed), intelligence(intelligence),
+		dNode(dNode), texturePath(texturePath), joints(joints) {
 	}
 };
 
+/* A suit is abstract. It is NOT a character. It holds information to build an abstract base character. */
 export struct SuitForm {
-	string name;
-	string slug;
-	bool unscrambled;
-	vector<LimbPlacement> limbPlacements; /* A suit is abstract. It is NOT a character. It holds information to build an abstract base character. */
+	const string name;
+	const string slug;
+	const bool unscrambled;
+	const vector<LimbPlacement> limbPlacements;
 };
 
 
 export struct LandmarkForm {
-	int blocksWidth;
-	int blocksHeight;
-	vector<Point> blockPositions;
-	SDL_Texture* texture;
-	LandmarkType landmarkType;
+	const int blocksWidth;
+	const int blocksHeight;
+	const vector<Point> blockPositions;
+	const SDL_Texture* texture;
+	const LandmarkType landmarkType;
 };
 
 
@@ -188,49 +197,87 @@ export class Character {
 * 
 * Let a Limb take a Form as its constructor... and a 2nd consrtructor which also takes an ID? Or only an ID (and gets the Form based on slug?)?
 * 
+* Limb object should take a Form as its basic stats, and have modifiers.
+* Only the modifiers are saved to the DB.
+* The Form is retrieved fresh from the definition every time the Limb is constructed/instantiated.
+* 
 */
 export class Limb {
 	public:
 		/* constructor */
-		Limb(
-			string name,
-			int hp,
-			int attack,
-			int speed,
-			int weight,
-			DominanceNode dNode,
-			bool flipped,
-			vector<Point> joints,
-			Point position = Point(0, 0) /* Optional Point position with default. */
-		) :
-			name(name),
-			hp(hp),
-			attack(attack),
-			speed(speed),
-			weight(weight),
-			dNode(dNode),
-			flipped(flipped),
-			joints(joints),
-			position(position)
-		{ }
-		Limb() {}
+		Limb(LimbForm form) : form(form) {
+			name = form.name; /* Name can POSSIBLE be changed (no plans for this yet) */
+			hpMod = 0;
+			strengthMod = 0;
+			speedMod = 0;
+			intelligenceMod = 0;
+			position = Point(0, 0);
+			lastPosition = Point(0, 0);
+
+			/* get Limb texture */
+
+			UI& ui = UI::getInstance();
+			SDL_Surface* limbSurface = IMG_Load(form.texturePath.c_str());
+			texture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), limbSurface);
+			SDL_FreeSurface(limbSurface);
+			/* TO DO: ERROR HANDLING FOR TEXTURE. */
+		}
+		/*  */
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
-		bool save() { /* SAVE this limb to the database. */ }
+		bool save() { /* SAVE this limb to the database. (save the MODIFICATIONS) */ }
 		Point getPosition() { return position; }
 		void setPosition(Point newPosition) { position = newPosition; }
 
+		/* GET the FORM (default) values PLUS the modifiers (which can be negative) */
+		int getHP() { return form.hp + hpMod; }
+		int getStrength() { return form.strength + strengthMod; }
+		int getSpeed() { return form.speed + speedMod; }
+		int getIntelligence() { return form.intelligence + intelligenceMod; }
+
+		/* SET the modifiers. */
+
+		int modifyStrength(int mod) {
+			modifyAttribute(strengthMod, form.strength, mod);
+			return getStrength(); }
+
+		int modifySpeed(int mod) {
+			modifyAttribute(speedMod, form.speed, mod);
+			return getSpeed(); }
+
+		int modifyIntelligence(int mod) {
+			modifyAttribute(intelligenceMod, form.intelligence, mod);
+			return getIntelligence(); }
+
+		/* HP is different. It can go down to 0, but can still only be boosted by 1/2. */
+		int modifyHP(int mod) {
+			hpMod += mod;
+			/* Check if updated attributeMod goes beyond limit */
+			if (hpMod > form.hp / 2) {
+				hpMod = form.hp / 2; }
+			return getHP();
+		}
+
+		void modifyAttribute(int& attributeMod, int formAttribute, int modMod) {
+			attributeMod += modMod;
+			/* Check if updated attributeMod goes beyond limit */
+			if (attributeMod > formAttribute / 2) {
+				attributeMod = formAttribute / 2; }
+			else if ((attributeMod * -1) > formAttribute / 2) { /* check limit for detriment too */
+				attributeMod = formAttribute / (-2); }
+		}
+
 	protected:
+		LimbForm form;
 		string name;
-		int hp;
-		int attack;
-		int speed;
-		int weight;
-		DominanceNode dNode;
+		int hpMod;
+		int strengthMod;
+		int speedMod;
+		int intelligenceMod;
 		bool flipped = false;
-		vector<Point> joints;
 		SDL_Texture* texture = NULL;
 		Point position;
+		Point lastPosition;
 };
 
 export struct LimbPlacement {
