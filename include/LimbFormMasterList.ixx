@@ -31,35 +31,19 @@ export module LimbFormMasterList;
 
 using namespace std;
 
-
 import TypeStorage;
 import CharacterClasses;
 
-export struct LimbForm {
-	string name;
-	string slug;
-	int strength;
-	int speed;
-	int intelligence;
-	DominanceNode dNode;
-	vector<Point> joints;
-	string texturePath;
 
-	/* CONSTRUCTOR */
-	LimbForm(string name, string slug, int strength, int speed, int intelligence, DominanceNode dNode, string texturePath, vector<Point> joints) :
-		name(name), slug(slug), strength(strength), speed(speed), intelligence(intelligence), dNode(dNode), texturePath(texturePath), joints(joints) {
-	}
-};
 
-/* 
-* An unordered_map of functions to create LimbForm structs.
-* The structs are only created when their functions are called.
-* The string key is the slug.
+/*
+* 
+*			FOREST LIMBS
+* 
 */
-export unordered_map<string, function<LimbForm()>> getLimbFormMasterList() {
 
-	unordered_map<string, function<LimbForm()>> limbForms;
-
+/* Send in an existing unordered_list, we will populate it with functions to create Forest Limb Form structs. */
+void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& limbForms) {
 	/* FOREST LIMB FORMS */
 
 	limbForms["deer_leg_4"] = []() {
@@ -67,7 +51,7 @@ export unordered_map<string, function<LimbForm()>> getLimbFormMasterList() {
 			"Deer Leg 4", "deer_leg_4",
 			6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_4.png",
-			{ Point(144, 81) } );
+			{ Point(144, 81) });
 		};
 
 	limbForms["deer_leg_3"] = []() {
@@ -77,7 +61,7 @@ export unordered_map<string, function<LimbForm()>> getLimbFormMasterList() {
 			DominanceNode::Green, "data/maps/forest/deer_leg_3.png",
 			{ Point(131, 71) });
 		};
-	
+
 	limbForms["deer_leg_2"] = []() {
 		return LimbForm(
 			"Deer Leg 2", "deer_leg_2",
@@ -93,19 +77,76 @@ export unordered_map<string, function<LimbForm()>> getLimbFormMasterList() {
 			DominanceNode::Green, "data/maps/forest/deer_leg_1.png",
 			{ Point(52, 43) });
 		};
+}
+
+
+/* 
+* An unordered_map of functions to create LimbForm structs.
+* The structs are only created when their functions are called.
+* The string key is the slug.
+*/
+export unordered_map<string, function<LimbForm()>> getLimbFormList(MapLevel mapLevel) {
+	unordered_map<string, function<LimbForm()>> limbFormsMap;
+
+	if (mapLevel == MapLevel::All) {
+		/* ADD ALL FORMS */
+		addForestLimbFormMasterList(limbFormsMap);
+	} else if (mapLevel == MapLevel::Forest) {
+		/* ADD FOREST LIMB FORMS */
+		addForestLimbFormMasterList(limbFormsMap);
+	}
+
+	return limbFormsMap;
+}
+
+
+/*
+* 
+* 
+* FUNCTIONS TO GET LIMB FORMS
+* 
+* 
+*/
+
+
+/* get a SINGLE LimbFormStruct from a SPECIFIED MapLevel. */
+export LimbForm getLimbForm(string limbSlug, MapLevel mapLevel = MapLevel::All) {
+	/* TO DO: error check. Make sure that the list contains the slug key. */
+	return getLimbFormList(mapLevel)[limbSlug]();
+}
+
+/* get ALL the LimbFormStructs from a SPECIFIED MapLevel. */
+export vector<LimbForm> getMapLimbs(MapLevel mapLevel) {
+	unordered_map<string, function<LimbForm()>> limbFormsMap = getLimbFormList(mapLevel);
+	vector<LimbForm> limbForms;
+
+	for (auto kv : limbFormsMap) {
+		limbForms.push_back(kv.second()); }
 
 	return limbForms;
 }
 
+/* get a VECTOR of LimbFormStructs from ACROSS ALL MapLevels. */
+export vector<LimbForm> getLimbForms(vector<string> slugs) {
+	unordered_map<string, function<LimbForm()>> limbFormsMap = getLimbFormList(MapLevel::All);
+	vector<LimbForm> limbForms;
 
-export LimbForm getLimbForm(string slug) {
-	unordered_map<string, function<LimbForm()>> limbFormMasterList = getLimbFormMasterList();
+	for (string slug : slugs) {
+		limbForms.push_back(limbFormsMap[slug]()); }
 
-	/*
-	* Do a check
-	*/
-
-	return limbFormMasterList[slug]();
+	return limbForms;
 }
+
+/*
+* 
+* We need:
+* 
+* ONE function to get a SINGLE LimbFormStruct from a SPECIFIED MapLevel DONE
+* 
+* ONE function to get ALL the LimbFormStructs from a SPECIFIED MapLevel DONE
+* 
+* ONE function to get a VECTOR of LimbFormStructs from ACROSS ALL MapLevels DONE
+* 
+*/
 
 /* ALSO add a function which takes a LIST of slugs to getLimbForms PLURAL without creating and destroying the same unordered_list repeatedly */

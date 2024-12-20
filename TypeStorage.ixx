@@ -9,6 +9,10 @@ export enum class MapType {
 	World, Building, Dungeon
 };
 
+export enum class MapLevel {
+	Forest, All
+};
+
 export enum class FontContext {
 	Title, Body, Button, Dialog
 };
@@ -28,6 +32,10 @@ export struct Resolution {
 		h = y;
 	}
 };
+
+/* Dominance Node is a Limb's node in the Dominance Cycle (think Rock, Paper, Scissors). */
+export enum class DominanceNode { Red, Green, Blue };
+export int const dominanceCycleAdvantage = 15;
 
 
 /* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens.

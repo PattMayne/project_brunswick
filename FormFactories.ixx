@@ -1,6 +1,10 @@
 /*
-* 
 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~  _____ ___  ____  __  __						  ~
+* ~ |  ___/ _ \|  _ \|  \/  |						  ~
+* ~ | |_ | | | | |_) | |\/| |						  ~
+* ~ |  _|| |_| |  _ <| |  | |						  ~
+* ~ |_|   \___/|_| \_\_|  |_|						  ~
 * ~  _____ _    ____ _____ ___  ____  ___ _____ ____  ~
 * ~ |  ___/ \  / ___|_   _/ _ \|  _ \|_ _| ____/ ___| ~
 * ~ | |_ / _ \| |     | || | | | |_) || ||  _| \___ \ ~
@@ -42,7 +46,7 @@ module;
 #include <unordered_map>
 #include <functional>
 
-export module Factories;
+export module FormFactories;
 
 using namespace std;
 
@@ -50,58 +54,6 @@ import CharacterClasses;
 import LimbFormMasterList;
 import TypeStorage;
 import UI;
-
-
-/*
-* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* ~  _____ ___  ____  __  __                  ~
-* ~ |  ___/ _ \|  _ \|  \/  |                 ~
-* ~ | |_ | | | | |_) | |\/| |                 ~
-* ~ |  _|| |_| |  _ <| |  | |                 ~
-* ~ |_|__ \___/|_|_\_\_|  |_|____ _____ ____  ~
-* ~ / ___|_   _|  _ \| | | |/ ___|_   _/ ___| ~
-* ~ \___ \ | | | |_) | | | | |     | | \___ \ ~
-* ~  ___) || | |  _ <| |_| | |___  | |  ___) |~
-* ~ |____/ |_| |_| \_\\___/ \____| |_| |____/ ~
-* ~                                           ~
-* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* 
-* These are the basic types holding core data of what will be objects.
-* Vanilla forms of objects, prior to being saved to (or retrieved from) the database.
-* 
-* 
-*/
-
-
-
-
-export struct SuitForm {
-	string name;
-	string slug;
-	bool unscrambled;
-	vector<LimbPlacement> limbPlacements; /* A suit is abstract. It is NOT a character. It holds information to build an abstract base character. */
-};
-
-
-export struct LandmarkForm {
-	int blocksWidth;
-	int blocksHeight;
-	vector<Point> blockPositions;
-	SDL_Texture* texture;
-	LandmarkType landmarkType;
-};
-
-
-export struct MapForm {
-	string name;
-	string slug;
-	vector<LimbForm> nativeLimbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
-	vector<SuitForm> suits;
-	int blocksWidth;
-	int blocksHeight;
-	SDL_Texture* wallTexture;
-	SDL_Texture* floorTexture;
-};
 
 /*
 
@@ -148,6 +100,9 @@ Expand this later to lat them be RECTANGLES.
 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * 
 * The functions which create the actual FORM structs for the levels of the game.
+* Sub-maps (dungeons and buildings) will not have suits or their own limbs.
+* Their native limbs will draw from their parent map (MapLevel).
+* Sub-maps CAN have their own NPCs and landmarks though.
 * 
 */
 
@@ -176,6 +131,7 @@ Expand this later to lat them be RECTANGLES.
 MapForm forestMap() {
 	UI& ui = UI::getInstance();
 	MapForm forestMap;
+	forestMap.mapLevel = MapLevel::Forest;
 	forestMap.name = "Enchanted Forest";
 	forestMap.slug = "forest";
 	forestMap.blocksWidth = 100;
@@ -194,11 +150,9 @@ MapForm forestMap() {
 	SDL_FreeSurface(wallSurface);
 	SDL_FreeSurface(floorSurface);
 
-	// SUITS and LIMBS will come later.
+	forestMap.nativeLimbs = getMapLimbs(forestMap.mapLevel);
 
-	//forestMap.nativeLimbs = {
-	//	LimbForm
-	//};
+	// SUITS will come later.
 
 	return forestMap;
 }
@@ -210,6 +164,7 @@ export MapForm getMapFormFromSlug(string slug) {
 		return forestMap();
 	}
 	cout << "string check FAILED\n";
+	// Temporary DEFAULT map... deal with error somehow instead...
 	return forestMap();
 }
 

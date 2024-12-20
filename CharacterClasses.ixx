@@ -42,12 +42,90 @@ import TypeStorage;
 
 export enum CharacterType { Player, Hostile, Friendly }; /* NOT a CLASS because we want to use it as int. */
 /* Red beats Green (fire consumes life), Green beats Blue (life consumes water), Blue beats Red (water extinguishes fire) */
-export enum class DominanceNode { Red, Green, Blue };
-export int const dominanceCycleAdvantage = 15;
 export enum class LimbState { Free, Owned, Equipped }; /* If it is OWNED or EQUIPPED, then there must be a character id. Every character should exist in the DB.*/
 
 class Limb;
 struct LimbPlacement;
+
+
+
+/*
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~  _____ ___  ____  __  __                  ~
+* ~ |  ___/ _ \|  _ \|  \/  |                 ~
+* ~ | |_ | | | | |_) | |\/| |                 ~
+* ~ |  _|| |_| |  _ <| |  | |                 ~
+* ~ |_|   \___/|_| \_\_|  |_|				  ~
+* ~  ____ _____ _____ _   _  ____ _____ ____  ~
+* ~ / ___|_   _|  _ \| | | |/ ___|_   _/ ___| ~
+* ~ \___ \ | | | |_) | | | | |     | | \___ \ ~
+* ~  ___) || | |  _ <| |_| | |___  | |  ___) |~
+* ~ |____/ |_| |_| \_\\___/ \____| |_| |____/ ~
+* ~                                           ~
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*
+* These are the basic types holding core data of what will be objects.
+* Vanilla forms of objects, prior to being saved to (or retrieved from) the database.
+*
+*
+*/
+export struct LimbForm {
+	string name;
+	string slug;
+	int strength;
+	int speed;
+	int intelligence;
+	DominanceNode dNode;
+	vector<Point> joints;
+	string texturePath;
+
+	/* CONSTRUCTOR */
+	LimbForm(string name, string slug, int strength, int speed, int intelligence, DominanceNode dNode, string texturePath, vector<Point> joints) :
+		name(name), slug(slug), strength(strength), speed(speed), intelligence(intelligence), dNode(dNode), texturePath(texturePath), joints(joints) {
+	}
+};
+
+export struct SuitForm {
+	string name;
+	string slug;
+	bool unscrambled;
+	vector<LimbPlacement> limbPlacements; /* A suit is abstract. It is NOT a character. It holds information to build an abstract base character. */
+};
+
+
+export struct LandmarkForm {
+	int blocksWidth;
+	int blocksHeight;
+	vector<Point> blockPositions;
+	SDL_Texture* texture;
+	LandmarkType landmarkType;
+};
+
+
+export struct MapForm {
+	MapLevel mapLevel;
+	string name;
+	string slug;
+	vector<LimbForm> nativeLimbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
+	vector<SuitForm> suits;
+	int blocksWidth;
+	int blocksHeight;
+	SDL_Texture* wallTexture;
+	SDL_Texture* floorTexture;
+};
+
+
+/**
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* ~   ____ _        _    ____ ____  _____ ____  ~
+* ~  / ___| |      / \  / ___/ ___|| ____/ ___| ~
+* ~ | |   | |     / _ \ \___ \___ \|  _| \___ \ ~
+* ~ | |___| |___ / ___ \ ___) |__) | |___ ___) |~
+* ~  \____|_____/_/   \_\____/____/|_____|____/ ~
+* ~                                             ~
+* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
 
 /*
 * Very minimal parent class.
@@ -101,6 +179,15 @@ export class Character {
 * Certain Low-intelligence limbs can create a special power which spreads damage around intentionally.
 * Intelligence raises your chances of hitting at all. Or hitting the correct target.
 * Intelligence also raises your chance of being missed (make whole limb twirl around on a joint-pivot or something?)
+* Position is where the Limb is located in any Character or Suit that's holding it.
+* 
+* 
+* 
+* Limb should have a LimbForm, and modifiers.
+* Modifiers cannot be larger than the original.
+* 
+* Let a Limb take a Form as its constructor... and a 2nd consrtructor which also takes an ID? Or only an ID (and gets the Form based on slug?)?
+* 
 */
 export class Limb {
 	public:
@@ -113,7 +200,8 @@ export class Limb {
 			int weight,
 			DominanceNode dNode,
 			bool flipped,
-			vector<Point> joints
+			vector<Point> joints,
+			Point position = Point(0, 0) /* Optional Point position with default. */
 		) :
 			name(name),
 			hp(hp),
@@ -122,12 +210,15 @@ export class Limb {
 			weight(weight),
 			dNode(dNode),
 			flipped(flipped),
-			joints(joints)
-		{}
+			joints(joints),
+			position(position)
+		{ }
 		Limb() {}
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
 		bool save() { /* SAVE this limb to the database. */ }
+		Point getPosition() { return position; }
+		void setPosition(Point newPosition) { position = newPosition; }
 
 	protected:
 		string name;
@@ -139,6 +230,7 @@ export class Limb {
 		bool flipped = false;
 		vector<Point> joints;
 		SDL_Texture* texture = NULL;
+		Point position;
 };
 
 export struct LimbPlacement {

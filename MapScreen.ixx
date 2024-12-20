@@ -53,11 +53,16 @@
 * 
 * NEXT:
 * 
-* ---------- (BREAK for Christmas gifts & USB stuff)
-* -----	hitting the EXIT exits the screen
-* ---------- This requires TURNS.
-* --------------- After the player moves, then we check if they hit (A) NPCs (B) Limbs (C) Landmarks.
-* --------------- Each landmark has a vector of int pairs (Point struct... not actually a point)
+* ----- LIMBS roaming around.
+* ---------- Get a list of LimbForms from the FormFactory
+* ---------- Turn them into a vector of Limb Objects
+* ---------- Make them MapLimb objects actually, with an x/y position
+* --------------- the Position attribute can be used for Position in the MAP, when NOT part of a character!
+* --------------- ...or maybe not... because we need to animate with lastPosition...
+* --------------- ...or maybe we just add lastPosition to the main class anyway, since it will be useful in battles when you lose a limb and have to travel to New Position?
+* ----- Introduce TURNS
+* ---------- After the player moves, then we check if they hit (A) NPCs (B) Limbs (C) Landmarks.
+* ---------- Each landmark has a vector of int pairs (Point struct... not actually a point)
 * -----	JSON for other landmarks.
 * -----	Paths between other landmarks.
 * ---------- Side-paths.
@@ -104,7 +109,8 @@ import TypeStorage;
 import GameState;
 import Resources;
 import CharacterClasses;
-import Factories;
+import LimbFormMasterList;
+import FormFactories;
 import UI;
 
 enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
@@ -162,9 +168,7 @@ class MapCharacter : public Character {
 		void setTexture(SDL_Texture* incomingTexture) {
 			if (texture) {
 				SDL_DestroyTexture(texture);
-				texture = incomingTexture;
-			}
-		}
+				texture = incomingTexture; } }
 
 		void updateLastBlock() {
 			lastBlockPosition.x = blockPosition.x;
@@ -326,9 +330,11 @@ class Map {
 		vector<Landmark> landmarks;
 		SDL_Texture* wallTexture;
 		SDL_Texture* floorTexture;
-		// list of nativeLimbs
-		// list of textures
-		/* Will need a list of nativeLimbs */
+		vector<LimbForm> nativeLimbForms;
+
+		/* Will need a list of NPCs */
+		/* Will need a list of Roaming Limbs */
+		/* Will need classes for both NPC and RoamingLimb (probably?) */
 };
 
 
@@ -1193,6 +1199,7 @@ Map::Map(MapForm mapForm) {
 	*/
 	wallTexture = mapForm.wallTexture;
 	floorTexture = mapForm.floorTexture;
+	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
 	buildMap(mapForm);
 
 	// populate characters and limbs after building the map (and its landmarks).
@@ -1422,7 +1429,7 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 		cout << e.key.keysym.sym << "\n";
 	}
 
-	cout << "Block Width: " << blockWidth << "\n";
+	// cout << "Block Width: " << blockWidth << "\n";
 
 }
 
