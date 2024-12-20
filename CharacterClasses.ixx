@@ -97,17 +97,27 @@ export struct LimbForm {
 export struct SuitForm {
 	const string name;
 	const string slug;
-	const bool unscrambled;
 	const vector<LimbPlacement> limbPlacements;
+	bool unscrambled;
+
+	SuitForm(string name, string slug, vector<LimbPlacement> limbPlacements, bool unscrambled = false) :
+		name(name), slug(slug), limbPlacements(limbPlacements), unscrambled(unscrambled) { }
 };
 
 
 export struct LandmarkForm {
+	const string name;
 	const int blocksWidth;
 	const int blocksHeight;
 	const vector<Point> blockPositions;
 	const SDL_Texture* texture;
 	const LandmarkType landmarkType;
+
+	LandmarkForm(
+		string name, int width, int height, vector<Point> blockPositions,
+		SDL_Texture* texture, LandmarkType landmarkType ) :
+		name(name), blocksWidth(width), blocksHeight(height), blockPositions(blockPositions),
+		texture(texture), landmarkType(landmarkType) { }
 };
 
 
