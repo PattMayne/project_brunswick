@@ -281,6 +281,11 @@ export class Limb {
 				attributeMod = formAttribute / (-2); }
 		}
 
+		void move(Point newPosition) {
+			lastPosition = position;
+			position = newPosition;
+		}
+
 	protected:
 		LimbForm form;
 		string name;

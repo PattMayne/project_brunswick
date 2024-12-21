@@ -326,7 +326,7 @@ class Map {
 		MapCharacter& getPlayerCharacter() { return playerCharacter; }
 		SDL_Texture* getFloorTexture() { return mapForm.floorTexture; }
 		SDL_Texture* getWallTexture() { return mapForm.wallTexture; }
-		vector<Limb> getRoamingLimbs() { return roamingLimbs; }
+		vector<Limb>& getRoamingLimbs() { return roamingLimbs; }
 		string getName() { return mapForm.name; }
 		string getSlug() { return mapForm.slug; }
 		MapLevel getMapLevel() { return mapForm.mapLevel; }
@@ -389,6 +389,7 @@ export class MapScreen {
 			SDL_DestroyTexture(wallTexture);
 			SDL_DestroyTexture(titleTexture);
 
+
 			/* Destroy all the textures in the Landmarks */
 			for (int i = 0; i < map.getLandmarks().size(); i++) {
 				SDL_Texture* textureToDestroy = map.getLandmarks()[i].getTexture();
@@ -422,6 +423,8 @@ export class MapScreen {
 		void drawRoamingLimbs(UI& ui);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 		void drawPanel(UI& ui, Panel& panel);
+
+		bool moveLimb(Limb& roamingLimb);
 
 		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY);
 
@@ -730,6 +733,10 @@ export void MapScreen::run() {
 			* 
 			*/
 
+			for (Limb& limb : map.getRoamingLimbs()) {
+				moveLimb(limb);
+			}
+
 			/* Then start the Animation of the movement. */
 
 			startAnimationCountdown(AnimationType::NPC);
@@ -743,6 +750,49 @@ export void MapScreen::run() {
 
 	/* set the next screen to load */
 	gameState.setScreenStruct(screenToLoadStruct);
+}
+
+
+
+bool MapScreen::moveLimb(Limb& roamingLimb) {
+	bool moved = false;
+	Point currentPosition = roamingLimb.getPosition();
+	int pointX = currentPosition.x;
+	int pointY = currentPosition.y;
+
+	/* Get list of available blocks */
+	vector<Point> availablePositions;
+	vector<vector<Block>>& rows = map.getRows();
+
+	/* Check up. */
+	if (pointY > 0) {
+		if (rows[pointY - 1][pointX].getIsFloor()) {
+			availablePositions.push_back(Point(pointX, pointY - 1)); } }
+
+	/* Check down. */
+	if ( pointY < vBlocksTotal) {
+		if (rows[pointY + 1][pointX].getIsFloor()) {
+			availablePositions.push_back(Point(pointX, pointY + 1)); } }
+
+	/* Check left. */
+	if (pointX > 0) {
+		if (rows[pointY][pointX - 1].getIsFloor()) {
+			availablePositions.push_back(Point(pointX - 1, pointY)); } }
+
+	if (pointX < hBlocksTotal) {
+		if (rows[pointY][pointX + 1].getIsFloor()) {
+			availablePositions.push_back(Point(pointX + 1, pointY)); } }
+
+	if (availablePositions.size() > 0) {
+		Point& newPoint = availablePositions[rand() % availablePositions.size()];
+		roamingLimb.move(newPoint);
+		moved = true;
+	}
+
+	string movedOrNot = moved ? "MOVED\n" : "NOT MOVED\n";
+	cout << movedOrNot;
+
+	return moved;
 }
 
 /* The main DRAW function, which calls the more-specific Draw functions. */
@@ -906,7 +956,7 @@ void MapScreen::animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositio
 void MapScreen::drawRoamingLimbs(UI& ui) {
 	SDL_Rect limbRect = { 0, 0, blockWidth, blockWidth };
 
-	for (Limb limb : map.getRoamingLimbs()) {
+	for (Limb& limb : map.getRoamingLimbs()) {
 		Point position = limb.getPosition();
 		int posX = position.x;
 		int posY = position.y;
