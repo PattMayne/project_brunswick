@@ -237,7 +237,9 @@ export class Limb {
 		void flip() { flipped = !flipped; }
 		bool save() { /* SAVE this limb to the database. (save the MODIFICATIONS) */ }
 		Point getPosition() { return position; }
+		Point getLastPosition() { return lastPosition; }
 		void setPosition(Point newPosition) { position = newPosition; }
+		void setLastPosition(Point newPosition) { lastPosition = newPosition; }
 
 		/* GET the FORM (default) values PLUS the modifiers (which can be negative) */
 		int getHP() { return form.hp + hpMod; }

@@ -8,20 +8,16 @@
 * 
 */
 
-
 module;
 
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_ttf.h"
+
 export module CharacterCreationScreen;
-import "include/json.hpp";
-import "SDL.h";
-import "SDL_image.h";
-import <stdio.h>;
 import <string>;
 import <iostream>;
-import "SDL_ttf.h";
 import <vector>;
-import <cstdlib>;
-import <time.h>;
 import <unordered_map>;
 
 import CharacterClasses;

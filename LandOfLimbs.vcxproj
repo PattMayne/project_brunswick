@@ -143,7 +143,7 @@
     <ClCompile Include="CharacterClasses.ixx" />
     <ClCompile Include="CharacterCreationScreen.ixx" />
     <ClCompile Include="GameState.ixx" />
-    <ClCompile Include="FormFactories.ixx" />
+    <ClCompile Include="FormFactory.ixx" />
     <ClCompile Include="LimbFormMasterList.ixx" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MapScreen.ixx" />

@@ -90,26 +90,26 @@
 
 module;
 
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_ttf.h"
+
 export module MapScreen;
 
-import "include/json.hpp";
-import "SDL.h";
-import "SDL_image.h";
 import <stdio.h>;
 import <string>;
 import <iostream>;
-import "SDL_ttf.h";
 import <vector>;
 import <cstdlib>;
 import <time.h>;
 import <unordered_map>;
 
+import FormFactory;
 import TypeStorage;
 import GameState;
 import Resources;
 import CharacterClasses;
 import LimbFormMasterList;
-import FormFactories;
 import UI;
 
 using namespace std;
@@ -323,7 +323,7 @@ class Map {
 	private:
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
-		void buildMap(MapForm mapForm);
+		vector<Point> buildMap(MapForm mapForm);
 		vector<MapCharacter> NPCs;
 		MapCharacter playerCharacter;
 
@@ -1087,7 +1087,75 @@ void MapScreen::decrementCountdown() {
 * 
 */
 
-void Map::buildMap(MapForm mapForm) {
+
+/* Map class constructor */
+Map::Map(MapForm mapForm) {
+	/*
+	* When loading from DB we will not care about MapScreen's resolution.
+	* This will be raw map data from the DB.
+	* So our numbers of rows and blocks will be from the DB.
+	*
+	* FOR NOW we want hardcoded numbers for temporary display purposes.
+	*
+	* Right now this makes insane maps.
+	* We will tweak it to make more sensible maps when we have the JSON ready.
+	*
+	* BUT FIRST: Navigation.
+	*
+	*
+	* NAVIGATION PLAN:
+	*
+	* -- create a startDraw block to be the top left block.
+	* ---- moving around changes both character location AND startDraw block
+	* ---- when you reach either edge, player still moves but startDraw does NOT.
+	* ---- HOW do we know if the player has moved away from the center?
+	* ------ choose a centreBlock (which updates each time)
+	* ------ if user is away from center block, don't move map until user is back on center block
+	* -------- MORE:::: -->  if userX != centerX act accordingly (same with userY != centerY)... until user is back on centerBlock
+	*
+	*
+	*
+	*/
+
+	/* Gather the textures. (WILL become more complex when we add variations on floor and wall, plus path.) */
+	wallTexture = mapForm.wallTexture;
+	floorTexture = mapForm.floorTexture;
+
+	/*
+	* On the first draw, we must build the GRID based on the number of SUITS (therefore shrines) and landmarks.
+	* But we must scatter the LIMBS across the available FLOOR tiles, which are only known after creating the grid.
+	* So SUITS must be calculated before buildMap, and Limbs must be created and distributed AFTER buildMap.
+	* 
+	* After incorporating the database, we will need to differentiate between FIRST TIME (create map) vs. rebuilding
+	* from the DB.
+	*/
+
+	vector<Point> floorPositions = buildMap(mapForm); /* Build the actual grid for the first time. */
+
+	/* populate characters and limbs after building the map(and its landmarks). */
+	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
+	
+	/* FOR NOW I just have ONE copy of each native limb */
+	for (LimbForm limbForm : nativeLimbForms) {
+		int numberOfThisLimb = (rand() % 15) + 5;
+
+		for (int n = 0; n < numberOfThisLimb; ++n) {
+			Limb newLimb = Limb(limbForm);
+			Point newPosition = floorPositions[rand() % floorPositions.size()];
+			newLimb.setPosition(newPosition);
+			newLimb.setLastPosition(newPosition);
+			roamingLimbs.push_back(newLimb);
+		}
+	}
+
+	cout << "\n\nThere are " << roamingLimbs.size() << " LIMBS in Roaming Limbs\n\n";
+}
+
+/*
+* Build the actual grid.
+* Returns a vector of Points which are the coordinates for all Floor objects.
+*/
+vector<Point> Map::buildMap(MapForm mapForm) {
 	/* 
 	* This WILL get the DB object and build the entire map as data.
 	* To draw the map will mean to review this data and draw the local blocks.
@@ -1148,6 +1216,8 @@ void Map::buildMap(MapForm mapForm) {
 	/* Entrance landmark */
 	landmarks.emplace_back(pathX, pathY, 1, 1, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
 
+	vector<Point> floorPositions;
+
 	/* while loop makes the path */
 	while (pathY > 0) {
 
@@ -1192,6 +1262,7 @@ void Map::buildMap(MapForm mapForm) {
 		}
 
 		floorize(pathX, pathY, subPath.radius);
+		floorPositions.push_back(Point(pathX, pathY));
 		--subPath.seed;
 
 		if (subPath.seed < 1) {
@@ -1213,51 +1284,10 @@ void Map::buildMap(MapForm mapForm) {
 	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 	playerCharacter = MapCharacter(CharacterType::Player, characterTexture, playerX, playerY);
 	SDL_FreeSurface(characterSurface);
+
+	return floorPositions;
 }
 
-
-
-/* Map class constructor */
-Map::Map(MapForm mapForm) {
-	/*
-	* When loading from DB we will not care about MapScreen's resolution.
-	* This will be raw map data from the DB.
-	* So our numbers of rows and blocks will be from the DB.
-	*
-	* FOR NOW we want hardcoded numbers for temporary display purposes.
-	* 
-	* Right now this makes insane maps.
-	* We will tweak it to make more sensible maps when we have the JSON ready.
-	* 
-	* BUT FIRST: Navigation.
-	* 
-	* 
-	* NAVIGATION PLAN:
-	* 
-	* -- create a startDraw block to be the top left block.
-	* ---- moving around changes both character location AND startDraw block
-	* ---- when you reach either edge, player still moves but startDraw does NOT.
-	* ---- HOW do we know if the player has moved away from the center?
-	* ------ choose a centreBlock (which updates each time)
-	* ------ if user is away from center block, don't move map until user is back on center block
-	* -------- MORE:::: -->  if userX != centerX act accordingly (same with userY != centerY)... until user is back on centerBlock
-	* 
-	* 
-	* 
-	*/
-	wallTexture = mapForm.wallTexture;
-	floorTexture = mapForm.floorTexture;
-	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
-
-	/* FOR NOW I just have ONE copy of each native limb */
-	for (LimbForm limbForm : nativeLimbForms) {
-		roamingLimbs.push_back(Limb(limbForm));
-	}
-	cout << "\n\nThere are " << roamingLimbs.size() << " LIMBS in Roaming Limbs\n\n";
-	buildMap(mapForm);
-
-	// populate characters and limbs after building the map (and its landmarks).
-}
 
 /*
 * When we create a path we want to clear a radius around each block of the central path.
@@ -1314,16 +1344,14 @@ void Map::floorize(int x, int y, int radius) {
 		/* down and to the left */
 		while (x - leftInc > 0 && leftInc < radius) {
 			rows[y + downInc][x - leftInc].setIsFloor(true);
-			++leftInc;
-		}
+			++leftInc; }
 
 		leftInc = 0;
 
 		/* up and to the right */
 		while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
 			rows[y + downInc][x + rightInc].setIsFloor(true);
-			++rightInc;
-		}
+			++rightInc; }
 
 		rightInc = 0;
 		++downInc;
@@ -1336,14 +1364,12 @@ void Map::floorize(int x, int y, int radius) {
 	/* Clear LEFT */
 	while (x - leftInc > 0 && leftInc < radius) {
 		rows[y][x - leftInc].setIsFloor(true);
-		++leftInc;
-	}
+		++leftInc; }
 
 	/* Clear RIGHT */
 	while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
 		rows[y][x + rightInc].setIsFloor(true);
-		++rightInc;
-	}
+		++rightInc; }
 }
 
 

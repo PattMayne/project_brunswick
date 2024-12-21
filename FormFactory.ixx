@@ -35,19 +35,16 @@
 * 
 */
 
-module;
 
-export module FormFactories;
+
+export module FormFactory;
 
 import "SDL.h";
 import "SDL_image.h";
 import <string>;
 import <iostream>;
 import <vector>;
-import <cstdlib>;
-import <time.h>;
 import <unordered_map>;
-import <functional>;
 
 import CharacterClasses;
 import LimbFormMasterList;
@@ -158,14 +155,14 @@ MapForm forestMap() {
 	return forestMap;
 }
 
-
+/* Get the basic Map data struct based on slug ID parameter value. */
 export MapForm getMapFormFromSlug(string slug) {
 	if (slug == "forest") {
 		cout << "string check worked\n";
 		return forestMap();
 	}
 	cout << "string check FAILED\n";
-	// Temporary DEFAULT map... deal with error somehow instead...
+	// Temporary DEFAULT map... deal with error (faulty slug) somehow instead...
 	return forestMap();
 }
 
@@ -190,46 +187,3 @@ vector<Character> suits = {
 * TAKES a slug identifier and returns a limb object or struct DEFINED IN THE FUNCTION.
 * OR : should each MAP be a function which contains all its objects, and can return EITHER the full map OR just its pieces ?
 */
-
-//export LimbForm baseLimbData(string slug) {
-
-	/*
-	* NEW METHOD. Forget defining them here.
-	* Make a huge unordered_map instead!
-	* The SLUG is the KEY in the UNORDERED_MAP.
-	* 
-	* Also, maybe each MAP has its own unordered_map of Limb objects?
-	* That way we don't need to load EVERY limb whenever we want to find ONE?
-	* And this function can cycle through the maps, check each of their lists,
-	* and finally deliver the right one?
-	* 
-	* DEEPAI suggests using an unordered_map. And apparently 500 items is not too many.
-	* 
-	* 
-	* BETTER IDEA:
-	* 
-	* The unordered_map will hold FUNCTIONS instead of objects.
-	* These functions will instantiate an object only when the key is accessed:
-				unordered_map<string, function<Limb()> baseLimbMap;
-	* 
-	* We can always check for the existence of a key like this:
-	
-
-		if (baseLimbMap.find("dolly") != baseLimbMap.end()) {
-			MyObject dolly = baseLimbMap["dolly"](); // Instantiate when accessing
-			dolly.display();
-		} else {
-			std::cout << "'dolly' not found.\n";
-		}
-
-
-	* 
-	* ALSO.... I don't want "magic strings" for slug names.
-	* There should be a master list of unordered_map<string, string>: "SLUG_NAME", "slug_name"
-	* That way they're always SET by something in the master list (though they can be accessed without accessing the slug list)
-	* 
-	* 
-	*/
-
-//}
-

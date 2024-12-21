@@ -48,7 +48,7 @@
     <ClCompile Include="CharacterClasses.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="FormFactories.ixx">
+    <ClCompile Include="FormFactory.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
     <ClCompile Include="LimbFormMasterList.ixx">
