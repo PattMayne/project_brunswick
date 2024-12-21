@@ -221,7 +221,7 @@ export class Limb {
 			strengthMod = 0;
 			speedMod = 0;
 			intelligenceMod = 0;
-			position = Point(0, 0);
+			position = Point(80, 80);
 			lastPosition = Point(0, 0);
 
 			/* get Limb texture */
@@ -244,6 +244,8 @@ export class Limb {
 		int getStrength() { return form.strength + strengthMod; }
 		int getSpeed() { return form.speed + speedMod; }
 		int getIntelligence() { return form.intelligence + intelligenceMod; }
+
+		SDL_Texture* getTexture() { return texture; }
 
 		/* SET the modifiers. */
 

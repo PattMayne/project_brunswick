@@ -317,6 +317,7 @@ class Map {
 		MapCharacter& getPlayerCharacter() { return playerCharacter; }
 		SDL_Texture* getFloorTexture() { return floorTexture; }
 		SDL_Texture* getWallTexture() { return wallTexture; }
+		vector<Limb> getRoamingLimbs() { return roamingLimbs; }
 
 	private:
 		vector<vector<Block>> rows;
@@ -331,6 +332,7 @@ class Map {
 		SDL_Texture* wallTexture;
 		SDL_Texture* floorTexture;
 		vector<LimbForm> nativeLimbForms;
+		vector<Limb> roamingLimbs;
 
 		/* Will need a list of NPCs */
 		/* Will need a list of Roaming Limbs */
@@ -406,6 +408,7 @@ export class MapScreen {
 		void drawLandmarks(UI& ui);
 		void drawCharacters(UI& ui);
 		void drawPlayerCharacter(UI& ui);
+		void drawRoamingLimbs(UI& ui);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 		void drawPanel(UI& ui, Panel& panel);
 
@@ -786,6 +789,7 @@ void MapScreen::drawCharacters(UI& ui) {
 	* --- ACTUALLY... if the NPC moves onto YOU then they should be drawn OVER the player.
 	*					(figure that out later)
 	*/
+	drawRoamingLimbs(ui);
 	drawPlayerCharacter(ui);
 }
 
@@ -840,6 +844,31 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		NULL, &characterRect,
 		0, NULL, SDL_FLIP_NONE
 	);
+}
+
+void MapScreen::drawRoamingLimbs(UI& ui) {
+
+	/*
+	* TO DO:
+	* ----- ONLY draw them when they are WITHIN the view area.
+	* ----- ANIMATE during animate sessions.
+	*/
+
+	SDL_Rect limbRect = { 0, 0, blockWidth, blockWidth };
+
+	for (Limb limb : map.getRoamingLimbs()) {
+		Point position = limb.getPosition();
+		limbRect.x = (position.x - drawStartX) * blockWidth;
+		limbRect.y = (position.y - drawStartY) * blockWidth;
+
+
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			limb.getTexture(),
+			NULL, &limbRect,
+			0, NULL, SDL_FLIP_NONE
+		);
+	}
 }
 
 void MapScreen::drawMap(UI& ui) {
@@ -1200,6 +1229,12 @@ Map::Map(MapForm mapForm) {
 	wallTexture = mapForm.wallTexture;
 	floorTexture = mapForm.floorTexture;
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
+
+	/* FOR NOW I just have ONE copy of each native limb */
+	for (LimbForm limbForm : nativeLimbForms) {
+		roamingLimbs.push_back(Limb(limbForm));
+	}
+	cout << "\n\nThere are " << roamingLimbs.size() << " LIMBS in Roaming Limbs\n\n";
 	buildMap(mapForm);
 
 	// populate characters and limbs after building the map (and its landmarks).
