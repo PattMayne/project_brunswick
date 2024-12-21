@@ -316,11 +316,15 @@ class Map {
 		vector<vector<Block>>& getRows() { return rows; }
 		vector<Landmark>& getLandmarks() { return landmarks; }
 		MapCharacter& getPlayerCharacter() { return playerCharacter; }
-		SDL_Texture* getFloorTexture() { return floorTexture; }
-		SDL_Texture* getWallTexture() { return wallTexture; }
+		SDL_Texture* getFloorTexture() { return mapForm.floorTexture; }
+		SDL_Texture* getWallTexture() { return mapForm.wallTexture; }
 		vector<Limb> getRoamingLimbs() { return roamingLimbs; }
+		string getName() { return mapForm.name; }
+		string getSlug() { return mapForm.slug; }
+		MapLevel getMapLevel() { return mapForm.mapLevel; }
 
 	private:
+		MapForm mapForm;
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
 		vector<Point> buildMap(MapForm mapForm);
@@ -330,8 +334,6 @@ class Map {
 		/* stuff sent in from MapData struct */
 
 		vector<Landmark> landmarks;
-		SDL_Texture* wallTexture;
-		SDL_Texture* floorTexture;
 		vector<LimbForm> nativeLimbForms;
 		vector<Limb> roamingLimbs;
 
@@ -495,7 +497,7 @@ export class MapScreen {
 /* Create the texture with the name of the game */
 void MapScreen::createTitleTexture(UI& ui) {
 	Resources& resources = Resources::getInstance();
-	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture("Map!");
+	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture(map.getName());
 	titleTexture = incomingTitleTexture;
 	titleRect = incomingTitleRect;
 }
@@ -668,18 +670,6 @@ export void MapScreen::run() {
 				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
 			}
 		}
-
-		/* here we will load the actual MAP screen.
-		* For now just a big checker board and a settings menu
-		* Deal with handleEvents and resizing.
-		* 
-		* draw
-		* create background texture
-		* display map title (for now just id??? and maptype???)
-		* handleEvent
-		* checkMouseLocation
-		* rebuildDisplay
-		*/
 
 		checkMouseLocation(e, settingsPanel, gameMenuPanel);
 		draw(ui, settingsPanel, gameMenuPanel);
@@ -856,13 +846,6 @@ void MapScreen::animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositio
 }
 
 void MapScreen::drawRoamingLimbs(UI& ui) {
-
-	/*
-	* TO DO:
-	* ----- ONLY draw them when they are WITHIN the view area.
-	* ----- ANIMATE during animate sessions.
-	*/
-
 	SDL_Rect limbRect = { 0, 0, blockWidth, blockWidth };
 
 	for (Limb limb : map.getRoamingLimbs()) {
@@ -1089,37 +1072,13 @@ void MapScreen::decrementCountdown() {
 
 
 /* Map class constructor */
-Map::Map(MapForm mapForm) {
+Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	/*
-	* When loading from DB we will not care about MapScreen's resolution.
-	* This will be raw map data from the DB.
-	* So our numbers of rows and blocks will be from the DB.
-	*
-	* FOR NOW we want hardcoded numbers for temporary display purposes.
-	*
-	* Right now this makes insane maps.
-	* We will tweak it to make more sensible maps when we have the JSON ready.
-	*
-	* BUT FIRST: Navigation.
-	*
-	*
-	* NAVIGATION PLAN:
-	*
-	* -- create a startDraw block to be the top left block.
-	* ---- moving around changes both character location AND startDraw block
-	* ---- when you reach either edge, player still moves but startDraw does NOT.
-	* ---- HOW do we know if the player has moved away from the center?
-	* ------ choose a centreBlock (which updates each time)
-	* ------ if user is away from center block, don't move map until user is back on center block
-	* -------- MORE:::: -->  if userX != centerX act accordingly (same with userY != centerY)... until user is back on centerBlock
-	*
-	*
-	*
+	* Currently we create a new map every time we load the Map Screen.
+	* It is built on a half-complete definition of Map structs.
+	* We still need Suits for Shrines, and other landmarks.
+	* Then we will need to save the built maps into the database, so we can load instead of building fresh next time.
 	*/
-
-	/* Gather the textures. (WILL become more complex when we add variations on floor and wall, plus path.) */
-	wallTexture = mapForm.wallTexture;
-	floorTexture = mapForm.floorTexture;
 
 	/*
 	* On the first draw, we must build the GRID based on the number of SUITS (therefore shrines) and landmarks.
@@ -1130,7 +1089,7 @@ Map::Map(MapForm mapForm) {
 	* from the DB.
 	*/
 
-	vector<Point> floorPositions = buildMap(mapForm); /* Build the actual grid for the first time. */
+	vector<Point> floorPositions = buildMap(mapForm); /* Build the actual grid for the first time. Receive a list of floor coordinates. */
 
 	/* populate characters and limbs after building the map(and its landmarks). */
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
