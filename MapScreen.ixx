@@ -86,6 +86,14 @@
 * TO DO: Wall tiles should be a little bigger, so the wall-thing (tree, or whatever) stick ABOVE the higher tile.
 * ALSO randomly paint them as FLIP (horizontal) or NO_FLIP (  use rand % 2 to get each FLIP or NO FLIP... save it somewhere... maybe the DB)
 * 
+* 
+* 
+*		COLLISION ANIMATIONS:
+* 
+*			--- There can be a GENERIC COLLISION ANIMATION.
+*			--- Whenever there is a collision with NPCs or Limbs, we can just mark the Point position and draw those animations
+* 
+* 
 */
 
 module;
@@ -115,7 +123,7 @@ import UI;
 using namespace std;
 
 enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
-enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN it is. */
+enum class AnimationType { Player, NPC, Collision, None }; /* This is about whose TURN it is. */
 
 /* This is what a Landmark's checkCollision function will return. */
 struct LandmarkCollisionInfo {
@@ -620,45 +628,71 @@ export void MapScreen::run() {
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
 		frameStartTime = SDL_GetTicks();
+		bool startNpcAnimation = false;
 
-		/* check if we're animating anything */
-		if (animationCountdown > 0) {
-			animate = true;
-			if (lastDrawStartX != drawStartX || lastDrawStartY != drawStartY) {
-				animationType = AnimationType::Map;
-			}
-		}
-		else if (animate) {
-			/* counter has run out but animate is still true. Reset lastDrawStart values and check for collisions. */
-			animate = false;
-			lastDrawStartX = drawStartX;
-			lastDrawStartY = drawStartY;
+		if (animate && animationCountdown < 1) {
+			/* counter has run out but animate is still true. */
 
-			/* check for collisions (animation is done, player is ON new block and/or NPCs have moved ONTO new blocks */
+			bool landmarkCollided = false;
+			bool npcCollided = false;
+			bool limbCollided = false;
 
-			/* collisions with LANDMARK: */
+			if (animationType == AnimationType::Player) {
+				/*
+				* Player animation has finished.
+				* Reset lastDrawStart values and check for collisions.
+				* If no collisions happened, start NPC animation.
+				*/
+				animate = false;
+				animationType = AnimationType::None;
+				lastDrawStartX = drawStartX;
+				lastDrawStartY = drawStartY;
 
-			MapCharacter& playerCharacter = map.getPlayerCharacter();
+				/* check for collisions (animation is done, player is ON new block and/or NPCs have moved ONTO new blocks */
 
-			for (Landmark landmark : map.getLandmarks()) {
-				LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
+				/* collisions with LANDMARK: */
 
-				if (collisionInfo.hasCollided) {
-					cout << "HIT LANDMARK\n";
+				MapCharacter& playerCharacter = map.getPlayerCharacter();
 
-					if (collisionInfo.type == LandmarkType::Exit) {
-						cout << "EXITING\n";
-						running = false;
-					} else if (collisionInfo.type == LandmarkType::Entrance) {
-						cout << "YOU CANNOT LEAVE THIS WAY\n";
-						/* TO DO: animate PUSHING the character OFF the entrance??? */
+				for (Landmark landmark : map.getLandmarks()) {
+					LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
+
+					if (collisionInfo.hasCollided) {
+						cout << "HIT LANDMARK\n";
+						landmarkCollided = true;
+
+						if (collisionInfo.type == LandmarkType::Exit) {
+							cout << "EXITING\n";
+							running = false;
+						}
+						else if (collisionInfo.type == LandmarkType::Entrance) {
+							cout << "YOU CANNOT LEAVE THIS WAY\n";
+							/* TO DO: animate PUSHING the character OFF the entrance??? */
+						}
 					}
 				}
+
+				/* Collisions with NPCs */
+
+				/* Collisions with LIMBs */
+
+				if (!landmarkCollided && !npcCollided && !limbCollided) {
+					/* start the NPC animation. */
+					startNpcAnimation = true;
+				}
 			}
+			else if (animationType == AnimationType::NPC) {
+				/* Deal with wrapping up the NPC animation. */
+				animate = false;
+				animationType = AnimationType::None;
 
-			/* Collisions with NPCs */
-
-			/* Collisions with LIMBs */
+				/* 
+				* Check for collisions again.
+				* This time check for collisions between Limbs, so they can become NPCs.
+				* But also check for Limbs or NPCs who moved onto the Player's block.
+				*/
+			}
+			
 		}
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
@@ -681,6 +715,30 @@ export void MapScreen::run() {
 			SDL_Delay(FRAME_DELAY - frameTimeElapsed); }
 
 		if (animate) { decrementCountdown(); }
+
+		if (startNpcAnimation) {
+			/* First move the NPCs and the Limbs */
+
+			// Move NPCs
+			// Move LIMBs
+
+			/*
+			* 
+			* 
+			*		MOVE LIMBS
+			* 
+			* 
+			*/
+
+			/* Then start the Animation of the movement. */
+
+			startAnimationCountdown(AnimationType::NPC);
+			startNpcAnimation = false;
+		}
+
+		if (animate && animationType == AnimationType::NPC) {
+			cout << "NPC animation: " << animationCountdown << "\n";
+		}
 	}
 
 	/* set the next screen to load */
@@ -739,7 +797,7 @@ void MapScreen::drawLandmarks(UI& ui) {
 			targetRect.x = (lX - drawStartX) * blockWidth;
 			targetRect.y = (lY - drawStartY) * blockWidth;
 
-			if (animate) {
+			if (animate && animationType == AnimationType::Player) {
 				animateMapBlockDuringPlayerMove(targetRect, lX, lY); }
 
 			SDL_RenderCopyEx(
@@ -784,7 +842,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	* Player has different animation dynamics from the map blocks.
 	*/
 
-	if (animate) {
+	if (animate && animationType == AnimationType::Player) {
 
 		int lastBlockX = playerCharacter.getLastX();
 		int lastBlockY = playerCharacter.getLastY();
@@ -861,7 +919,7 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 		limbRect.x = (posX - drawStartX) * blockWidth;
 		limbRect.y = (posY - drawStartY) * blockWidth;
 
-		if (animate) {
+		if (animate && animationType == AnimationType::Player) {
 			animateMapBlockDuringPlayerMove(limbRect, posX, posY); }
 
 		SDL_RenderCopyEx(
@@ -899,7 +957,7 @@ void MapScreen::drawMap(UI& ui) {
 			targetRect.x = (x - drawStartX) * blockWidth;
 			targetRect.y = (y - drawStartY) * blockWidth;
 
-			if (animate) {
+			if (animate && animationType == AnimationType::Player) {
 
 				/* Shifting DOWN or UP. */
 				if (drawStartY > lastDrawStartY) {
