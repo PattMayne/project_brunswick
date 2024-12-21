@@ -16,26 +16,26 @@
 */
 
 module;
-#include "include/json.hpp"
-#include "SDL.h"
-#include "SDL_image.h"
-#include <stdio.h>
-#include <string>
-#include <iostream>
-#include "SDL_ttf.h"
-#include <vector>
-#include <cstdlib>
-#include <time.h>
-#include <unordered_map>
 
 export module MenuScreen;
-
-using namespace std;
+import "include/json.hpp";
+import "SDL.h";
+import "SDL_image.h";
+import <stdio.h>;
+import <string>;
+import <iostream>;
+import "SDL_ttf.h";
+import <vector>;
+import <cstdlib>;
+import <time.h>;
+import <unordered_map>;
 
 import TypeStorage;
 import GameState;
 import Resources;
 import UI;
+
+using namespace std;
 
 export class MenuScreen {
 	public:

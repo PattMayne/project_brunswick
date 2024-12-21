@@ -144,7 +144,7 @@
     <ClCompile Include="CharacterCreationScreen.ixx" />
     <ClCompile Include="GameState.ixx" />
     <ClCompile Include="FormFactories.ixx" />
-    <ClCompile Include="include\LimbFormMasterList.ixx" />
+    <ClCompile Include="LimbFormMasterList.ixx" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MapScreen.ixx" />
     <ClCompile Include="MenuScreen.ixx" />

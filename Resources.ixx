@@ -1,12 +1,12 @@
 module;
 
-#include <iostream>
-#include <fstream>
-#include <vector>
-#include <cstdint>
-#include "include/json.hpp"
-
 export module Resources;
+
+import <iostream>;
+import <fstream>;
+import <vector>;
+import <cstdint>;
+import "include/json.hpp";
 
 import TypeStorage;
 using json = nlohmann::json;

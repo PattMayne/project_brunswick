@@ -10,27 +10,27 @@
 
 
 module;
-#include "include/json.hpp"
-#include "SDL.h"
-#include "SDL_image.h"
-#include <stdio.h>
-#include <string>
-#include <iostream>
-#include "SDL_ttf.h"
-#include <vector>
-#include <cstdlib>
-#include <time.h>
-#include <unordered_map>
 
 export module CharacterCreationScreen;
-
-using namespace std;
+import "include/json.hpp";
+import "SDL.h";
+import "SDL_image.h";
+import <stdio.h>;
+import <string>;
+import <iostream>;
+import "SDL_ttf.h";
+import <vector>;
+import <cstdlib>;
+import <time.h>;
+import <unordered_map>;
 
 import CharacterClasses;
 import TypeStorage;
 import GameState;
 import Resources;
 import UI;
+
+using namespace std;
 
 /* Map Screen class: where we navigate worlds, dungeons, and buildings. */
 export class CharacterCreationScreen {
@@ -125,8 +125,7 @@ export void CharacterCreationScreen::run() {
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
 		/* Delay loop */
 		if (frameTimeElapsed < FRAME_DELAY) {
-			SDL_Delay(FRAME_DELAY - frameTimeElapsed);
-		}
+			SDL_Delay(FRAME_DELAY - frameTimeElapsed); }
 	}
 
 	/* set the next screen to load */

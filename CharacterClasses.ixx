@@ -29,17 +29,17 @@
 
 module;
 
-#include "SDL.h"
-#include "SDL_image.h"
-#include <string>
-#include <vector>
-
 export module CharacterClasses;
 
-using namespace std;
+import "SDL.h";
+import "SDL_image.h";
+import <string>;
+import <vector>;
 
 import TypeStorage;
 import UI;
+
+using namespace std;
 
 export enum CharacterType { Player, Hostile, Friendly }; /* NOT a CLASS because we want to use it as int. */
 /* Red beats Green (fire consumes life), Green beats Blue (life consumes water), Blue beats Red (water extinguishes fire) */
@@ -221,7 +221,7 @@ export class Limb {
 			strengthMod = 0;
 			speedMod = 0;
 			intelligenceMod = 0;
-			position = Point(80, 80);
+			position = Point(50, 95);
 			lastPosition = Point(0, 0);
 
 			/* get Limb texture */

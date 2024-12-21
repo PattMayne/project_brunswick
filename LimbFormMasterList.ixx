@@ -20,14 +20,14 @@
 
 module;
 
-#include <string>
-#include <iostream>
-#include <vector>
-#include <cstdlib>
-#include <unordered_map>
-#include <functional>
-
 export module LimbFormMasterList;
+
+import <string>;
+import <iostream>;
+import <vector>;
+import <cstdlib>;
+import <unordered_map>;
+import <functional>;
 
 using namespace std;
 

@@ -37,11 +37,7 @@
 #include "SDL_ttf.h"
 #include <vector>
 #include <cstdlib>
-#include <iostream>
-#include <cstdlib>
 #include <ctime>
-
-using namespace std;
 
 import UI;
 import GameState;

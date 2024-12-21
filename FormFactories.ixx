@@ -36,24 +36,25 @@
 */
 
 module;
-#include "SDL.h"
-#include "SDL_image.h"
-#include <string>
-#include <iostream>
-#include <vector>
-#include <cstdlib>
-#include <time.h>
-#include <unordered_map>
-#include <functional>
 
 export module FormFactories;
 
-using namespace std;
+import "SDL.h";
+import "SDL_image.h";
+import <string>;
+import <iostream>;
+import <vector>;
+import <cstdlib>;
+import <time.h>;
+import <unordered_map>;
+import <functional>;
 
 import CharacterClasses;
 import LimbFormMasterList;
 import TypeStorage;
 import UI;
+
+using namespace std;
 
 /*
 

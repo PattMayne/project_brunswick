@@ -5,13 +5,13 @@
 
 module;
 
-#include<vector>
-#include<iostream>
 export module GameState;
+import <vector>;
+import <iostream>;
+import TypeStorage;
 
 using namespace std;
 
-import TypeStorage;
 
 export class GameState {
 	public:

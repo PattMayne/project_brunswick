@@ -51,7 +51,7 @@
     <ClCompile Include="FormFactories.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
-    <ClCompile Include="include\LimbFormMasterList.ixx">
+    <ClCompile Include="LimbFormMasterList.ixx">
       <Filter>Resource Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -89,21 +89,20 @@
 */
 
 module;
-#include "include/json.hpp"
-#include "SDL.h"
-#include "SDL_image.h"
-#include <stdio.h>
-#include <string>
-#include <iostream>
-#include "SDL_ttf.h"
-#include <vector>
-#include <cstdlib>
-#include <time.h>
-#include <unordered_map>
 
 export module MapScreen;
 
-using namespace std;
+import "include/json.hpp";
+import "SDL.h";
+import "SDL_image.h";
+import <stdio.h>;
+import <string>;
+import <iostream>;
+import "SDL_ttf.h";
+import <vector>;
+import <cstdlib>;
+import <time.h>;
+import <unordered_map>;
 
 import TypeStorage;
 import GameState;
@@ -112,6 +111,8 @@ import CharacterClasses;
 import LimbFormMasterList;
 import FormFactories;
 import UI;
+
+using namespace std;
 
 enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
 enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN it is. */
@@ -411,6 +412,8 @@ export class MapScreen {
 		void drawRoamingLimbs(UI& ui);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 		void drawPanel(UI& ui, Panel& panel);
+
+		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY);
 
 		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
 		void handleMousedown(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel);
@@ -743,27 +746,11 @@ void MapScreen::drawLandmarks(UI& ui) {
 			lY >= drawStartY &&
 			lY <= (drawStartY + yViewRes)
 		) {
-			targetRect.x = (landmark.getDrawX() - drawStartX) * blockWidth;
-			targetRect.y = (landmark.getDrawY() - drawStartY) * blockWidth;
+			targetRect.x = (lX - drawStartX) * blockWidth;
+			targetRect.y = (lY - drawStartY) * blockWidth;
 
 			if (animate) {
-
-				/* Shifting DOWN or UP. */
-				if (drawStartY > lastDrawStartY) {
-					targetRect.y = ((lY - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
-				}
-				else if (drawStartY < lastDrawStartY) {
-					targetRect.y = ((lY - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
-				}
-
-				/* Shifting RIGHT or LEFT. */
-				if (drawStartX > lastDrawStartX) {
-					targetRect.x = ((lX - lastDrawStartX) * blockWidth) - blockAnimationIncrement;
-				}
-				else if (drawStartX < lastDrawStartX) {
-					targetRect.x = ((lX - lastDrawStartX) * blockWidth) + blockAnimationIncrement;
-				}
-			}
+				animateMapBlockDuringPlayerMove(targetRect, lX, lY); }
 
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
@@ -804,6 +791,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	/* Check if we are animating AND close to an edge.
 	* If close to a vertical edge, and moving vertically, animate the character.
 	* If close to a horizontal edge, and moving horizontally, animate the character.
+	* Player has different animation dynamics from the map blocks.
 	*/
 
 	if (animate) {
@@ -846,6 +834,27 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	);
 }
 
+/*
+* During the animation of the Player Character moving from one block to another,
+* if the map has to move, it must move in increments defined by blockAnimationIncrement,
+* which is set during every frame of the animation.
+* This function accepts a reference to the rect where we will draw the block (or limb, or NPC, or landmark texture)
+* onto the screen, and the positions of the block, use those positions to tell the rect where it must draw the block (or &etc).
+*/
+void MapScreen::animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY) {
+	/* Shifting DOWN or UP. */
+	if (drawStartY > lastDrawStartY) {
+		rect.y = ((blockPositionY - lastDrawStartY) * blockWidth) - blockAnimationIncrement; }
+	else if (drawStartY < lastDrawStartY) {
+		rect.y = ((blockPositionY - lastDrawStartY) * blockWidth) + blockAnimationIncrement; }
+
+	/* Shifting RIGHT or LEFT. */
+	if (drawStartX > lastDrawStartX) {
+		rect.x = ((blockPositionX - lastDrawStartX) * blockWidth) - blockAnimationIncrement; }
+	else if (drawStartX < lastDrawStartX) {
+		rect.x = ((blockPositionX - lastDrawStartX) * blockWidth) + blockAnimationIncrement; }
+}
+
 void MapScreen::drawRoamingLimbs(UI& ui) {
 
 	/*
@@ -858,9 +867,19 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 
 	for (Limb limb : map.getRoamingLimbs()) {
 		Point position = limb.getPosition();
-		limbRect.x = (position.x - drawStartX) * blockWidth;
-		limbRect.y = (position.y - drawStartY) * blockWidth;
+		int posX = position.x;
+		int posY = position.y;
 
+		/* skip limbs that are too far outside of the frame. (still draw them if they might fly onto the frame. */
+		if (posX < drawStartX - 5 || posX > drawStartX + xViewRes + 5 ||
+			posY < drawStartY - 5 || posY > drawStartY + yViewRes + 5
+		) { continue; }
+
+		limbRect.x = (posX - drawStartX) * blockWidth;
+		limbRect.y = (posY - drawStartY) * blockWidth;
+
+		if (animate) {
+			animateMapBlockDuringPlayerMove(limbRect, posX, posY); }
 
 		SDL_RenderCopyEx(
 			ui.getMainRenderer(),
