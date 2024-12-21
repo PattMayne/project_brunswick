@@ -21,27 +21,26 @@
 
 module;
 
-#include "include/json.hpp"
-#include "SDL.h"
-#include "SDL_image.h"
-#include "SDL_ttf.h"
-#include <stdio.h>
-#include <string>
-#include <iostream>
-#include <vector>
-#include <unordered_map>
-
-#include <cmath>
-#include <time.h>
-#include<cstdlib> /* Needed for rand() and srand() */
-#include<ctime>   /* Needed for time() */
-
 export module UI;
+
+import  "include/json.hpp";
+import  "SDL.h";
+import  "SDL_image.h";
+import  "SDL_ttf.h";
+import  <stdio.h>;
+import  <string>;
+import  <iostream>;
+import  <vector>;
+import  <unordered_map>;
+import  <cmath>;
+import  <time.h>;
+import <cstdlib>; /* Needed for rand() and srand() */
+import <ctime>;   /* Needed for time() */
+import Resources;
+import TypeStorage;
 
 using namespace std;
 
-import Resources;
-import TypeStorage;
 class Panel;
 class Button;
 struct PreButtonStruct;

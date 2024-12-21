@@ -1,3 +1,4 @@
+module;
 export module TypeStorage;
 
 export enum class ScreenType {
@@ -7,6 +8,10 @@ export enum class ScreenType {
 // This will be stored in the Map module, with a value held in each
 export enum class MapType {
 	World, Building, Dungeon
+};
+
+export enum class MapLevel {
+	Forest, All
 };
 
 export enum class FontContext {
@@ -28,6 +33,10 @@ export struct Resolution {
 		h = y;
 	}
 };
+
+/* Dominance Node is a Limb's node in the Dominance Cycle (think Rock, Paper, Scissors). */
+export enum class DominanceNode { Red, Green, Blue };
+export int const dominanceCycleAdvantage = 15;
 
 
 /* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens.
@@ -96,3 +105,5 @@ export struct Point {
 	int x;
 	int y;
 };
+
+export enum class LandmarkType { Entrance, Exit, Building, Shrine };

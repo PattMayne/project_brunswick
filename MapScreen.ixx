@@ -53,11 +53,16 @@
 * 
 * NEXT:
 * 
-* ---------- (BREAK for Christmas gifts & USB stuff)
-* -----	hitting the EXIT exits the screen
-* ---------- This requires TURNS.
-* --------------- After the player moves, then we check if they hit (A) NPCs (B) Limbs (C) Landmarks.
-* --------------- Each landmark has a vector of int pairs (Point struct... not actually a point)
+* ----- LIMBS roaming around.
+* ---------- Get a list of LimbForms from the FormFactory
+* ---------- Turn them into a vector of Limb Objects
+* ---------- Make them MapLimb objects actually, with an x/y position
+* --------------- the Position attribute can be used for Position in the MAP, when NOT part of a character!
+* --------------- ...or maybe not... because we need to animate with lastPosition...
+* --------------- ...or maybe we just add lastPosition to the main class anyway, since it will be useful in battles when you lose a limb and have to travel to New Position?
+* ----- Introduce TURNS
+* ---------- After the player moves, then we check if they hit (A) NPCs (B) Limbs (C) Landmarks.
+* ---------- Each landmark has a vector of int pairs (Point struct... not actually a point)
 * -----	JSON for other landmarks.
 * -----	Paths between other landmarks.
 * ---------- Side-paths.
@@ -84,29 +89,31 @@
 */
 
 module;
-#include "include/json.hpp"
+
 #include "SDL.h"
 #include "SDL_image.h"
-#include <stdio.h>
-#include <string>
-#include <iostream>
 #include "SDL_ttf.h"
-#include <vector>
-#include <cstdlib>
-#include <time.h>
-#include <unordered_map>
 
 export module MapScreen;
 
-using namespace std;
+import <stdio.h>;
+import <string>;
+import <iostream>;
+import <vector>;
+import <cstdlib>;
+import <time.h>;
+import <unordered_map>;
 
+import FormFactory;
 import TypeStorage;
 import GameState;
 import Resources;
 import CharacterClasses;
+import LimbFormMasterList;
 import UI;
 
-enum class LandmarkType { Entrance, Exit, Building, Shrine };
+using namespace std;
+
 enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
 enum class AnimationType { Player, NPC, Map, None }; /* This is about whose TURN it is. */
 
@@ -162,9 +169,7 @@ class MapCharacter : public Character {
 		void setTexture(SDL_Texture* incomingTexture) {
 			if (texture) {
 				SDL_DestroyTexture(texture);
-				texture = incomingTexture;
-			}
-		}
+				texture = incomingTexture; } }
 
 		void updateLastBlock() {
 			lastBlockPosition.x = blockPosition.x;
@@ -225,17 +230,17 @@ class Landmark {
 		Landmark(
 			int drawStartX,
 			int drawStartY,
-			int blocksW,
-			int blocksH,
-			SDL_Texture* iTexture,
-			LandmarkType iLandmarkType,
-			int iSubjectId = -1
+			int blocksWidth,
+			int blocksHeight,
+			SDL_Texture* texture,
+			LandmarkType landmarkType,
+			int subjectId = -1
 		) :
-			texture(iTexture),
-			landmarkType(iLandmarkType),
-			blocksWidth(blocksW),
-			blocksHeight(blocksH),
-			subjectId(iSubjectId)
+			texture(texture),
+			landmarkType(landmarkType),
+			blocksWidth(blocksWidth),
+			blocksHeight(blocksHeight),
+			subjectId(subjectId)
 		{
 			/* [0] must be the drawStart position */
 			blockPositions.push_back({ drawStartX, drawStartY });
@@ -264,12 +269,11 @@ class Landmark {
 	private:
 		/* Point refers to the block grid, not the pixels */
 		vector<Point> blockPositions;
-		//Point blockPosition;
 		SDL_Texture* texture;
 		LandmarkType landmarkType;
 		int blocksWidth;
 		int blocksHeight;
-		int subjectId;
+		int subjectId; /* This can be either the MAP id or the SUIT slug??? Needs re-thinking! */
 };
 
 class Block {
@@ -307,24 +311,33 @@ class Block {
 class Map {
 	public:
 		/* constructor */
-		Map(int mapWidth);
+		Map() {};
+		Map(MapForm mapForm);
 		vector<vector<Block>>& getRows() { return rows; }
 		vector<Landmark>& getLandmarks() { return landmarks; }
 		MapCharacter& getPlayerCharacter() { return playerCharacter; }
+		SDL_Texture* getFloorTexture() { return floorTexture; }
+		SDL_Texture* getWallTexture() { return wallTexture; }
+		vector<Limb> getRoamingLimbs() { return roamingLimbs; }
 
 	private:
 		vector<vector<Block>> rows;
 		void floorize(int x, int y, int radius);
-		void buildMap(int mapWidth);
+		vector<Point> buildMap(MapForm mapForm);
 		vector<MapCharacter> NPCs;
 		MapCharacter playerCharacter;
 
 		/* stuff sent in from MapData struct */
 
 		vector<Landmark> landmarks;
-		// list of nativeLimbs
-		// list of textures
-		/* Will need a list of nativeLimbs */
+		SDL_Texture* wallTexture;
+		SDL_Texture* floorTexture;
+		vector<LimbForm> nativeLimbForms;
+		vector<Limb> roamingLimbs;
+
+		/* Will need a list of NPCs */
+		/* Will need a list of Roaming Limbs */
+		/* Will need classes for both NPC and RoamingLimb (probably?) */
 };
 
 
@@ -339,14 +352,16 @@ export class MapScreen {
 		* and/or the reference to a JSON file.
 		* mapWidth refers to the number of blocks to CREATE.
 		*/
-		MapScreen(int mapWidth): map(mapWidth) {
+		MapScreen(string mapSlug) {
+			mapForm = getMapFormFromSlug(mapSlug);
+			map = Map(mapForm);
 			mapType = MapType::World; /* TODO: once we get the MAP object from the DB (based on the id) we can read its attribute to get its MapType. */
 			screenType = ScreenType::Map;
 			id = 0;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
-			hBlocksTotal = mapWidth;
-			vBlocksTotal = mapWidth;
+			hBlocksTotal = mapForm.blocksWidth;
+			vBlocksTotal = mapForm.blocksHeight;
 
 			animationType = AnimationType::None;
 
@@ -367,11 +382,12 @@ export class MapScreen {
 			/* Destroy all the textures in the Landmarks */
 			for (int i = 0; i < map.getLandmarks().size(); i++) {
 				SDL_Texture* textureToDestroy = map.getLandmarks()[i].getTexture();
-				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); }				
-			}
+				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); } }
 
 			/* Destroy all the textures in the Characters */
 			SDL_DestroyTexture(map.getPlayerCharacter().getTexture());
+			SDL_DestroyTexture(wallTexture);
+			SDL_DestroyTexture(floorTexture);
 		}
 
 		int getAnimationIncrementPercent() { return animationIncrementFraction; }
@@ -381,6 +397,7 @@ export class MapScreen {
 
 		ScreenType getScreenType() { return screenType; }
 		MapType getMapType() { return mapType; }
+		MapForm mapForm;
 		void run();
 
 	private:
@@ -392,8 +409,11 @@ export class MapScreen {
 		void drawLandmarks(UI& ui);
 		void drawCharacters(UI& ui);
 		void drawPlayerCharacter(UI& ui);
+		void drawRoamingLimbs(UI& ui);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 		void drawPanel(UI& ui, Panel& panel);
+
+		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY);
 
 		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
 		void handleMousedown(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel);
@@ -431,8 +451,8 @@ export class MapScreen {
 		SDL_Texture* floorTexture = NULL;
 		SDL_Texture* wallTexture = NULL;
 
-		SDL_Texture* getWallTexture() { return wallTexture; }
-		SDL_Texture* getFloorTexture() { return floorTexture; }
+		SDL_Texture* getWallTexture() { return map.getWallTexture(); }
+		SDL_Texture* getFloorTexture() { return map.getFloorTexture(); }
 
 		void createTitleTexture(UI& ui);
 
@@ -726,27 +746,11 @@ void MapScreen::drawLandmarks(UI& ui) {
 			lY >= drawStartY &&
 			lY <= (drawStartY + yViewRes)
 		) {
-			targetRect.x = (landmark.getDrawX() - drawStartX) * blockWidth;
-			targetRect.y = (landmark.getDrawY() - drawStartY) * blockWidth;
+			targetRect.x = (lX - drawStartX) * blockWidth;
+			targetRect.y = (lY - drawStartY) * blockWidth;
 
 			if (animate) {
-
-				/* Shifting DOWN or UP. */
-				if (drawStartY > lastDrawStartY) {
-					targetRect.y = ((lY - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
-				}
-				else if (drawStartY < lastDrawStartY) {
-					targetRect.y = ((lY - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
-				}
-
-				/* Shifting RIGHT or LEFT. */
-				if (drawStartX > lastDrawStartX) {
-					targetRect.x = ((lX - lastDrawStartX) * blockWidth) - blockAnimationIncrement;
-				}
-				else if (drawStartX < lastDrawStartX) {
-					targetRect.x = ((lX - lastDrawStartX) * blockWidth) + blockAnimationIncrement;
-				}
-			}
+				animateMapBlockDuringPlayerMove(targetRect, lX, lY); }
 
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
@@ -772,6 +776,7 @@ void MapScreen::drawCharacters(UI& ui) {
 	* --- ACTUALLY... if the NPC moves onto YOU then they should be drawn OVER the player.
 	*					(figure that out later)
 	*/
+	drawRoamingLimbs(ui);
 	drawPlayerCharacter(ui);
 }
 
@@ -786,6 +791,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	/* Check if we are animating AND close to an edge.
 	* If close to a vertical edge, and moving vertically, animate the character.
 	* If close to a horizontal edge, and moving horizontally, animate the character.
+	* Player has different animation dynamics from the map blocks.
 	*/
 
 	if (animate) {
@@ -826,6 +832,62 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		NULL, &characterRect,
 		0, NULL, SDL_FLIP_NONE
 	);
+}
+
+/*
+* During the animation of the Player Character moving from one block to another,
+* if the map has to move, it must move in increments defined by blockAnimationIncrement,
+* which is set during every frame of the animation.
+* This function accepts a reference to the rect where we will draw the block (or limb, or NPC, or landmark texture)
+* onto the screen, and the positions of the block, use those positions to tell the rect where it must draw the block (or &etc).
+*/
+void MapScreen::animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY) {
+	/* Shifting DOWN or UP. */
+	if (drawStartY > lastDrawStartY) {
+		rect.y = ((blockPositionY - lastDrawStartY) * blockWidth) - blockAnimationIncrement; }
+	else if (drawStartY < lastDrawStartY) {
+		rect.y = ((blockPositionY - lastDrawStartY) * blockWidth) + blockAnimationIncrement; }
+
+	/* Shifting RIGHT or LEFT. */
+	if (drawStartX > lastDrawStartX) {
+		rect.x = ((blockPositionX - lastDrawStartX) * blockWidth) - blockAnimationIncrement; }
+	else if (drawStartX < lastDrawStartX) {
+		rect.x = ((blockPositionX - lastDrawStartX) * blockWidth) + blockAnimationIncrement; }
+}
+
+void MapScreen::drawRoamingLimbs(UI& ui) {
+
+	/*
+	* TO DO:
+	* ----- ONLY draw them when they are WITHIN the view area.
+	* ----- ANIMATE during animate sessions.
+	*/
+
+	SDL_Rect limbRect = { 0, 0, blockWidth, blockWidth };
+
+	for (Limb limb : map.getRoamingLimbs()) {
+		Point position = limb.getPosition();
+		int posX = position.x;
+		int posY = position.y;
+
+		/* skip limbs that are too far outside of the frame. (still draw them if they might fly onto the frame. */
+		if (posX < drawStartX - 5 || posX > drawStartX + xViewRes + 5 ||
+			posY < drawStartY - 5 || posY > drawStartY + yViewRes + 5
+		) { continue; }
+
+		limbRect.x = (posX - drawStartX) * blockWidth;
+		limbRect.y = (posY - drawStartY) * blockWidth;
+
+		if (animate) {
+			animateMapBlockDuringPlayerMove(limbRect, posX, posY); }
+
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			limb.getTexture(),
+			NULL, &limbRect,
+			0, NULL, SDL_FLIP_NONE
+		);
+	}
 }
 
 void MapScreen::drawMap(UI& ui) {
@@ -1025,7 +1087,75 @@ void MapScreen::decrementCountdown() {
 * 
 */
 
-void Map::buildMap(int mapWidth) {
+
+/* Map class constructor */
+Map::Map(MapForm mapForm) {
+	/*
+	* When loading from DB we will not care about MapScreen's resolution.
+	* This will be raw map data from the DB.
+	* So our numbers of rows and blocks will be from the DB.
+	*
+	* FOR NOW we want hardcoded numbers for temporary display purposes.
+	*
+	* Right now this makes insane maps.
+	* We will tweak it to make more sensible maps when we have the JSON ready.
+	*
+	* BUT FIRST: Navigation.
+	*
+	*
+	* NAVIGATION PLAN:
+	*
+	* -- create a startDraw block to be the top left block.
+	* ---- moving around changes both character location AND startDraw block
+	* ---- when you reach either edge, player still moves but startDraw does NOT.
+	* ---- HOW do we know if the player has moved away from the center?
+	* ------ choose a centreBlock (which updates each time)
+	* ------ if user is away from center block, don't move map until user is back on center block
+	* -------- MORE:::: -->  if userX != centerX act accordingly (same with userY != centerY)... until user is back on centerBlock
+	*
+	*
+	*
+	*/
+
+	/* Gather the textures. (WILL become more complex when we add variations on floor and wall, plus path.) */
+	wallTexture = mapForm.wallTexture;
+	floorTexture = mapForm.floorTexture;
+
+	/*
+	* On the first draw, we must build the GRID based on the number of SUITS (therefore shrines) and landmarks.
+	* But we must scatter the LIMBS across the available FLOOR tiles, which are only known after creating the grid.
+	* So SUITS must be calculated before buildMap, and Limbs must be created and distributed AFTER buildMap.
+	* 
+	* After incorporating the database, we will need to differentiate between FIRST TIME (create map) vs. rebuilding
+	* from the DB.
+	*/
+
+	vector<Point> floorPositions = buildMap(mapForm); /* Build the actual grid for the first time. */
+
+	/* populate characters and limbs after building the map(and its landmarks). */
+	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
+	
+	/* FOR NOW I just have ONE copy of each native limb */
+	for (LimbForm limbForm : nativeLimbForms) {
+		int numberOfThisLimb = (rand() % 15) + 5;
+
+		for (int n = 0; n < numberOfThisLimb; ++n) {
+			Limb newLimb = Limb(limbForm);
+			Point newPosition = floorPositions[rand() % floorPositions.size()];
+			newLimb.setPosition(newPosition);
+			newLimb.setLastPosition(newPosition);
+			roamingLimbs.push_back(newLimb);
+		}
+	}
+
+	cout << "\n\nThere are " << roamingLimbs.size() << " LIMBS in Roaming Limbs\n\n";
+}
+
+/*
+* Build the actual grid.
+* Returns a vector of Points which are the coordinates for all Floor objects.
+*/
+vector<Point> Map::buildMap(MapForm mapForm) {
 	/* 
 	* This WILL get the DB object and build the entire map as data.
 	* To draw the map will mean to review this data and draw the local blocks.
@@ -1047,11 +1177,11 @@ void Map::buildMap(int mapWidth) {
 	*/
 
 	UI& ui = UI::getInstance();
-	rows = vector<vector<Block>>(mapWidth);
+	rows = vector<vector<Block>>(mapForm.blocksHeight);
 
 	/* replace with reading from DB */
 	for (int i = 0; i < rows.size(); ++i) {
-		vector<Block> blocks(mapWidth);
+		vector<Block> blocks(mapForm.blocksWidth);
 
 		for (int k = 0; k < blocks.size(); ++k) {
 			blocks[k] = Block(false); }
@@ -1061,7 +1191,7 @@ void Map::buildMap(int mapWidth) {
 	/* Now make the PATH */
 	/* get a random x starting point, but the y will be map's height - 2 */
 
-	int pathX = (rand() % (mapWidth - 10)) + 5;
+	int pathX = (rand() % (mapForm.blocksWidth - 10)) + 5;
 	int pathY = static_cast<int>(rows.size()) - 2;
 
 	int playerX = pathX;
@@ -1085,6 +1215,8 @@ void Map::buildMap(int mapWidth) {
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	/* Entrance landmark */
 	landmarks.emplace_back(pathX, pathY, 1, 1, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
+
+	vector<Point> floorPositions;
 
 	/* while loop makes the path */
 	while (pathY > 0) {
@@ -1130,6 +1262,7 @@ void Map::buildMap(int mapWidth) {
 		}
 
 		floorize(pathX, pathY, subPath.radius);
+		floorPositions.push_back(Point(pathX, pathY));
 		--subPath.seed;
 
 		if (subPath.seed < 1) {
@@ -1151,42 +1284,10 @@ void Map::buildMap(int mapWidth) {
 	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 	playerCharacter = MapCharacter(CharacterType::Player, characterTexture, playerX, playerY);
 	SDL_FreeSurface(characterSurface);
+
+	return floorPositions;
 }
 
-
-
-/* Map class constructor */
-Map::Map(int mapWidth) {
-	/*
-	* When loading from DB we will not care about MapScreen's resolution.
-	* This will be raw map data from the DB.
-	* So our numbers of rows and blocks will be from the DB.
-	*
-	* FOR NOW we want hardcoded numbers for temporary display purposes.
-	* 
-	* Right now this makes insane maps.
-	* We will tweak it to make more sensible maps when we have the JSON ready.
-	* 
-	* BUT FIRST: Navigation.
-	* 
-	* 
-	* NAVIGATION PLAN:
-	* 
-	* -- create a startDraw block to be the top left block.
-	* ---- moving around changes both character location AND startDraw block
-	* ---- when you reach either edge, player still moves but startDraw does NOT.
-	* ---- HOW do we know if the player has moved away from the center?
-	* ------ choose a centreBlock (which updates each time)
-	* ------ if user is away from center block, don't move map until user is back on center block
-	* -------- MORE:::: -->  if userX != centerX act accordingly (same with userY != centerY)... until user is back on centerBlock
-	* 
-	* 
-	* 
-	*/
-	buildMap(mapWidth);
-
-	// populate characters and limbs after building the map (and its landmarks).
-}
 
 /*
 * When we create a path we want to clear a radius around each block of the central path.
@@ -1243,16 +1344,14 @@ void Map::floorize(int x, int y, int radius) {
 		/* down and to the left */
 		while (x - leftInc > 0 && leftInc < radius) {
 			rows[y + downInc][x - leftInc].setIsFloor(true);
-			++leftInc;
-		}
+			++leftInc; }
 
 		leftInc = 0;
 
 		/* up and to the right */
 		while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
 			rows[y + downInc][x + rightInc].setIsFloor(true);
-			++rightInc;
-		}
+			++rightInc; }
 
 		rightInc = 0;
 		++downInc;
@@ -1265,14 +1364,12 @@ void Map::floorize(int x, int y, int radius) {
 	/* Clear LEFT */
 	while (x - leftInc > 0 && leftInc < radius) {
 		rows[y][x - leftInc].setIsFloor(true);
-		++leftInc;
-	}
+		++leftInc; }
 
 	/* Clear RIGHT */
 	while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
 		rows[y][x + rightInc].setIsFloor(true);
-		++rightInc;
-	}
+		++rightInc; }
 }
 
 
@@ -1412,7 +1509,7 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 		cout << e.key.keysym.sym << "\n";
 	}
 
-	cout << "Block Width: " << blockWidth << "\n";
+	// cout << "Block Width: " << blockWidth << "\n";
 
 }
 

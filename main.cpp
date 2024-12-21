@@ -37,11 +37,7 @@
 #include "SDL_ttf.h"
 #include <vector>
 #include <cstdlib>
-#include <iostream>
-#include <cstdlib>
 #include <ctime>
-
-using namespace std;
 
 import UI;
 import GameState;
@@ -94,7 +90,7 @@ int main(int argc, char* args[]) {
 		}
 		else if (gameState.getScreenType() == ScreenType::Map) {
 			cout << "\nselected MAP\n";
-			MapScreen mapScreen = MapScreen(100);
+			MapScreen mapScreen = MapScreen("forest");
 			mapScreen.run();
 		}else if (gameState.getScreenType() == ScreenType::Battle) {
 			cout << "\nselected BATTLE\n";
