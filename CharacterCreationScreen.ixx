@@ -5,6 +5,15 @@
 * ------- each time we change the limb setup, we will destroy the texture and replace it with a new texture from the new setup.
 * 
 * 
+* ROTATION:
+* ----- SDL_RenderCopyEx takes parameters for angle of rotation AND a point for the point around which the image rotates.
+* ---------- SO I can save (A) whether the image should be FLIPPED, (B) angle of rotation, and (C) point of rotation to the Limb and the DB.
+* ---------- SDL_RenderCopyEx will then render the texture accordingly.
+* ---------- When flipping or rotating, we will have to calculate how that affects any limbs that are attached to that limb.
+* --------------- We will need to override joint Points in Limb to accomodate flipping and rotating.
+* --------------- We will need to store information about which joints are attached to which. This will be complicated, when it comes to the Battle Screen.
+* -------------------- Draw Position is not sufficient anymore. We need Anchor Joint... nested branches of Limbs... this will be complicated, but it will be cool in the end.
+* 
 * 
 */
 

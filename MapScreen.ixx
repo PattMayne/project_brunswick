@@ -1223,9 +1223,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 			Limb& newLimb = roamingLimbs.emplace_back(limbForm);
 			Point newPosition = floorPositions[rand() % floorPositions.size()];
 			newLimb.setPosition(newPosition);
-			newLimb.setLastPosition(newPosition);
-		}
-	}
+			newLimb.setLastPosition(newPosition); } }
 
 	cout << "\n\nThere are " << roamingLimbs.size() << " LIMBS in Roaming Limbs\n\n";
 }
@@ -1304,39 +1302,31 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 		switch (subPath.direction) {
 		case Direction::Up:
 			if (pathY > 0) { /* We ARE allowed to hit the ceiling (FOR NOW this ends the pathmaking) */
-				--pathY;
-			}
+				--pathY; }
 			else {
 				++pathY;
-				subPath.seed = 0;
-			}
+				subPath.seed = 0; }
 			break;
 		case Direction::Down:
 			if (pathY < rows.size() - 2) { /* We are NOT allowed to hit the bottom again. */
-				++pathY;
-			}
+				++pathY; }
 			else {
 				--pathY;
-				subPath.seed = 0;
-			}
+				subPath.seed = 0; }
 			break;
 		case Direction::Left:
 			if (pathX > 3) { /* We are NOT allowed to hit the left wall. */
-				--pathX;
-			}
+				--pathX; }
 			else {
 				++pathX;
-				subPath.seed = 0;
-			}
+				subPath.seed = 0; }
 			break;
 		case Direction::Right:
 			if (pathX < rows[pathY].size() - 2) { /* We are NOT allowed to hit the right wall. */
-				++pathX;
-			}
+				++pathX; }
 			else {
 				--pathX;
-				subPath.seed = 0;
-			}
+				subPath.seed = 0; }
 			break;
 		}
 
