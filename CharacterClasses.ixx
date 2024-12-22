@@ -46,7 +46,13 @@ export enum CharacterType { Player, Hostile, Friendly }; /* NOT a CLASS because 
 export enum class LimbState { Free, Owned, Equipped }; /* If it is OWNED or EQUIPPED, then there must be a character id. Every character should exist in the DB.*/
 
 class Limb;
-struct LimbPlacement;
+
+/* Where the limb image will be drawn onto the character surface. */
+export struct SuitLimbPlacement {
+	string slug;
+	Point position;
+};
+
 
 
 
@@ -97,10 +103,10 @@ export struct LimbForm {
 export struct SuitForm {
 	const string name;
 	const string slug;
-	const vector<LimbPlacement> limbPlacements;
+	const vector<SuitLimbPlacement> limbPlacements;
 	bool unscrambled;
 
-	SuitForm(string name, string slug, vector<LimbPlacement> limbPlacements, bool unscrambled = false) :
+	SuitForm(string name, string slug, vector<SuitLimbPlacement> limbPlacements, bool unscrambled = false) :
 		name(name), slug(slug), limbPlacements(limbPlacements), unscrambled(unscrambled) { }
 };
 
@@ -146,48 +152,7 @@ export struct MapForm {
 */
 
 
-/*
-* Very minimal parent class.
-* Different Screen modules will extend this to be useful in their environments.
-* We can't hold a vector of Limb objects here, because the derived Character classes must hold similarly derived Limb objects.
-* 
-* Maybe Character should hold a vector of Limbs, and its derived object can have a function to turn those Limbs into derived Limbs.
-* 
-* REMOVE TEXTURE.
-* Only screen-specific derivatives should have textures, created from limbs.
-* In fact, only the Map has a texture, since it's displayed as a collection of limbs everywhere else.
-* 
-* I don't need MAP here, because MAP will only exist on the MapScreen screen, so it doesn't need derived classes.
-* The factories will include a Map factory, just to retrieve the basic Map data and send it to the MapScreen screen.
-*/
-export class Character {
-	public:
-		Character() {}
-		~Character() {}
-		Character(CharacterType characterType) :
-			characterType(characterType) { }
 
-		int getType() { return characterType; }
-		void setId(int id) { this->id = id; }
-		virtual void setLimbs(vector<Limb> limbs) {
-			/*
-			* Derived classes MUST override this.
-			* They will take the base Limbs vector provided, and cast them into their own DERIVED Limbs.
-			* So the MapCharacter will take a vector of normal Limbs (or derived MapLimbs),
-			* and explicitly cast them as MapLimbs into vector<MapLimb> limbs,
-			* so the module can programmatically use MapLimbs' specific functions and attributes.
-			*/
-		}
-
-	protected:
-		CharacterType characterType;
-		int id;
-		/*
-		* NO LIMBS VECTOR HERE.
-		* Instead each Derived class will
-		*/
-		// vector<Limb> limbs; /* LIMBS vector should be the BASE. Derived Character classes have functions to convert the base Limbs into derived Limbs. */
-};
 
 /*
 * Minimalistic class from which useful Limb classes will derive for their objects.
@@ -211,6 +176,7 @@ export class Character {
 * Only the modifiers are saved to the DB.
 * The Form is retrieved fresh from the definition every time the Limb is constructed/instantiated.
 * 
+* Limb textures will be destroyed by the screens handling them.
 */
 export class Limb {
 	public:
@@ -232,6 +198,7 @@ export class Limb {
 			SDL_FreeSurface(limbSurface);
 			/* TO DO: ERROR HANDLING FOR TEXTURE. */
 		}
+
 		/*  */
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
@@ -299,7 +266,35 @@ export class Limb {
 		Point lastPosition;
 };
 
-export struct LimbPlacement {
-	string slug;
-	Point position;
+
+/*
+* Very minimal parent class.
+* Different Screen modules will extend this to be useful in their environments.
+* We can't hold a vector of Limb objects here, because the derived Character classes must hold similarly derived Limb objects.
+*
+* Maybe Character should hold a vector of Limbs, and its derived object can have a function to turn those Limbs into derived Limbs.
+*
+* REMOVE TEXTURE.
+* Only screen-specific derivatives should have textures, created from limbs.
+* In fact, only the Map has a texture, since it's displayed as a collection of limbs everywhere else.
+*
+* I don't need MAP here, because MAP will only exist on the MapScreen screen, so it doesn't need derived classes.
+* The factories will include a Map factory, just to retrieve the basic Map data and send it to the MapScreen screen.
+*/
+export class Character {
+public:
+	Character() {}
+	~Character() {}
+	Character(CharacterType characterType) :
+		characterType(characterType) {
+	}
+
+	int getType() { return characterType; }
+	void setId(int id) { this->id = id; }
+
+protected:
+	CharacterType characterType;
+	int id;
+	//vector<Limb> inventoryLimbs;
+	//vector<Limb> equippedLimbs;
 };

@@ -390,10 +390,15 @@ export class MapScreen {
 			SDL_DestroyTexture(wallTexture);
 			SDL_DestroyTexture(titleTexture);
 
-
 			/* Destroy all the textures in the Landmarks */
 			for (int i = 0; i < map.getLandmarks().size(); i++) {
 				SDL_Texture* textureToDestroy = map.getLandmarks()[i].getTexture();
+				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); } }
+
+			/* Destroy all the textures in the roamingLimbs */
+			vector<Limb> roamingLimbs = map.getRoamingLimbs();
+			for (int i = 0; i < roamingLimbs.size(); i++) {
+				SDL_Texture* textureToDestroy = roamingLimbs[i].getTexture();
 				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); } }
 
 			/* Destroy all the textures in the Characters */
@@ -1162,13 +1167,10 @@ void MapScreen::startAnimationCountdown(AnimationType iType) {
 
 void MapScreen::decrementCountdown() {
 	if (animationCountdown > 0) {
-		--animationCountdown;
-	}
+		--animationCountdown; }
 	else {
-		animationCountdown = 0;
-	}
+		animationCountdown = 0;}
 }
-
 
 
 /*
@@ -1214,15 +1216,14 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
 	
 	/* FOR NOW I just have ONE copy of each native limb */
-	for (LimbForm limbForm : nativeLimbForms) {
+	for (LimbForm& limbForm : nativeLimbForms) {
 		int numberOfThisLimb = (rand() % 15) + 5;
 
 		for (int n = 0; n < numberOfThisLimb; ++n) {
-			Limb newLimb = Limb(limbForm);
+			Limb& newLimb = roamingLimbs.emplace_back(limbForm);
 			Point newPosition = floorPositions[rand() % floorPositions.size()];
 			newLimb.setPosition(newPosition);
 			newLimb.setLastPosition(newPosition);
-			roamingLimbs.push_back(newLimb);
 		}
 	}
 
@@ -1449,7 +1450,6 @@ void Map::floorize(int x, int y, int radius) {
 		rows[y][x + rightInc].setIsFloor(true);
 		++rightInc; }
 }
-
 
 
 /*
