@@ -1006,9 +1006,6 @@ void MapScreen::drawMap(UI& ui) {
 
 		for (int x = drawStartX; x < drawStartX + xViewRes; ++x) {
 			
-			targetRect.x = (x - drawStartX) * blockWidth;
-			targetRect.y = (y - drawStartY) * blockWidth;
-
 			if (animate && animationType == AnimationType::Player) {
 
 				/* Shifting DOWN or UP. */
@@ -1018,6 +1015,10 @@ void MapScreen::drawMap(UI& ui) {
 				else if (drawStartY < lastDrawStartY) {
 					targetRect.y = ((y - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
 				}
+				else {
+					/* No vertical shift. */
+					targetRect.y = (y - drawStartY) * blockWidth;
+				}
 
 				/* Shifting RIGHT or LEFT. */
 				if (drawStartX > lastDrawStartX) {
@@ -1026,6 +1027,14 @@ void MapScreen::drawMap(UI& ui) {
 				else if (drawStartX < lastDrawStartX) {
 					targetRect.x = ((x - lastDrawStartX) * blockWidth) + blockAnimationIncrement;
 				}
+				else {
+					/* No horiztonal shift. */
+					targetRect.x = (x - drawStartX) * blockWidth;
+				}
+			}
+			else {
+				targetRect.x = (x - drawStartX) * blockWidth;
+				targetRect.y = (y - drawStartY) * blockWidth;
 			}
 			
 			SDL_RenderCopyEx(
