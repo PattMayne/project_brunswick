@@ -172,6 +172,7 @@ class MapCharacter : public Character {
 		int getLastX() { return lastBlockPosition.x; }
 		int getLastY() { return lastBlockPosition.y; }
 		Point getPosition() { return blockPosition; }
+		Point getLastPosition() { return lastBlockPosition; }
 
 		SDL_Texture* getTexture() { return texture; }
 		void setTexture(SDL_Texture* incomingTexture) {
@@ -425,8 +426,8 @@ export class MapScreen {
 		void drawPanel(UI& ui, Panel& panel);
 
 		bool moveLimb(Limb& roamingLimb);
-
 		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY);
+		void animateMovingObject(SDL_Rect& rect, int blockPositionX, int blockPositionY, Point lastPosition);
 
 		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
 		void handleMousedown(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel);
@@ -734,17 +735,12 @@ export void MapScreen::run() {
 			*/
 
 			for (Limb& limb : map.getRoamingLimbs()) {
-				moveLimb(limb);
-			}
+				moveLimb(limb); }
 
 			/* Then start the Animation of the movement. */
 
 			startAnimationCountdown(AnimationType::NPC);
 			startNpcAnimation = false;
-		}
-
-		if (animate && animationType == AnimationType::NPC) {
-			cout << "NPC animation: " << animationCountdown << "\n";
 		}
 	}
 
@@ -788,9 +784,6 @@ bool MapScreen::moveLimb(Limb& roamingLimb) {
 		roamingLimb.move(newPoint);
 		moved = true;
 	}
-
-	string movedOrNot = moved ? "MOVED\n" : "NOT MOVED\n";
-	cout << movedOrNot;
 
 	return moved;
 }
@@ -861,10 +854,6 @@ void MapScreen::drawLandmarks(UI& ui) {
 
 /* Draw NPCs and player character */
 void MapScreen::drawCharacters(UI& ui) {
-
-	/* use this rect for all the characters. Just change the X Y each time. */
-	SDL_Rect characterRect = { 0, 0, blockWidth, blockWidth };
-
 	/* cycle through the characters list and draw them */
 
 	/* ONLY draw the ones in the screen */
@@ -893,36 +882,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	*/
 
 	if (animate && animationType == AnimationType::Player) {
-
-		int lastBlockX = playerCharacter.getLastX();
-		int lastBlockY = playerCharacter.getLastY();
-
-		/* are we close to a horizontal edge and moving horizontally? */
-		if (blockX > rightLimit || lastBlockX > rightLimit || blockX < leftLimit || lastBlockX < leftLimit) {
-			/* are we moving left or moving right? */
-			if (blockX > lastBlockX) {
-				/* we are moving right */
-				characterRect.x = ((lastBlockX - drawStartX) * blockWidth) + blockAnimationIncrement;
-			}
-			else if (blockX < lastBlockX) {
-				/* we are moving left */
-				characterRect.x = ((lastBlockX - drawStartX) * blockWidth) - blockAnimationIncrement;
-			}
-		}
-
-		/* are we close to a vertical edge and moving vertically? */
-		if (blockY > bottomLimit || lastBlockY > bottomLimit || blockY < topLimit || lastBlockY < topLimit) {
-			/* are we moving up or down? */
-			if (blockY > lastBlockY) {
-				/* we are moving down */
-				characterRect.y = ((lastBlockY - drawStartY) * blockWidth) + blockAnimationIncrement;
-			}
-			else if (blockY < lastBlockY) {
-				/* we're moving up */
-				characterRect.y = ((lastBlockY - drawStartY) * blockWidth) - blockAnimationIncrement;
-			}
-		}
-	}
+		animateMovingObject(characterRect, blockX, blockY, playerCharacter.getLastPosition()); }
 
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
@@ -953,6 +913,46 @@ void MapScreen::animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositio
 		rect.x = ((blockPositionX - lastDrawStartX) * blockWidth) + blockAnimationIncrement; }
 }
 
+/*
+*  When a character or limb moves while the map stays still, use this function to set the incremented position
+* of the rect for each frame of the animation.
+*/
+void MapScreen::animateMovingObject(SDL_Rect& rect, int blockPositionX, int blockPositionY, Point lastPosition) {
+	int lastBlockX = lastPosition.x;
+	int lastBlockY = lastPosition.y;
+
+	/* are we close to a horizontal edge and moving horizontally? */
+	if (
+		blockPositionX > rightLimit ||
+		animationType == AnimationType::NPC || /* only check limits if the Player is being animated. */
+		(lastBlockX > rightLimit || blockPositionX < leftLimit || lastBlockX < leftLimit)
+	) {
+		/* are we moving left or moving right? */
+		if (blockPositionX > lastBlockX) {
+			/* we are moving right */
+			rect.x = ((lastBlockX - drawStartX) * blockWidth) + blockAnimationIncrement; }
+		else if (blockPositionX < lastBlockX) {
+			/* we are moving left */
+			rect.x = ((lastBlockX - drawStartX) * blockWidth) - blockAnimationIncrement; }
+	}
+
+	/* are we close to a vertical edge and moving vertically? */
+	if (
+		blockPositionY > bottomLimit ||
+		animationType == AnimationType::NPC || /* only check limits if the Player is being animated. */
+		(lastBlockY > bottomLimit || blockPositionY < topLimit || lastBlockY < topLimit)
+	) {
+		/* are we moving up or down? */
+		if (blockPositionY > lastBlockY) {
+			/* we are moving down */
+			rect.y = ((lastBlockY - drawStartY) * blockWidth) + blockAnimationIncrement; }
+		else if (blockPositionY < lastBlockY) {
+			/* we're moving up */
+			rect.y = ((lastBlockY - drawStartY) * blockWidth) - blockAnimationIncrement; }
+	}
+}
+
+/* The limbs must move. */
 void MapScreen::drawRoamingLimbs(UI& ui) {
 	SDL_Rect limbRect = { 0, 0, blockWidth, blockWidth };
 
@@ -969,8 +969,11 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 		limbRect.x = (posX - drawStartX) * blockWidth;
 		limbRect.y = (posY - drawStartY) * blockWidth;
 
-		if (animate && animationType == AnimationType::Player) {
-			animateMapBlockDuringPlayerMove(limbRect, posX, posY); }
+		if (animate) {
+			if (animationType == AnimationType::Player) {
+				animateMapBlockDuringPlayerMove(limbRect, posX, posY); }
+			else if (animationType == AnimationType::NPC) {
+				animateMovingObject(limbRect, posX, posY, limb.getLastPosition()); } }		
 
 		SDL_RenderCopyEx(
 			ui.getMainRenderer(),
@@ -1002,8 +1005,7 @@ void MapScreen::drawMap(UI& ui) {
 		vector<Block>& blocks = rows[y];
 
 		for (int x = drawStartX; x < drawStartX + xViewRes; ++x) {
-
-			Block& block = blocks[x];
+			
 			targetRect.x = (x - drawStartX) * blockWidth;
 			targetRect.y = (y - drawStartY) * blockWidth;
 
@@ -1025,10 +1027,10 @@ void MapScreen::drawMap(UI& ui) {
 					targetRect.x = ((x - lastDrawStartX) * blockWidth) + blockAnimationIncrement;
 				}
 			}
-
+			
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
-				block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+				blocks[x].getIsFloor() ? getFloorTexture() : getWallTexture(),
 				NULL, &targetRect,
 				0, NULL, SDL_FLIP_NONE);
 		}
