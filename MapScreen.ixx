@@ -289,11 +289,13 @@ class Block {
 	public:
 		/* constructor */
 		Block(bool isFloor = true)
-			: isFloor(isFloor) { }
+			: isFloor(isFloor), floorTextureIndex(0) { }
 
 		/* getters */
 		bool getIsFloor() { return isFloor; }
 		bool getIsLooted() { return isLooted; }
+		int getFloorTextureIndex() { return floorTextureIndex; }
+		void setFloorTextureIndex(int index) { floorTextureIndex = index; }
 
 		/* setters */
 		void setIsFloor(bool incomingIsFloor) { isFloor = incomingIsFloor; }
@@ -313,6 +315,7 @@ class Block {
 	private:
 		bool isFloor;
 		bool isLooted;
+		int  floorTextureIndex;
 };
 
 
@@ -325,7 +328,10 @@ class Map {
 		vector<vector<Block>>& getRows() { return rows; }
 		vector<Landmark>& getLandmarks() { return landmarks; }
 		MapCharacter& getPlayerCharacter() { return playerCharacter; }
-		SDL_Texture* getFloorTexture() { return mapForm.floorTexture; }
+		//SDL_Texture* getFloorTexture() { return mapForm.floorTexture; }
+		SDL_Texture* getFloorTexture(int index) {
+			return mapForm.floorTextures[index];
+		}
 		SDL_Texture* getWallTexture() { return mapForm.wallTexture; }
 		vector<Limb>& getRoamingLimbs() { return roamingLimbs; }
 		string getName() { return mapForm.name; }
@@ -471,7 +477,7 @@ export class MapScreen {
 		SDL_Texture* wallTexture = NULL;
 
 		SDL_Texture* getWallTexture() { return map.getWallTexture(); }
-		SDL_Texture* getFloorTexture() { return map.getFloorTexture(); }
+		SDL_Texture* getFloorTexture(int index) { return map.getFloorTexture(index); }
 
 		void createTitleTexture(UI& ui);
 
@@ -1044,7 +1050,7 @@ void MapScreen::drawMap(UI& ui) {
 			
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
-				blocks[x].getIsFloor() ? getFloorTexture() : getWallTexture(),
+				blocks[x].getIsFloor() ? getFloorTexture(blocks[x].getFloorTextureIndex()) : getWallTexture(),
 				NULL, &targetRect,
 				0, NULL, SDL_FLIP_NONE);
 		}
@@ -1065,7 +1071,7 @@ void MapScreen::drawMap(UI& ui) {
 
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
-					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					block.getIsFloor() ? getFloorTexture(block.getFloorTextureIndex()) : getWallTexture(),
 					NULL, &targetRect,
 					0, NULL, SDL_FLIP_NONE);
 			}
@@ -1081,7 +1087,7 @@ void MapScreen::drawMap(UI& ui) {
 
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
-					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					block.getIsFloor() ? getFloorTexture(block.getFloorTextureIndex()) : getWallTexture(),
 					NULL, &targetRect,
 					0, NULL, SDL_FLIP_NONE);
 			}
@@ -1094,7 +1100,7 @@ void MapScreen::drawMap(UI& ui) {
 				targetRect.y = (y - drawStartY) * blockWidth;
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
-					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					block.getIsFloor() ? getFloorTexture(block.getFloorTextureIndex()) : getWallTexture(),
 					NULL, &targetRect,
 					0, NULL, SDL_FLIP_NONE);
 			}
@@ -1108,7 +1114,7 @@ void MapScreen::drawMap(UI& ui) {
 				targetRect.y = (y - drawStartY) * blockWidth;
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
-					block.getIsFloor() ? getFloorTexture() : getWallTexture(),
+					block.getIsFloor() ? getFloorTexture(block.getFloorTextureIndex()) : getWallTexture(),
 					NULL, &targetRect,
 					0, NULL, SDL_FLIP_NONE);
 			}
@@ -1261,7 +1267,8 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 		vector<Block> blocks(mapForm.blocksWidth);
 
 		for (int k = 0; k < blocks.size(); ++k) {
-			blocks[k] = Block(false); }
+			blocks[k] = Block(false);
+			blocks[k].setFloorTextureIndex(rand() % mapForm.floorTextures.size()); }
 		rows[i] = blocks;
 	}
 
