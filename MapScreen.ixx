@@ -328,7 +328,6 @@ class Map {
 		vector<vector<Block>>& getRows() { return rows; }
 		vector<Landmark>& getLandmarks() { return landmarks; }
 		MapCharacter& getPlayerCharacter() { return playerCharacter; }
-		//SDL_Texture* getFloorTexture() { return mapForm.floorTexture; }
 		SDL_Texture* getFloorTexture(int index) {
 			return mapForm.floorTextures[index];
 		}

@@ -145,7 +145,6 @@ MapForm forestMap() {
 	/* DO ERROR CHECKS */
 
 	forestMap.wallTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), wallSurface);
-	forestMap.floorTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), floorSurface001);
 
 	forestMap.floorTextures = {
 		SDL_CreateTextureFromSurface(ui.getMainRenderer(), floorSurface001),
