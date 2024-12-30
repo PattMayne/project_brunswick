@@ -137,7 +137,7 @@ export struct MapForm {
 	int blocksHeight;
 	vector<SDL_Texture*> floorTextures;
 	vector<SDL_Texture*> wallTextures;
-	SDL_Texture* wallTexture;
+	SDL_Texture* pathTexture;
 };
 
 

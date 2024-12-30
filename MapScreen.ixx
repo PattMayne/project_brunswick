@@ -289,7 +289,7 @@ class Block {
 	public:
 		/* constructor */
 		Block(bool isFloor = true)
-			: isFloor(isFloor), floorTextureIndex(0) { }
+			: isFloor(isFloor), floorTextureIndex(0), isPath(false), pathFlipOption(0), pathRotateAngle(0) { }
 
 		/* getters */
 		bool getIsFloor() { return isFloor; }
@@ -301,9 +301,15 @@ class Block {
 		void setWallTextureIndex(int index) { wallTextureIndex = index; }
 		void setWallIsFlipped(bool flipWall) { wallIsFlipped = flipWall; }
 		bool getWallIsFlipped() { return wallIsFlipped; }
+		bool getIsPath() { return isPath; }
+		int getPathFlipOption() { return pathFlipOption; }
+		int getPathRotateAngle() { return pathRotateAngle; }
 
 		/* setters */
+		void setPathRotateAngle(int angle = 0) { pathRotateAngle = angle; }
+		void setPathFlipOption(int option = 0) { pathFlipOption = option; }
 		void setIsFloor(bool incomingIsFloor) { isFloor = incomingIsFloor; }
+		void setIsPath(bool incomingIsPath = true) { isPath = incomingIsPath; }
 		void loot() {
 			isLooted = true;
 			/*
@@ -320,6 +326,9 @@ class Block {
 	private:
 		bool isFloor;
 		bool isLooted;
+		bool isPath;
+		int pathFlipOption;
+		int pathRotateAngle;
 		int floorTextureIndex;
 		int wallTextureIndex;
 		bool wallIsFlipped;
@@ -339,6 +348,7 @@ class Map {
 			return mapForm.floorTextures[index]; }
 		SDL_Texture* getWallTexture(int index) {
 			return mapForm.wallTextures[index]; }
+		SDL_Texture* getPathTexture() { return mapForm.pathTexture; }
 		vector<Limb>& getRoamingLimbs() { return roamingLimbs; }
 		string getName() { return mapForm.name; }
 		string getSlug() { return mapForm.slug; }
@@ -1076,6 +1086,17 @@ void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 			block.getWallIsFlipped() ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE
 		);
 	}
+	else if (block.getIsPath()) {
+		int pathFlipOption = block.getPathFlipOption();
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			map.getPathTexture(),
+			NULL, &targetRect,
+			block.getPathRotateAngle(),
+			NULL,
+			pathFlipOption == 2 ? SDL_FLIP_VERTICAL : pathFlipOption == 1 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE
+		);
+	}
 }
 
 void MapScreen::drawMap(UI& ui) {
@@ -1446,8 +1467,17 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 * But only certain paths are *actual* paths... many are just normal floor blocks.
 */
 void Map::floorize(int x, int y, int radius) {
-	if (rows[y][x].getIsFloor()) { return; }
-	rows[y][x].setIsFloor(true);
+	/* Incoming coordinates are always a path */
+	Block& thisBlock = rows[y][x];
+	/* The path can be flipped vertical, horizontal, or not at all. */
+	thisBlock.setPathFlipOption(rand() % 3);
+	/* The path can also be rotated 90 degrees, 270 degrees, or not at all. */
+	int pathRotateOption = rand() % 3;
+	thisBlock.setPathRotateAngle(pathRotateOption == 2 ? 270 : pathRotateOption == 1 ? 90 : 0);
+	thisBlock.setIsPath(true);
+	/* If the block was already a floor, don't bother clearing the surrounding blocks. */
+	if (thisBlock.getIsFloor()) { return; }
+	thisBlock.setIsFloor(true);
 	if (y < (radius + 2)) { return; } /* don't clear top blocks (except exit block, which is already cleared) */
 
 	/* increment counters (to help reach radius) */
