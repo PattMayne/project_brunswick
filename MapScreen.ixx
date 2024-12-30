@@ -7,7 +7,7 @@
 * |_|  |_|\__,_| .__/  |____/ \___|_|  \___|\___|_| |_|
 *              |_|
 * 
-* 
+* Where the character roams the open world (or a dungeon or building) seeking limbs, fighting NPCs, and meeting friendly NPCs.
 * 
 * 
 * 
@@ -299,6 +299,8 @@ class Block {
 		void setFloorTextureIndex(int index) { floorTextureIndex = index; }
 		int getWallTextureIndex() { return wallTextureIndex; }
 		void setWallTextureIndex(int index) { wallTextureIndex = index; }
+		void setWallIsFlipped(bool flipWall) { wallIsFlipped = flipWall; }
+		bool getWallIsFlipped() { return wallIsFlipped; }
 
 		/* setters */
 		void setIsFloor(bool incomingIsFloor) { isFloor = incomingIsFloor; }
@@ -320,6 +322,7 @@ class Block {
 		bool isLooted;
 		int floorTextureIndex;
 		int wallTextureIndex;
+		bool wallIsFlipped;
 };
 
 
@@ -434,6 +437,7 @@ export class MapScreen {
 		int id;
 		ScreenStruct screenToLoadStruct;
 		void drawMap(UI& ui);
+		void drawBlock(UI& ui, Block& block, SDL_Rect targetRect);
 		void drawLandmarks(UI& ui);
 		void drawCharacters(UI& ui);
 		void drawPlayerCharacter(UI& ui);
@@ -1000,6 +1004,26 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 	}
 }
 
+void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
+	/* always draw floor. */
+	SDL_RenderCopyEx(
+		ui.getMainRenderer(),
+		getFloorTexture(block.getFloorTextureIndex()),
+		NULL, &targetRect,
+		0, NULL, SDL_FLIP_NONE);
+
+	/* Draw wall if it's not a floor. */
+	if (!block.getIsFloor()) {
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			getWallTexture(block.getWallTextureIndex()),
+			NULL, &targetRect,
+			0, NULL,
+			block.getWallIsFlipped() ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE
+		);
+	}
+}
+
 void MapScreen::drawMap(UI& ui) {
 	/*
 	* FOR EACH FRAME:
@@ -1045,29 +1069,12 @@ void MapScreen::drawMap(UI& ui) {
 				}
 				else {
 					/* No horiztonal shift. */
-					targetRect.x = (x - drawStartX) * blockWidth;
-				}
+					targetRect.x = (x - drawStartX) * blockWidth; }
 			}
 			else {
 				targetRect.x = (x - drawStartX) * blockWidth;
-				targetRect.y = (y - drawStartY) * blockWidth;
-			}
-			
-			/* always draw floor. */
-			SDL_RenderCopyEx(
-				ui.getMainRenderer(),
-				getFloorTexture(blocks[x].getFloorTextureIndex()),
-				NULL, &targetRect,
-				0, NULL, SDL_FLIP_NONE);
-
-			/* Draw wall if it's not a floor. */
-			if (!blocks[x].getIsFloor()) {
-				SDL_RenderCopyEx(
-					ui.getMainRenderer(),
-					getWallTexture(blocks[x].getWallTextureIndex()),
-					NULL, &targetRect,
-					0, NULL, SDL_FLIP_NONE);
-			}
+				targetRect.y = (y - drawStartY) * blockWidth; }			
+			drawBlock(ui, blocks[x], targetRect);
 		}
 	}
 
@@ -1083,22 +1090,7 @@ void MapScreen::drawMap(UI& ui) {
 				Block& block = blocks[x];
 				targetRect.x = (x - drawStartX) * blockWidth;
 				targetRect.y = 0 - blockAnimationIncrement;
-
-				/* always draw floor. */
-				SDL_RenderCopyEx(
-					ui.getMainRenderer(),
-					getFloorTexture(blocks[x].getFloorTextureIndex()),
-					NULL, &targetRect,
-					0, NULL, SDL_FLIP_NONE);
-
-				/* Draw wall if it's not a floor. */
-				if (!blocks[x].getIsFloor()) {
-					SDL_RenderCopyEx(
-						ui.getMainRenderer(),
-						getWallTexture(blocks[x].getWallTextureIndex()),
-						NULL, &targetRect,
-						0, NULL, SDL_FLIP_NONE);
-				}
+				drawBlock(ui, blocks[x], targetRect);
 			}
 		} else if (drawStartY < lastDrawStartY && lastDrawStartY <= vBlocksTotal - yViewRes) {
 			/* Add blocks at the BOTTOM */
@@ -1109,22 +1101,7 @@ void MapScreen::drawMap(UI& ui) {
 				Block& block = blocks[x];
 				targetRect.x = (x - drawStartX) * blockWidth;
 				targetRect.y = ((bottomRowIndex - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
-
-				/* always draw floor. */
-				SDL_RenderCopyEx(
-					ui.getMainRenderer(),
-					getFloorTexture(blocks[x].getFloorTextureIndex()),
-					NULL, &targetRect,
-					0, NULL, SDL_FLIP_NONE);
-
-				/* Draw wall if it's not a floor. */
-				if (!blocks[x].getIsFloor()) {
-					SDL_RenderCopyEx(
-						ui.getMainRenderer(),
-						getWallTexture(blocks[x].getWallTextureIndex()),
-						NULL, &targetRect,
-						0, NULL, SDL_FLIP_NONE);
-				}
+				drawBlock(ui, blocks[x], targetRect);
 			}
 		}
 		else if (drawStartX > lastDrawStartX) {
@@ -1133,21 +1110,7 @@ void MapScreen::drawMap(UI& ui) {
 				Block& block = rows[y][lastDrawStartX];
 				targetRect.x = 0 - blockAnimationIncrement;
 				targetRect.y = (y - drawStartY) * blockWidth;
-				/* always draw floor. */
-				SDL_RenderCopyEx(
-					ui.getMainRenderer(),
-					getFloorTexture(block.getFloorTextureIndex()),
-					NULL, &targetRect,
-					0, NULL, SDL_FLIP_NONE);
-
-				/* Draw wall if it's not a floor. */
-				if (!block.getIsFloor()) {
-					SDL_RenderCopyEx(
-						ui.getMainRenderer(),
-						getWallTexture(block.getWallTextureIndex()),
-						NULL, &targetRect,
-						0, NULL, SDL_FLIP_NONE);
-				}
+				drawBlock(ui, block, targetRect);
 			}
 		}
 		else if (drawStartX < lastDrawStartX) {
@@ -1157,21 +1120,7 @@ void MapScreen::drawMap(UI& ui) {
 				Block& block = rows[y][rightColumnIndex];
 				targetRect.x = ((xViewRes * blockWidth) - blockWidth) + blockAnimationIncrement;
 				targetRect.y = (y - drawStartY) * blockWidth;
-				/* always draw floor. */
-				SDL_RenderCopyEx(
-					ui.getMainRenderer(),
-					getFloorTexture(block.getFloorTextureIndex()),
-					NULL, &targetRect,
-					0, NULL, SDL_FLIP_NONE);
-
-				/* Draw wall if it's not a floor. */
-				if (!block.getIsFloor()) {
-					SDL_RenderCopyEx(
-						ui.getMainRenderer(),
-						getWallTexture(block.getWallTextureIndex()),
-						NULL, &targetRect,
-						0, NULL, SDL_FLIP_NONE);
-				}
+				drawBlock(ui, block, targetRect);
 			}
 		}
 	}
@@ -1414,7 +1363,14 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 		for (int k = 0; k < blocks.size(); ++k) {
 			Block& thisBlock = blocks[k];
 			thisBlock.setFloorTextureIndex(rand() % mapForm.floorTextures.size());
-			thisBlock.setWallTextureIndex(thisBlock.getIsFloor() ? 0 : rand() % mapForm.wallTextures.size());
+			/* set texture values for Wall blocks (defaults if they're not wall blocks). */
+			if (thisBlock.getIsFloor()) {
+				thisBlock.setWallTextureIndex(0);
+				thisBlock.setWallIsFlipped(false);
+			} else {
+				thisBlock.setWallTextureIndex(rand() % mapForm.wallTextures.size());
+				thisBlock.setWallIsFlipped(rand() % 2 == 0);
+			}
 		}
 	}
 
@@ -1455,16 +1411,14 @@ void Map::floorize(int x, int y, int radius) {
 		/* up and to the left */
 		while (x - leftInc > 0 && leftInc < radius) {
 			rows[y - upInc][x - leftInc].setIsFloor(true);
-			++leftInc;
-		}
+			++leftInc; }
 
 		leftInc = 0;
 
 		/* up and to the right */
 		while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
 			rows[y - upInc][x + rightInc].setIsFloor(true);
-			++rightInc;
-		}
+			++rightInc; }
 
 		rightInc = 0;
 		++upInc;
