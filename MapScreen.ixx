@@ -396,6 +396,7 @@ export class MapScreen {
 			setDrawStartBlock();
 			buildMapDisplay();
 			createTitleTexture(ui);
+			limbAngle = 0;
 		}
 
 		/* Destructor */
@@ -506,6 +507,9 @@ export class MapScreen {
 
 		int maxDrawStartX = 0;
 		int maxDrawStartY = 0;
+
+
+		int limbAngle;
 
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
@@ -619,7 +623,18 @@ void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 }
 
 
-/* The main function of the module, containing the game loop. */
+/* The main function of the module, containing the game loop.
+* Multiple kinds of animations happen during game loop.
+* MOVE animation is controlled by the animate boolean.
+* Whenever the player moves, the map and/or characters are shifted, and this is called an animation.
+* When the player has finished moving, the NPCs and LIMBs also move.
+This is also controlled by the animate boolean, but differentiated by the AnimationType enum value.
+* 
+* SPRITE ANIM is different. It ALWAYS happens.
+* Limbs rotate back and forth.
+* NPCs bounce up and down.
+* These are controlled by spriteAnim ints, which go up and down.
+*/
 export void MapScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
@@ -648,6 +663,10 @@ export void MapScreen::run() {
 	SDL_Event e;
 	bool running = true;
 	animate = false;
+
+	/* Making the Limbs rotate; */
+	int spriteAnimMax = 15;
+	bool reverseSprintAnim = false;
 
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
@@ -761,6 +780,21 @@ export void MapScreen::run() {
 
 			startAnimationCountdown(AnimationType::NPC);
 			startNpcAnimation = false;
+		}
+
+		/* check the sprite anim situation (wiggling Roaming Limbs, bouncing NPCs.). */
+
+		if (reverseSprintAnim) {
+			if (limbAngle > spriteAnimMax * -1) {
+				--limbAngle; }
+			else {
+				reverseSprintAnim = !reverseSprintAnim; }			
+		}
+		else {
+			if (limbAngle < spriteAnimMax) {
+				++limbAngle; }
+			else {
+				reverseSprintAnim = !reverseSprintAnim; }
 		}
 	}
 
@@ -999,7 +1033,7 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 			ui.getMainRenderer(),
 			limb.getTexture(),
 			NULL, &limbRect,
-			0, NULL, SDL_FLIP_NONE
+			limbAngle, NULL, SDL_FLIP_NONE
 		);
 	}
 }
