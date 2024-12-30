@@ -44,11 +44,12 @@ import CharacterClasses;
 /* Send in an existing unordered_list, we will populate it with functions to create Forest Limb Form structs. */
 void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& limbForms) {
 	/* FOREST LIMB FORMS */
+	/* HP / STRENGTH / SPEED / INTELLIGENCE */
 
 	limbForms["deer_leg_4"] = []() {
 		return LimbForm(
 			"Deer Leg 4", "deer_leg_4",
-			10, 6, 10, 3,
+			9, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_4.png",
 			{ Point(144, 81) });
 		};
@@ -56,7 +57,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["deer_leg_3"] = []() {
 		return LimbForm(
 			"Deer Leg 3", "deer_leg_3",
-			10, 6, 10, 3,
+			9, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_3.png",
 			{ Point(131, 71) });
 		};
@@ -64,7 +65,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["deer_leg_2"] = []() {
 		return LimbForm(
 			"Deer Leg 2", "deer_leg_2",
-			10, 6, 10, 3,
+			9, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_2.png",
 			{ Point(78, 46) });
 		};
@@ -72,9 +73,41 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["deer_leg_1"] = []() {
 		return LimbForm(
 			"Deer Leg 1", "deer_leg_1",
-			10, 6, 10, 3,
+			9, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_1.png",
 			{ Point(52, 43) });
+		};
+
+	limbForms["deer_head"] = []() {
+		return LimbForm(
+			"Deer Head", "deer_head",
+			8, 4, 3, 7,
+			DominanceNode::Green, "data/maps/forest/deer_head.png",
+			{ Point(93, 129), Point(117, 33), Point(90, 37) });
+		};
+
+	limbForms["deer_body"] = []() {
+		return LimbForm(
+			"Deer Body", "deer_body",
+			10, 7, 3, 3,
+			DominanceNode::Green, "data/maps/forest/deer_body.png",
+			{ Point(184, 86), Point(183, 130), Point(138, 138), Point(44, 112), Point(57, 114) });
+		};
+
+	limbForms["deer_antler_1"] = []() {
+		return LimbForm(
+			"Deer Antler 1", "deer_antler_1",
+			9, 6, 6, 3,
+			DominanceNode::Green, "data/maps/forest/deer_antler_1.png",
+			{ Point(107, 78) });
+		};
+
+	limbForms["deer_antler_2"] = []() {
+		return LimbForm(
+			"Deer Antler 2", "deer_antler_2",
+			9, 6, 6, 3,
+			DominanceNode::Green, "data/maps/forest/deer_antler_2.png",
+			{ Point(99, 86) });
 		};
 }
 
