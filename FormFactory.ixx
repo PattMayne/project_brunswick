@@ -213,3 +213,16 @@ vector<Character> suits = {
 * TAKES a slug identifier and returns a limb object or struct DEFINED IN THE FUNCTION.
 * OR : should each MAP be a function which contains all its objects, and can return EITHER the full map OR just its pieces ?
 */
+
+export Character buildPlayerCharacter() {
+	Character playerCharacter = Character(CharacterType::Player);
+
+	vector<LimbForm> inventoryLimbForms =  getMapLimbs(MapLevel::Forest);
+	vector<Limb>& inventoryLimbs = playerCharacter.getInventoryLimbs();
+
+	/* For now, just give the user one of each Forest Limbs. */
+	for (LimbForm& limbForm : inventoryLimbForms) {
+		inventoryLimbs.emplace_back(limbForm); }
+
+	return playerCharacter;
+}

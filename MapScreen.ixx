@@ -174,7 +174,7 @@ class MapCharacter : public Character {
 		Point getPosition() { return blockPosition; }
 		Point getLastPosition() { return lastBlockPosition; }
 
-		SDL_Texture* getTexture() { return texture; }
+		SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 		void setTexture(SDL_Texture* incomingTexture) {
 			if (texture) {
 				SDL_DestroyTexture(texture);
@@ -336,11 +336,9 @@ class Map {
 		vector<Landmark>& getLandmarks() { return landmarks; }
 		MapCharacter& getPlayerCharacter() { return playerCharacter; }
 		SDL_Texture* getFloorTexture(int index) {
-			return mapForm.floorTextures[index];
-		}
+			return mapForm.floorTextures[index]; }
 		SDL_Texture* getWallTexture(int index) {
-			return mapForm.wallTextures[index];
-		}
+			return mapForm.wallTextures[index]; }
 		vector<Limb>& getRoamingLimbs() { return roamingLimbs; }
 		string getName() { return mapForm.name; }
 		string getSlug() { return mapForm.slug; }
@@ -389,6 +387,9 @@ export class MapScreen {
 			vBlocksTotal = mapForm.blocksHeight;
 
 			animationType = AnimationType::None;
+
+			showTitle = true;
+			titleCountdown = 140;
 
 			UI& ui = UI::getInstance();
 			setViewResAndBlockWidth(ui);
@@ -481,6 +482,9 @@ export class MapScreen {
 		int blockAnimationIncrement;
 		AnimationType animationType;
 
+		bool showTitle;
+		int titleCountdown;
+
 		Map map;
 
 		SDL_Texture* floorTexture = NULL;
@@ -493,6 +497,12 @@ export class MapScreen {
 
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
+
+		void raiseTitleRect() {
+			--titleRect.y; }
+
+		int getTitleBottomPosition() {
+			return titleRect.y + titleRect.h; }
 
 		void requestUp();
 		void requestDown();
@@ -654,8 +664,8 @@ export void MapScreen::run() {
 	*/
 
 	/* Timeout data */
-	const int TARGET_FPS = 60;
-	const int FRAME_DELAY = 600 / TARGET_FPS; // milliseconds per frame
+	const int TARGET_FPS = 120;
+	const int FRAME_DELAY = 1200 / TARGET_FPS; // milliseconds per frame
 	Uint32 frameStartTime; // Tick count when this particular frame began
 	int frameTimeElapsed; // how much time has elapsed during this frame
 
@@ -735,7 +745,6 @@ export void MapScreen::run() {
 				* But also check for Limbs or NPCs who moved onto the Player's block.
 				*/
 			}
-			
 		}
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
@@ -746,6 +755,17 @@ export void MapScreen::run() {
 			) {
 				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
 			}
+		}
+
+		/* Deal with showing the title. */
+		if (showTitle) {
+			if (titleCountdown > 0) {
+				--titleCountdown; }
+			else {
+				raiseTitleRect(); }
+
+			if (getTitleBottomPosition() < -1) {
+				showTitle = false; }
 		}
 
 		checkMouseLocation(e, settingsPanel, gameMenuPanel);
@@ -859,8 +879,8 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	drawLandmarks(ui);
 	drawCharacters(ui);
 
-	/* draw the title */
-	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
+	if (showTitle) {
+		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE); }
 
 	drawPanel(ui, settingsPanel);
 	drawPanel(ui, gameMenuPanel);

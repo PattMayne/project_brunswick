@@ -30,6 +30,7 @@ import <vector>;
 import <unordered_map>;
 
 import CharacterClasses;
+import FormFactory;
 import TypeStorage;
 import GameState;
 import Resources;
@@ -49,6 +50,13 @@ public:
 		UI& ui = UI::getInstance();
 		getBackgroundTexture(ui);
 		createTitleTexture(ui);
+		playerCharacter = buildPlayerCharacter();
+
+		showTitle = true;
+		titleCountdown = 140;
+
+
+		cout << playerCharacter.getInventoryLimbs().size() << " LIMBS\n";
 	}
 
 	/* Destructor */
@@ -82,6 +90,17 @@ private:
 	void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
 
 	void createTitleTexture(UI& ui);
+
+	void raiseTitleRect() {
+		--titleRect.y; }
+
+	int getTitleBottomPosition() {
+		return titleRect.y + titleRect.h; }
+
+	bool showTitle;
+	int titleCountdown;
+
+	Character playerCharacter;
 };
 
 void CharacterCreationScreen::getBackgroundTexture(UI& ui) {
@@ -103,8 +122,8 @@ export void CharacterCreationScreen::run() {
 	gameMenuPanel.setShow(true);
 
 	/* Timeout data */
-	const int TARGET_FPS = 60;
-	const int FRAME_DELAY = 600 / TARGET_FPS; // milliseconds per frame
+	const int TARGET_FPS = 120;
+	const int FRAME_DELAY = 1200 / TARGET_FPS; // milliseconds per frame
 	Uint32 frameStartTime; // Tick count when this particular frame began
 	int frameTimeElapsed; // how much time has elapsed during this frame
 
@@ -120,6 +139,20 @@ export void CharacterCreationScreen::run() {
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
 				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
+			}
+		}
+
+		/* Deal with showing the title. */
+		if (showTitle) {
+			if (titleCountdown > 0) {
+				--titleCountdown;
+			}
+			else {
+				raiseTitleRect();
+			}
+
+			if (getTitleBottomPosition() < -1) {
+				showTitle = false;
 			}
 		}
 

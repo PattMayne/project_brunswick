@@ -77,15 +77,15 @@ export struct SuitLimbPlacement {
 * Every value for a form struct must be a const.
 */
 export struct LimbForm {
-	const string name;
-	const string slug;
-	const  int hp;
-	const int strength;
-	const int speed;
-	const int intelligence;
-	const DominanceNode dNode;
-	const vector<Point> joints;
-	const string texturePath;
+	string name;
+	string slug;
+	int hp;
+	int strength;
+	int speed;
+	int intelligence;
+	DominanceNode dNode;
+	vector<Point> joints;
+	string texturePath;
 
 	/* CONSTRUCTOR */
 	LimbForm(
@@ -287,15 +287,16 @@ public:
 	Character() {}
 	~Character() {}
 	Character(CharacterType characterType) :
-		characterType(characterType) {
-	}
+		characterType(characterType) {}
 
 	int getType() { return characterType; }
 	void setId(int id) { this->id = id; }
+	vector<Limb>& getInventoryLimbs() { return inventoryLimbs; }
+	vector<Limb>& getEquippedLimbs() { return equippedLimbs; }
 
 protected:
 	CharacterType characterType;
 	int id;
-	//vector<Limb> inventoryLimbs;
-	//vector<Limb> equippedLimbs;
+	vector<Limb> inventoryLimbs;
+	vector<Limb> equippedLimbs;
 };
