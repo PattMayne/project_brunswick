@@ -1469,12 +1469,15 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 void Map::floorize(int x, int y, int radius) {
 	/* Incoming coordinates are always a path */
 	Block& thisBlock = rows[y][x];
-	/* The path can be flipped vertical, horizontal, or not at all. */
+	if (thisBlock.getIsPath()) { return; }
+
+	/* Set up PATH BLOCK info. The path can be flipped vertical, horizontal, or not at all. */
 	thisBlock.setPathFlipOption(rand() % 3);
 	/* The path can also be rotated 90 degrees, 270 degrees, or not at all. */
 	int pathRotateOption = rand() % 3;
 	thisBlock.setPathRotateAngle(pathRotateOption == 2 ? 270 : pathRotateOption == 1 ? 90 : 0);
 	thisBlock.setIsPath(true);
+
 	/* If the block was already a floor, don't bother clearing the surrounding blocks. */
 	if (thisBlock.getIsFloor()) { return; }
 	thisBlock.setIsFloor(true);

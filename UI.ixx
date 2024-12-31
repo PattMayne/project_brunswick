@@ -1075,7 +1075,12 @@ void UI::rebuildMainMenuPanel(Panel& mainMenuPanel) {
 	mainMenuPanel.rebuildSelf(panelRect, buttons);
 }
 
-/* SETTINGS PANEL CREATION AND RE-BUILDING */
+/* 
+* 
+* SETTINGS PANEL CREATION AND RE-BUILDING
+* 
+* 
+*/
 
 
 /* build and deliver basic info for settings panel buttons */
@@ -1127,7 +1132,15 @@ void UI::rebuildSettingsPanel(Panel& settingsPanel, ScreenType context) {
 
 
 
-/* MAP MENU COMPONENTS */
+/* 
+* 
+* 
+* 
+*							MAP MENU COMPONENTS
+* 
+* 
+* 
+*/
 
 /* build and deliver basic info for main menu panel buttons */
 vector<PreButtonStruct> UI::getGameMenuPreButtonStructs() {
@@ -1158,6 +1171,20 @@ void UI::rebuildGameMenuPanel(Panel& gameMenuPanel) {
 	auto [panelRect, buttons] = createGameMenuPanelComponents();
 	gameMenuPanel.rebuildSelf(panelRect, buttons);
 }
+
+
+/*
+* 
+* 
+* 
+* 
+*				CHARACTER CREATION PANELS
+* 
+* 
+* 
+* 
+* 
+*/
 
 
 

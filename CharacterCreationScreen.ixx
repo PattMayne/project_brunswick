@@ -15,6 +15,13 @@
 * -------------------- Draw Position is not sufficient anymore. We need Anchor Joint... nested branches of Limbs... this will be complicated, but it will be cool in the end.
 * 
 * 
+* TO DO:
+* 1.	Build the PANELS.
+* ---------- MAIN PANEL:: SHOW LIMBS / HIDE LIMBS / SAVE / CLEAR
+* ---------- LOADED LIMB PANEL:: NEXT LIMB JOINT / NEXT CHARACTER JOINT / ROTATE LIMB CLOCKWISE / COUNTER-CLOCKWISE /  REMOVE LIMB
+* ---------- INVENTORY PANEL:: Make it a full-screen panel. A button for each limb.
+* ---------- LOADED LIMB PANEL:: click a limb to bring it to the top.
+* 
 */
 
 module;
@@ -37,6 +44,12 @@ import Resources;
 import UI;
 
 using namespace std;
+
+enum class CreationMode {
+	Review, /* DEFAULT. Show default panel. */
+	ChooseLimb, /* Show list of limbs. */
+	LimbLoaded /* Limb is loaded. Show LoadedLimb Panel. */
+};
 
 /* Map Screen class: where we navigate worlds, dungeons, and buildings. */
 export class CharacterCreationScreen {

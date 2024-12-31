@@ -74,8 +74,18 @@ export enum class ButtonOption {
 	NewGame, LoadGame, Settings, About, Exit,
 	/* Settings buttons */
 	Mobile, Tablet, Desktop, Fullscreen,
-	// TO COME: more options for Map, Battle, and Character Creation screens
+	// TO COME: more options for Map, Battle
 	MapOptions,
+
+	/* CHARACTER CREATION SCREEN BUTTONS */
+	/* Review Mode panel buttons. */
+	ShowLimbs, ClearSuit, SaveSuit,
+	/* Inventory (ChooseLimb mode) Panel Buttons. */
+	LoadLimb, /* Will be re-used dynamically by ALL limb buttons. */
+	NextPage, PreviousPage,
+	/* Loaded Limb (LimbLoaded mode) panel buttons. */
+	NextCharJoint, NextLimbJoint, RotateClockwise, RotateCounterClockwise, UnloadLimb
+
 };
 
 /* When a button is clicked it must send back one of these Structs.
