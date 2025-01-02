@@ -90,6 +90,7 @@ export class UI {
 		TTF_Font* getTitleFont() { return titleFont; }
 		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
 
+		/* MAIN MENU PANEL. */
 		Panel createMainMenuPanel();
 		void rebuildMainMenuPanel(Panel& mainMenuPanel);
 
@@ -98,6 +99,17 @@ export class UI {
 
 		Panel createGameMenuPanel();
 		void rebuildGameMenuPanel(Panel& gameMenuPanel);
+
+		/* CHARACTER CREATION PANELS. */
+
+
+		Panel createReviewModePanel();
+		Panel createLimbLoadedModePanel(); /* Does this need a limb id? */
+		Panel createChooseLimbModePanel(vector<int> limbIDs);
+
+		/* NEXT: make rebuildPanel functions for Character Creation screen. */
+
+
 
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
@@ -175,6 +187,16 @@ export class UI {
 		/* Map Menu panel building functions */
 		tuple<SDL_Rect, vector<Button>> createGameMenuPanelComponents();
 		vector<PreButtonStruct> getGameMenuPreButtonStructs();
+
+		/* Character Creation panel building functions. */
+
+		tuple<SDL_Rect, vector<Button>> createReviewModePanelComponents();
+		tuple<SDL_Rect, vector<Button>> createLimbLoadedModePanelComponents();
+		tuple<SDL_Rect, vector<Button>> createChooseLimbModePanelComponents(vector<int> limbIDs);
+
+		vector<PreButtonStruct> getReviewModePreButtonStructs();
+		vector<PreButtonStruct> getLimbLoadedModePreButtonStructs();
+		vector<PreButtonStruct> getChooseLimbModePreButtonStructs(vector<int> limbIDs);
 
 		void prepareColors();
 		void getAndStoreWindowSize();
@@ -1021,6 +1043,11 @@ void UI::resizeWindow(WindowResType newResType) {
 * 
 * We can have VERTICAL panels (going all up the side)
 * and HORIZONTAL panels (spread across the bottom)
+* 
+* Creating a button panel requires three stages:
+* 1. create the preButtonStructs.
+* 2. create the components (including buttons) from the structs.
+* 3. create the panel which contains the buttons.
 */
 
 
@@ -1186,6 +1213,102 @@ void UI::rebuildGameMenuPanel(Panel& gameMenuPanel) {
 * 
 */
 
+/* Make Pre-Button Structs. */
+
+/* build and deliver basic info for default Character Creation panel buttons. */
+vector<PreButtonStruct> UI::getReviewModePreButtonStructs() {
+	Resources& resources = Resources::getInstance();
+	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
+	return {
+		buildPreButtonStruct(resources.getButtonText("LIMBS"), ButtonOption::ShowLimbs),
+		buildPreButtonStruct(resources.getButtonText("SAVE"), ButtonOption::SaveSuit),
+		buildPreButtonStruct(resources.getButtonText("CLEAR"), ButtonOption::ClearSuit)
+	};
+}
+
+/* build a list of Limb buttons for the Character Creation screen. */
+vector<PreButtonStruct> UI::getChooseLimbModePreButtonStructs(vector<int> limbIDs) {
+
+	/* 
+	* TO DO:
+	* 
+	* These buttons might need to be built differently in every way.
+	* They don't display text, but instead they display an image.
+	* REVIEW AND REFACTOR.
+	* 
+	* WHAT WE NEED:
+	* Each button should accomodate a square image, and hold a limb_id.
+	* ((  We will need the database VERY SOON )).
+	* We will probably need a new subclass of Button specifically for the CharacterCreation screen.
+	* 
+	*/
+
+	vector<PreButtonStruct> limbPreButtonStructs;
+
+	for (int i = 0; i < limbIDs.size(); ++i) {
+		/* For now just make the limbID the text. */
+		string limbText = "LIMB #" + limbIDs[i];
+		limbPreButtonStructs.push_back(buildPreButtonStruct(limbText, ButtonOption::LoadLimb));
+	}
+
+	return limbPreButtonStructs;
+}
+
+/* build and deliver basic info for default Character Creation panel buttons. */
+vector<PreButtonStruct> UI::getLimbLoadedModePreButtonStructs() {
+	Resources& resources = Resources::getInstance();
+	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
+	return {
+		buildPreButtonStruct(resources.getButtonText("NEXT_CHARACTER_JOINT"), ButtonOption::NextCharJoint),
+		buildPreButtonStruct(resources.getButtonText("NEXT_LIMB_JOINT"), ButtonOption::NextLimbJoint),
+		buildPreButtonStruct(resources.getButtonText("ROTATE_CLOCKWISE"), ButtonOption::RotateClockwise),
+		buildPreButtonStruct(resources.getButtonText("ROTATE_COUNTERCLOCKWISE"), ButtonOption::RotateCounterClockwise),
+		buildPreButtonStruct(resources.getButtonText("UNLOAD_LIMB"), ButtonOption::UnloadLimb)
+	};
+}
+
+/* Get the components (including panel object and buttons) for the Character Creation panels. */
+
+
+tuple<SDL_Rect, vector<Button>> UI::createReviewModePanelComponents() {
+	vector<PreButtonStruct> preButtonStructs = getReviewModePreButtonStructs();
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	return { panelRect, buttons };
+}
+
+
+tuple<SDL_Rect, vector<Button>> UI::createLimbLoadedModePanelComponents() {
+	vector<PreButtonStruct> preButtonStructs = getLimbLoadedModePreButtonStructs();
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	return { panelRect, buttons };
+}
+
+tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<int> limbIDs) {
+	vector<PreButtonStruct> preButtonStructs = getChooseLimbModePreButtonStructs(limbIDs);
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	return { panelRect, buttons };
+}
+
+/* Create the actual panels. */
+
+Panel UI::createReviewModePanel() {
+	auto [panelRect, buttons] = createReviewModePanelComponents();
+	return Panel(panelRect, buttons);
+}
+
+/* Does this need a limb id? */
+Panel UI::createLimbLoadedModePanel() {
+	auto [panelRect, buttons] = createLimbLoadedModePanelComponents();
+	return Panel(panelRect, buttons);
+}
+
+Panel UI::createChooseLimbModePanel(vector<int> limbIDs) {
+	auto [panelRect, buttons] = createChooseLimbModePanelComponents(limbIDs);
+	return Panel(panelRect, buttons);
+}
 
 
 /*
