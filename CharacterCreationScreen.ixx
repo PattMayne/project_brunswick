@@ -17,10 +17,10 @@
 * 
 * TO DO:
 * 1.	Build the PANELS.
-* ---------- MAIN PANEL:: SHOW LIMBS / HIDE LIMBS / SAVE / CLEAR
-* ---------- LOADED LIMB PANEL:: NEXT LIMB JOINT / NEXT CHARACTER JOINT / ROTATE LIMB CLOCKWISE / COUNTER-CLOCKWISE /  REMOVE LIMB
-* ---------- INVENTORY PANEL:: Make it a full-screen panel. A button for each limb.
+* ---------- INVENTORY PANEL:: DOES NOT WORK. FIX IT. Also add "HIDE LIMBS" button.
 * ---------- LOADED LIMB PANEL:: click a limb to bring it to the top.
+* 2. ANIMATE the Panel Buttons.
+* 3. Rebuild Panel functions in UI file.
 * 
 */
 
@@ -99,11 +99,11 @@ private:
 	Panel limbLoadedPanel;
 	Panel chooseLimbPanel;
 
-	void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
+	void draw(UI& ui);
 	void drawPanel(UI& ui, Panel& panel);
 
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
-	void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel);
+	void checkMouseLocation(SDL_Event& e);
 
 	void getBackgroundTexture(UI& ui);
 	void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
@@ -142,7 +142,8 @@ export void CharacterCreationScreen::run() {
 	chooseLimbPanel = ui.createChooseLimbModePanel({ 1, 2, 3, 4, 5 });
 
 	settingsPanel.setShow(false);
-	gameMenuPanel.setShow(true);
+	gameMenuPanel.setShow(false);
+	reviewModePanel.setShow(true);
 
 	/* Timeout data */
 	const int TARGET_FPS = 120;
@@ -179,8 +180,8 @@ export void CharacterCreationScreen::run() {
 			}
 		}
 
-		checkMouseLocation(e, settingsPanel, gameMenuPanel);
-		draw(ui, settingsPanel, gameMenuPanel);
+		checkMouseLocation(e);
+		draw(ui);
 
 		/* Delay so the app doesn't just crash */
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -194,7 +195,7 @@ export void CharacterCreationScreen::run() {
 }
 
 
-void CharacterCreationScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
+void CharacterCreationScreen::draw(UI& ui) {
 	//unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
@@ -207,11 +208,11 @@ void CharacterCreationScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenu
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 
 	drawPanel(ui, settingsPanel);
-	drawPanel(ui, gameMenuPanel);
-
+	//drawPanel(ui, gameMenuPanel);
+	drawPanel(ui, reviewModePanel);
 	/* WHEN TO DRAW NEW PANELS ? And they are NOT created properly. */
 
-	//drawPanel(ui, reviewModePanel);
+	
 	//drawPanel(ui, limbLoadedPanel);
 	//drawPanel(ui, chooseLimbPanel);
 
@@ -297,7 +298,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				case ButtonOption::Back:
 					// switch to other panel
 					settingsPanel.setShow(false);
-					gameMenuPanel.setShow(true);
+					reviewModePanel.setShow(true);
 					break;
 				case ButtonOption::Exit:
 					/* back to menu screen */
@@ -307,9 +308,9 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					cout << "ERROR\n";
 				}
 			}
-			else if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
+			else if (reviewModePanel.getShow() && reviewModePanel.isInPanel(mouseX, mouseY)) {
 				cout << "\n\nCLICK MAP MENU \n\n";
-				ButtonClickStruct clickStruct = gameMenuPanel.checkButtonClick(mouseX, mouseY);
+				ButtonClickStruct clickStruct = reviewModePanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
 				switch (clickStruct.buttonOption) {
@@ -318,7 +319,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					break;
 				case ButtonOption::Settings:
 					settingsPanel.setShow(true);
-					gameMenuPanel.setShow(false);
+					reviewModePanel.setShow(false);
 					break;
 				default:
 					cout << "ERROR\n";
@@ -329,11 +330,14 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 	}
 }
 
-void CharacterCreationScreen::checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel) {
+void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 	/* send the x and y to the panel and its buttons to change the color */
 	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
 	if (gameMenuPanel.getShow()) { gameMenuPanel.checkMouseOver(mouseX, mouseY); }
+	if (reviewModePanel.getShow()) { reviewModePanel.checkMouseOver(mouseX, mouseY); }
+	if (limbLoadedPanel.getShow()) { limbLoadedPanel.checkMouseOver(mouseX, mouseY); }
+	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
 }

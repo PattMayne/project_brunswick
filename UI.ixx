@@ -1224,7 +1224,8 @@ vector<PreButtonStruct> UI::getReviewModePreButtonStructs() {
 	return {
 		buildPreButtonStruct(resources.getButtonText("LIMBS"), ButtonOption::ShowLimbs),
 		buildPreButtonStruct(resources.getButtonText("SAVE"), ButtonOption::SaveSuit),
-		buildPreButtonStruct(resources.getButtonText("CLEAR"), ButtonOption::ClearSuit)
+		buildPreButtonStruct(resources.getButtonText("CLEAR"), ButtonOption::ClearSuit),
+		buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings)
 	};
 }
 
