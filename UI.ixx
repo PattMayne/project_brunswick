@@ -653,6 +653,8 @@ export class Panel {
 			show = false;
 		}
 
+		Panel() {}
+
 		SDL_Rect getRect() { return rect; }
 		vector<Button> getButtons() { return buttons; }
 

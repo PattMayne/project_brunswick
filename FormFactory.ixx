@@ -137,8 +137,6 @@ MapForm forestMap() {
 
 	/* create the TEXTURES */
 
-	SDL_Surface* pathSurface = IMG_Load("data/maps/forest/path_001.png");
-
 	/* FLOOR surfaces. */
 	SDL_Surface* floorSurface001 = IMG_Load("data/maps/forest/floor_001.png");
 	SDL_Surface* floorSurface002 = IMG_Load("data/maps/forest/floor_002.png");
@@ -174,9 +172,7 @@ MapForm forestMap() {
 		SDL_CreateTextureFromSurface(ui.getMainRenderer(), pathSurface003)
 	};
 
-	forestMap.pathTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), pathSurface);
 
-	SDL_FreeSurface(pathSurface);
 	SDL_FreeSurface(floorSurface001);
 	SDL_FreeSurface(floorSurface002);
 	SDL_FreeSurface(floorSurface003);

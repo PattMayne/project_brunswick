@@ -93,10 +93,16 @@ private:
 	SDL_Texture* titleTexture;
 	SDL_Rect titleRect;
 
+	Panel settingsPanel;
+	Panel gameMenuPanel;
+	Panel reviewModePanel;
+	Panel limbLoadedPanel;
+	Panel chooseLimbPanel;
+
 	void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 	void drawPanel(UI& ui, Panel& panel);
 
-	void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
+	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
 	void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel);
 
 	void getBackgroundTexture(UI& ui);
@@ -128,9 +134,13 @@ export void CharacterCreationScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
-	/* panels */
-	Panel settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-	Panel gameMenuPanel = ui.createGameMenuPanel();
+	/* create panels */
+	settingsPanel = ui.createSettingsPanel(ScreenType::Map);
+	gameMenuPanel = ui.createGameMenuPanel();
+	reviewModePanel = ui.createReviewModePanel();
+	limbLoadedPanel = ui.createLimbLoadedModePanel();
+	chooseLimbPanel = ui.createChooseLimbModePanel({ 1, 2, 3, 4, 5 });
+
 	settingsPanel.setShow(false);
 	gameMenuPanel.setShow(true);
 
@@ -151,7 +161,7 @@ export void CharacterCreationScreen::run() {
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
-				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
+				handleEvent(e, running, gameState);
 			}
 		}
 
@@ -198,6 +208,13 @@ void CharacterCreationScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenu
 
 	drawPanel(ui, settingsPanel);
 	drawPanel(ui, gameMenuPanel);
+
+	/* WHEN TO DRAW NEW PANELS ? And they are NOT created properly. */
+
+	//drawPanel(ui, reviewModePanel);
+	//drawPanel(ui, limbLoadedPanel);
+	//drawPanel(ui, chooseLimbPanel);
+
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
@@ -239,7 +256,7 @@ void CharacterCreationScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMe
 
 
 /* Process user input */
-void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState) {
+void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) {
 		cout << "\nQUIT\n";
