@@ -149,6 +149,11 @@ MapForm forestMap() {
 	SDL_Surface* wallSurface002 = IMG_Load("data/maps/forest/wall_002.png");
 	SDL_Surface* wallSurface003 = IMG_Load("data/maps/forest/wall_003.png");
 
+	/* PATH surfaces. */
+	SDL_Surface* pathSurface001 = IMG_Load("data/maps/forest/path_001.png");
+	SDL_Surface* pathSurface002 = IMG_Load("data/maps/forest/path_002.png");
+	SDL_Surface* pathSurface003 = IMG_Load("data/maps/forest/path_003.png");
+
 	/* DO ERROR CHECKS */
 
 	forestMap.floorTextures = {
@@ -163,6 +168,12 @@ MapForm forestMap() {
 		SDL_CreateTextureFromSurface(ui.getMainRenderer(), wallSurface003)
 	};
 
+	forestMap.pathTextures = {
+		SDL_CreateTextureFromSurface(ui.getMainRenderer(), pathSurface001),
+		SDL_CreateTextureFromSurface(ui.getMainRenderer(), pathSurface002),
+		SDL_CreateTextureFromSurface(ui.getMainRenderer(), pathSurface003)
+	};
+
 	forestMap.pathTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), pathSurface);
 
 	SDL_FreeSurface(pathSurface);
@@ -173,6 +184,10 @@ MapForm forestMap() {
 	SDL_FreeSurface(wallSurface001);
 	SDL_FreeSurface(wallSurface002);
 	SDL_FreeSurface(wallSurface003);
+
+	SDL_FreeSurface(pathSurface001);
+	SDL_FreeSurface(pathSurface002);
+	SDL_FreeSurface(pathSurface003);
 
 	forestMap.nativeLimbs = getMapLimbs(forestMap.mapLevel);
 

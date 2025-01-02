@@ -289,7 +289,7 @@ class Block {
 	public:
 		/* constructor */
 		Block(bool isFloor = true)
-			: isFloor(isFloor), floorTextureIndex(0), isPath(false), pathFlipOption(0), pathRotateAngle(0) { }
+			: isFloor(isFloor), floorTextureIndex(0), isPath(false), pathFlipOption(0), pathRotateAngle(0), wallTextureIndex(0), pathTextureIndex(0) { }
 
 		/* getters */
 		bool getIsFloor() { return isFloor; }
@@ -298,18 +298,21 @@ class Block {
 		int getFloorTextureIndex() { return floorTextureIndex; }
 		void setFloorTextureIndex(int index) { floorTextureIndex = index; }
 		int getWallTextureIndex() { return wallTextureIndex; }
-		void setWallTextureIndex(int index) { wallTextureIndex = index; }
-		void setWallIsFlipped(bool flipWall) { wallIsFlipped = flipWall; }
 		bool getWallIsFlipped() { return wallIsFlipped; }
 		bool getIsPath() { return isPath; }
 		int getPathFlipOption() { return pathFlipOption; }
 		int getPathRotateAngle() { return pathRotateAngle; }
+		int getPathTextureIndex() { return pathTextureIndex; }
 
 		/* setters */
 		void setPathRotateAngle(int angle = 0) { pathRotateAngle = angle; }
 		void setPathFlipOption(int option = 0) { pathFlipOption = option; }
 		void setIsFloor(bool incomingIsFloor) { isFloor = incomingIsFloor; }
 		void setIsPath(bool incomingIsPath = true) { isPath = incomingIsPath; }
+		void setWallTextureIndex(int index) { wallTextureIndex = index; }
+		void setWallIsFlipped(bool flipWall) { wallIsFlipped = flipWall; }
+		void setPathTextureIndex(int index) { pathTextureIndex = index; }
+
 		void loot() {
 			isLooted = true;
 			/*
@@ -331,6 +334,7 @@ class Block {
 		int pathRotateAngle;
 		int floorTextureIndex;
 		int wallTextureIndex;
+		int pathTextureIndex;
 		bool wallIsFlipped;
 };
 
@@ -348,7 +352,7 @@ class Map {
 			return mapForm.floorTextures[index]; }
 		SDL_Texture* getWallTexture(int index) {
 			return mapForm.wallTextures[index]; }
-		SDL_Texture* getPathTexture() { return mapForm.pathTexture; }
+		SDL_Texture* getPathTexture(int index) { return mapForm.pathTextures[index]; }
 		vector<Limb>& getRoamingLimbs() { return roamingLimbs; }
 		string getName() { return mapForm.name; }
 		string getSlug() { return mapForm.slug; }
@@ -1090,7 +1094,7 @@ void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 		int pathFlipOption = block.getPathFlipOption();
 		SDL_RenderCopyEx(
 			ui.getMainRenderer(),
-			map.getPathTexture(),
+			map.getPathTexture(block.getPathTextureIndex()),
 			NULL, &targetRect,
 			block.getPathRotateAngle(),
 			NULL,
@@ -1472,6 +1476,7 @@ void Map::floorize(int x, int y, int radius) {
 	if (thisBlock.getIsPath()) { return; }
 
 	/* Set up PATH BLOCK info. The path can be flipped vertical, horizontal, or not at all. */
+	thisBlock.setPathTextureIndex(rand() % mapForm.pathTextures.size());
 	thisBlock.setPathFlipOption(rand() % 3);
 	/* The path can also be rotated 90 degrees, 270 degrees, or not at all. */
 	int pathRotateOption = rand() % 3;
