@@ -1119,33 +1119,29 @@ void MapScreen::drawMap(UI& ui) {
 	vector<vector<Block>>& rows = map.getRows();
 	SDL_Rect targetRect = { 0, 0, blockWidth, blockWidth };
 
-	/* start with the TOP ROW that we want to draw, then work our way down */
+	/* start with the TOP ROW that we want to draw, then work our way down. */
 	for (int y = drawStartY; y < drawStartY + yViewRes; ++y) {
 		vector<Block>& blocks = rows[y];
 
+		/* Start with the left-most BLOCK that we want to draw, then work our way across. */
 		for (int x = drawStartX; x < drawStartX + xViewRes; ++x) {
 			
 			if (animate && animationType == AnimationType::Player) {
 
 				/* Shifting DOWN or UP. */
 				if (drawStartY > lastDrawStartY) {
-					targetRect.y = ((y - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
-				}
+					targetRect.y = ((y - lastDrawStartY) * blockWidth) - blockAnimationIncrement; }
 				else if (drawStartY < lastDrawStartY) {
-					targetRect.y = ((y - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
-				}
+					targetRect.y = ((y - lastDrawStartY) * blockWidth) + blockAnimationIncrement; }
 				else {
 					/* No vertical shift. */
-					targetRect.y = (y - drawStartY) * blockWidth;
-				}
+					targetRect.y = (y - drawStartY) * blockWidth; }
 
 				/* Shifting RIGHT or LEFT. */
 				if (drawStartX > lastDrawStartX) {
-					targetRect.x = ((x - lastDrawStartX) * blockWidth) - blockAnimationIncrement;
-				}
+					targetRect.x = ((x - lastDrawStartX) * blockWidth) - blockAnimationIncrement; }
 				else if (drawStartX < lastDrawStartX) {
-					targetRect.x = ((x - lastDrawStartX) * blockWidth) + blockAnimationIncrement;
-				}
+					targetRect.x = ((x - lastDrawStartX) * blockWidth) + blockAnimationIncrement; }
 				else {
 					/* No horiztonal shift. */
 					targetRect.x = (x - drawStartX) * blockWidth; }

@@ -1231,6 +1231,7 @@ vector<PreButtonStruct> UI::getReviewModePreButtonStructs() {
 
 /* build a list of Limb buttons for the Character Creation screen. */
 vector<PreButtonStruct> UI::getChooseLimbModePreButtonStructs(vector<int> limbIDs) {
+	Resources& resources = Resources::getInstance();
 
 	/* 
 	* TO DO:
@@ -1250,9 +1251,13 @@ vector<PreButtonStruct> UI::getChooseLimbModePreButtonStructs(vector<int> limbID
 
 	for (int i = 0; i < limbIDs.size(); ++i) {
 		/* For now just make the limbID the text. */
-		string limbText = "LIMB #" + limbIDs[i];
+		string limbText = "LIMB #" + to_string(limbIDs[i]);
 		limbPreButtonStructs.push_back(buildPreButtonStruct(limbText, ButtonOption::LoadLimb));
 	}
+
+	/* Allow user to exit menu/mode. */
+
+	limbPreButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("BACK"), ButtonOption::Back));
 
 	return limbPreButtonStructs;
 }

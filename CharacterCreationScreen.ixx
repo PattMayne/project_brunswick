@@ -214,7 +214,7 @@ void CharacterCreationScreen::draw(UI& ui) {
 
 	
 	//drawPanel(ui, limbLoadedPanel);
-	//drawPanel(ui, chooseLimbPanel);
+	drawPanel(ui, chooseLimbPanel);
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
@@ -320,6 +320,43 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				case ButtonOption::Settings:
 					settingsPanel.setShow(true);
 					reviewModePanel.setShow(false);
+					break;
+				case ButtonOption::ShowLimbs:
+					chooseLimbPanel.setShow(true);
+					reviewModePanel.setShow(false);
+					break;
+				case ButtonOption::ClearSuit:
+					cout << "CLEARING SUIT\n";
+					//settingsPanel.setShow(true);
+					//reviewModePanel.setShow(false);
+					break;
+				case ButtonOption::SaveSuit:
+					cout << "SAVING SUIT\n";
+					/*settingsPanel.setShow(true);
+					reviewModePanel.setShow(false);*/
+					break;
+				default:
+					cout << "ERROR\n";
+
+				}
+			}
+			else if (chooseLimbPanel.getShow() && chooseLimbPanel.isInPanel(mouseX, mouseY)) {
+				cout << "\n\nCLICK MAP MENU \n\n";
+				ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
+				UI& ui = UI::getInstance();
+				/* see what button might have been clicked : */
+				switch (clickStruct.buttonOption) {
+				case ButtonOption::LoadLimb:
+					/* 
+					* Get the limb index. Where should it be stored? Edit the BUTTON. 
+					* BUTTON should also optionally take a texture as an argument.
+					*/
+					cout << "Loading Limb.\n";
+					break;
+				case ButtonOption::Back:
+					// switch to other panel
+					chooseLimbPanel.setShow(false);
+					reviewModePanel.setShow(true);
 					break;
 				default:
 					cout << "ERROR\n";
