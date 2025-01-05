@@ -139,7 +139,25 @@ export void CharacterCreationScreen::run() {
 	gameMenuPanel = ui.createGameMenuPanel();
 	reviewModePanel = ui.createReviewModePanel();
 	limbLoadedPanel = ui.createLimbLoadedModePanel();
-	chooseLimbPanel = ui.createChooseLimbModePanel({ 1, 2, 3, 4, 5 });
+
+
+	/*
+	* Here I need to already have the LIMBS vector.
+	* I need to build LimbButtonData structs and send them in.
+	*/
+
+	/* This needs to go somewhere else. */
+
+	vector<LimbButtonData> limbBtnDataStructs;
+	vector<Limb> inventoryLimbs = playerCharacter.getInventoryLimbs();
+
+	for (int i = 0; i < inventoryLimbs.size(); ++i) {
+		/* FOR NOW we want the index. But when we bring in the database, we will use the ID. So the LimbButtonData says id instead of index. */
+		Limb thisLimb = inventoryLimbs[i];
+		limbBtnDataStructs.emplace_back(thisLimb.getTexture(), thisLimb.getName(), i);
+	}
+
+	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
 
 	settingsPanel.setShow(false);
 	gameMenuPanel.setShow(false);
@@ -350,6 +368,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					/* 
 					* Get the limb index. Where should it be stored? Edit the BUTTON. 
 					* BUTTON should also optionally take a texture as an argument.
+					* ClickStruct has an ITEM ID!!!!!
 					*/
 					cout << "Loading Limb.\n";
 					break;
