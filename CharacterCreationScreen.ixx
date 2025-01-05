@@ -68,6 +68,22 @@ public:
 		showTitle = true;
 		titleCountdown = 140;
 
+		/* create panels */
+		settingsPanel = ui.createSettingsPanel(ScreenType::Map);
+		gameMenuPanel = ui.createGameMenuPanel();
+		reviewModePanel = ui.createReviewModePanel();
+		limbLoadedPanel = ui.createLimbLoadedModePanel();
+
+		/* Build a vector of data structures so the UI can build the panel of Limb buttons. */
+		vector<LimbButtonData> limbBtnDataStructs;
+		vector<Limb>& inventoryLimbs = playerCharacter.getInventoryLimbs();
+
+		for (int i = 0; i < inventoryLimbs.size(); ++i) {
+			/* FOR NOW we want the index. But when we bring in the database, we will use the ID. So the LimbButtonData says id instead of index. */
+			Limb& thisLimb = inventoryLimbs[i];
+			limbBtnDataStructs.emplace_back(thisLimb.getTexture(), thisLimb.getName(), i); }
+
+		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
 
 		cout << playerCharacter.getInventoryLimbs().size() << " LIMBS\n";
 	}
@@ -134,30 +150,6 @@ export void CharacterCreationScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
-	/* create panels */
-	settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-	gameMenuPanel = ui.createGameMenuPanel();
-	reviewModePanel = ui.createReviewModePanel();
-	limbLoadedPanel = ui.createLimbLoadedModePanel();
-
-
-	/*
-	* Here I need to already have the LIMBS vector.
-	* I need to build LimbButtonData structs and send them in.
-	*/
-
-	/* This needs to go somewhere else. */
-
-	vector<LimbButtonData> limbBtnDataStructs;
-	vector<Limb> inventoryLimbs = playerCharacter.getInventoryLimbs();
-
-	for (int i = 0; i < inventoryLimbs.size(); ++i) {
-		/* FOR NOW we want the index. But when we bring in the database, we will use the ID. So the LimbButtonData says id instead of index. */
-		Limb thisLimb = inventoryLimbs[i];
-		limbBtnDataStructs.emplace_back(thisLimb.getTexture(), thisLimb.getName(), i);
-	}
-
-	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
 
 	settingsPanel.setShow(false);
 	gameMenuPanel.setShow(false);
@@ -327,7 +319,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				}
 			}
 			else if (reviewModePanel.getShow() && reviewModePanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICK MAP MENU \n\n";
+				cout << "\n\nCLICK REVIEW MENU \n\n";
 				ButtonClickStruct clickStruct = reviewModePanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
@@ -359,28 +351,43 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				}
 			}
 			else if (chooseLimbPanel.getShow() && chooseLimbPanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICK MAP MENU \n\n";
+				cout << "\n\nCLICK LIMB MENU \n\n";
 				ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
-				/* see what button might have been clicked : */
-				switch (clickStruct.buttonOption) {
-				case ButtonOption::LoadLimb:
-					/* 
-					* Get the limb index. Where should it be stored? Edit the BUTTON. 
-					* BUTTON should also optionally take a texture as an argument.
-					* ClickStruct has an ITEM ID!!!!!
-					*/
-					cout << "Loading Limb.\n";
-					break;
-				case ButtonOption::Back:
-					// switch to other panel
-					chooseLimbPanel.setShow(false);
-					reviewModePanel.setShow(true);
-					break;
-				default:
-					cout << "ERROR\n";
 
+				/* If we sent in a limb id/idex: */
+				if (clickStruct.itemID >= 0) {
+					Limb& clickedLimb = playerCharacter.getInventoryLimbs()[clickStruct.itemID];
+
+					/* see what button might have been clicked : */
+					switch (clickStruct.buttonOption) {
+					case ButtonOption::LoadLimb:
+						/*
+						* Get the limb index. Where should it be stored? Edit the BUTTON.
+						* BUTTON should also optionally take a texture as an argument.
+						* ClickStruct has an ITEM ID!!!!!
+						*/
+						cout << "Loading Limb: " << clickedLimb.getName() << "\n";
+						break;
+					default:
+						cout << "ERROR\n";
+					}
 				}
+				else {
+					/* see what button might have been clicked : */
+					switch (clickStruct.buttonOption) {
+					case ButtonOption::Back:
+						// switch to other panel
+						chooseLimbPanel.setShow(false);
+						reviewModePanel.setShow(true);
+						break;
+					default:
+						cout << "ERROR\n";
+
+					}
+				}
+
+				
 			}
 		}
 	}

@@ -183,6 +183,7 @@ export class UI {
 		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
+		vector<Button> buildLimbButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 
 		/* settings panel building functions */
 		tuple<SDL_Rect, vector<Button>> createSettingsPanelComponents(ScreenType context = ScreenType::Menu);
@@ -287,18 +288,15 @@ export class Button {
 		Button(
 			SDL_Rect buttonRect,
 			SDL_Rect textRect,
-			string incomingText,
+			string text,
 			TTF_Font* buttonFont,
 			unordered_map<string, SDL_Color> colors,
 			SDL_Renderer* mainRenderer,
-			ButtonClickStruct incomingClickStruct
-		){
-			clickStruct = incomingClickStruct;
+			ButtonClickStruct clickStruct
+		) : text(text), clickStruct(clickStruct), rect(buttonRect)
+		{
 			mouseOver = false;
-			rect = buttonRect;
-			text = incomingText;
-
-			createButtonTextures(buttonRect, textRect, incomingText, buttonFont, colors, mainRenderer);
+			createButtonTextures(buttonRect, textRect, text, buttonFont, colors, mainRenderer);
 		}
 
 		// Might turn this private since we should only operate on it internally
@@ -740,7 +738,19 @@ struct PreButtonStruct {
 *
 *
 *
-*
+* Building panels is complicated.
+* We must build buttons to populate the panels,
+* and the size of the panels depends on the dimensions of the buttons.
+* But sometimes a button's size depends on the size of other buttons.
+* So we build PreButtonStructs with SOME button data,
+* and use that to build the panel's rect(angle),
+* then use that panel's rect to build the ACTUAL buttons.
+* Once we have the ACTUAL buttons and the panel's rect,
+* then we can construct (and return) the actual panel.
+* 
+* Some panels follow a similar pattern, but others are more unique.
+* The panel of limbs on the character creation screen has rows AND columns.
+* Its buttons have pictures. Will they have text too??
 */
 
 /* Buttons need their parent panel rect before they can be built.
@@ -779,6 +789,52 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 
 /* NOW that we have both some info about the buttons, plus the panel rect, make the actual buttons. */
 vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect) {
+	vector<Button> buttons;
+	const int xForAll = PANEL_PADDING;
+	int widthForAll = panelRect.w - (PANEL_PADDING * 2);
+	int heightSoFar = panelRect.y + PANEL_PADDING;
+
+
+	for (int i = 0; i < preButtonStructs.size(); ++i) {
+		/* start at the top of the panelRect PLUS panelPadding */
+
+		SDL_Rect thisButtonRect = {
+			xForAll,
+			heightSoFar,
+			widthForAll,
+			preButtonStructs[i].textRectHeight + (buttonPadding * 2)
+		};
+
+		/* RELATIVE rect to be later painted onto the button itself (when fed into the constructor)*/
+		SDL_Rect thisTextRect = {
+			// text x position is HALF of the difference b/w button width and text width
+			(thisButtonRect.w - preButtonStructs[i].textRectWidth) / 2,
+			buttonPadding,
+			preButtonStructs[i].textRectWidth,
+			preButtonStructs[i].textRectHeight
+		};
+
+		buttons.push_back(
+			Button(
+				thisButtonRect,
+				thisTextRect,
+				preButtonStructs[i].text,
+				buttonFont,
+				colorsByFunction,
+				mainRenderer,
+				preButtonStructs[i].clickStruct));
+
+		/* increment heightSoFar */
+		heightSoFar += thisButtonRect.h + PANEL_PADDING;
+	}
+
+	return buttons;
+}
+
+/*
+* Building buttons specifically for the Inventory Limbs button panel.
+*/
+vector<Button> UI::buildLimbButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect) {
 	vector<Button> buttons;
 	const int xForAll = PANEL_PADDING;
 	int widthForAll = panelRect.w - (PANEL_PADDING * 2);
@@ -1114,6 +1170,7 @@ void UI::rebuildMainMenuPanel(Panel& mainMenuPanel) {
 
 /* 
 * 
+* 
 * SETTINGS PANEL CREATION AND RE-BUILDING
 * 
 * 
@@ -1258,13 +1315,19 @@ vector<PreButtonStruct> UI::getChooseLimbModePreButtonStructs(vector<LimbButtonD
 	vector<PreButtonStruct> limbPreButtonStructs;
 
 	for (int i = 0; i < limbBtnDataStructs.size(); ++i) {
-		/* For now just make the limbID the text. PLACEHOLDING. */
-		string limbText = "LIMB #" + to_string(limbBtnDataStructs[i].id);
-		limbPreButtonStructs.push_back(buildPreButtonStruct(limbText, ButtonOption::LoadLimb));
+
+		/* For now just make the limbID the text. */
+
+		LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
+		limbPreButtonStructs.push_back(
+			buildPreButtonStruct(
+				limbBtnDataStruct.name,
+				ButtonOption::LoadLimb,
+				limbBtnDataStruct.id /* Currently this is the INDEX of the VECTOR. TO DO: Must replace with DB ID. */
+			));
 	}
 
 	/* Allow user to exit menu/mode. */
-
 	limbPreButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("BACK"), ButtonOption::Back));
 
 	return limbPreButtonStructs;
@@ -1301,9 +1364,22 @@ tuple<SDL_Rect, vector<Button>> UI::createLimbLoadedModePanelComponents() {
 }
 
 tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs) {
-	vector<PreButtonStruct> preButtonStructs = getChooseLimbModePreButtonStructs(limbBtnDataStructs);
-	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
-	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	vector<PreButtonStruct> preButtonStructs = getChooseLimbModePreButtonStructs(limbBtnDataStructs); /* THIS should NOT change. */
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs); /* THIS must be full-screen. */
+
+	getAndStoreWindowSize();
+
+	// PROBLEM with creating the OVERLAY (yRes becomes 0 and we try to divide by it!)
+	// // but we don't need an overlay for these. Simple backgrounds is enough.
+	//SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
+
+	/*
+	* THIS is where most of the change will happen.
+	* Each button must have a certain size, and contain the image.
+	* They must be built in columns and rows.
+	*/
+	vector<Button> buttons = buildLimbButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+
 	return { panelRect, buttons };
 }
 
