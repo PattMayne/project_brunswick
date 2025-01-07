@@ -94,6 +94,8 @@
 *			--- Whenever there is a collision with NPCs or Limbs, we can just mark the Point position and draw those animations
 * 
 * 
+* Destroy all textures for PANELS and LIMBS (on every screen).
+* 
 */
 
 module;

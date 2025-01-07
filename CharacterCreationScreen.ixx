@@ -81,7 +81,7 @@ public:
 		for (int i = 0; i < inventoryLimbs.size(); ++i) {
 			/* FOR NOW we want the index. But when we bring in the database, we will use the ID. So the LimbButtonData says id instead of index. */
 			Limb& thisLimb = inventoryLimbs[i];
-			limbBtnDataStructs.emplace_back(thisLimb.getTexture(), thisLimb.getName(), i); }
+			limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), i); }
 
 		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
 

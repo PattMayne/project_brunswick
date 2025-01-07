@@ -52,9 +52,9 @@ vector<SDL_Rect> createSurfaceOverlay(SDL_Rect bgRect);
 SDL_Surface* createTransparentSurface(int w, int h);
 
 export struct LimbButtonData {
-	LimbButtonData(SDL_Texture* texture, string name, int id) :
-		texture(texture), name(name), id(id) { }
-	SDL_Texture* texture;
+	LimbButtonData(string texturePath, string name, int id) :
+		texturePath(texturePath), name(name), id(id) { }
+	string texturePath;
 	string name;
 	int id;
 };
@@ -205,19 +205,17 @@ export class UI {
 
 		vector<PreButtonStruct> getReviewModePreButtonStructs();
 		vector<PreButtonStruct> getLimbLoadedModePreButtonStructs();
-		vector<PreButtonStruct> getChooseLimbModePreButtonStructs(vector<LimbButtonData> limbBtnDataStructs);
 
 		void prepareColors();
 		void getAndStoreWindowSize();
 		/* when you need to dictate dimensions (for dev purposes) */
 		void setWindowSize(int x, int y) {
 			windowWidth = x;
-			windowHeight = y;
-		}
+			windowHeight = y; }
 
 		// color maps
-		unordered_map<string, SDL_Color> colorsByFunction; // colors by function, which reference colors by name
-		unordered_map<string, SDL_Color> colorsByName; // raw colors
+		unordered_map<string, SDL_Color> colorsByFunction; /* colors by function, which reference colors by name. */
+		unordered_map<string, SDL_Color> colorsByName; /* raw colors. */
 
 		bool initialize();
 		bool initializeFonts(Resources& resources);
@@ -1303,44 +1301,6 @@ vector<PreButtonStruct> UI::getReviewModePreButtonStructs() {
 	};
 }
 
-/* build a list of Limb buttons for the Character Creation screen. */
-vector<PreButtonStruct> UI::getChooseLimbModePreButtonStructs(vector<LimbButtonData> limbBtnDataStructs) {
-	Resources& resources = Resources::getInstance();
-
-	/* 
-	* TO DO:
-	* 
-	* These buttons might need to be built differently in every way.
-	* They don't display text, but instead they display an image.
-	* REVIEW AND REFACTOR.
-	* 
-	* WHAT WE NEED:
-	* Each button should accomodate a square image, and hold a limb_id.
-	* ((  We will need the database VERY SOON )).
-	* We will probably need a new subclass of Button specifically for the CharacterCreation screen.
-	* 
-	*/
-
-	vector<PreButtonStruct> limbPreButtonStructs;
-
-	for (int i = 0; i < limbBtnDataStructs.size(); ++i) {
-
-		/* For now just make the limbID the text. */
-
-		LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
-		limbPreButtonStructs.push_back(
-			buildPreButtonStruct(
-				limbBtnDataStruct.name,
-				ButtonOption::LoadLimb,
-				limbBtnDataStruct.id /* Currently this is the INDEX of the VECTOR. TO DO: Must replace with DB ID. */
-			));
-	}
-
-	/* Allow user to exit menu/mode. */
-	limbPreButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("BACK"), ButtonOption::Back));
-
-	return limbPreButtonStructs;
-}
 
 /* build and deliver basic info for default Character Creation panel buttons. */
 vector<PreButtonStruct> UI::getLimbLoadedModePreButtonStructs() {
@@ -1383,24 +1343,22 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 	* 3. iterate through structs and:
 	* --A) make text
 	* --B) make image surface from texturePath (which must be sent in instead of the texture)
-	* 
-	* add BACK BUTTON!
+	* --C) add BACK BUTTON at the very end (must account for pagination).
+	* --D) They are SQUARES and we print the NAME (instead of limb? or above a semi-transparent overlay?) ON HOVER.
 	*/
 
-	vector<PreButtonStruct> preButtonStructs = getChooseLimbModePreButtonStructs(limbBtnDataStructs); /* THIS should NOT change. */
 	SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
 
 	int columnsCount = 10;
 	int buttonWidth = (windowWidth - ((PANEL_PADDING * columnsCount) + PANEL_PADDING)) / columnsCount;
-	int buttonHeight = buttonWidth * 2 + (PANEL_PADDING * 3);
+	int buttonHeight = buttonWidth; // buttonWidth * 2 + (PANEL_PADDING * 3);
 
 	vector<Button> buttons;
 
 	for (int i = 0; i < limbBtnDataStructs.size(); ++i) {
+
 		LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
-
 		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));
-
 		int rectY = i < columnsCount ? PANEL_PADDING :
 			((i / columnsCount) * (PANEL_PADDING + buttonHeight)) + PANEL_PADDING;
 
@@ -1412,16 +1370,23 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 		};
 
 		SDL_Surface* normalSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
-		SDL_FillRect(normalSurface, NULL, convertSDL_ColorToUint32(normalSurface->format, colorsByFunction["BTN_BG"]));
-
 		SDL_Surface* hoverSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
+
+
+
+		SDL_FillRect(normalSurface, NULL, convertSDL_ColorToUint32(normalSurface->format, colorsByFunction["BTN_BG"]));
 		SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, colorsByFunction["BTN_HOVER_BG"]));
+
+		/* Get the limb image IF it's a limb (not for the final BACK button). */
+		SDL_Surface* limbSurface = IMG_Load(limbBtnDataStruct.texturePath.c_str());
+		SDL_BlitScaled(limbSurface, NULL, normalSurface, NULL);
 
 		SDL_Texture* normalTexture = SDL_CreateTextureFromSurface(mainRenderer, normalSurface);
 		SDL_Texture* hoverTexture = SDL_CreateTextureFromSurface(mainRenderer, hoverSurface);
 
 		SDL_FreeSurface(hoverSurface);
 		SDL_FreeSurface(normalSurface);
+		SDL_FreeSurface(limbSurface);
 
 		buttons.emplace_back(
 			rect,
