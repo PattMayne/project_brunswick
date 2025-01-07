@@ -1384,11 +1384,33 @@ export SDL_Surface* createCenteredWrappedText(string text, TTF_Font* font, SDL_C
 }
 
 /*
+* Creates a new surface based on the incoming rect, and centers the incoming surface in THAT new surface,
+* and returns the new surface.
+*/
+export SDL_Surface* centerSurfaceInRect(SDL_Surface* surfaceToCenter, SDL_Rect rect) {
+	SDL_Surface* newSurface = createTransparentSurface(rect.w, rect.h);
+
+	int newX = (rect.w - surfaceToCenter->w) / 2;
+	int newY = (rect.h - surfaceToCenter->h) / 2;
+	SDL_Rect textRect = { newX, newY, surfaceToCenter->w , surfaceToCenter->h };
+
+	SDL_BlitSurface(
+		surfaceToCenter,
+		NULL,
+		newSurface,
+		&textRect
+	);
+
+	return newSurface;
+}
+
+/*
 * Make a full-screen panel which displays a button for each Limb in a given vector.
 * Also adds a "BACK" button as the final item.
 * 
 * TO DO:
 * -- make it responsive (columnsCount decreases with screen size).
+* -- Do pagination (still keep Back button for EVERY page... but also add NEXT and PREVIOUS).
 */
 tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs) {
 	SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
@@ -1399,7 +1421,7 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 	vector<Button> buttons;
 
 	for (int i = 0; i < limbBtnDataStructs.size() + 1; ++i) {
-
+		/* Many things change for the back button option (final option). */
 		bool isBackButton = i == limbBtnDataStructs.size();
 		
 		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));
@@ -1438,25 +1460,12 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 
 		/* If the text surface is too small, center it in a surface of the proper size (don't expand it). */
 		if (textSurface->h < rect.h && textSurface->w < rect.w) {
-			SDL_Surface* newSurface = createTransparentSurface(rect.w, rect.h);
-
-			int newX = (rect.w - textSurface->w) / 2;
-			int newY = (rect.h - textSurface->h) / 2;
-			SDL_Rect textRect = { newX, newY, textSurface->w , textSurface->h };
-
-			SDL_BlitSurface(
-				textSurface,
-				NULL,
-				newSurface,
-				&textRect
-			);
-
-			textSurface = newSurface;
-		}
+			textSurface = centerSurfaceInRect(textSurface, rect); }
 
 		SDL_BlitScaled(textSurface, NULL, hoverSurface, NULL);
 
 		if (isBackButton) {
+			textSurface = centerSurfaceInRect(createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["BTN_TEXT"]), rect);
 			SDL_BlitScaled(textSurface, NULL, normalSurface, NULL); }
 
 		SDL_Texture* normalTexture = SDL_CreateTextureFromSurface(mainRenderer, normalSurface);
