@@ -902,6 +902,7 @@ void UI::prepareColors() {
 	/*  Three yellows might seem crazy but it's good, actually.
 	* I will probably also add a third, lighter blue as well */
 	colorsByName["PERIDOT"] = { 242, 222, 6 };  /* THEME */ /* yellow orangey */
+	colorsByName["PERIDOT_DEMI"] = { 242, 222, 6, 50 };  /* THEME */ /* yellow orangey */
 	colorsByName["VIVID_YELLOW"] = { 217, 168, 6 }; /* THEME */ /* brighter yellow */
 	colorsByName["GOLD"] = { 255,214, 10 }; /* bright yellowish */
 	colorsByName["YALE_BLUE"] = { 0, 53, 102 }; /* slightly lighter blue */
@@ -924,6 +925,7 @@ void UI::prepareColors() {
 
 	/* COLORS BY FUNCTION */
 	colorsByFunction["BTN_HOVER_BG"] = colorsByName["PERIDOT"];
+	colorsByFunction["BTN_HOVER_BG_DEMI"] = colorsByName["PERIDOT_DEMI"];
 	colorsByFunction["BTN_BG"] = colorsByName["OXFORD_BLUE"];
 	colorsByFunction["BTN_HOVER_BRDR"] = colorsByName["VIVID_YELLOW"];
 	colorsByFunction["BTN_BRDR"] = colorsByName["YALE_BLUE"];
@@ -1332,32 +1334,74 @@ tuple<SDL_Rect, vector<Button>> UI::createLimbLoadedModePanelComponents() {
 	return { panelRect, buttons };
 }
 
+/* Returns a surface with the text centered, broken up on spaces. */
+export SDL_Surface* createCenteredWrappedText(string text, TTF_Font* font, SDL_Color color) {
+	vector<string> words;
+	vector<SDL_Surface*> wordSurfaces;
+
+	int xOffset = 6;
+	int yOffset = 6;
+
+	int widestSurfaceWidth = 0;
+	int tallestSurfaceHeight = 0;
+
+	istringstream stringStream(text);
+	string word;
+
+	/* make a vector of words from the string */
+	while (getline(stringStream, word, ' ')) { words.push_back(word); }
+
+	/* make a vector of text surfaces from the words */
+	for (string word : words) {
+		SDL_Surface* wordSurface = TTF_RenderUTF8_Blended(font, word.c_str(), color);
+		wordSurfaces.push_back(wordSurface);
+		if (wordSurface->w > widestSurfaceWidth) { widestSurfaceWidth = wordSurface->w; }
+		if (wordSurface->h > tallestSurfaceHeight) { tallestSurfaceHeight = wordSurface->h; }}
+
+	int newSurfaceWidth = widestSurfaceWidth + (xOffset * 2);
+	int newSurfaceHeight = (tallestSurfaceHeight + yOffset) * words.size();
+
+	SDL_Surface* textSurface = createTransparentSurface(newSurfaceWidth, newSurfaceHeight);
+
+	for (int i = 0; i < wordSurfaces.size(); i++) {
+
+		/* blit each surface onto the new surfaces */
+		int wordWidth = wordSurfaces[i]->w;
+		int wordHeight = wordSurfaces[i]->h;
+
+		SDL_Rect wordRect = {
+			(newSurfaceWidth - wordWidth) / 2,
+			(wordHeight * i) + (yOffset * i),
+			wordWidth,
+			wordHeight
+		};
+
+		SDL_BlitSurface(wordSurfaces[i], NULL, textSurface, &wordRect);
+		SDL_FreeSurface(wordSurfaces[i]);
+	}
+
+	return textSurface;
+}
+
+/*
+* Make a full-screen panel which displays a button for each Limb in a given vector.
+* Also adds a "BACK" button as the final item.
+* 
+* TO DO:
+* -- make it responsive (columnsCount decreases with screen size).
+*/
 tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs) {
-
-	/*
-	* This can be different... simpler in one way because the panel will be full-screen.
-	* I don't need pre-button structs because the panel doesn't depend on that info.
-	* 
-	* 1. Build the panel.
-	* 2. Choose number of columns based on screen size (10 for now).
-	* 3. iterate through structs and:
-	* --A) make text
-	* --B) make image surface from texturePath (which must be sent in instead of the texture)
-	* --C) add BACK BUTTON at the very end (must account for pagination).
-	* --D) They are SQUARES and we print the NAME (instead of limb? or above a semi-transparent overlay?) ON HOVER.
-	*/
-
 	SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
-
 	int columnsCount = 10;
 	int buttonWidth = (windowWidth - ((PANEL_PADDING * columnsCount) + PANEL_PADDING)) / columnsCount;
 	int buttonHeight = buttonWidth; // buttonWidth * 2 + (PANEL_PADDING * 3);
 
 	vector<Button> buttons;
 
-	for (int i = 0; i < limbBtnDataStructs.size(); ++i) {
+	for (int i = 0; i < limbBtnDataStructs.size() + 1; ++i) {
 
-		LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
+		bool isBackButton = i == limbBtnDataStructs.size();
+		
 		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));
 		int rectY = i < columnsCount ? PANEL_PADDING :
 			((i / columnsCount) * (PANEL_PADDING + buttonHeight)) + PANEL_PADDING;
@@ -1372,28 +1416,61 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 		SDL_Surface* normalSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 		SDL_Surface* hoverSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 
-
-
 		SDL_FillRect(normalSurface, NULL, convertSDL_ColorToUint32(normalSurface->format, colorsByFunction["BTN_BG"]));
 		SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, colorsByFunction["BTN_HOVER_BG"]));
 
-		/* Get the limb image IF it's a limb (not for the final BACK button). */
-		SDL_Surface* limbSurface = IMG_Load(limbBtnDataStruct.texturePath.c_str());
-		SDL_BlitScaled(limbSurface, NULL, normalSurface, NULL);
+		Resources& resources = Resources::getInstance();
+		string buttonText = !isBackButton ? limbBtnDataStructs[i].name : resources.getButtonText("BACK");
+		/* Get the TEXT surface. */
+		SDL_Surface* textSurface = createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["DARK_TEXT"]);
+		ButtonClickStruct clickStruct;
+
+		if (!isBackButton) {
+			LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
+			SDL_Surface* limbSurface = IMG_Load(limbBtnDataStruct.texturePath.c_str());
+			SDL_BlitScaled(limbSurface, NULL, normalSurface, NULL);
+			clickStruct = ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStruct.id);
+			SDL_FreeSurface(limbSurface);
+		}
+		else {
+			clickStruct = ButtonClickStruct(ButtonOption::Back, -1);
+		}
+
+		/* If the text surface is too small, center it in a surface of the proper size (don't expand it). */
+		if (textSurface->h < rect.h && textSurface->w < rect.w) {
+			SDL_Surface* newSurface = createTransparentSurface(rect.w, rect.h);
+
+			int newX = (rect.w - textSurface->w) / 2;
+			int newY = (rect.h - textSurface->h) / 2;
+			SDL_Rect textRect = { newX, newY, textSurface->w , textSurface->h };
+
+			SDL_BlitSurface(
+				textSurface,
+				NULL,
+				newSurface,
+				&textRect
+			);
+
+			textSurface = newSurface;
+		}
+
+		SDL_BlitScaled(textSurface, NULL, hoverSurface, NULL);
+
+		if (isBackButton) {
+			SDL_BlitScaled(textSurface, NULL, normalSurface, NULL); }
 
 		SDL_Texture* normalTexture = SDL_CreateTextureFromSurface(mainRenderer, normalSurface);
 		SDL_Texture* hoverTexture = SDL_CreateTextureFromSurface(mainRenderer, hoverSurface);
 
 		SDL_FreeSurface(hoverSurface);
 		SDL_FreeSurface(normalSurface);
-		SDL_FreeSurface(limbSurface);
 
 		buttons.emplace_back(
 			rect,
 			hoverTexture,
 			normalTexture,
-			limbBtnDataStruct.name,
-			ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStruct.id)
+			buttonText,
+			clickStruct
 		);
 	}
 
