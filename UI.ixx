@@ -299,6 +299,15 @@ export class Button {
 			createButtonTextures(buttonRect, textRect, text, buttonFont, colors, mainRenderer);
 		}
 
+		/* 
+		* CONSTRUCTOR FOR PRE-BUILT TEXTURES.
+		* Constructor for when you created the two textures beforehand, and are just handing them in.
+		* Specifically for the LIMB BUTTONS, but can be used for others too.
+		*/
+		Button(SDL_Rect rect, SDL_Texture* hoverTexture, SDL_Texture* normalTexture, string text, ButtonClickStruct clickStruct) :
+			rect(rect), hoverTexture(hoverTexture), normalTexture(normalTexture),
+			text(text), clickStruct(clickStruct), mouseOver(false) { }
+
 		// Might turn this private since we should only operate on it internally
 		SDL_Rect getRect() { return rect; }
 		string getText() { return text; } // turn this completely into char for the printing
@@ -320,7 +329,7 @@ export class Button {
 		string text = "";
 		bool mouseOver;
 		ButtonClickStruct clickStruct;
-		SDL_Rect createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont);
+		SDL_Rect createTextRect(SDL_Rect buttonRect, string buttonText, TTF_Font* buttonFont); /* For normal all-text buttons. */
 		SDL_Surface* createButtonSurfaceBG(SDL_Rect buttonRect, SDL_Color color, SDL_Color overlayColor, SDL_Renderer* mainRenderer, vector<SDL_Rect> overlayRects);
 		void createButtonTextures(SDL_Rect buttonRect, SDL_Rect textRect, string incomingText, TTF_Font* buttonFont, unordered_map<string, SDL_Color> colors, SDL_Renderer* mainRenderer);
 };
@@ -1364,21 +1373,64 @@ tuple<SDL_Rect, vector<Button>> UI::createLimbLoadedModePanelComponents() {
 }
 
 tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs) {
-	vector<PreButtonStruct> preButtonStructs = getChooseLimbModePreButtonStructs(limbBtnDataStructs); /* THIS should NOT change. */
-	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs); /* THIS must be full-screen. */
-
-	getAndStoreWindowSize();
-
-	// PROBLEM with creating the OVERLAY (yRes becomes 0 and we try to divide by it!)
-	// // but we don't need an overlay for these. Simple backgrounds is enough.
-	//SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
 
 	/*
-	* THIS is where most of the change will happen.
-	* Each button must have a certain size, and contain the image.
-	* They must be built in columns and rows.
+	* This can be different... simpler in one way because the panel will be full-screen.
+	* I don't need pre-button structs because the panel doesn't depend on that info.
+	* 
+	* 1. Build the panel.
+	* 2. Choose number of columns based on screen size (10 for now).
+	* 3. iterate through structs and:
+	* --A) make text
+	* --B) make image surface from texturePath (which must be sent in instead of the texture)
+	* 
+	* add BACK BUTTON!
 	*/
-	vector<Button> buttons = buildLimbButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+
+	vector<PreButtonStruct> preButtonStructs = getChooseLimbModePreButtonStructs(limbBtnDataStructs); /* THIS should NOT change. */
+	SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
+
+	int columnsCount = 10;
+	int buttonWidth = (windowWidth - ((PANEL_PADDING * columnsCount) + PANEL_PADDING)) / columnsCount;
+	int buttonHeight = buttonWidth * 2 + (PANEL_PADDING * 3);
+
+	vector<Button> buttons;
+
+	for (int i = 0; i < limbBtnDataStructs.size(); ++i) {
+		LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
+
+		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));
+
+		int rectY = i < columnsCount ? PANEL_PADDING :
+			((i / columnsCount) * (PANEL_PADDING + buttonHeight)) + PANEL_PADDING;
+
+		SDL_Rect rect = {
+			rectX,
+			rectY,
+			buttonWidth,
+			buttonHeight
+		};
+
+		SDL_Surface* normalSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
+		SDL_FillRect(normalSurface, NULL, convertSDL_ColorToUint32(normalSurface->format, colorsByFunction["BTN_BG"]));
+
+		SDL_Surface* hoverSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
+		SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, colorsByFunction["BTN_HOVER_BG"]));
+
+		SDL_Texture* normalTexture = SDL_CreateTextureFromSurface(mainRenderer, normalSurface);
+		SDL_Texture* hoverTexture = SDL_CreateTextureFromSurface(mainRenderer, hoverSurface);
+
+		SDL_FreeSurface(hoverSurface);
+		SDL_FreeSurface(normalSurface);
+
+		buttons.emplace_back(
+			rect,
+			hoverTexture,
+			normalTexture,
+			limbBtnDataStruct.name,
+			ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStruct.id)
+		);
+	}
 
 	return { panelRect, buttons };
 }
