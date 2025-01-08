@@ -426,6 +426,9 @@ protected:
 */
 tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearch) {
 	Limb& limbToSearch = limbs[limbIdToSearch];
+
+	cout << "\n SEARCHING " << limbToSearch.getName() << "\n\n";
+
 	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
 		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
 
@@ -435,13 +438,30 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 		}
 	}
 
-	cout << "None of the joints were free. Now we must CYCLE AGAIN through the UNFREE joints, and check the joints of THEIR limbs.\n";
+	cout << "NO FREE JOINTS. Now we CYCLE AGAIN through UNFREE joints, & check the joints of THEIR limbs.\n";
 
-	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
-		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
-		Limb& nestedLimbToSearch = limbs[i];
+	int jointCount = 1;
+
+	cout << "Number of joints TO SEARCH for " << limbToSearch.getName() << ": " << limbToSearch.getJoints().size() << "\n";
+
+	for (Joint& limbToSearchJoint : limbToSearch.getJoints()) {
+
+		cout << "Number of joints searched for " << limbToSearch.getName() << ": " << jointCount << "\n";
+		++jointCount;
+
 		if (!limbToSearchJoint.getIsAnchor()) {
-			return getLimbIdAndJointIndexForConnection(limbToSearchJoint.getConnectedLimbId());
+			Limb& nestedLimbToSearch = limbs[limbToSearchJoint.getConnectedLimbId()];
+			tuple<int, int> limbIdAndJointIndexForConnection = getLimbIdAndJointIndexForConnection(limbToSearchJoint.getConnectedLimbId());
+			int limbIdForConnection = get<0>(limbIdAndJointIndexForConnection);
+			int jointIndexForConnection = get<1>(limbIdAndJointIndexForConnection);
+
+			if (limbIdForConnection < 0 || jointIndexForConnection < 0) {
+				continue;
+			}
+			else {
+				return limbIdAndJointIndexForConnection;
+			}
+
 		}
 	}
 
