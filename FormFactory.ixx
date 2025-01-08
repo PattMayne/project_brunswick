@@ -229,11 +229,11 @@ export Character buildPlayerCharacter() {
 	Character playerCharacter = Character(CharacterType::Player);
 
 	vector<LimbForm> inventoryLimbForms =  getMapLimbs(MapLevel::Forest);
-	vector<Limb>& inventoryLimbs = playerCharacter.getInventoryLimbs();
+	vector<Limb>& limbs = playerCharacter.getLimbs();
 
 	/* For now, just give the user one of each Forest Limbs. */
 	for (LimbForm& limbForm : inventoryLimbForms) {
-		inventoryLimbs.emplace_back(limbForm); }
+		limbs.emplace_back(limbForm); }
 
 	return playerCharacter;
 }

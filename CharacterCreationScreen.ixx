@@ -88,7 +88,7 @@ public:
 
 		/* Build a vector of data structures so the UI can build the panel of Limb buttons. */
 		vector<LimbButtonData> limbBtnDataStructs;
-		vector<Limb>& inventoryLimbs = playerCharacter.getInventoryLimbs();
+		vector<Limb>& inventoryLimbs = playerCharacter.getLimbs();
 
 		for (int i = 0; i < inventoryLimbs.size(); ++i) {
 			/* FOR NOW we want the index. But when we bring in the database, we will use the ID. So the LimbButtonData says id instead of index. */
@@ -97,7 +97,7 @@ public:
 
 		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
 
-		cout << playerCharacter.getInventoryLimbs().size() << " LIMBS\n";
+		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
 	}
 
 	/* Destructor */
@@ -368,7 +368,8 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 
 				/* If we sent in a limb id/index: */
 				if (clickStruct.itemID >= 0) {
-					Limb& clickedLimb = playerCharacter.getInventoryLimbs()[clickStruct.itemID];
+					Limb& clickedLimb = playerCharacter.getLimbs()[clickStruct.itemID];
+					bool limbEquipped = false;
 
 					/* see what button might have been clicked : */
 					switch (clickStruct.buttonOption) {
@@ -378,7 +379,17 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						* BUTTON should also optionally take a texture as an argument.
 						* ClickStruct has an ITEM ID!!!!!
 						*/
-						cout << "Loading Limb: " << clickedLimb.getName() << "\n";
+
+						limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
+
+						if (limbEquipped) {
+							cout << "Loaded Limb: " << clickedLimb.getName() << "\n";
+						}
+						else {
+							cout << "DID NOT LOAD LIMB\n";
+						}
+
+						
 						break;
 					default:
 						cout << "ERROR\n";

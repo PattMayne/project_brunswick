@@ -188,6 +188,9 @@ public:
 		anchorJointIndex = -1;
 	}
 
+	bool isFree() {
+		return !isAnchor && connectedLimbId < 0;
+	}
 
 private:
 	Point point;
@@ -255,7 +258,7 @@ export class Limb {
 		/*  */
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
-		bool save() { /* SAVE this limb to the database. (save the MODIFICATIONS) */ }
+		bool save() { /* SAVE this limb to the database. (save the MODIFICATIONS) */ return true; }
 		Point getPosition() { return position; }
 		Point getLastPosition() { return lastPosition; }
 		void setPosition(Point newPosition) { position = newPosition; }
@@ -303,9 +306,18 @@ export class Limb {
 				attributeMod = formAttribute / (-2); }
 		}
 
+		/* This can be MAP position or DRAW position. */
 		void move(Point newPosition) {
 			lastPosition = position;
 			position = newPosition;
+		}
+
+		vector<Joint>& getJoints() { return joints; }
+
+		bool isEquipped() {
+			for (Joint& joint : joints) {
+				if (!joint.isFree()) { return true; } }
+			return false;
 		}
 
 	protected:
@@ -349,22 +361,63 @@ public:
 
 	int getType() { return characterType; }
 	void setId(int id) { this->id = id; }
-	vector<Limb>& getInventoryLimbs() { return inventoryLimbs; }
-	vector<Limb>& getEquippedLimbs() {
-		/* 
-		* TO DO:
-		* -- There will be NO "equippedLimbs" vector.
-		* Instead, we will cycle through the limbs descending from the anchorLimb.
-		*/
-		return equippedLimbs;
-	}
+	vector<Limb>& getLimbs() { return limbs; }
+	bool equipLimb(int limbId);
+
 
 protected:
 	CharacterType characterType;
 	int id;
 	int anchorLimbId; /* Currently using INDEX for dev purposes... will replace with actual DB ID. */
-	vector<Limb> inventoryLimbs;
-	vector<Limb> equippedLimbs;
+	vector<Limb> limbs;
 };
 
 
+bool Character::equipLimb(int limbId) {
+	Limb& limbToEquip = limbs[limbId];// THIS will get the limb WITH the ID later, not by index!
+	if (limbToEquip.isEquipped()) {
+		cout << "Limb is already equipped!\n";
+		return false;
+	}
+
+	if (anchorLimbId < 0) {
+		anchorLimbId = limbId;
+		return true;
+	}
+	else {
+		/* Recursively search through limb joints (and their limbs and THEIR joints) to find a FREE joint.
+		* This FREE joint will become the ANCHOR joint.
+		* 
+		* THEN we need to attach this ANCHOR (free) joint to a free joint on the character's anchor LIMB.
+		* 
+		* Fow now we're doing ONE level of "recursion" (ie no recursion) and getting the base functionality.
+		* Will abstract these as functions to make recursion possible.
+		*/
+		// start with just searching on THIS level.
+
+		for (int i = 0; i < limbToEquip.getJoints().size(); ++i) {
+			Joint& joint = limbToEquip.getJoints()[i];
+			if (joint.isFree()) {
+				/* Now find a joint on which to anchor it. */
+
+				Limb& anchorLimb = limbs[anchorLimbId];
+
+				for (int k = 0; k < anchorLimb.getJoints().size(); ++k) {
+					Joint& anchoredLimbJoint = anchorLimb.getJoints()[i];
+
+					if (anchoredLimbJoint.isFree()) {
+						/* First set the limbToEquip joint as the anchor for that limb. */
+						joint.setAnchor(true);
+
+						/* Then anchor the actual limb onto the free joint. */
+						anchoredLimbJoint.connectLimb(limbId, i);
+
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}
