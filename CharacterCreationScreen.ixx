@@ -500,12 +500,9 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 
 	for (int i = 0; i < anchorJoints.size(); ++i) {
 		Joint& anchorJoint = anchorJoints[i];
+		if (anchorJoint.getConnectedLimbId() < 0) { continue; }
 
-		if (anchorJoint.getConnectedLimbId() < 0) {
-			continue;
-		}
 		Point anchorJointPoint = anchorJoint.getPoint();
-
 		Limb& connectedLimb = limbs[anchorJoint.getConnectedLimbId()];
 
 		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
@@ -531,5 +528,4 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 			limbAngle, NULL, SDL_FLIP_NONE
 		);
 	}
-
 }

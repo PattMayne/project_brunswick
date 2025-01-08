@@ -35,6 +35,7 @@ import "SDL.h";
 import "SDL_image.h";
 import <string>;
 import <vector>;
+import <tuple>;
 
 import TypeStorage;
 import UI;
@@ -408,6 +409,7 @@ public:
 	int getAnchorLimbId() { return anchorLimbId; }
 
 	Limb& getAnchorLimb() { return limbs[anchorLimbId]; }
+	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch);
 
 
 protected:
@@ -417,6 +419,38 @@ protected:
 	vector<Limb> limbs;
 };
 
+/* 
+* Returns a tuple.
+* FIRST int is the limb id
+* SECOND int is its free joint ID.
+*/
+tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearch) {
+	Limb& limbToSearch = limbs[limbIdToSearch];
+	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
+		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
+
+		if (limbToSearchJoint.isFree()) {
+			cout << "Found a free joint in the anchored limb. Now searching the LIMB TO EQUIP for a free joint.\n";
+			return make_tuple(limbIdToSearch, i);			
+		}
+	}
+
+	cout << "None of the joints were free. Now we must CYCLE AGAIN through the UNFREE joints, and check the joints of THEIR limbs.\n";
+
+	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
+		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
+		Limb& nestedLimbToSearch = limbs[i];
+		if (!limbToSearchJoint.getIsAnchor()) {
+			return getLimbIdAndJointIndexForConnection(limbToSearchJoint.getConnectedLimbId());
+		}
+	}
+
+	cout << "There are NO free joints ANYWHERE, so return an unusable tuple as FALSE\n";
+
+	return make_tuple(-1, -1);
+
+}
+
 
 bool Character::equipLimb(int limbId) {
 	Limb& limbToEquip = limbs[limbId];// THIS will get the limb WITH the ID later, not by index!
@@ -425,19 +459,15 @@ bool Character::equipLimb(int limbId) {
 		return false;
 	}
 
+	/* When there are no limbs equipped, make this limb the FIRST (anchor) limb. */
 	if (anchorLimbId < 0) {
 		anchorLimbId = limbId;
 		limbToEquip.setAnchor(true);
-		cout << limbToEquip.getName() << " is now the ANCHOR limb\n";
-
-		string isAnchorLimbString = limbToEquip.getIsAnchor() ? " AND it IS the anchor limb!\n\n" :
-			" and somehow is NOT the anchor limb???\n\n";
-		cout << isAnchorLimbString;
-
 		return true;
 	}
 	
 	cout << "Another limb is already anchored. Trying to attach...\n";
+
 	/* Recursively search through limb joints (and their limbs and THEIR joints) to find a FREE joint.
 	* This FREE joint will become the ANCHOR joint.
 	*
@@ -446,42 +476,50 @@ bool Character::equipLimb(int limbId) {
 	* Fow now we're doing ONE level of "recursion" (ie no recursion) and getting the base functionality.
 	* Will abstract these as functions to make recursion possible.
 	*/
-	// start with just searching on THIS level.
-	// YOU FOOL... we must search the ANCHOR LIMB for free joints first!
 
 	Limb& anchorLimb = limbs[anchorLimbId];
 
+	/* 
+	* HERE we can do recursion.
+	* The function should return a pair of the id (currently vector index) of the new limb AND the index of the joint.
+	*/
+
 	cout << "Searching anchored limb (" << anchorLimb.getName() << ") for free joints\n";
 
-	for (int k = 0; k < anchorLimb.getJoints().size(); ++k) {
-		Joint& anchoredLimbJoint = anchorLimb.getJoints()[k];
+	tuple<int, int> limbIdAndJointIndexForConnection = getLimbIdAndJointIndexForConnection(anchorLimbId);
 
-		if (anchoredLimbJoint.isFree()) {
+	int limbIdForConnection = get<0>(limbIdAndJointIndexForConnection);
+	int jointIndexForConnection = get<1>(limbIdAndJointIndexForConnection);
 
-			cout << "Found a free joint in the anchored limb. Now searching the LIMB TO EQUIP for a free joint.\n";
+	if (limbIdForConnection < 0 || jointIndexForConnection < 0) {
+		cout << "\nApparently we couldn't find enough free joints to connect?111111\n\n";
+		return false;
+	}
 
-			for (int i = 0; i < limbToEquip.getJoints().size(); ++i) {
-				Joint& jointToEquip = limbToEquip.getJoints()[i];
+	Joint& jointToConnect = limbs[limbIdForConnection].getJoints()[jointIndexForConnection];
 
-				if (jointToEquip.isFree()) {
-					/* Now find a joint on which to anchor it. */
-					cout << "FOund a free joint in the limb to equip.\n";
+	/* Now connect the actual limb: */
+	for (int i = 0; i < limbToEquip.getJoints().size(); ++i) {
+		Joint& jointToEquip = limbToEquip.getJoints()[i];
 
-					/* First set the limbToEquip joint as the anchor for that limb. */
-					jointToEquip.setAnchor(true);
+		if (jointToEquip.isFree()) {
+			/* Now find a joint on which to anchor it. */
+			cout << "FOund a free joint in the limb to equip.\n";
 
-					/* Then anchor the actual limb onto the free joint. */
-					anchoredLimbJoint.connectLimb(limbId, i);
+			/* First set the limbToEquip joint as the anchor for that limb. */
+			jointToEquip.setAnchor(true);
 
-					cout << "Seems like we connected the limb?\n";
+			/* Then anchor the actual limb onto the free joint. */
+			jointToConnect.connectLimb(limbId, i);
 
-					return true;
-				}
-			}
+			cout << "Seems like we connected the limb?\n";
+
+			return true;
 		}
 	}
 
-	cout << "\nApparently we couldn't find enough free joints to connect?\n\n";
+
+	cout << "\nApparently we couldn't find enough free joints to connect?2222222222222222\n\n";
 
 	return false;
 }
