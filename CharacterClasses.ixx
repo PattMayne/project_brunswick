@@ -192,6 +192,12 @@ public:
 		return !isAnchor && connectedLimbId < 0;
 	}
 
+	bool getIsAnchor() { return isAnchor; }
+
+	int getConnectedLimbId() { return connectedLimbId; }
+
+	Point getPoint() { return point; }
+
 private:
 	Point point;
 	bool isAnchor;
@@ -335,6 +341,16 @@ export class Limb {
 				joint.detachLimb();
 			}
 			isAnchor = false;
+		}
+
+		Joint& getAnchorJoint() {
+			for (Joint& joint : joints) {
+				if (joint.getIsAnchor()) {
+					return joint;
+				}
+			}
+			/* THIS IS NOT SAFE. */
+			return joints[0];
 		}
 
 	protected:

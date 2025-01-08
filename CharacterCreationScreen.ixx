@@ -482,7 +482,7 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	* 
 	*/
 
-	SDL_Rect limbRect = {
+	SDL_Rect anchorLimbRect = {
 		(screenWidth / 2) - (limbWidth / 2),
 		(screenHeight / 2) - (limbHeight / 2),
 		limbWidth,
@@ -492,8 +492,44 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
 		anchorLimb.getTexture(),
-		NULL, &limbRect,
+		NULL, &anchorLimbRect,
 		limbAngle, NULL, SDL_FLIP_NONE
 	);
+
+	vector<Joint>& anchorJoints = anchorLimb.getJoints();
+
+	for (int i = 0; i < anchorJoints.size(); ++i) {
+		Joint& anchorJoint = anchorJoints[i];
+
+		if (anchorJoint.getConnectedLimbId() < 0) {
+			continue;
+		}
+		Point anchorJointPoint = anchorJoint.getPoint();
+
+		Limb& connectedLimb = limbs[anchorJoint.getConnectedLimbId()];
+
+		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
+		Joint& connectedLimbAnchorJoint = connectedLimb.getAnchorJoint();
+		Point connectedLimbAnchorJointPoint = connectedLimbAnchorJoint.getPoint();
+
+		/* First offset by parent limb location, 
+		* then by the JOINT to which we are connected.
+		* THEN offset by THIS limb's anchor joint
+		*/
+
+		SDL_Rect newLimbRect = {
+			anchorLimbRect.x + anchorJointPoint.x - connectedLimbAnchorJointPoint.x,
+			anchorLimbRect.y + anchorJointPoint.y - connectedLimbAnchorJointPoint.y,
+			limbWidth,
+			limbHeight
+		};
+
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			connectedLimb.getTexture(),
+			NULL, &newLimbRect,
+			limbAngle, NULL, SDL_FLIP_NONE
+		);
+	}
 
 }
