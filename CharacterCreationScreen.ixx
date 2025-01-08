@@ -277,6 +277,13 @@ void CharacterCreationScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMe
 }
 
 
+void printAllLimbs(Character character) {
+	for (Limb& limb : character.getLimbs()) {
+		string isAnchorString = limb.getIsAnchor() ? " IS anchor " : " is NOT anchor";
+		cout << limb.getName() << isAnchorString << "\n";
+	}
+}
+
 /* Process user input */
 void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
 	/* User pressed X to close */
@@ -348,13 +355,10 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					break;
 				case ButtonOption::ClearSuit:
 					cout << "CLEARING SUIT\n";
-					//settingsPanel.setShow(true);
-					//reviewModePanel.setShow(false);
+					playerCharacter.clearSuit();
 					break;
 				case ButtonOption::SaveSuit:
 					cout << "SAVING SUIT\n";
-					/*settingsPanel.setShow(true);
-					reviewModePanel.setShow(false);*/
 					break;
 				default:
 					cout << "ERROR\n";
@@ -389,6 +393,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 							cout << "DID NOT LOAD LIMB\n";
 						}
 
+						//printAllLimbs(playerCharacter);
 						
 						break;
 					default:

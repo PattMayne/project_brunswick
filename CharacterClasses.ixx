@@ -238,6 +238,7 @@ export class Limb {
 			intelligenceMod = 0;
 			position = Point(50, 95);
 			lastPosition = Point(0, 0);
+			isAnchor = false;
 
 			/* get Limb texture */
 
@@ -309,15 +310,31 @@ export class Limb {
 		/* This can be MAP position or DRAW position. */
 		void move(Point newPosition) {
 			lastPosition = position;
-			position = newPosition;
-		}
+			position = newPosition; }
 
 		vector<Joint>& getJoints() { return joints; }
 
 		bool isEquipped() {
+			if (getIsAnchor()) {
+				return true;
+			}
 			for (Joint& joint : joints) {
-				if (!joint.isFree()) { return true; } }
+				if (!joint.isFree()) { return true; }
+			}
 			return false;
+		}
+
+		void setAnchor(bool isAnchor = true) {
+			this->isAnchor = isAnchor; }
+
+		bool getIsAnchor() { return isAnchor; }
+
+		void unEquip() {
+			for (Joint& joint : joints) {
+				joint.setAnchor(false);
+				joint.detachLimb();
+			}
+			isAnchor = false;
 		}
 
 	protected:
@@ -332,6 +349,7 @@ export class Limb {
 		Point position;
 		Point lastPosition;
 		vector<Joint> joints;
+		bool isAnchor;
 };
 
 
@@ -365,6 +383,11 @@ public:
 	void setId(int id) { this->id = id; }
 	vector<Limb>& getLimbs() { return limbs; }
 	bool equipLimb(int limbId);
+	void clearSuit() {
+		for (Limb& limb : limbs) {
+			limb.unEquip(); }
+		anchorLimbId = -1;
+	}
 
 
 protected:
@@ -384,7 +407,13 @@ bool Character::equipLimb(int limbId) {
 
 	if (anchorLimbId < 0) {
 		anchorLimbId = limbId;
+		limbToEquip.setAnchor(true);
 		cout << limbToEquip.getName() << " is now the ANCHOR limb\n";
+
+		string isAnchorLimbString = limbToEquip.getIsAnchor() ? " AND it IS the anchor limb!\n\n" :
+			" and somehow is NOT the anchor limb???\n\n";
+		cout << isAnchorLimbString;
+
 		return true;
 	}
 	
@@ -429,17 +458,10 @@ bool Character::equipLimb(int limbId) {
 					return true;
 				}
 			}
-
-			
-
-			
 		}
 	}
 
-
-
-
-	
+	cout << "\nApparently we couldn't find enough free joints to connect?\n\n";
 
 	return false;
 }
