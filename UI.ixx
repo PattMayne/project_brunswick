@@ -1428,6 +1428,7 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 		int rectY = i < columnsCount ? PANEL_PADDING :
 			((i / columnsCount) * (PANEL_PADDING + buttonHeight)) + PANEL_PADDING;
 
+		/* This rectangle defines the size and position of the button. */
 		SDL_Rect rect = {
 			rectX,
 			rectY,
@@ -1435,6 +1436,7 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 			buttonHeight
 		};
 
+		/* create main surfaces */
 		SDL_Surface* normalSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 		SDL_Surface* hoverSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 
@@ -1445,17 +1447,14 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 		string buttonText = !isBackButton ? limbBtnDataStructs[i].name : resources.getButtonText("BACK");
 		/* Get the TEXT surface. */
 		SDL_Surface* textSurface = createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["DARK_TEXT"]);
-		ButtonClickStruct clickStruct;
+		ButtonClickStruct clickStruct = !isBackButton ? ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStructs[i].id) :
+			ButtonClickStruct(ButtonOption::Back, -1);
 
 		if (!isBackButton) {
 			LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
 			SDL_Surface* limbSurface = IMG_Load(limbBtnDataStruct.texturePath.c_str());
 			SDL_BlitScaled(limbSurface, NULL, normalSurface, NULL);
-			clickStruct = ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStruct.id);
 			SDL_FreeSurface(limbSurface);
-		}
-		else {
-			clickStruct = ButtonClickStruct(ButtonOption::Back, -1);
 		}
 
 		/* If the text surface is too small, center it in a surface of the proper size (don't expand it). */

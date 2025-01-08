@@ -22,6 +22,15 @@
 * 2. ANIMATE the Panel Buttons.
 * 3. Rebuild Panel functions in UI file.
 * 
+* 
+* LOADING A LIMB:
+* -- A "loaded" limb is actually equipped.
+* But we "hold" it and manipulate its position according to button presses from the player.
+* "EQUIP" button just sets "limbLoaded" to false and "loadedLimbId" back to -1, and changes the MODE (and therefore which panel is shown (review mode panel).
+* 
+* Loading / equipping limbs should be done with functions in the Character object.
+* That way I can reuse them for NPCs being created on the map.
+* 
 */
 
 module;
@@ -64,6 +73,9 @@ public:
 		getBackgroundTexture(ui);
 		createTitleTexture(ui);
 		playerCharacter = buildPlayerCharacter();
+
+		limbLoaded = false;
+		loadedLimbId = -1;
 
 		showTitle = true;
 		titleCountdown = 140;
@@ -114,6 +126,9 @@ private:
 	Panel reviewModePanel;
 	Panel limbLoadedPanel;
 	Panel chooseLimbPanel;
+
+	bool limbLoaded;
+	int loadedLimbId; /* Currently holds index from vector. Will hold id from DB. */
 
 	void draw(UI& ui);
 	void drawPanel(UI& ui, Panel& panel);
@@ -172,22 +187,18 @@ export void CharacterCreationScreen::run() {
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
-				handleEvent(e, running, gameState);
-			}
+				handleEvent(e, running, gameState); }
 		}
 
 		/* Deal with showing the title. */
 		if (showTitle) {
 			if (titleCountdown > 0) {
-				--titleCountdown;
-			}
+				--titleCountdown; }
 			else {
-				raiseTitleRect();
-			}
+				raiseTitleRect(); }
 
 			if (getTitleBottomPosition() < -1) {
-				showTitle = false;
-			}
+				showTitle = false; }
 		}
 
 		checkMouseLocation(e);
@@ -355,7 +366,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
 
-				/* If we sent in a limb id/idex: */
+				/* If we sent in a limb id/index: */
 				if (clickStruct.itemID >= 0) {
 					Limb& clickedLimb = playerCharacter.getInventoryLimbs()[clickStruct.itemID];
 
@@ -383,11 +394,8 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						break;
 					default:
 						cout << "ERROR\n";
-
 					}
 				}
-
-				
 			}
 		}
 	}

@@ -83,19 +83,19 @@ export struct LimbForm {
 	int strength;
 	int speed;
 	int intelligence;
-	DominanceNode dNode;
-	vector<Point> joints;
+	DominanceNode domNode;
+	vector<Point> jointPoints; /* Limb CLASS will have full Joint objects which hold references to other limbs. */
 	string texturePath;
 
 	/* CONSTRUCTOR */
 	LimbForm(
 		string name, string slug,
 		int hp, int strength, int speed, int intelligence,
-		DominanceNode dNode, string texturePath, vector<Point> joints)
+		DominanceNode domNode, string texturePath, vector<Point> jointPoints)
 		:
 		name(name), slug(slug),
 		hp(hp), strength(strength), speed(speed), intelligence(intelligence),
-		dNode(dNode), texturePath(texturePath), joints(joints) {
+		domNode(domNode), texturePath(texturePath), jointPoints(jointPoints) {
 	}
 };
 
@@ -152,7 +152,52 @@ export struct MapForm {
 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+/* TO DO: add id (from database) */
+export class Joint {
+public:
+	/* Vanilla empty Limb. Possibly never use. */
+	Joint() {
+		point = { 0, 0 };
+		isAnchor = false;
+		connectedLimbId = -1;
+		anchorJointIndex = -1;
+		rotationAngle = 0;
+	}
 
+	/* When we create a new Joint for a new Limb. */
+	Joint(Point point) : point(point), isAnchor(false), connectedLimbId(-1), anchorJointIndex(-1), rotationAngle(0) {}
+
+	/* When we load a joint from the database. */
+	Joint(Point point, bool isAnchor, int connectedLimbId, int anchorJointIndex, int rotationAngle) :
+		point(point), isAnchor(isAnchor), connectedLimbId(connectedLimbId), anchorJointIndex(anchorJointIndex), rotationAngle(rotationAngle) {}
+
+	void setAnchor(bool makeAnchor = true) { isAnchor = makeAnchor; }
+	void connectLimb(int limbId, int jointIndex) {
+		connectedLimbId = limbId;
+		anchorJointIndex = jointIndex;
+	}
+	//void setRotationAngle(int newAngle) { rotationAngle = newAngle; }
+	int rotateAnchoredLimb(int angleIncrement) {
+		rotationAngle += angleIncrement;
+		return rotationAngle;
+	}
+	void resetRotationAngle() { rotationAngle = 0; }
+	void detachLimb() {
+		rotationAngle = 0;
+		connectedLimbId = -1;
+		anchorJointIndex = -1;
+	}
+
+
+private:
+	Point point;
+	bool isAnchor;
+
+	/* Data about the CONNECTED limb. */
+	int connectedLimbId;
+	int anchorJointIndex;
+	int rotationAngle;
+};
 
 
 /*
@@ -198,6 +243,13 @@ export class Limb {
 			texture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), limbSurface);
 			SDL_FreeSurface(limbSurface);
 			/* TO DO: ERROR HANDLING FOR TEXTURE. */
+
+			/* Build actual Joints from the LimbForm. */
+
+			for (Point jointPoint : form.jointPoints) {
+				/* new Limb constructor (must later accomadate existing joints from existing Limbs. */
+				joints.emplace_back(jointPoint);
+			}
 		}
 
 		/*  */
@@ -267,7 +319,9 @@ export class Limb {
 		SDL_Texture* texture = NULL;
 		Point position;
 		Point lastPosition;
+		vector<Joint> joints;
 };
+
 
 
 /*
@@ -283,6 +337,8 @@ export class Limb {
 *
 * I don't need MAP here, because MAP will only exist on the MapScreen screen, so it doesn't need derived classes.
 * The factories will include a Map factory, just to retrieve the basic Map data and send it to the MapScreen screen.
+* 
+* Maybe the limbs vector(s) must be smart pointers.
 */
 export class Character {
 public:
@@ -294,11 +350,21 @@ public:
 	int getType() { return characterType; }
 	void setId(int id) { this->id = id; }
 	vector<Limb>& getInventoryLimbs() { return inventoryLimbs; }
-	vector<Limb>& getEquippedLimbs() { return equippedLimbs; }
+	vector<Limb>& getEquippedLimbs() {
+		/* 
+		* TO DO:
+		* -- There will be NO "equippedLimbs" vector.
+		* Instead, we will cycle through the limbs descending from the anchorLimb.
+		*/
+		return equippedLimbs;
+	}
 
 protected:
 	CharacterType characterType;
 	int id;
+	int anchorLimbId; /* Currently using INDEX for dev purposes... will replace with actual DB ID. */
 	vector<Limb> inventoryLimbs;
 	vector<Limb> equippedLimbs;
 };
+
+
