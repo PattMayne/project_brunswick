@@ -31,6 +31,10 @@
 * Loading / equipping limbs should be done with functions in the Character object.
 * That way I can reuse them for NPCs being created on the map.
 * 
+* NEXT: Draw the equipped limbs.
+* 
+* THEN: Equip RECURSIVELY.
+* 
 */
 
 module;
@@ -126,6 +130,8 @@ private:
 	Panel reviewModePanel;
 	Panel limbLoadedPanel;
 	Panel chooseLimbPanel;
+
+	void drawCharacter(UI& ui);
 
 	bool limbLoaded;
 	int loadedLimbId; /* Currently holds index from vector. Will hold id from DB. */
@@ -236,6 +242,7 @@ void CharacterCreationScreen::draw(UI& ui) {
 	
 	//drawPanel(ui, limbLoadedPanel);
 	drawPanel(ui, chooseLimbPanel);
+	drawCharacter(ui);
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
@@ -362,7 +369,6 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					break;
 				default:
 					cout << "ERROR\n";
-
 				}
 			}
 			else if (chooseLimbPanel.getShow() && chooseLimbPanel.isInPanel(mouseX, mouseY)) {
@@ -427,4 +433,67 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	if (reviewModePanel.getShow()) { reviewModePanel.checkMouseOver(mouseX, mouseY); }
 	if (limbLoadedPanel.getShow()) { limbLoadedPanel.checkMouseOver(mouseX, mouseY); }
 	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
+}
+
+
+void CharacterCreationScreen::drawCharacter(UI& ui) {
+
+	if (playerCharacter.getAnchorLimbId() < 0) { return; }
+
+	/* 
+	* 1. Make a rectangle of the whole screen.
+	* 2. Draw anchor limb (REFERENCE) in the center.
+	* 3. Draw limbs CONNECTED TO the anchor limb.
+	* 4. Do this recursively for THEIR connected limbs.
+	* 5. Allow user to change which LOADED LIMB JOINT is the ANCHOR.
+	* 6. Allow user to change which EQUIPPED LIMB JOINT it is anchored TO.
+	* 7. Draw them at their ANGLES.
+	* 8. Allow user to CHANGE the angle of the ORIGINAL (we're using a reference anyway for this reason).
+	* 9. SAVE this information to the DATABASE.
+	*		---> We won't need a "suit." AnchorLimbId will be in the character, and the other attributes are in the Limb and Joint objects.
+	* 10. EVENTUALLY allow user to FLIP limbs horizontally or vertically.
+	*/
+
+	vector<Limb>& limbs = playerCharacter.getLimbs();
+	Limb& anchorLimb = playerCharacter.getAnchorLimb();
+
+	/* 1.Make a rectangle of the whole screen. (will I use this?? NOPE... unless I draw something on it?? YES. some backdrop... off-white.  */
+
+	int screenWidth = ui.getWindowWidth();
+	int screenHeight = ui.getWindowHeight();
+
+	SDL_Rect screenRect = { 0, 0, screenWidth, screenHeight };
+
+	/* 2. Draw anchor limb (REFERENCE) in the center. */
+
+	int limbAngle = 0; // FOR NOW
+
+	/* FOR NOW we will use the natural size of the textures. */
+	int limbWidth, limbHeight;
+	SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &limbWidth, &limbHeight);
+
+	/* 
+	* We will want the draw order to eventually be (optionally) different from the hierarchy... so each will need its own SDL_Rect.
+	* So this algorithm which currently DRAWS each limb... will eventually need to SET each rect and draw LATER.
+	* But we DO NOT want to calculate each rect for each frame of the animation.
+	* SO we will instead make an unordered_map of RECTs and LIMBs, and update them...
+	* NO... instead it will be a vector of new structs?
+	* We'll figure it out later... we need the draw order, the rect, the angle, many things...
+	* 
+	*/
+
+	SDL_Rect limbRect = {
+		(screenWidth / 2) - (limbWidth / 2),
+		(screenHeight / 2) - (limbHeight / 2),
+		limbWidth,
+		limbHeight
+	};
+
+	SDL_RenderCopyEx(
+		ui.getMainRenderer(),
+		anchorLimb.getTexture(),
+		NULL, &limbRect,
+		limbAngle, NULL, SDL_FLIP_NONE
+	);
+
 }

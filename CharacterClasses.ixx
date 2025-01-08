@@ -389,6 +389,10 @@ public:
 		anchorLimbId = -1;
 	}
 
+	int getAnchorLimbId() { return anchorLimbId; }
+
+	Limb& getAnchorLimb() { return limbs[anchorLimbId]; }
+
 
 protected:
 	CharacterType characterType;
