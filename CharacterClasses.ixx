@@ -194,9 +194,8 @@ public:
 	}
 
 	bool getIsAnchor() { return isAnchor; }
-
+	int getRotationAngle() { return rotationAngle; }
 	int getConnectedLimbId() { return connectedLimbId; }
-
 	Point getPoint() { return point; }
 
 private:
@@ -261,6 +260,8 @@ export class Limb {
 				/* new Limb constructor (must later accomadate existing joints from existing Limbs. */
 				joints.emplace_back(jointPoint);
 			}
+
+			drawRect = { 0, 0, 0, 0, };
 		}
 
 		/*  */
@@ -280,7 +281,9 @@ export class Limb {
 		int getSpeed() { return form.speed + speedMod; }
 		int getIntelligence() { return form.intelligence + intelligenceMod; }
 
+		SDL_Rect& getDrawRect() { return drawRect; }
 		SDL_Texture* getTexture() { return texture; }
+		bool getIsAnchor() { return isAnchor; }
 
 		/* SET the modifiers. */
 
@@ -334,8 +337,6 @@ export class Limb {
 		void setAnchor(bool isAnchor = true) {
 			this->isAnchor = isAnchor; }
 
-		bool getIsAnchor() { return isAnchor; }
-
 		void unEquip() {
 			for (Joint& joint : joints) {
 				joint.setAnchor(false);
@@ -354,6 +355,9 @@ export class Limb {
 			return joints[0];
 		}
 
+		void setDrawRect(SDL_Rect drawRect) {
+			this->drawRect = drawRect; }
+
 	protected:
 		LimbForm form;
 		string name;
@@ -367,6 +371,7 @@ export class Limb {
 		Point lastPosition;
 		vector<Joint> joints;
 		bool isAnchor;
+		SDL_Rect drawRect;
 };
 
 

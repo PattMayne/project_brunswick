@@ -111,6 +111,7 @@ public:
 	}
 
 	ScreenType getScreenType() { return screenType; }
+	void drawChildLimbs(Limb& parentLimb, UI& ui);
 	void run();
 
 private:
@@ -435,7 +436,63 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
 }
 
+void drawLimb(Limb& limb, int rotationAngle, UI& ui) {
+	SDL_RenderCopyEx(
+		ui.getMainRenderer(),
+		limb.getTexture(),
+		NULL, &limb.getDrawRect(),
+		rotationAngle, NULL, SDL_FLIP_NONE
+	);
+}
 
+void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
+	vector<Limb>& limbs = playerCharacter.getLimbs();
+	vector<Joint>& anchorJoints = parentLimb.getJoints();
+	SDL_Rect& parentRect = parentLimb.getDrawRect();
+
+	int rotationAngle = 0; /*  */
+
+	for (int i = 0; i < anchorJoints.size(); ++i) {
+		Joint& anchorJoint = anchorJoints[i];
+		if (anchorJoint.getConnectedLimbId() < 0) { continue; }
+
+		Point anchorJointPoint = anchorJoint.getPoint();
+		Limb& connectedLimb = limbs[anchorJoint.getConnectedLimbId()];
+
+		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
+		Joint& connectedLimbAnchorJoint = connectedLimb.getAnchorJoint();
+		Point connectedLimbAnchorJointPoint = connectedLimbAnchorJoint.getPoint();
+
+		/* First offset by parent limb location,
+		* then by the JOINT to which we are connected.
+		* THEN offset by THIS limb's anchor joint
+		*/
+
+		connectedLimb.setDrawRect({
+			parentRect.x + anchorJointPoint.x - connectedLimbAnchorJointPoint.x,
+			parentRect.y + anchorJointPoint.y - connectedLimbAnchorJointPoint.y,
+			parentRect.w,
+			parentRect.h
+		});
+
+		drawLimb(connectedLimb, anchorJoint.getRotationAngle(), ui);
+
+		/* Recursively draw all THIS limb's child limbs. */
+		drawChildLimbs(connectedLimb, ui);
+	}
+}
+
+/*
+* Draw each limb.
+* 
+* For now we will start with the anchor limb,
+* then cycle through each of its joints and draw their connected limbs,
+* then cycle through their joints, etc, recursively.
+* 
+* THEN, the above sequence will just be to create the rects.
+* We need to add drawOrder as an int member of Limb
+* and draw based on the order instead of the connection hierarchy.
+*/
 void CharacterCreationScreen::drawCharacter(UI& ui) {
 
 	if (playerCharacter.getAnchorLimbId() < 0) { return; }
@@ -466,7 +523,7 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 
 	/* 2. Draw anchor limb (REFERENCE) in the center. */
 
-	int limbAngle = 0; // FOR NOW
+	int rotationAngle = 0; // FOR NOW
 
 	/* FOR NOW we will use the natural size of the textures. */
 	int limbWidth, limbHeight;
@@ -489,43 +546,11 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 		limbHeight
 	};
 
-	SDL_RenderCopyEx(
-		ui.getMainRenderer(),
-		anchorLimb.getTexture(),
-		NULL, &anchorLimbRect,
-		limbAngle, NULL, SDL_FLIP_NONE
-	);
+	anchorLimb.setDrawRect(anchorLimbRect);
 
-	vector<Joint>& anchorJoints = anchorLimb.getJoints();
+	drawLimb(anchorLimb, rotationAngle, ui);
 
-	for (int i = 0; i < anchorJoints.size(); ++i) {
-		Joint& anchorJoint = anchorJoints[i];
-		if (anchorJoint.getConnectedLimbId() < 0) { continue; }
+	/* Now the recursion... a "draw all limbs" function. */
 
-		Point anchorJointPoint = anchorJoint.getPoint();
-		Limb& connectedLimb = limbs[anchorJoint.getConnectedLimbId()];
-
-		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
-		Joint& connectedLimbAnchorJoint = connectedLimb.getAnchorJoint();
-		Point connectedLimbAnchorJointPoint = connectedLimbAnchorJoint.getPoint();
-
-		/* First offset by parent limb location, 
-		* then by the JOINT to which we are connected.
-		* THEN offset by THIS limb's anchor joint
-		*/
-
-		SDL_Rect newLimbRect = {
-			anchorLimbRect.x + anchorJointPoint.x - connectedLimbAnchorJointPoint.x,
-			anchorLimbRect.y + anchorJointPoint.y - connectedLimbAnchorJointPoint.y,
-			limbWidth,
-			limbHeight
-		};
-
-		SDL_RenderCopyEx(
-			ui.getMainRenderer(),
-			connectedLimb.getTexture(),
-			NULL, &newLimbRect,
-			limbAngle, NULL, SDL_FLIP_NONE
-		);
-	}
+	drawChildLimbs(anchorLimb, ui);
 }
