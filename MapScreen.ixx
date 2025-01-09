@@ -215,7 +215,7 @@ class MapCharacter : public Character {
 				break;
 			}
 
-			cout << blockPosition.x << ", " << blockPosition.y << "\n";
+			// cout << blockPosition.x << ", " << blockPosition.y << "\n";
 
 			return moved;
 		}

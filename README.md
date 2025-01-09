@@ -10,9 +10,9 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 
 ### Technologies:
 
-**Language:** C++
+**Language:** C++, JSON
 
-**Libraries:** SDL2, SDL_TTF, SDL_Image
+**Libraries:** SDL2, SDL_TTF, SDL_Image, nlohmann (JSON)
  
 ## TO DO:
 
@@ -25,10 +25,6 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
         - [x] dialog (script / handwriting)
     - [x] Background for main menu screen
 - [ ] Switch to SDL3
-- [ ] Create JSON schema for Map files
-    - [ ] Validate each Map file based on the schema
-- [ ] Replace Lohmann with Glaze for JSON
-    - [ ] Make a new branch first.
 - [x] Make main menu screen
   - [x] UI module to process buttons and panels
     - [x] Buttons light up on-hover
@@ -40,8 +36,8 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
     - [ ] outside/main (world / non-safe by default, until solved) screen
     - [ ] inside (building / safe) screen
     - [ ] inside (dungeon / unsafe by default, until solved) screen
-  - [ ] Character Creation screen
-  - [ ] Battle screen
+  - [x] Character Creation screen
+  - [x] Battle screen
 - [x] Build actual MAP screen
   - [x] Represent STATIC maps
     - [x] Decide b/w auto-generated maps vs pre-designed maps
@@ -50,15 +46,21 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
         - [x] NO DESIGNER SCREEN
     - [ ] Save generated map to SQLite DB
 - [ ] Build Character Creation Screen
-- [ ] Represent STATIC limbs (instantiated limb objects will be saved to the DB)
-  - [ ] JSON?
+    - [x] Recursively connect limbs.
+    - [ ] Draw all the limbs.
+    - [ ] Rotate the limbs.
+    - [ ] Move connected limb to next joint (more recursive searching).
+    - [ ] Change anchor joint of connected limb.
+- [x] Represent some STATIC limbs
 - [ ] Incorporate LIMBS and AVATARS into MAP screen
+    - [x] LIMBS
+    - [ ] AVATARS
 - [ ] Build Battle Screen
 - [ ] When closing program close each font with TTF_CloseFont()
 - [ ] incorporate SQLite database
     - [ ] must download the sqlite3.h header file (#include <sqlite3.h>)
 - [x] MOBILE proportions are wack. Must unwack. Maybe this will be about SCALING.
-    - [ ] Button size and Font size are the main issue. Button size is based on font size. So **font size should adjust automatically based on screen size.**
+    - [x] Button size and Font size are the main issue. Button size is based on font size. So **font size should adjust automatically based on screen size.**
 - [ ]  Possibly install conanfile or vcpkg to handle libraries (SDL2 or SDL3, json)
 - [x] Make a Resources module to encapsulate string and int resources
     - [x] Make a JSON file
