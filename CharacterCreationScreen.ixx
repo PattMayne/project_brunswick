@@ -103,6 +103,9 @@ public:
 		creationMode = CreationMode::Review;
 
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
+		drawLoadedLimb = true;
+		loadedLimbCountdown = 20;
+
 	}
 
 	/* Destructor */
@@ -162,26 +165,22 @@ private:
 
 	void draw(UI& ui);
 	void drawPanel(UI& ui, Panel& panel);
-
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
 	void checkMouseLocation(SDL_Event& e);
 
 	void getBackgroundTexture(UI& ui);
 	void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
-
 	void createTitleTexture(UI& ui);
-
-	void raiseTitleRect() {
-		--titleRect.y; }
-
-	int getTitleBottomPosition() {
-		return titleRect.y + titleRect.h; }
+	void raiseTitleRect() { --titleRect.y; }
+	int getTitleBottomPosition() { return titleRect.y + titleRect.h; }
+	void drawLimb(Limb& limb, UI& ui);
 
 	bool showTitle;
+	bool drawLoadedLimb;
 	int titleCountdown;
+	int loadedLimbCountdown;
 
 	Character playerCharacter;
-
 	CreationMode creationMode;
 };
 
@@ -222,6 +221,15 @@ export void CharacterCreationScreen::run() {
 				handleEvent(e, running, gameState); }
 		}
 
+		/* Deal with blinking loaded limb */
+		if (loadedLimbId >= 0) {
+			--loadedLimbCountdown;
+			if (loadedLimbCountdown < 1) {
+				drawLoadedLimb = !drawLoadedLimb;
+				loadedLimbCountdown = 20;
+			}
+		}
+
 		/* Deal with showing the title. */
 		if (showTitle) {
 			if (titleCountdown > 0) {
@@ -249,7 +257,6 @@ export void CharacterCreationScreen::run() {
 
 
 void CharacterCreationScreen::draw(UI& ui) {
-	//unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
 	SDL_RenderClear(ui.getMainRenderer());
@@ -263,8 +270,6 @@ void CharacterCreationScreen::draw(UI& ui) {
 	drawPanel(ui, settingsPanel);
 	//drawPanel(ui, gameMenuPanel);
 	drawPanel(ui, reviewModePanel);
-	/* WHEN TO DRAW NEW PANELS ? And they are NOT created properly. */
-
 	
 	drawPanel(ui, limbLoadedPanel);
 	drawPanel(ui, chooseLimbPanel);
@@ -416,11 +421,12 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						* ClickStruct has an ITEM ID!!!!!
 						*/
 
-						loadedLimbId = clickStruct.itemID;
-						limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
-						changeCreationMode(CreationMode::LimbLoaded);
-						limbLoadedPanel.setShow(true);
-
+						if (!clickedLimb.isEquipped()) {
+							loadedLimbId = clickStruct.itemID;
+							limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
+							changeCreationMode(CreationMode::LimbLoaded);
+							limbLoadedPanel.setShow(true);
+						}
 						//printAllLimbs(playerCharacter);
 						
 						break;
@@ -474,8 +480,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						cout << "UNLOADING LIMB #" << loadedLimbId << "?????\n";
 						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
 						if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
-							playerCharacter.setAnchorLimbId(-1);
-						}
+							playerCharacter.setAnchorLimbId(-1); }
 						playerCharacter.unEquipLimb(loadedLimbId);
 					}
 					changeCreationMode(CreationMode::ChooseLimb);
@@ -501,7 +506,7 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
 }
 
-void drawLimb(Limb& limb, UI& ui) {
+void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
 		limb.getTexture(),
@@ -517,7 +522,8 @@ void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
 
 	for (int i = 0; i < anchorJoints.size(); ++i) {
 		Joint& anchorJoint = anchorJoints[i];
-		if (anchorJoint.getConnectedLimbId() < 0) { continue; }
+		int connectedLimbId = anchorJoint.getConnectedLimbId();
+		if (connectedLimbId < 0) { continue; }
 
 		Point anchorJointPoint = anchorJoint.getPoint();
 		Limb& connectedLimb = limbs[anchorJoint.getConnectedLimbId()];
@@ -538,7 +544,9 @@ void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
 			parentRect.h
 		});
 
-		drawLimb(connectedLimb, ui);
+		/* Skip "loaded" limb when drawLoadedLimb is false (for hot blinking action). */
+		if (connectedLimbId != loadedLimbId || drawLoadedLimb) {
+			drawLimb(connectedLimb, ui); }
 
 		/* Recursively draw all THIS limb's child limbs. */
 		drawChildLimbs(connectedLimb, ui);
@@ -557,8 +565,8 @@ void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
 * and draw based on the order instead of the connection hierarchy.
 */
 void CharacterCreationScreen::drawCharacter(UI& ui) {
-
-	if (playerCharacter.getAnchorLimbId() < 0) { return; }
+	int anchorLimbId = playerCharacter.getAnchorLimbId();
+	if (anchorLimbId < 0) { return; }
 
 	/*
 	* 4. Make LoadedLimb blink.
@@ -575,15 +583,9 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	Limb& anchorLimb = playerCharacter.getAnchorLimb();
 
 	/* 1.Make a rectangle of the whole screen. (will I use this?? NOPE... unless I draw something on it?? YES. some backdrop... off-white.  */
-
 	int screenWidth = ui.getWindowWidth();
 	int screenHeight = ui.getWindowHeight();
-
 	SDL_Rect screenRect = { 0, 0, screenWidth, screenHeight };
-
-	/* 2. Draw anchor limb (REFERENCE) in the center. */
-
-	int rotationAngle = 0; // FOR NOW
 
 	/* FOR NOW we will use the natural size of the textures. */
 	int limbWidth, limbHeight;
@@ -596,24 +598,18 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	* SO we will instead make an unordered_map of RECTs and LIMBs, and update them...
 	* NO... instead it will be a vector of new structs?
 	* We'll figure it out later... we need the draw order, the rect, the angle, many things...
-	* 
-	* 
-	* ROTATION ANGLE:
-	* 
-	* We should move the rotation angle FROM the Joint and into the Limb.
-	* Then the anchor limb can be at an angle too.
-	* 
 	*/
 
-	SDL_Rect anchorLimbRect = {
+	anchorLimb.setDrawRect({
 		(screenWidth / 2) - (limbWidth / 2),
 		(screenHeight / 2) - (limbHeight / 2),
 		limbWidth,
 		limbHeight
-	};
+	});
 
-	anchorLimb.setDrawRect(anchorLimbRect);
-	drawLimb(anchorLimb, ui);
+	/* Skip "loaded" limb when drawLoadedLimb is false (for hot blinking action). */
+	if (anchorLimbId != loadedLimbId || drawLoadedLimb) {
+		drawLimb(anchorLimb, ui); }
 
 	/* Now the recursion... a "draw all limbs" function. */
 	drawChildLimbs(anchorLimb, ui);
