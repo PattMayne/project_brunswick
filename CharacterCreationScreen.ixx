@@ -100,6 +100,7 @@ public:
 			limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), i); }
 
 		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
+		creationMode = CreationMode::Review;
 
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
 	}
@@ -108,6 +109,28 @@ public:
 	~CharacterCreationScreen() {
 		SDL_DestroyTexture(bgTexture);
 		SDL_DestroyTexture(titleTexture);
+	}
+
+	void changeCreationMode(CreationMode creationMode) {
+		this->creationMode = creationMode;
+
+		switch(creationMode){
+		case CreationMode::ChooseLimb:
+			chooseLimbPanel.setShow(true);
+			reviewModePanel.setShow(false);
+			limbLoadedPanel.setShow(false);
+			break;
+		case CreationMode::Review:
+			chooseLimbPanel.setShow(false);
+			reviewModePanel.setShow(true);
+			limbLoadedPanel.setShow(false);
+			break;
+		case CreationMode::LimbLoaded:
+			chooseLimbPanel.setShow(false);
+			reviewModePanel.setShow(false);
+			limbLoadedPanel.setShow(true);
+		break;
+		}
 	}
 
 	ScreenType getScreenType() { return screenType; }
@@ -158,6 +181,8 @@ private:
 	int titleCountdown;
 
 	Character playerCharacter;
+
+	CreationMode creationMode;
 };
 
 void CharacterCreationScreen::getBackgroundTexture(UI& ui) {
@@ -241,7 +266,7 @@ void CharacterCreationScreen::draw(UI& ui) {
 	/* WHEN TO DRAW NEW PANELS ? And they are NOT created properly. */
 
 	
-	//drawPanel(ui, limbLoadedPanel);
+	drawPanel(ui, limbLoadedPanel);
 	drawPanel(ui, chooseLimbPanel);
 	drawCharacter(ui);
 
@@ -391,14 +416,10 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						* ClickStruct has an ITEM ID!!!!!
 						*/
 
+						loadedLimbId = clickStruct.itemID;
 						limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
-
-						if (limbEquipped) {
-							cout << "Loaded Limb: " << clickedLimb.getName() << "\n";
-						}
-						else {
-							cout << "DID NOT LOAD LIMB\n";
-						}
+						changeCreationMode(CreationMode::LimbLoaded);
+						limbLoadedPanel.setShow(true);
 
 						//printAllLimbs(playerCharacter);
 						
@@ -412,12 +433,56 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					switch (clickStruct.buttonOption) {
 					case ButtonOption::Back:
 						// switch to other panel
-						chooseLimbPanel.setShow(false);
-						reviewModePanel.setShow(true);
+						changeCreationMode(CreationMode::Review);
 						break;
 					default:
 						cout << "ERROR\n";
 					}
+				}
+			}
+			else if (limbLoadedPanel.getShow() && limbLoadedPanel.isInPanel(mouseX, mouseY)) {
+				cout << "\n\nCLICK REVIEW MENU \n\n";
+				ButtonClickStruct clickStruct = limbLoadedPanel.checkButtonClick(mouseX, mouseY);
+				UI& ui = UI::getInstance();
+
+				/* see what button might have been clicked : */
+				switch (clickStruct.buttonOption) {
+				case ButtonOption::Equip:
+					loadedLimbId = -1;
+					changeCreationMode(CreationMode::Review);
+					cout << "\nEQUIPPING LOADED LIMB\n";
+					break;
+				case ButtonOption::NextCharJoint:
+					cout << "\nNEXT CHARACTER JOINT\n";
+					break;
+				case ButtonOption::NextLimbJoint:
+					cout << "\nNEXT LIMB JOINT\n";
+					break;
+				case ButtonOption::RotateClockwise:
+					cout << "ROTATING CLOCKWISE\n";
+					break;
+				case ButtonOption::RotateCounterClockwise:
+					cout << "ROTATING COUNTER-CLOCKWISE\n";
+					break;
+				case ButtonOption::UnloadLimb:
+					cout << "UNLOADING LIMB #" << loadedLimbId << "\n";
+					/*
+					* Unequip that limb.
+					* Go back to the ChooseLimb mode.
+					*/
+					if (loadedLimbId >= 0) {
+						cout << "UNLOADING LIMB #" << loadedLimbId << "?????\n";
+						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+						if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
+							playerCharacter.setAnchorLimbId(-1);
+						}
+						playerCharacter.unEquipLimb(loadedLimbId);
+					}
+					changeCreationMode(CreationMode::ChooseLimb);
+					loadedLimbId = -1;
+					break;
+				default:
+					cout << "ERROR\n";
 				}
 			}
 		}
@@ -436,12 +501,12 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
 }
 
-void drawLimb(Limb& limb, int rotationAngle, UI& ui) {
+void drawLimb(Limb& limb, UI& ui) {
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
 		limb.getTexture(),
 		NULL, &limb.getDrawRect(),
-		rotationAngle, NULL, SDL_FLIP_NONE
+		limb.getRotationAngle(), NULL, SDL_FLIP_NONE
 	);
 }
 
@@ -449,8 +514,6 @@ void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
 	vector<Limb>& limbs = playerCharacter.getLimbs();
 	vector<Joint>& anchorJoints = parentLimb.getJoints();
 	SDL_Rect& parentRect = parentLimb.getDrawRect();
-
-	int rotationAngle = 0; /*  */
 
 	for (int i = 0; i < anchorJoints.size(); ++i) {
 		Joint& anchorJoint = anchorJoints[i];
@@ -475,7 +538,7 @@ void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
 			parentRect.h
 		});
 
-		drawLimb(connectedLimb, anchorJoint.getRotationAngle(), ui);
+		drawLimb(connectedLimb, ui);
 
 		/* Recursively draw all THIS limb's child limbs. */
 		drawChildLimbs(connectedLimb, ui);
@@ -497,11 +560,8 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 
 	if (playerCharacter.getAnchorLimbId() < 0) { return; }
 
-	/* 
-	* 1. Make a rectangle of the whole screen.
-	* 2. Draw anchor limb (REFERENCE) in the center.
-	* 3. Draw limbs CONNECTED TO the anchor limb.
-	* 4. Do this recursively for THEIR connected limbs.
+	/*
+	* 4. Make LoadedLimb blink.
 	* 5. Allow user to change which LOADED LIMB JOINT is the ANCHOR.
 	* 6. Allow user to change which EQUIPPED LIMB JOINT it is anchored TO.
 	* 7. Draw them at their ANGLES.
@@ -537,6 +597,12 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	* NO... instead it will be a vector of new structs?
 	* We'll figure it out later... we need the draw order, the rect, the angle, many things...
 	* 
+	* 
+	* ROTATION ANGLE:
+	* 
+	* We should move the rotation angle FROM the Joint and into the Limb.
+	* Then the anchor limb can be at an angle too.
+	* 
 	*/
 
 	SDL_Rect anchorLimbRect = {
@@ -547,10 +613,8 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	};
 
 	anchorLimb.setDrawRect(anchorLimbRect);
-
-	drawLimb(anchorLimb, rotationAngle, ui);
+	drawLimb(anchorLimb, ui);
 
 	/* Now the recursion... a "draw all limbs" function. */
-
 	drawChildLimbs(anchorLimb, ui);
 }

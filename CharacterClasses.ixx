@@ -162,29 +162,22 @@ public:
 		isAnchor = false;
 		connectedLimbId = -1;
 		anchorJointIndex = -1;
-		rotationAngle = 0;
 	}
 
 	/* When we create a new Joint for a new Limb. */
-	Joint(Point point) : point(point), isAnchor(false), connectedLimbId(-1), anchorJointIndex(-1), rotationAngle(0) {}
+	Joint(Point point) : point(point), isAnchor(false), connectedLimbId(-1), anchorJointIndex(-1) {}
 
 	/* When we load a joint from the database. */
 	Joint(Point point, bool isAnchor, int connectedLimbId, int anchorJointIndex, int rotationAngle) :
-		point(point), isAnchor(isAnchor), connectedLimbId(connectedLimbId), anchorJointIndex(anchorJointIndex), rotationAngle(rotationAngle) {}
+		point(point), isAnchor(isAnchor), connectedLimbId(connectedLimbId), anchorJointIndex(anchorJointIndex) {}
 
 	void setAnchor(bool makeAnchor = true) { isAnchor = makeAnchor; }
 	void connectLimb(int limbId, int jointIndex) {
 		connectedLimbId = limbId;
 		anchorJointIndex = jointIndex;
 	}
-	//void setRotationAngle(int newAngle) { rotationAngle = newAngle; }
-	int rotateAnchoredLimb(int angleIncrement) {
-		rotationAngle += angleIncrement;
-		return rotationAngle;
-	}
-	void resetRotationAngle() { rotationAngle = 0; }
+
 	void detachLimb() {
-		rotationAngle = 0;
 		connectedLimbId = -1;
 		anchorJointIndex = -1;
 	}
@@ -194,7 +187,6 @@ public:
 	}
 
 	bool getIsAnchor() { return isAnchor; }
-	int getRotationAngle() { return rotationAngle; }
 	int getConnectedLimbId() { return connectedLimbId; }
 	Point getPoint() { return point; }
 
@@ -205,7 +197,6 @@ private:
 	/* Data about the CONNECTED limb. */
 	int connectedLimbId;
 	int anchorJointIndex;
-	int rotationAngle;
 };
 
 
@@ -256,12 +247,13 @@ export class Limb {
 
 			/* Build actual Joints from the LimbForm. */
 
-			for (Point jointPoint : form.jointPoints) {
+			for (Point& jointPoint : form.jointPoints) {
 				/* new Limb constructor (must later accomadate existing joints from existing Limbs. */
 				joints.emplace_back(jointPoint);
 			}
 
 			drawRect = { 0, 0, 0, 0, };
+			rotationAngle = 0;
 		}
 
 		/*  */
@@ -280,6 +272,7 @@ export class Limb {
 		int getStrength() { return form.strength + strengthMod; }
 		int getSpeed() { return form.speed + speedMod; }
 		int getIntelligence() { return form.intelligence + intelligenceMod; }
+		int getRotationAngle() { return rotationAngle; }
 
 		SDL_Rect& getDrawRect() { return drawRect; }
 		SDL_Texture* getTexture() { return texture; }
@@ -343,6 +336,7 @@ export class Limb {
 				joint.detachLimb();
 			}
 			isAnchor = false;
+			rotationAngle = 0;
 		}
 
 		Joint& getAnchorJoint() {
@@ -358,6 +352,13 @@ export class Limb {
 		void setDrawRect(SDL_Rect drawRect) {
 			this->drawRect = drawRect; }
 
+		//void setRotationAngle(int rotationAngle) { this->rotationAngle = rotationAngle; }
+		void resetRotationAngle() { rotationAngle = 0; }
+		int rotate(int angleIncrement) {
+			rotationAngle += angleIncrement;
+			return rotationAngle;
+		}
+
 	protected:
 		LimbForm form;
 		string name;
@@ -372,6 +373,7 @@ export class Limb {
 		vector<Joint> joints;
 		bool isAnchor;
 		SDL_Rect drawRect;
+		int rotationAngle;
 };
 
 
@@ -411,11 +413,32 @@ public:
 		anchorLimbId = -1;
 	}
 
-	int getAnchorLimbId() { return anchorLimbId; }
+	void unEquipLimb(int limbId) {
+		/* First check if this is the anchor limb. */
+		if (anchorLimbId == limbId) {
+			anchorLimbId = -1; }		
 
+		/* Next remove reference from parent limb. */
+		for (Limb& limb : limbs) {
+			for (Joint& joint : limb.getJoints()) {
+				if (joint.getConnectedLimbId() == limbId) {
+					joint.detachLimb(); } } }
+
+		/* recursively unequip limbs and child limbs. */
+		Limb& baseLimb = limbs[limbId];
+		for (int i = 0; i < baseLimb.getJoints().size(); ++i) {
+			Joint& joint = baseLimb.getJoints()[i];
+			int connectedLimbId = joint.getConnectedLimbId();
+			if (connectedLimbId >= 0) {
+				unEquipLimb(connectedLimbId); } }
+
+		baseLimb.unEquip();
+	}
+
+	int getAnchorLimbId() { return anchorLimbId; }
 	Limb& getAnchorLimb() { return limbs[anchorLimbId]; }
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch);
-
+	void setAnchorLimbId(int newId) { anchorLimbId = newId; }
 
 protected:
 	CharacterType characterType;

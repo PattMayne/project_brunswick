@@ -84,7 +84,7 @@ export enum class ButtonOption {
 	LoadLimb, /* Will be re-used dynamically by ALL limb buttons. */
 	NextPage, PreviousPage,
 	/* Loaded Limb (LimbLoaded mode) panel buttons. */
-	NextCharJoint, NextLimbJoint, RotateClockwise, RotateCounterClockwise, UnloadLimb
+	NextCharJoint, NextLimbJoint, RotateClockwise, RotateCounterClockwise, UnloadLimb, Equip
 
 };
 

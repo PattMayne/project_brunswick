@@ -1309,6 +1309,7 @@ vector<PreButtonStruct> UI::getLimbLoadedModePreButtonStructs() {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	return {
+		buildPreButtonStruct(resources.getButtonText("EQUIP_LIMB"), ButtonOption::Equip),
 		buildPreButtonStruct(resources.getButtonText("NEXT_CHARACTER_JOINT"), ButtonOption::NextCharJoint),
 		buildPreButtonStruct(resources.getButtonText("NEXT_LIMB_JOINT"), ButtonOption::NextLimbJoint),
 		buildPreButtonStruct(resources.getButtonText("ROTATE_CLOCKWISE"), ButtonOption::RotateClockwise),
