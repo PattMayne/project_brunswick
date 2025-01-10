@@ -359,6 +359,57 @@ export class Limb {
 			return rotationAngle;
 		}
 
+		/*
+		* In the character creation screen, when the user wants to change which joint
+		* the limb uses to anchor itself to its parent limb, this function does that.
+		* Cycles through joints, and if one is available we do the switch.
+		* Returns boolean indicating whether a switch took place.
+		*/
+		bool shiftAnchorLimb() {
+			if (!isEquipped() || joints.size() == 1) { return false; }
+			int oldAnchorId = -1;
+			int newAnchorId = -1;
+
+			/* Get the old anchor id. */
+			for (int i = 0; i < joints.size(); ++i) {
+				if (joints[i].getIsAnchor()) {
+					oldAnchorId = i;
+					break;
+				}
+			}
+
+			if (oldAnchorId < 0) { return false; }
+
+			/* Cycle through joints ABOVE the oldAnchorId. */
+			if (oldAnchorId < joints.size() - 1) {
+				for (int i = oldAnchorId + 1; i < joints.size(); ++i) {
+					if (joints[i].isFree()) {
+						newAnchorId = i;
+						break;
+					}
+				}
+			}
+
+			/* If that didn't work, start from the beginning. */
+			if (newAnchorId < 0) {
+				for (int i = 0; i < oldAnchorId; ++i) {
+					if (joints[i].isFree()) {
+						newAnchorId = i;
+						break;
+					}
+				}
+			}
+
+			/* If we found both new and old anchor positions, do the switch. */
+			if (oldAnchorId >= 0 && newAnchorId >= 0) {
+				joints[newAnchorId].setAnchor(true);
+				joints[oldAnchorId].setAnchor(false);
+				return true;
+			}
+
+			return false;
+		}
+
 	protected:
 		LimbForm form;
 		string name;

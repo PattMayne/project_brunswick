@@ -16,11 +16,12 @@
 * 
 * 
 * TO DO:
-* 1.	Build the PANELS.
-* ---------- INVENTORY PANEL:: DOES NOT WORK. FIX IT. Also add "HIDE LIMBS" button.
-* ---------- LOADED LIMB PANEL:: click a limb to bring it to the top.
-* 2. ANIMATE the Panel Buttons.
-* 3. Rebuild Panel functions in UI file.
+* 1. Cycle through loadedLimb joints.
+* 2. Cycle through Character joints.
+* 3. Rotate loaded limb.
+* 4. In panel, only add buttons for Limbs that are NOT equipped (not in this file, in the UI file).
+* 5. Re-write to draw the limbs in a different order.
+* 6. Click a button (new panel for equipped limbs in Review mode) to bring THAT limb to the top of the draw order.
 * 
 * 
 * LOADING A LIMB:
@@ -30,11 +31,6 @@
 * 
 * Loading / equipping limbs should be done with functions in the Character object.
 * That way I can reuse them for NPCs being created on the map.
-* 
-* NEXT: Draw the equipped limbs.
-* 
-* THEN: Equip RECURSIVELY.
-* 
 */
 
 module;
@@ -459,11 +455,35 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					cout << "\nEQUIPPING LOADED LIMB\n";
 					break;
 				case ButtonOption::NextCharJoint:
+
+
+					/*
+					* This is more difficult.
+					* This requires more recursion.
+					* 1. Get the parent limb.
+					* 2. Parent limb should have a function to SHIFT CHILD LIMB
+					* ---> shiftChildLimb(limbId)
+					* 3. Or should it??? Maybe the function must be OUTSIDE it...
+					* ------> maybe the function should be in the character class?
+					* ----------> Seems like that makes it more amenable to recusrion?
+					* ----------> Yeah... start with the anchor limb and search each limb recursively for an available spot...
+					* ---------------> then REMOVE the reference in the original limb!
+					*/
+
 					cout << "\nNEXT CHARACTER JOINT\n";
+
 					break;
 				case ButtonOption::NextLimbJoint:
-					cout << "\nNEXT LIMB JOINT\n";
-					break;
+					/* Change the anchor joint of the loaded limb. */
+					if (playerCharacter.getAnchorLimbId() == loadedLimbId) {
+						break;
+					}
+					else {
+						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+						bool anchorShifted = loadedLimb.shiftAnchorLimb();
+						break;
+					}
+
 				case ButtonOption::RotateClockwise:
 					cout << "ROTATING CLOCKWISE\n";
 					break;
