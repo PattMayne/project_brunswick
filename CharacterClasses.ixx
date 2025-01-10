@@ -624,6 +624,98 @@ public:
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch);
 	void setAnchorLimbId(int newId) { anchorLimbId = newId; }
 
+	/*
+	* Move the loaded limb to the next available joint in the character's equipped limbs.
+	* Also, cycle back to the beginning of the list once we reach the end.
+	*/
+	bool shiftChildLimb(int childLimbId) {
+		if (getAnchorLimbId() == childLimbId) {
+			/* Don't do it if this is the anchor limb (no parent limb with limbs through which to cycle). */
+			return false;
+		}
+		else {
+			/* Try to get the parent limb ID and the parent limb itself. */
+			int parentLimbId = getParentLimbId(childLimbId);
+			if (parentLimbId < 0) { return false; }
+			Limb& parentLimb = getLimbs()[parentLimbId];
+
+			/* Try to get the index of the joint (in the parent limb) holding the loaded limb. */
+			int parentJointIndex = -1;
+			for (int i = 0; i < parentLimb.getJoints().size(); ++i) {
+				if (parentLimb.getJoints()[i].getConnectedLimbId() == childLimbId) {
+					parentJointIndex = i;
+					break;
+				}
+			}
+
+			if (parentJointIndex < 0) { return false; }
+
+			/* Get a list of ALL the equipped joints in the character (excluding loaded limb and its children). */
+			vector<tuple<int, int, bool>> jointsData = getEquippedJointsData(childLimbId);
+
+			/* Find out where the PARENT joint is located in that list. */
+			int parentJointIndexInJointsDataVector = -1;
+
+			for (int i = 0; i < jointsData.size(); ++i) {
+
+				int thisLimbId = get<0>(jointsData[i]);
+				int thisJointId = get<1>(jointsData[i]);
+
+				if (thisLimbId == parentLimbId && thisJointId == parentJointIndex) {
+					parentJointIndexInJointsDataVector = i;
+				}
+			}
+
+			if (parentJointIndexInJointsDataVector < 0) { return false; }
+
+			/* Now check ABOVE the current location for a free joint. */
+
+			int newParentJointIndex = -1;
+			int newParentLimbId = -1;
+
+			if (parentJointIndexInJointsDataVector < jointsData.size() - 1) {
+				for (int i = parentJointIndexInJointsDataVector + 1; i < jointsData.size(); ++i) {
+					bool thisJointIsFree = get<2>(jointsData[i]);
+					if (thisJointIsFree) {
+						newParentLimbId = get<0>(jointsData[i]);
+						newParentJointIndex = get<1>(jointsData[i]);
+						break;
+					}
+				}
+			}
+
+			/* Check IF we got one from above. And if not, get one from below. */
+
+			if (parentJointIndexInJointsDataVector > 0 && (newParentJointIndex < 0 || newParentLimbId < 0)) {
+				for (int i = 0; i < parentJointIndexInJointsDataVector; ++i) {
+					bool thisJointIsFree = get<2>(jointsData[i]);
+					if (thisJointIsFree) {
+						newParentLimbId = get<0>(jointsData[i]);
+						newParentJointIndex = get<1>(jointsData[i]);
+						break;
+					}
+				}
+			}
+
+			/* If we caught something, do the switch. */
+			if (newParentJointIndex >= 0 && newParentLimbId >= 0) {
+				/* Detach limb from old parent. */
+				Limb& newParentLimb = getLimbById(newParentLimbId);
+
+				if (newParentLimb.isEquipped()) {
+					parentLimb.getJoints()[parentJointIndex].detachLimb();
+					Joint& newParentJoint = newParentLimb.getJoints()[newParentJointIndex];
+					int loadedLimbAnchorJointId = getLimbById(childLimbId).getAnchorJointId();
+					newParentJoint.connectLimb(childLimbId, loadedLimbAnchorJointId);
+
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
 protected:
 	CharacterType characterType;
 	int id;
