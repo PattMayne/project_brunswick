@@ -350,6 +350,16 @@ export class Limb {
 			return joints[0];
 		}
 
+		int getAnchorJointId() {
+			for (int i = 0; i < joints.size(); ++i) {
+				Joint& joint = joints[i];
+				if (joint.getIsAnchor()) {
+					return i;
+				}
+			}
+			return -1;
+		}
+
 		void setDrawRect(SDL_Rect drawRect) {
 			this->drawRect = drawRect; }
 
@@ -364,6 +374,15 @@ export class Limb {
 			for (Joint& joint : joints) {
 				if (joint.isFree()) { return true; } }
 			return false;
+		}
+
+		int getNextFreeJointIndex(int startingIndex = 0) {
+			for (int i = startingIndex; i < joints.size(); ++i) {
+				if (joints[i].isFree()) {
+					return i;
+				}
+			}
+			return -1;
 		}
 
 		/*
@@ -564,6 +583,41 @@ public:
 
 		return -1;
 	}
+
+	Limb& getLimbById(int limbId) {
+		/* FOR NOW return limb by vector index.
+		* This is where we'll search for the limb with the actual DB ID later.
+		*/
+
+		return limbs[limbId];
+	}
+
+	/*
+	* returns vector of: tuple<limbId, jointId, isFree>
+	*/
+	vector<tuple<int, int, bool>> getEquippedJointsData(int limbToSkipId = -1) {
+		vector<tuple<int, int, bool>> jointsData;
+
+		for (int i = 0; i < limbs.size(); ++i) {
+			if (i == limbToSkipId) {
+				continue;
+			}
+
+			Limb& thisLimb = limbs[i];
+
+			if (!thisLimb.isEquipped()) { continue; }
+			vector<Joint>& theseJoints = thisLimb.getJoints();
+
+			for (int k = 0; k < theseJoints.size(); ++k) {
+				Joint& thisJoint = theseJoints[k];
+				tuple<int, int, bool> thisTuple = make_tuple(i, k, thisJoint.isFree());
+				jointsData.push_back(thisTuple);
+			}
+		}
+
+		return jointsData;
+	}
+
 
 	int getAnchorLimbId() { return anchorLimbId; }
 	Limb& getAnchorLimb() { return limbs[anchorLimbId]; }

@@ -455,35 +455,94 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					cout << "\nEQUIPPING LOADED LIMB\n";
 					break;
 				case ButtonOption::NextCharJoint:
-
-
-					/*
-					* This is more difficult.
-					* This requires more recursion.
-					* 1. Get the parent limb.
-					* 2. Parent limb should have a function to SHIFT CHILD LIMB
-					* ---> shiftChildLimb(limbId)
-					* 3. Or should it??? Maybe the function must be OUTSIDE it...
-					* ------> maybe the function should be in the character class?
-					* ----------> Seems like that makes it more amenable to recusrion?
-					* ----------> Yeah... start with the anchor limb and search each limb recursively for an available spot...
-					* ---------------> then REMOVE the reference in the original limb!
+					/* 
+					* Move the loaded limb to the next available joint in the character's equipped limbs.
+					* Also, cycle back to the beginning of the list once we reach the end.
+					* Maybe put this in a function in the character class.
 					*/
 
 					if (playerCharacter.getAnchorLimbId() == loadedLimbId) {
+						/* Don't do it if this is the anchor limb (no parent limb with limbs through which to cycle). */
 						break;
 					}
 					else {
+						/* Try to get the parent limb ID and the parent limb itself. */
 						int parentLimbId = playerCharacter.getParentLimbId(loadedLimbId);
-						if (parentLimbId >= 0) {
-							Limb& parentLimb = playerCharacter.getLimbs()[parentLimbId];
-							bool anchorShifted = parentLimb.shiftJointOfLimb(loadedLimbId);
+						if (parentLimbId < 0) { break; }						
+						Limb& parentLimb = playerCharacter.getLimbs()[parentLimbId];
 
-							/* PROBLEM: I'm shifting the limb on ONE LIMB.
-							* I need to shift it on the whole character, the whole list of limbs.
-							*/
+						/* Try to get the index of the joint (in the parent limb) holding the loaded limb. */
+						int parentJointIndex = -1;
+						for (int i = 0; i < parentLimb.getJoints().size(); ++i) {
+							if (parentLimb.getJoints()[i].getConnectedLimbId() == loadedLimbId) {
+								parentJointIndex = i;
+								break;
+							}
+						}
+
+						if (parentJointIndex < 0) { break; }
+
+						/* Get a list of ALL the equipped joints in the character (excluding loaded limb and its children). */
+						vector<tuple<int, int, bool>> jointsData = playerCharacter.getEquippedJointsData(loadedLimbId);
+
+						/* Find out where the PARENT joint is located in that list. */
+						int parentJointIndexInJointsDataVector = -1;
+
+						for (int i = 0; i < jointsData.size(); ++i) {
+
+							int thisLimbId = get<0>(jointsData[i]);
+							int thisJointId = get<1>(jointsData[i]);
+
+							if (thisLimbId == parentLimbId && thisJointId == parentJointIndex) {
+								parentJointIndexInJointsDataVector = i;
+							}
+						}
+
+						if (parentJointIndexInJointsDataVector < 0) { break; }
+
+						/* Now check ABOVE the current location for a free joint. */
+
+						int newParentJointIndex = -1;
+						int newParentLimbId = -1;
+
+						if (parentJointIndexInJointsDataVector < jointsData.size() - 1) {
+							for (int i = parentJointIndexInJointsDataVector + 1; i < jointsData.size(); ++i) {
+								bool thisJointIsFree = get<2>(jointsData[i]);
+								if (thisJointIsFree) {
+									newParentLimbId = get<0>(jointsData[i]);
+									newParentJointIndex = get<1>(jointsData[i]);
+									break;
+								}
+							}
+						}
+
+						/* Check IF we got one from above. And if not, get one from below. */
+
+						if (parentJointIndexInJointsDataVector > 0 && (newParentJointIndex < 0 || newParentLimbId < 0)) {
+							for (int i = 0; i < parentJointIndexInJointsDataVector; ++i) {
+								bool thisJointIsFree = get<2>(jointsData[i]);
+								if (thisJointIsFree) {
+									newParentLimbId = get<0>(jointsData[i]);
+									newParentJointIndex = get<1>(jointsData[i]);
+									break;
+								}
+							}
+						}
+
+						/* If we caught something, do the switch. */
+						if (newParentJointIndex >= 0 && newParentLimbId >= 0) {
+							/* Detach limb from old parent. */								
+							Limb& newParentLimb = playerCharacter.getLimbById(newParentLimbId);
+
+							if (newParentLimb.isEquipped()) {
+								parentLimb.getJoints()[parentJointIndex].detachLimb();
+								Joint& newParentJoint = newParentLimb.getJoints()[newParentJointIndex];
+								int loadedLimbAnchorJointId = playerCharacter.getLimbById(loadedLimbId).getAnchorJointId();
+								newParentJoint.connectLimb(loadedLimbId, loadedLimbAnchorJointId);
+							}
 						}
 					}
+
 					break;
 				case ButtonOption::NextLimbJoint:
 					/* Change the anchor joint of the loaded limb. */
