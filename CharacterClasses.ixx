@@ -188,6 +188,7 @@ public:
 
 	bool getIsAnchor() { return isAnchor; }
 	int getConnectedLimbId() { return connectedLimbId; }
+	int getChildLimbAnchorJointIndex() { return anchorJointIndex; }
 	Point getPoint() { return point; }
 
 private:
@@ -359,6 +360,69 @@ export class Limb {
 			return rotationAngle;
 		}
 
+		bool hasFreeJoint() {
+			for (Joint& joint : joints) {
+				if (joint.isFree()) { return true; } }
+			return false;
+		}
+
+		/*
+		* When the player has loaded a limb which is the CHILD OF (connected to) this limb,
+		* we call this function on this limb and shift the location of the child (limbId).
+		*/
+		bool shiftJointOfLimb(int limbId) {
+			/* again, we're using the index but must replace with actual limbId. */
+
+			/*
+			* 1. make sure there is a free joint.
+			* 2. find the current joint index
+			* 3. find the next available joint index
+			* --- start ABOVE. If we fail, start again at 0.
+			* 4. make the switch.
+			* 5. Now do it RECURSIVELY!!!
+			*/
+
+			/* Make sure there is a free joint. (maybe useless?) */
+			if (!hasFreeJoint()) { return false; }
+
+			/* Get the current joint index. */
+
+			int oldJointIndex = -1;
+			int newJointIndex = -1;
+			int anchorJointIndex = -1;
+
+			for (int i = 0; i < joints.size(); i++) {
+				if (joints[i].getConnectedLimbId() == limbId) {
+					anchorJointIndex = joints[i].getChildLimbAnchorJointIndex();
+					oldJointIndex = i;
+					break; } }
+
+			if (oldJointIndex < 0) { return false; }
+
+			/* Find the next available joint index. Start ABOVE the current one. */
+
+			for (int i = oldJointIndex + 1; i < joints.size(); ++i) {
+				if (joints[i].isFree()) {
+					newJointIndex = i;
+					break; } }
+
+			/* If we didn't find a free joint above the old one, start at the beginning. */
+			if (newJointIndex < 0) {
+				for (int i = 0; i < oldJointIndex; ++i) {
+					if (joints[i].isFree()) {
+						newJointIndex = i;
+						break; } } }
+
+			if (newJointIndex >= 0 && oldJointIndex >= 0 && anchorJointIndex >= 0) {
+				/* make the switch. */
+				joints[oldJointIndex].detachLimb();
+				joints[newJointIndex].connectLimb(limbId, anchorJointIndex);
+				return true;
+			}
+
+			return false;
+		}
+
 		/*
 		* In the character creation screen, when the user wants to change which joint
 		* the limb uses to anchor itself to its parent limb, this function does that.
@@ -484,6 +548,21 @@ public:
 				unEquipLimb(connectedLimbId); } }
 
 		baseLimb.unEquip();
+	}
+
+	int getParentLimbId(int childLimbId) {
+
+		for (int i = 0; i < limbs.size(); ++i) {
+			vector<Joint> theseJoints = limbs[i].getJoints();
+
+			for (int k = 0; k < theseJoints.size(); ++k) {
+				if (theseJoints[k].getConnectedLimbId() == childLimbId) {
+					return i;
+				}
+			}
+		}
+
+		return -1;
 	}
 
 	int getAnchorLimbId() { return anchorLimbId; }

@@ -470,8 +470,20 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					* ---------------> then REMOVE the reference in the original limb!
 					*/
 
-					cout << "\nNEXT CHARACTER JOINT\n";
+					if (playerCharacter.getAnchorLimbId() == loadedLimbId) {
+						break;
+					}
+					else {
+						int parentLimbId = playerCharacter.getParentLimbId(loadedLimbId);
+						if (parentLimbId >= 0) {
+							Limb& parentLimb = playerCharacter.getLimbs()[parentLimbId];
+							bool anchorShifted = parentLimb.shiftJointOfLimb(loadedLimbId);
 
+							/* PROBLEM: I'm shifting the limb on ONE LIMB.
+							* I need to shift it on the whole character, the whole list of limbs.
+							*/
+						}
+					}
 					break;
 				case ButtonOption::NextLimbJoint:
 					/* Change the anchor joint of the loaded limb. */
