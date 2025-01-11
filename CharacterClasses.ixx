@@ -47,6 +47,7 @@ export enum CharacterType { Player, Hostile, Friendly }; /* NOT a CLASS because 
 export enum class LimbState { Free, Owned, Equipped }; /* If it is OWNED or EQUIPPED, then there must be a character id. Every character should exist in the DB.*/
 
 class Limb;
+int normalizeAngle(int angle);
 
 /* Where the limb image will be drawn onto the character surface. */
 export struct SuitLimbPlacement {
@@ -158,18 +159,23 @@ export class Joint {
 public:
 	/* Vanilla empty Limb. Possibly never use. */
 	Joint() {
-		point = { 0, 0 };
+		pointForm = { 0, 0 };
 		isAnchor = false;
 		connectedLimbId = -1;
 		anchorJointIndex = -1;
 	}
 
 	/* When we create a new Joint for a new Limb. */
-	Joint(Point point) : point(point), isAnchor(false), connectedLimbId(-1), anchorJointIndex(-1) {}
+	Joint(Point point) : pointForm(point), isAnchor(false), connectedLimbId(-1), anchorJointIndex(-1) {
+		resetModifiedPoint();
+	}
 
 	/* When we load a joint from the database. */
 	Joint(Point point, bool isAnchor, int connectedLimbId, int anchorJointIndex, int rotationAngle) :
-		point(point), isAnchor(isAnchor), connectedLimbId(connectedLimbId), anchorJointIndex(anchorJointIndex) {}
+		pointForm(point), isAnchor(isAnchor), connectedLimbId(connectedLimbId), anchorJointIndex(anchorJointIndex)
+	{
+		resetModifiedPoint();
+	}
 
 	void setAnchor(bool makeAnchor = true) { isAnchor = makeAnchor; }
 	void connectLimb(int limbId, int jointIndex) {
@@ -189,10 +195,14 @@ public:
 	bool getIsAnchor() { return isAnchor; }
 	int getConnectedLimbId() { return connectedLimbId; }
 	int getChildLimbAnchorJointIndex() { return anchorJointIndex; }
-	Point getPoint() { return point; }
+	Point getPoint() { return modifiedPoint; }
+	void resetModifiedPoint() {
+		modifiedPoint = { pointForm.x, pointForm.y };
+	}
 
 private:
-	Point point;
+	Point pointForm;
+	Point modifiedPoint;
 	bool isAnchor;
 
 	/* Data about the CONNECTED limb. */
@@ -253,7 +263,7 @@ export class Limb {
 				joints.emplace_back(jointPoint);
 			}
 
-			drawRect = { 0, 0, 0, 0, };
+			drawRect = { 0, 0, 0, 0 };
 			rotationAngle = 0;
 		}
 
@@ -363,10 +373,10 @@ export class Limb {
 		void setDrawRect(SDL_Rect drawRect) {
 			this->drawRect = drawRect; }
 
-		//void setRotationAngle(int rotationAngle) { this->rotationAngle = rotationAngle; }
+		//void setRotationAngle(int rotationAngle) { this->rotationAngle = normalizeAngle(rotationAngle); }
 		void resetRotationAngle() { rotationAngle = 0; }
 		int rotate(int angleIncrement) {
-			rotationAngle += angleIncrement;
+			rotationAngle = normalizeAngle(rotationAngle + angleIncrement);
 			return rotationAngle;
 		}
 
@@ -391,15 +401,6 @@ export class Limb {
 		*/
 		bool shiftJointOfLimb(int limbId) {
 			/* again, we're using the index but must replace with actual limbId. */
-
-			/*
-			* 1. make sure there is a free joint.
-			* 2. find the current joint index
-			* 3. find the next available joint index
-			* --- start ABOVE. If we fail, start again at 0.
-			* 4. make the switch.
-			* 5. Now do it RECURSIVELY!!!
-			*/
 
 			/* Make sure there is a free joint. (maybe useless?) */
 			if (!hasFreeJoint()) { return false; }
@@ -815,4 +816,25 @@ bool Character::equipLimb(int limbId) {
 
 	/* Failed to find a free joint on the limb we've been trying to equip (unlikely... should be impossible). */
 	return false;
+}
+
+/*
+*			EXTRA HELPER FUNCTIONS
+*/
+
+
+int normalizeAngle(int angle) {
+	if (angle < 360 && angle >= 0) {
+		return angle;
+	}
+	else {
+		if (angle >= 360) {
+			angle = angle - 360;
+		}
+		else if (angle < 0) {
+			angle = angle + 360;
+		}
+
+		return normalizeAngle(angle);
+	}
 }

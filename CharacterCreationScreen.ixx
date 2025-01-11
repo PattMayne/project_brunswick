@@ -477,10 +477,16 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					}
 
 				case ButtonOption::RotateClockwise:
-					cout << "ROTATING CLOCKWISE\n";
+					if (loadedLimbId >= 0 && loadedLimbId < playerCharacter.getLimbs().size()) {
+						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+						loadedLimb.rotate(15);
+					}
 					break;
 				case ButtonOption::RotateCounterClockwise:
-					cout << "ROTATING COUNTER-CLOCKWISE\n";
+					if (loadedLimbId >= 0 && loadedLimbId < playerCharacter.getLimbs().size()) {
+						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+						loadedLimb.rotate(-15);
+					}
 					break;
 				case ButtonOption::UnloadLimb:
 					cout << "UNLOADING LIMB #" << loadedLimbId << "\n";
@@ -518,13 +524,27 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
 }
 
+/* Remember to delete this SDL_Point pointer if it's not null! */
+SDL_Point* getRotationPointSDL(Limb& limb, int anchorJointId) {
+	if (anchorJointId < 0) { return NULL; }
+	Point anchorPoint = limb.getJoints()[anchorJointId].getPoint();
+	SDL_Point* rotationPoint = new SDL_Point(limb.getJoints()[0].getPoint().x, limb.getJoints()[0].getPoint().y );
+	return rotationPoint;
+}
+
 void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
+	int anchorJointId = limb.getAnchorJointId();
+	SDL_Point* rotationPoint = getRotationPointSDL(limb, anchorJointId);
+
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
 		limb.getTexture(),
 		NULL, &limb.getDrawRect(),
-		limb.getRotationAngle(), NULL, SDL_FLIP_NONE
+		limb.getRotationAngle(), rotationPoint, SDL_FLIP_NONE
 	);
+	if (rotationPoint != NULL) {
+		delete rotationPoint;
+	}	
 }
 
 void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
