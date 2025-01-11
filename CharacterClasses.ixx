@@ -36,6 +36,7 @@ import "SDL_image.h";
 import <string>;
 import <vector>;
 import <tuple>;
+import <cmath>;
 
 import TypeStorage;
 import UI;
@@ -195,10 +196,12 @@ public:
 	bool getIsAnchor() { return isAnchor; }
 	int getConnectedLimbId() { return connectedLimbId; }
 	int getChildLimbAnchorJointIndex() { return anchorJointIndex; }
+	Point getFormPoint() { return pointForm; }
 	Point getPoint() { return modifiedPoint; }
 	void resetModifiedPoint() {
 		modifiedPoint = { pointForm.x, pointForm.y };
 	}
+	void setModifiedPoint(Point newPoint) { modifiedPoint = newPoint; }
 
 private:
 	Point pointForm;
@@ -209,6 +212,26 @@ private:
 	int connectedLimbId;
 	int anchorJointIndex;
 };
+
+
+Point getRotatedPoint(Point anchorPoint, Point pointToRotate, int rotationAngle) {
+	/* Convert to radians. */
+	double angleRad = rotationAngle * (M_PI / 180);
+
+	/* Translate point to rotate to origin. */
+	double translatedX = pointToRotate.x - anchorPoint.x;
+	double translatedY = pointToRotate.y - anchorPoint.y;
+
+	/* Apply rotation. */
+	double rotatedX = translatedX * cos(angleRad) - translatedY * sin(angleRad);
+	double rotatedY = translatedX * sin(angleRad) + translatedY * cos(angleRad);
+
+	Point newPoint = {
+		static_cast<int>(round(rotatedX + anchorPoint.x)),
+		static_cast<int>(round(rotatedY + anchorPoint.y))
+	};
+	return newPoint;
+}
 
 
 /*
@@ -265,6 +288,7 @@ export class Limb {
 
 			drawRect = { 0, 0, 0, 0 };
 			rotationAngle = 0;
+			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
 		}
 
 		/*  */
@@ -345,6 +369,7 @@ export class Limb {
 			for (Joint& joint : joints) {
 				joint.setAnchor(false);
 				joint.detachLimb();
+				joint.resetModifiedPoint();
 			}
 			isAnchor = false;
 			rotationAngle = 0;
@@ -377,6 +402,21 @@ export class Limb {
 		void resetRotationAngle() { rotationAngle = 0; }
 		int rotate(int angleIncrement) {
 			rotationAngle = normalizeAngle(rotationAngle + angleIncrement);
+
+			/* Now update all the joint points. */
+
+			for (Joint& joint : joints) {
+				Point anchorPoint =
+					getAnchorJointId() < 1 ? Point(textureWidth / 2, textureHeight / 2) :
+					getAnchorJoint().getFormPoint();
+
+				Point pointToRotate = joint.getFormPoint();
+
+				if (!joint.getIsAnchor()) {
+					joint.setModifiedPoint(getRotatedPoint(anchorPoint, pointToRotate, rotationAngle));
+				}
+			}
+
 			return rotationAngle;
 		}
 
@@ -509,6 +549,8 @@ export class Limb {
 		bool isAnchor;
 		SDL_Rect drawRect;
 		int rotationAngle;
+		int textureWidth;
+		int textureHeight;
 };
 
 

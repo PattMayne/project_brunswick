@@ -528,13 +528,11 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 SDL_Point* getRotationPointSDL(Limb& limb, int anchorJointId) {
 	if (anchorJointId < 0) { return NULL; }
 	Point anchorPoint = limb.getJoints()[anchorJointId].getPoint();
-	SDL_Point* rotationPoint = new SDL_Point(limb.getJoints()[0].getPoint().x, limb.getJoints()[0].getPoint().y );
-	return rotationPoint;
+	return new SDL_Point(anchorPoint.x, anchorPoint.y);
 }
 
 void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
-	int anchorJointId = limb.getAnchorJointId();
-	SDL_Point* rotationPoint = getRotationPointSDL(limb, anchorJointId);
+	SDL_Point* rotationPoint = getRotationPointSDL(limb, limb.getAnchorJointId());
 
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
@@ -542,9 +540,7 @@ void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
 		NULL, &limb.getDrawRect(),
 		limb.getRotationAngle(), rotationPoint, SDL_FLIP_NONE
 	);
-	if (rotationPoint != NULL) {
-		delete rotationPoint;
-	}	
+	if (rotationPoint != NULL) { delete rotationPoint; }	
 }
 
 void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
