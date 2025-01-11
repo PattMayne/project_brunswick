@@ -85,17 +85,8 @@ public:
 		gameMenuPanel = ui.createGameMenuPanel();
 		reviewModePanel = ui.createReviewModePanel();
 		limbLoadedPanel = ui.createLimbLoadedModePanel();
-
-		/* Build a vector of data structures so the UI can build the panel of Limb buttons. */
-		vector<LimbButtonData> limbBtnDataStructs;
-		vector<Limb>& inventoryLimbs = playerCharacter.getLimbs();
-
-		for (int i = 0; i < inventoryLimbs.size(); ++i) {
-			/* FOR NOW we want the index. But when we bring in the database, we will use the ID. So the LimbButtonData says id instead of index. */
-			Limb& thisLimb = inventoryLimbs[i];
-			limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), i); }
-
-		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
+		createChooseLimbPanel(ui);
+		
 		creationMode = CreationMode::Review;
 
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
@@ -108,6 +99,30 @@ public:
 	~CharacterCreationScreen() {
 		SDL_DestroyTexture(bgTexture);
 		SDL_DestroyTexture(titleTexture);
+	}
+
+	void createChooseLimbPanel(UI& ui = UI::getInstance()) {
+		/* Destroy textures if they already exist. */
+		if (chooseLimbPanel.getButtons().size() > 0) {
+			for (Button& button : chooseLimbPanel.getButtons()) {
+				SDL_DestroyTexture(button.getHoverTexture());
+				SDL_DestroyTexture(button.getNormalTexture());
+			}
+		}
+
+		/* Build a vector of data structures so the UI can build the panel of Limb buttons. */
+		vector<LimbButtonData> limbBtnDataStructs;
+		vector<Limb>& inventoryLimbs = playerCharacter.getLimbs();
+
+		for (int i = 0; i < inventoryLimbs.size(); ++i) {
+			/* FOR NOW we want the index. But when we bring in the database, we will use the ID. So the LimbButtonData says id instead of index. */
+			Limb& thisLimb = inventoryLimbs[i];
+			if (!thisLimb.isEquipped()) {
+				limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), i);
+			}
+		}
+
+		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
 	}
 
 	void changeCreationMode(CreationMode creationMode) {
@@ -384,6 +399,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					reviewModePanel.setShow(false);
 					break;
 				case ButtonOption::ShowLimbs:
+					createChooseLimbPanel();
 					chooseLimbPanel.setShow(true);
 					reviewModePanel.setShow(false);
 					break;

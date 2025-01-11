@@ -669,7 +669,7 @@ export class Panel {
 		Panel() {}
 
 		SDL_Rect getRect() { return rect; }
-		vector<Button> getButtons() { return buttons; }
+		vector<Button>& getButtons() { return buttons; }
 
 		/* check if mouse location has hit the panel */
 		bool isInPanel(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
