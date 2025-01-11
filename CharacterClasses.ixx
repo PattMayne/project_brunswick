@@ -403,17 +403,16 @@ export class Limb {
 		int rotate(int angleIncrement) {
 			rotationAngle = normalizeAngle(rotationAngle + angleIncrement);
 
-			/* Now update all the joint points. */
-
+			/* Now update all the joint points (except the anchor point). */
 			for (Joint& joint : joints) {
-				Point anchorPoint =
-					getAnchorJointId() < 1 ? Point(textureWidth / 2, textureHeight / 2) :
-					getAnchorJoint().getFormPoint();
-
-				Point pointToRotate = joint.getFormPoint();
-
 				if (!joint.getIsAnchor()) {
-					joint.setModifiedPoint(getRotatedPoint(anchorPoint, pointToRotate, rotationAngle));
+
+					/* If this LIMB has no ANCHOR JOINT then it's the anchor limb, so rotate on the center instead of on a joint. */
+					Point anchorPoint =
+						getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) :
+						getAnchorJoint().getFormPoint();
+
+					joint.setModifiedPoint(getRotatedPoint(anchorPoint, joint.getFormPoint(), rotationAngle));
 				}
 			}
 
