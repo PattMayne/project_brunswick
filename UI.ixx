@@ -112,7 +112,7 @@ export class UI {
 
 
 		Panel createReviewModePanel();
-		Panel createLimbLoadedModePanel(); /* Does this need a limb id? */
+		Panel createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints); /* Does this need a limb id? */
 		Panel createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs);
 
 		/* NEXT: make rebuildPanel functions for Character Creation screen. */
@@ -200,11 +200,11 @@ export class UI {
 		/* Character Creation panel building functions. */
 
 		tuple<SDL_Rect, vector<Button>> createReviewModePanelComponents();
-		tuple<SDL_Rect, vector<Button>> createLimbLoadedModePanelComponents();
+		tuple<SDL_Rect, vector<Button>> createLimbLoadedModePanelComponents(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints);
 		tuple<SDL_Rect, vector<Button>> createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs);
 
 		vector<PreButtonStruct> getReviewModePreButtonStructs();
-		vector<PreButtonStruct> getLimbLoadedModePreButtonStructs();
+		vector<PreButtonStruct> getLimbLoadedModePreButtonStructs(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints);
 
 		void prepareColors();
 		void getAndStoreWindowSize();
@@ -1305,17 +1305,22 @@ vector<PreButtonStruct> UI::getReviewModePreButtonStructs() {
 
 
 /* build and deliver basic info for default Character Creation panel buttons. */
-vector<PreButtonStruct> UI::getLimbLoadedModePreButtonStructs() {
+vector<PreButtonStruct> UI::getLimbLoadedModePreButtonStructs(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints) {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
-	return {
-		buildPreButtonStruct(resources.getButtonText("EQUIP_LIMB"), ButtonOption::Equip),
-		buildPreButtonStruct(resources.getButtonText("NEXT_CHARACTER_JOINT"), ButtonOption::NextCharJoint),
-		buildPreButtonStruct(resources.getButtonText("NEXT_LIMB_JOINT"), ButtonOption::NextLimbJoint),
-		buildPreButtonStruct(resources.getButtonText("ROTATE_CLOCKWISE"), ButtonOption::RotateClockwise),
-		buildPreButtonStruct(resources.getButtonText("ROTATE_COUNTERCLOCKWISE"), ButtonOption::RotateCounterClockwise),
-		buildPreButtonStruct(resources.getButtonText("UNLOAD_LIMB"), ButtonOption::UnloadLimb)
-	};
+	vector<PreButtonStruct> limbLoadedModePreButtonStructs;
+	limbLoadedModePreButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("EQUIP_LIMB"), ButtonOption::Equip));
+	if (characterHasExtraJoints) {
+		limbLoadedModePreButtonStructs.push_back(
+			buildPreButtonStruct(resources.getButtonText("NEXT_CHARACTER_JOINT"), ButtonOption::NextCharJoint)); }
+	if (loadedLimbHasExtraJoints) {
+		limbLoadedModePreButtonStructs.push_back(
+			buildPreButtonStruct(resources.getButtonText("NEXT_LIMB_JOINT"), ButtonOption::NextLimbJoint)); }	
+	limbLoadedModePreButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("ROTATE_CLOCKWISE"), ButtonOption::RotateClockwise));
+	limbLoadedModePreButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("ROTATE_COUNTERCLOCKWISE"), ButtonOption::RotateCounterClockwise));
+	limbLoadedModePreButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("UNLOAD_LIMB"), ButtonOption::UnloadLimb));
+
+	return limbLoadedModePreButtonStructs;
 }
 
 /* Get the components (including panel object and buttons) for the Character Creation panels. */
@@ -1328,8 +1333,8 @@ tuple<SDL_Rect, vector<Button>> UI::createReviewModePanelComponents() {
 }
 
 
-tuple<SDL_Rect, vector<Button>> UI::createLimbLoadedModePanelComponents() {
-	vector<PreButtonStruct> preButtonStructs = getLimbLoadedModePreButtonStructs();
+tuple<SDL_Rect, vector<Button>> UI::createLimbLoadedModePanelComponents(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints) {
+	vector<PreButtonStruct> preButtonStructs = getLimbLoadedModePreButtonStructs(loadedLimbHasExtraJoints, characterHasExtraJoints);
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
 	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
 	return { panelRect, buttons };
@@ -1494,8 +1499,8 @@ Panel UI::createReviewModePanel() {
 }
 
 /* Does this need a limb id? */
-Panel UI::createLimbLoadedModePanel() {
-	auto [panelRect, buttons] = createLimbLoadedModePanelComponents();
+Panel UI::createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints) {
+	auto [panelRect, buttons] = createLimbLoadedModePanelComponents(loadedLimbHasExtraJoints, characterHasExtraJoints);
 	return Panel(panelRect, buttons);
 }
 

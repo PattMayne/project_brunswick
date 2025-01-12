@@ -434,6 +434,16 @@ export class Limb {
 			return -1;
 		}
 
+		vector<int> getFreeJointIndexes() {
+			vector<int> indexes;
+			for (int i = 0; i < joints.size(); ++i) {
+				if (joints[i].isFree()) {
+					indexes.push_back(i);
+				}
+			}
+			return indexes;
+		}
+
 		/*
 		* When the player has loaded a limb which is the CHILD OF (connected to) this limb,
 		* we call this function on this limb and shift the location of the child (limbId).
