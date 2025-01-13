@@ -1750,7 +1750,7 @@ struct FloatingObject {
 		SDL_QueryTexture(texture, NULL, NULL, &width, &height);
 		drawRect = {
 			-width,
-			(rand() % screenHeight) - height, /* random y location */
+			rand() % (screenHeight - height), /* random y location */
 			width,
 			height
 		};
@@ -1760,14 +1760,14 @@ struct FloatingObject {
 
 		/* xSpeed should be higher and less variable than ySpeed. */
 		xSpeed = (rand() % 3) + 3;
-		ySpeed = (rand() % 3) + 1;
+		ySpeed = (rand() % 3);
 
 		/* In some situations, make the "speed" (trajectory?) negative. */
 		if (startDirection == StartDirection::Right) {
 			xSpeed *= -1;
 		}
 
-		if (rand() % 2 == 0) {
+		if (ySpeed > 0 && rand() % 2 == 0) {
 			ySpeed *= -1;
 		}
 	}
@@ -1804,9 +1804,10 @@ struct FloatingObject {
 };
 
 /*
-* 
-* Get the object to draw the sky and clouds animated background.
-* 
+* For the opening screen, the background will be a blue sky with various clouds flying around.
+* Later we will add limbs flying together and snapping together, then flying apart as new limbs fly in.
+* Maybe we will also add land at the bottom.
+* YES: land at the bottom and LIMBS growing up from the land, and dancing like living trees or grass.
 */
 export class SkyAndCloudsBackground {
 public:

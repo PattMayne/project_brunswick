@@ -673,7 +673,7 @@ public:
 
 	int getAnchorLimbId() { return anchorLimbId; }
 	Limb& getAnchorLimb() { return limbs[anchorLimbId]; }
-	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch);
+	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude = -1);
 	void setAnchorLimbId(int newId) { anchorLimbId = newId; }
 
 	/*
@@ -783,10 +783,11 @@ protected:
 * FIRST int is the limb id.
 * SECOND int is its free joint ID.
 */
-tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearch) {
+tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude) {
 	Limb& limbToSearch = limbs[limbIdToSearch];
 
 	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
+		if (i == limbIdToExclude) { continue; }
 		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
 
 		if (limbToSearchJoint.isFree()) {
@@ -797,7 +798,10 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 	for (Joint& limbToSearchJoint : limbToSearch.getJoints()) {
 		if (!limbToSearchJoint.getIsAnchor()) {
 			Limb& nestedLimbToSearch = limbs[limbToSearchJoint.getConnectedLimbId()];
-			tuple<int, int> limbIdAndJointIndexForConnection = getLimbIdAndJointIndexForConnection(limbToSearchJoint.getConnectedLimbId());
+			tuple<int, int> limbIdAndJointIndexForConnection = getLimbIdAndJointIndexForConnection(
+				limbToSearchJoint.getConnectedLimbId(),
+				limbIdToExclude
+			);
 
 			int limbIdForConnection = get<0>(limbIdAndJointIndexForConnection);
 			int jointIndexForConnection = get<1>(limbIdAndJointIndexForConnection);

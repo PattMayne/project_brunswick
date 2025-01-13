@@ -93,8 +93,8 @@ void MenuScreen::run() {
 	settingsPanel.setShow(false);
 
 	/* Timeout data */
-	const int TARGET_FPS = 60;
-	const int FRAME_DELAY = 600 / TARGET_FPS; // milliseconds per frame
+	const int TARGET_FPS = 120;
+	const int FRAME_DELAY = 1200 / TARGET_FPS; // milliseconds per frame
 	Uint32 frameStartTime; // Tick count when this particular frame began
 	int frameTimeElapsed; // how much time has elapsed during this frame
 

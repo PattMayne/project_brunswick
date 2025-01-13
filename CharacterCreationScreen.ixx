@@ -116,10 +116,15 @@ public:
 			if (loadedLimb.getFreeJointIndexes().size() > 1 && loadedLimbId != anchorLimbId) {
 				loadedLimbHasExtraJoints = true; }
 
-			if (anchorLimbId > -1) {
-				tuple<int, int> limbIdAndJointIndexForConnection = playerCharacter.getLimbIdAndJointIndexForConnection(anchorLimbId);
-				if (get<0>(limbIdAndJointIndexForConnection) >= 0 && get<1>(limbIdAndJointIndexForConnection)) {
-					characterHasExtraJoints = true; } }
+			if (anchorLimbId > -1 && loadedLimbId != playerCharacter.getAnchorLimbId()) {
+				tuple<int, int> limbIdAndJointIndexForConnection = playerCharacter.getLimbIdAndJointIndexForConnection(anchorLimbId, loadedLimbId);
+				int possibleConnectorLimbId = get<0>(limbIdAndJointIndexForConnection);
+				int possibleConnectorJointId = get<1>(limbIdAndJointIndexForConnection);
+
+				if (possibleConnectorLimbId >= 0 && possibleConnectorJointId >= 0 && possibleConnectorLimbId != loadedLimbId) {
+					characterHasExtraJoints = true;
+				}
+			}
 		}
 		limbLoadedPanel = ui.createLimbLoadedModePanel(loadedLimbHasExtraJoints, characterHasExtraJoints);
 	}
@@ -367,7 +372,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 		return;
 	}
 	else {
-		// user clicked
+		/* user clicked */
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
 			cout << "user clicked mouse\n";
 			// These events might change the value of screenToLoad
