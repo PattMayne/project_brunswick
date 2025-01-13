@@ -75,7 +75,7 @@ int main(int argc, char* args[]) {
 	* the screen's "run" function returns a NEW screen to load.	*/
 	while (running) {
 
-		// Check for closing the app (clicking the (x) button)
+		/* Check for closing the app(clicking the(x) button) */
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_QUIT) { running = false; }
 		}

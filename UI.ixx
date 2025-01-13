@@ -361,7 +361,6 @@ vector<SDL_Rect> createSurfaceOverlay(SDL_Rect bgRect) {
 
 	/* we will store all the rects here and later draw them */
 	vector<SDL_Rect> rects;
-
 	/* Pick a random starting point */
 	enum StartingRect { WholeSide, Corner, Top };
 	int startingRectNumber = (rand() % 3) + 1;
@@ -369,13 +368,15 @@ vector<SDL_Rect> createSurfaceOverlay(SDL_Rect bgRect) {
 		startingRectNumber == 2 ? Corner : Top;
 
 	float whRatio = (float)bgRect.w / (float)bgRect.h;
-
 	/* not totally random dimensions. Always in increments, defined as blocks (of pixels) based on resolution.
 	* Resolution variable based on dimensions. */
 	int xRes = bgRect.w < 350 ? 10 : bgRect.w < 800 ? 6 : 8;
 	//int yRes = bgRect.h < 200 ? 4 : bgRect.h < 350 ? 10 : bgRect.h < 800 ? 6 : bgRect.h < 900 ? 15 : 12;
 	float yResFloat = xRes / whRatio;
 	int yRes = (int)yResFloat;
+
+	if (yRes == 0) { yRes = 1; }
+	if (xRes == 0) { xRes = 1; }
 
 	/* resolution */
 
@@ -801,35 +802,36 @@ vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButton
 	int widthForAll = panelRect.w - (PANEL_PADDING * 2);
 	int heightSoFar = panelRect.y + PANEL_PADDING;
 
-
 	for (int i = 0; i < preButtonStructs.size(); ++i) {
+		PreButtonStruct thisStruct = preButtonStructs[i];
+
 		/* start at the top of the panelRect PLUS panelPadding */
 
 		SDL_Rect thisButtonRect = {
 			xForAll,
 			heightSoFar,
 			widthForAll,
-			preButtonStructs[i].textRectHeight + (buttonPadding * 2)
+			thisStruct.textRectHeight + (buttonPadding * 2)
 		};
 
 		/* RELATIVE rect to be later painted onto the button itself (when fed into the constructor)*/
 		SDL_Rect thisTextRect = {
 			// text x position is HALF of the difference b/w button width and text width
-			(thisButtonRect.w - preButtonStructs[i].textRectWidth) / 2,
+			(thisButtonRect.w - thisStruct.textRectWidth) / 2,
 			buttonPadding,
-			preButtonStructs[i].textRectWidth,
-			preButtonStructs[i].textRectHeight
+			thisStruct.textRectWidth,
+			thisStruct.textRectHeight
 		};
 
 		buttons.push_back(
 			Button(
 				thisButtonRect,
 				thisTextRect,
-				preButtonStructs[i].text,
+				thisStruct.text,
 				buttonFont,
 				colorsByFunction,
 				mainRenderer,
-				preButtonStructs[i].clickStruct));
+				thisStruct.clickStruct));
 
 		/* increment heightSoFar */
 		heightSoFar += thisButtonRect.h + PANEL_PADDING;
@@ -1735,3 +1737,199 @@ export SDL_Surface* createTransparentSurface(int w, int h) {
 	);
 	return transparentSurface;
 }
+
+enum StartDirection { Left, Right };
+
+struct FloatingObject {
+	FloatingObject(SDL_Texture* newTexture, int screenWidth, int screenHeight) :
+		texture(newTexture), screenWidth(screenWidth), screenHeight(screenHeight)
+	{
+		width = 1;
+		height = 1;
+
+		SDL_QueryTexture(texture, NULL, NULL, &width, &height);
+		drawRect = {
+			-width,
+			(rand() % screenHeight) - height, /* random y location */
+			width,
+			height
+		};
+
+		startDirection = rand() % 2 == 0 ? StartDirection::Left : StartDirection::Right;
+		drawRect.x = startDirection == StartDirection::Left ? -width : screenWidth;
+
+		/* xSpeed should be higher and less variable than ySpeed. */
+		xSpeed = (rand() % 3) + 3;
+		ySpeed = (rand() % 3) + 1;
+
+		/* In some situations, make the "speed" (trajectory?) negative. */
+		if (startDirection == StartDirection::Right) {
+			xSpeed *= -1;
+		}
+
+		if (rand() % 2 == 0) {
+			ySpeed *= -1;
+		}
+	}
+
+	void move() {
+		drawRect.x += xSpeed;
+		drawRect.y += ySpeed;
+	}
+
+	bool needsReset() {
+		if (startDirection == StartDirection::Right) {
+			if (drawRect.x < -width) {
+				return true;
+			}
+			else { return false; }
+		}
+		else {
+			if (drawRect.x > screenWidth) {
+				return true;
+			}
+			else { return false; }
+		}
+	}
+
+	SDL_Texture* texture;
+	SDL_Rect drawRect;
+	StartDirection startDirection;
+	int xSpeed;
+	int ySpeed;
+	int width;
+	int height;
+	int screenWidth;
+	int screenHeight;
+};
+
+/*
+* 
+* Get the object to draw the sky and clouds animated background.
+* 
+*/
+export class SkyAndCloudsBackground {
+public:
+	SkyAndCloudsBackground(bool actuallyMake = false) {
+		if (!actuallyMake) { return; }
+		UI& ui = UI::getInstance();
+		renderer = ui.getMainRenderer();
+
+		windowWidth = ui.getWindowWidth();
+		windowHeight = ui.getWindowHeight();
+
+		/* Get the CLOUD images as surfaces. */
+		SDL_Surface* cloudSurface001 = IMG_Load("assets/sky_and_clouds/cloud_001.png");
+		SDL_Surface* cloudSurface002 = IMG_Load("assets/sky_and_clouds/cloud_002.png");
+		SDL_Surface* cloudSurface003 = IMG_Load("assets/sky_and_clouds/cloud_003.png");
+		SDL_Surface* cloudSurface004 = IMG_Load("assets/sky_and_clouds/cloud_004.png");
+		SDL_Surface* cloudSurface005 = IMG_Load("assets/sky_and_clouds/cloud_005.png");
+
+		/* Make textures from the cloud surfaces, and destroy the surfaces. */
+		cloudTextures.emplace_back(SDL_CreateTextureFromSurface(renderer, cloudSurface001));
+		cloudTextures.emplace_back(SDL_CreateTextureFromSurface(renderer, cloudSurface002));
+		cloudTextures.emplace_back(SDL_CreateTextureFromSurface(renderer, cloudSurface003));
+		cloudTextures.emplace_back(SDL_CreateTextureFromSurface(renderer, cloudSurface004));
+		cloudTextures.emplace_back(SDL_CreateTextureFromSurface(renderer, cloudSurface005));
+
+		SDL_FreeSurface(cloudSurface001);
+		SDL_FreeSurface(cloudSurface002);
+		SDL_FreeSurface(cloudSurface003);
+		SDL_FreeSurface(cloudSurface004);
+		SDL_FreeSurface(cloudSurface005);
+
+		/* Make the SKY surface. */
+		SDL_Surface* skyImageSurface = IMG_Load("assets/sky_and_clouds/sky.png");
+		int skyImageWidth = skyImageSurface->w;
+		int skyImageHeight = skyImageSurface->h;
+
+		int skySurfaceWidth = windowWidth;
+		int skySurfaceHeight = windowHeight;
+
+		/* make skySurface the same ratio as the window. */
+		if (skyImageWidth >= windowWidth && skyImageHeight >= windowHeight) {
+			/* Image is bigger than screen. Just get a rectangle from within the pic. */
+			skySurfaceWidth = windowWidth;
+			skySurfaceHeight = windowHeight;
+		}
+		else if (skyImageWidth < windowWidth && skyImageHeight >= windowHeight) {
+				/* Image is LESS WIDE than screen, but just as tall.
+				* So we HAVE THE WIDTH.
+				* We will use IMAGE WIDTH, and get a ratio (from the screen) for new height. */
+				float ratio =static_cast<float>(windowHeight)/ static_cast<float>(windowWidth);
+
+				skySurfaceWidth = skyImageWidth;
+				skySurfaceHeight = static_cast<int>(skyImageWidth * ratio);
+		} else {
+			/* Image is SHORTER than screen.
+			* So we HAVE THE HEIGHT.
+			* We will use IMAGE HEIGHT, and get a ratio (from window) to calculate NEW WIDTH from that. */
+			float ratio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
+			skySurfaceWidth = static_cast<int>(ratio * skyImageHeight);
+			skySurfaceHeight = skyImageWidth;
+		}
+
+		SDL_Rect sourceRect = { 0, 0, skySurfaceWidth, skySurfaceHeight };
+		SDL_Surface* skySurface = createTransparentSurface(skySurfaceWidth, skySurfaceHeight);
+
+		SDL_BlitSurface(skyImageSurface, &sourceRect, skySurface, NULL);
+		skyTexture = SDL_CreateTextureFromSurface(renderer, skySurface);
+
+		SDL_FreeSurface(skyImageSurface);
+		SDL_FreeSurface(skySurface);
+
+		floatingObjects.push_back(makeNewFloatingObject());
+		floatingObjects.push_back(makeNewFloatingObject());
+	}
+
+	FloatingObject makeNewFloatingObject() {
+		int textureIndex = rand() % cloudTextures.size();
+		return FloatingObject(cloudTextures[textureIndex], windowWidth, windowHeight);
+	}
+
+	void draw() {
+		/* First draw the background. */
+		SDL_RenderCopyEx(renderer, skyTexture, NULL, NULL, 0, NULL, SDL_FLIP_NONE);
+		/* Now draw and move (and possibly recreate) each FloatingObject. */
+		for (int i = 0; i < floatingObjects.size(); ++i) {
+			FloatingObject& object = floatingObjects[i];
+			SDL_RenderCopyEx(renderer, object.texture, NULL, &object.drawRect, 0, NULL, SDL_FLIP_NONE);
+
+			/* Check reset conditions. */
+			if (object.needsReset()) {
+				floatingObjects[i] = makeNewFloatingObject();
+			}
+			else {
+				object.move();
+			}
+		}
+	}
+
+	void destroyTextures() {
+		if (skyTexture != NULL) { SDL_DestroyTexture(skyTexture); }
+
+		for (int i = cloudTextures.size() - 1; i >= 0; --i) {
+			SDL_Texture* cloudTexture = cloudTextures[i];
+			if (cloudTexture != NULL && cloudTexture != nullptr) {
+				SDL_DestroyTexture(cloudTexture);
+			}
+		}
+	}
+
+	/*
+	* The Screen holding this object will call the draw function.
+	* Draw function will include the animate function.
+	* 
+	* NEXT:
+	* 
+	*/
+
+private:
+	vector<SDL_Texture*> cloudTextures;
+	SDL_Texture* skyTexture = NULL;
+	vector<FloatingObject> floatingObjects;
+	SDL_Renderer* renderer;
+	int windowWidth;
+	int windowHeight;
+
+};

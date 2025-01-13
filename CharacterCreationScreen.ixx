@@ -73,20 +73,17 @@ public:
 		getBackgroundTexture(ui);
 		createTitleTexture(ui);
 		playerCharacter = buildPlayerCharacter();
-
 		limbLoaded = false;
 		loadedLimbId = -1;
-
 		showTitle = true;
 		titleCountdown = 140;
-
+		
 		/* create panels */
 		settingsPanel = ui.createSettingsPanel(ScreenType::Map);
 		gameMenuPanel = ui.createGameMenuPanel();
 		reviewModePanel = ui.createReviewModePanel();
 		createLimbLoadedPanel(ui);
 		createChooseLimbPanel(ui);
-		
 		creationMode = CreationMode::Review;
 
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
@@ -301,8 +298,10 @@ void CharacterCreationScreen::draw(UI& ui) {
 	/* draw BG for now */
 	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
 
-	/* draw the title */
-	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
+	if (showTitle) {
+		/* draw the title */
+		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
+	}	
 
 	drawPanel(ui, settingsPanel);
 	//drawPanel(ui, gameMenuPanel);

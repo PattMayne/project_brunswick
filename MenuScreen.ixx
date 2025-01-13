@@ -46,6 +46,7 @@ export class MenuScreen {
 			screenToLoadStruct = ScreenStruct(ScreenType::NoScreen, -1);
 			getBackgroundTexture(ui);
 			createTitleTexture(ui);
+			skyBG = SkyAndCloudsBackground(true);
 		}
 
 		/* Destructor */
@@ -77,6 +78,7 @@ export class MenuScreen {
 		void rebuildDisplay(Panel& menuPanel, Panel& settingsPanel);
 		void draw(UI& ui, Panel& menuPanel, Panel& settingsPanel);
 		void drawPanel(UI& ui, Panel& panel);
+		SkyAndCloudsBackground skyBG;
 };
 
 /* The main function of the class. Contains the game loop. */
@@ -160,7 +162,8 @@ void MenuScreen::draw(UI& ui, Panel& menuPanel, Panel& settingsPanel) {
 	SDL_RenderClear(ui.getMainRenderer());
 
 	/* print the BG image) */
-	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
+	//SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
+	skyBG.draw();
 
 	/* draw the actual panels */
 	drawPanel(ui, settingsPanel);
