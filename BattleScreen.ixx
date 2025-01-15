@@ -50,7 +50,6 @@ private:
 	SDL_Rect titleRect;
 
 	void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
-	void drawPanel(UI& ui, Panel& panel);
 
 	void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
 	void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel);
@@ -128,26 +127,9 @@ void BattleScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	/* draw the title */
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 
-	drawPanel(ui, settingsPanel);
-	drawPanel(ui, gameMenuPanel);
+	settingsPanel.draw(ui);
+	gameMenuPanel.draw(ui);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
-}
-
-
-void BattleScreen::drawPanel(UI& ui, Panel& panel) {
-	if (!panel.getShow()) { return; }
-	for (Button button : panel.getButtons()) {
-		/* get the rect, send it a reference(to be converted to a pointer) */
-		SDL_Rect rect = button.getRect();
-
-		/* now draw the button texture */
-		SDL_RenderCopyEx(
-			ui.getMainRenderer(),
-			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
-			NULL, &rect,
-			0, NULL, SDL_FLIP_NONE
-		);
-	}
 }
 
 

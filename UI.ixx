@@ -710,6 +710,22 @@ export class Panel {
 			buttons = incomingButtons;
 		}
 
+		void draw(UI& ui = UI::getInstance()) {
+			if (!getShow()) { return; }
+			for (Button button : buttons) {
+				/* get the rect, send it a reference(to be converted to a pointer) */
+				SDL_Rect rect = button.getRect();
+
+				/* now draw the button texture */
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
+					NULL, &rect,
+					0, NULL, SDL_FLIP_NONE
+				);
+			}
+		}
+
 	private:
 		SDL_Rect rect;
 		vector<Button> buttons;

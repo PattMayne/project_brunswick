@@ -77,7 +77,6 @@ export class MenuScreen {
 		void checkMouseLocation(SDL_Event& e, Panel& menuPanel, Panel& settingsPanel);
 		void rebuildDisplay(Panel& menuPanel, Panel& settingsPanel);
 		void draw(UI& ui, Panel& menuPanel, Panel& settingsPanel);
-		void drawPanel(UI& ui, Panel& panel);
 		SkyAndCloudsBackground skyBG;
 };
 
@@ -128,23 +127,6 @@ void MenuScreen::run() {
 	gameState.setScreenStruct(screenToLoadStruct);
 }
 
-/* Specific Draw functions for each Screen */
-
-void MenuScreen::drawPanel(UI& ui, Panel& panel) {
-	if (!panel.getShow()) { return; }
-	for (Button button : panel.getButtons()) {
-		/* get the rect, send it a reference(to be converted to a pointer) */
-		SDL_Rect rect = button.getRect();
-
-		/* now draw the button texture */
-		SDL_RenderCopyEx(
-			ui.getMainRenderer(),
-			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
-			NULL, &rect,
-			0, NULL, SDL_FLIP_NONE
-		);
-	}
-}
 
 /* 
 * All data has been updated. Time to draw a representation of the current state of things.
@@ -166,8 +148,8 @@ void MenuScreen::draw(UI& ui, Panel& menuPanel, Panel& settingsPanel) {
 	skyBG.draw();
 
 	/* draw the actual panels */
-	drawPanel(ui, settingsPanel);
-	drawPanel(ui, menuPanel);
+	settingsPanel.draw(ui);
+	menuPanel.draw(ui);
 
 	/* draw the logo */
 	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);

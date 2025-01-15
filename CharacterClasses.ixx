@@ -406,7 +406,6 @@ export class Limb {
 			/* Now update all the joint points (except the anchor point). */
 			for (Joint& joint : joints) {
 				if (!joint.getIsAnchor()) {
-
 					/* If this LIMB has no ANCHOR JOINT then it's the anchor limb, so rotate on the center instead of on a joint. */
 					Point anchorPoint =
 						getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) :

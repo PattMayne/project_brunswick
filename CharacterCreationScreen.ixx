@@ -1,36 +1,57 @@
 /*
-* Load limbs from JSON
-* create a surface that's 1000x1000 (or more?)
-* --- snap limbs together on this surface, then generate a texture to resize & display on the screen, and free the surface.
-* ------- each time we change the limb setup, we will destroy the texture and replace it with a new texture from the new setup.
 * 
+*       _____ _                          _
+*      / ____| |                        | |
+*     | |    | |__   __ _ _ __ __ _  ___| |_ ___ _ __
+*     | |    | '_ \ / _` | '__/ _` |/ __| __/ _ \ '__|
+*     | |____| | | | (_| | | | (_| | (__| ||  __/ |
+*      \_____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|
+*       _____                _   _
+*      / ____|              | | (_)
+*     | |     _ __ ___  __ _| |_ _  ___  _ __
+*     | |    | '__/ _ \/ _` | __| |/ _ \| '_ \
+*     | |____| | |  __/ (_| | |_| | (_) | | | |
+*      \_____|_|  \___|\__,_|\__|_|\___/|_| |_|
+*      / ____|
+*     | (___   ___ _ __ ___  ___ _ __
+*      \___ \ / __| '__/ _ \/ _ \ '_ \
+*      ____) | (__| | |  __/  __/ | | |
+*     |_____/ \___|_|  \___|\___|_| |_|
+*
 * 
-* ROTATION:
-* ----- SDL_RenderCopyEx takes parameters for angle of rotation AND a point for the point around which the image rotates.
-* ---------- SO I can save (A) whether the image should be FLIPPED, (B) angle of rotation, and (C) point of rotation to the Limb and the DB.
-* ---------- SDL_RenderCopyEx will then render the texture accordingly.
-* ---------- When flipping or rotating, we will have to calculate how that affects any limbs that are attached to that limb.
-* --------------- We will need to override joint Points in Limb to accomodate flipping and rotating.
-* --------------- We will need to store information about which joints are attached to which. This will be complicated, when it comes to the Battle Screen.
-* -------------------- Draw Position is not sufficient anymore. We need Anchor Joint... nested branches of Limbs... this will be complicated, but it will be cool in the end.
+*	Snap together limbs from the Player Character's inventory.
+* Limbs connect hierarchically: The first limb is the character's anchor limb. Other limbs branch off from there.
+* Each subsequent limb has an anchor joint: the joint which is connected to a joint of its parent limb.
+* So the anchor limb (first limb) has no anchor joint, and all its joints are free.
+* The character object has an "anchorLimbId" int which stores the id of the anchor limb (id from the database).
 * 
+* Each joint object has an "isAnchor" boolean.
+* When a limb is equipped to the character, its "anchor" joint's "isAnchor" boolean is set to true.
+* Its parent limb's joint takes data from the child limb and the child limb's anchor joint.
+* This way, we can start with the anchor limb and find all its child limbs, and all their child limbs.
+* So we don't need to store a suit. All the info of the equipped character is in the limbs and their joints.
+* But it starts with the anchorLimbId int in the character object.
+* 
+* A limb can rotate on its anchor joint. The limb object contains its angle of rotation.
+* The joint objects contain a point object called "modifiedPoint" which has the NEW location of each joint after rotation.
+* Rotating a limb means we need to use trigonometry to rotate the location of each joint point.
 * 
 * TO DO:
-* 1. Cycle through loadedLimb joints.
-* 2. Cycle through Character joints.
-* 3. Rotate loaded limb.
-* 4. In panel, only add buttons for Limbs that are NOT equipped (not in this file, in the UI file).
-* 5. Re-write to draw the limbs in a different order.
-* 6. Click a button (new panel for equipped limbs in Review mode) to bring THAT limb to the top of the draw order.
+* 1) Review Mode should include a 2nd panel of equipped limbs buttons, so we can LOAD limbs which are already equipped.
+* ---> This allows us to "unEquip" a limb AND all its child limbs (recursively) without clearing the whole character.
+* 2) Make drawOrder separate from branching hierarchy.
+* 3) Draw from player inventory instead of hard-coding all the limbs
+* 4) Load already-built character for editing.
+* 5) Pagination once we have many limbs on the map and in the inventory.
 * 
 * 
-* LOADING A LIMB:
-* -- A "loaded" limb is actually equipped.
-* But we "hold" it and manipulate its position according to button presses from the player.
-* "EQUIP" button just sets "limbLoaded" to false and "loadedLimbId" back to -1, and changes the MODE (and therefore which panel is shown (review mode panel).
+* PROBLEMS: 
+* 1) ROTATE LIMB does not work AFTER we shift to a different ANCHOR limb.
+* -----> It DOES work when we rotate around the center (with the first ("anchor") limb).
+* ----------> Therefore I assume the problem is with
+* -----> Draw DOTS over every joint point so I can track the wayward rotating joints.
+* 2) Vector out of bounds error when trying to connect to deer head (SOMETIMES).
 * 
-* Loading / equipping limbs should be done with functions in the Character object.
-* That way I can reuse them for NPCs being created on the map.
 */
 
 module;
@@ -203,7 +224,6 @@ private:
 	int loadedLimbId; /* Currently holds index from vector. Will hold id from DB. */
 
 	void draw(UI& ui);
-	void drawPanel(UI& ui, Panel& panel);
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
 	void checkMouseLocation(SDL_Event& e);
 
@@ -308,32 +328,14 @@ void CharacterCreationScreen::draw(UI& ui) {
 		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 	}	
 
-	drawPanel(ui, settingsPanel);
-	//drawPanel(ui, gameMenuPanel);
-	drawPanel(ui, reviewModePanel);
-	
-	drawPanel(ui, limbLoadedPanel);
-	drawPanel(ui, chooseLimbPanel);
+	chooseLimbPanel.draw(ui);
+	limbLoadedPanel.draw(ui);
+	reviewModePanel.draw(ui);
+	settingsPanel.draw(ui);
+	//gameMenuPanel.draw(ui);
 	drawCharacter(ui);
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
-}
-
-
-void CharacterCreationScreen::drawPanel(UI& ui, Panel& panel) {
-	if (!panel.getShow()) { return; }
-	for (Button button : panel.getButtons()) {
-		/* get the rect, send it a reference(to be converted to a pointer) */
-		SDL_Rect rect = button.getRect();
-
-		/* now draw the button texture */
-		SDL_RenderCopyEx(
-			ui.getMainRenderer(),
-			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
-			NULL, &rect,
-			0, NULL, SDL_FLIP_NONE
-		);
-	}
 }
 
 
@@ -466,6 +468,24 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						if (!clickedLimb.isEquipped()) {
 							loadedLimbId = clickStruct.itemID;
 							limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
+
+							if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
+								int screenWidth = ui.getWindowWidth();
+								int screenHeight = ui.getWindowHeight();
+								Limb& anchorLimb = playerCharacter.getAnchorLimb();
+
+								/* FOR NOW we will use the natural size of the textures (for different sized screens we might need to adjust this). */
+								int limbWidth, limbHeight;
+								SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &limbWidth, &limbHeight);
+
+								anchorLimb.setDrawRect({
+									(screenWidth / 2) - (limbWidth / 2),
+									(screenHeight / 2) - (limbHeight / 2),
+									limbWidth,
+									limbHeight
+								});
+							}
+
 							createLimbLoadedPanel();
 							changeCreationMode(CreationMode::LimbLoaded);
 						}
@@ -661,9 +681,6 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	int screenHeight = ui.getWindowHeight();
 	SDL_Rect screenRect = { 0, 0, screenWidth, screenHeight };
 
-	/* FOR NOW we will use the natural size of the textures. */
-	int limbWidth, limbHeight;
-	SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &limbWidth, &limbHeight);
 
 	/* 
 	* We will want the draw order to eventually be (optionally) different from the hierarchy... so each will need its own SDL_Rect.
@@ -674,12 +691,6 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	* We'll figure it out later... we need the draw order, the rect, the angle, many things...
 	*/
 
-	anchorLimb.setDrawRect({
-		(screenWidth / 2) - (limbWidth / 2),
-		(screenHeight / 2) - (limbHeight / 2),
-		limbWidth,
-		limbHeight
-	});
 
 	/* Skip "loaded" limb when drawLoadedLimb is false (for hot blinking action). */
 	if (anchorLimbId != loadedLimbId || drawLoadedLimb) {

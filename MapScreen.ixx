@@ -461,7 +461,6 @@ export class MapScreen {
 		void drawPlayerCharacter(UI& ui);
 		void drawRoamingLimbs(UI& ui);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
-		void drawPanel(UI& ui, Panel& panel);
 
 		bool moveLimb(Limb& roamingLimb);
 		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY);
@@ -898,8 +897,8 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	if (showTitle) {
 		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE); }
 
-	drawPanel(ui, settingsPanel);
-	drawPanel(ui, gameMenuPanel);
+	gameMenuPanel.draw(ui);
+	settingsPanel.draw(ui);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
@@ -1202,24 +1201,6 @@ void MapScreen::drawMap(UI& ui) {
 		}
 	}
 }
-
-
-void MapScreen::drawPanel(UI& ui, Panel& panel) {
-	if (!panel.getShow()) { return; }
-	for (Button button : panel.getButtons()) {
-		/* get the rect, send it a reference(to be converted to a pointer) */
-		SDL_Rect rect = button.getRect();
-
-		/* now draw the button texture */
-		SDL_RenderCopyEx(
-			ui.getMainRenderer(),
-			button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
-			NULL, &rect,
-			0, NULL, SDL_FLIP_NONE
-		);
-	}
-}
-
 
 /*
 * Sets the top left block for the camera.Cannot be less than 0,0.
