@@ -399,7 +399,12 @@ export class Limb {
 			this->drawRect = drawRect; }
 
 		//void setRotationAngle(int rotationAngle) { this->rotationAngle = normalizeAngle(rotationAngle); }
-		void resetRotationAngle() { rotationAngle = 0; }
+		void resetRotationAngle() {
+			rotationAngle = 0;
+			for (Joint& joint : joints) {
+				joint.resetModifiedPoint();
+			}
+		}
 		int rotate(int angleIncrement) {
 			rotationAngle = normalizeAngle(rotationAngle + angleIncrement);
 
@@ -408,6 +413,7 @@ export class Limb {
 				if (!joint.getIsAnchor()) {
 					/* If this LIMB has no ANCHOR JOINT then it's the anchor limb, so rotate on the center instead of on a joint. */
 					Point anchorPoint =
+						//getAnchorJointId() < 0 ? joint.getPoint() : /* THIS is to test the getRotatedPoint */
 						getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) :
 						getAnchorJoint().getFormPoint();
 
@@ -536,6 +542,14 @@ export class Limb {
 			if (oldAnchorId >= 0 && newAnchorId >= 0) {
 				joints[newAnchorId].setAnchor(true);
 				joints[oldAnchorId].setAnchor(false);
+
+				/* Now that we did the switch, update the joint points based on the rotation angle on the NEW anchor joint. */
+				if (rotationAngle != 0) {
+					int totalAngle = rotationAngle;
+					resetRotationAngle();
+					rotate(totalAngle);
+				}
+
 				return true;
 			}
 

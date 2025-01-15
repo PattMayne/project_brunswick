@@ -46,10 +46,6 @@
 * 
 * 
 * PROBLEMS: 
-* 1) ROTATE LIMB does not work AFTER we shift to a different ANCHOR limb.
-* -----> It DOES work when we rotate around the center (with the first ("anchor") limb).
-* ----------> Therefore I assume the problem is with
-* -----> Draw DOTS over every joint point so I can track the wayward rotating joints.
 * 2) Vector out of bounds error when trying to connect to deer head (SOMETIMES).
 * 
 */
@@ -74,6 +70,8 @@ import Resources;
 import UI;
 
 using namespace std;
+
+const bool DRAW_JOINTS = false;
 
 enum class CreationMode {
 	Review, /* DEFAULT. Show default panel. */
@@ -590,14 +588,67 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
 }
 
-/* Remember to delete this SDL_Point pointer if it's not null! */
+/* Remember to delete this SDL_Point pointer if it's not null!
+*  TO DO: Maybe we should replace ALL Point objects with SDL_Points to avoid using this function so often?
+* Or just for the Joint Points.
+*/
 SDL_Point* getRotationPointSDL(Limb& limb, int anchorJointId) {
 	if (anchorJointId < 0) { return NULL; }
 	Point anchorPoint = limb.getJoints()[anchorJointId].getPoint();
 	return new SDL_Point(anchorPoint.x, anchorPoint.y);
 }
 
+
+void drawJoints(Limb& limb, UI& ui) {
+
+
+		/* FOR DEBUGGING: Draw a box over each Joint.*/
+
+		SDL_Color jointColor;
+		jointColor.r = 255; // Red
+		jointColor.g = 255;   // Green
+		jointColor.b = 51;   // Blue
+		jointColor.a = 255; // Alpha (fully opaque)
+
+
+		for (Joint& joint : limb.getJoints()) {
+			Point point = joint.getPoint();
+
+			SDL_Rect pointRect = {
+				limb.getDrawRect().x + point.x - 5,
+				limb.getDrawRect().y + point.y - 5,
+				10,
+				10
+			};
+
+			SDL_Surface* pointSurface = createTransparentSurface(10, 10);
+			SDL_FillRect(pointSurface, NULL, convertSDL_ColorToUint32(pointSurface->format, jointColor));
+			SDL_Texture* pointTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), pointSurface);
+			SDL_FreeSurface(pointSurface);
+
+			SDL_RenderCopyEx(
+				ui.getMainRenderer(),
+				pointTexture,
+				NULL, &pointRect,
+				NULL, NULL, SDL_FLIP_NONE
+			);
+
+			SDL_DestroyTexture(pointTexture);
+		}
+
+}
+
+/*
+* Drawing limb. This can possible be moved to Limb class (we'll see if the Map and Battle draw functions are different).
+*/
 void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
+	/* rotationPoint should already be an SDL_Point in the Joint object.
+	* My Point object is redundant.
+	* WAIT... MAYBE NOT.
+	* There is no "rotation point", there are just joint points or else NULL.
+	* Further consideration is necessary.
+	* Maybe I do need a rotationPoint member which holds an SDL_Point pointer... GOOD IDEA.
+	*/
 	SDL_Point* rotationPoint = getRotationPointSDL(limb, limb.getAnchorJointId());
 
 	SDL_RenderCopyEx(
@@ -606,7 +657,8 @@ void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
 		NULL, &limb.getDrawRect(),
 		limb.getRotationAngle(), rotationPoint, SDL_FLIP_NONE
 	);
-	if (rotationPoint != NULL) { delete rotationPoint; }	
+	if (rotationPoint != NULL) { delete rotationPoint; }
+	if (DRAW_JOINTS) { drawJoints(limb, ui); } /* For debugging. */
 }
 
 void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
