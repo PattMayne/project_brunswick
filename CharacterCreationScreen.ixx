@@ -595,15 +595,12 @@ SDL_Point* getRotationPointSDL(Limb& limb, int anchorJointId) {
 }
 
 
+/* FOR DEBUGGING: Draw a box over each Joint.*/
 void drawJoints(Limb& limb, UI& ui) {
-
-
-		/* FOR DEBUGGING: Draw a box over each Joint.*/
-
 		SDL_Color jointColor;
-		jointColor.r = 255; // Red
-		jointColor.g = 255;   // Green
-		jointColor.b = 51;   // Blue
+		jointColor.r = 255;
+		jointColor.g = 255;
+		jointColor.b = 51;
 		jointColor.a = 255; // Alpha (fully opaque)
 
 
@@ -631,7 +628,6 @@ void drawJoints(Limb& limb, UI& ui) {
 
 			SDL_DestroyTexture(pointTexture);
 		}
-
 }
 
 /*

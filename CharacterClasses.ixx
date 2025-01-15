@@ -799,8 +799,8 @@ protected:
 tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude) {
 	Limb& limbToSearch = limbs[limbIdToSearch];
 
+	/* Search the joints for a free joint. Hopfeully we find something here. */
 	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
-		if (i == limbIdToExclude) { continue; }
 		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
 
 		if (limbToSearchJoint.isFree()) {
@@ -808,11 +808,20 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 		}
 	}
 
-	for (Joint& limbToSearchJoint : limbToSearch.getJoints()) {
+	/* This limb has no free joints.
+	* Now we cycle through each joint and get its connected limb, to search ITS joints for a free joint.
+	*/
+	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
+		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
+
+		/* Anchor joints do not hold connections to child limbs. So only search non-anchor joints. */
 		if (!limbToSearchJoint.getIsAnchor()) {
-			Limb& nestedLimbToSearch = limbs[limbToSearchJoint.getConnectedLimbId()];
+			int connectedLimbId = limbToSearchJoint.getConnectedLimbId();
+			if (connectedLimbId == limbIdToExclude || connectedLimbId < 0) { continue; }
+
+			Limb& nestedLimbToSearch = limbs[connectedLimbId];
 			tuple<int, int> limbIdAndJointIndexForConnection = getLimbIdAndJointIndexForConnection(
-				limbToSearchJoint.getConnectedLimbId(),
+				connectedLimbId,
 				limbIdToExclude
 			);
 
