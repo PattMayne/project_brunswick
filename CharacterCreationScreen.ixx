@@ -122,9 +122,8 @@ public:
 	void createLimbLoadedPanel(UI& ui = UI::getInstance()) {
 		/* Destroy textures if they already exist. */
 		if (limbLoadedPanel.getButtons().size() > 0) {
-			for (Button& button : limbLoadedPanel.getButtons()) {
-				SDL_DestroyTexture(button.getHoverTexture());
-				SDL_DestroyTexture(button.getNormalTexture()); }}
+			limbLoadedPanel.destroyTextures();
+		}
 
 		bool loadedLimbHasExtraJoints = false;
 		bool characterHasExtraJoints = false;
@@ -151,10 +150,7 @@ public:
 	void createChooseLimbPanel(UI& ui = UI::getInstance()) {
 		/* Destroy textures if they already exist. */
 		if (chooseLimbPanel.getButtons().size() > 0) {
-			for (Button& button : chooseLimbPanel.getButtons()) {
-				SDL_DestroyTexture(button.getHoverTexture());
-				SDL_DestroyTexture(button.getNormalTexture());
-			}
+			chooseLimbPanel.destroyTextures();
 		}
 
 		/* Build a vector of data structures so the UI can build the panel of Limb buttons. */

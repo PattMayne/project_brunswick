@@ -712,18 +712,39 @@ export class Panel {
 
 		void draw(UI& ui = UI::getInstance()) {
 			if (!getShow()) { return; }
-			for (Button button : buttons) {
+
+			if (bgTexture != NULL) {
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					bgTexture,
+					NULL, &rect,
+					0, NULL, SDL_FLIP_NONE
+				);
+			}
+
+			for (Button& button : buttons) {
 				/* get the rect, send it a reference(to be converted to a pointer) */
-				SDL_Rect rect = button.getRect();
+				SDL_Rect buttonRect = button.getRect();
 
 				/* now draw the button texture */
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
 					button.isMouseOver() ? button.getHoverTexture() : button.getNormalTexture(),
-					NULL, &rect,
+					NULL, &buttonRect,
 					0, NULL, SDL_FLIP_NONE
 				);
 			}
+		}
+
+		void destroyTextures() {
+			for (Button& button : buttons) {
+				if (button.getHoverTexture() != NULL) {
+					SDL_DestroyTexture(button.getHoverTexture()); }
+				if (button.getNormalTexture() != NULL) {
+					SDL_DestroyTexture(button.getNormalTexture()); }
+			}
+			buttons = {};
+			if (bgTexture != NULL) { SDL_DestroyTexture(bgTexture); }
 		}
 
 	private:
@@ -731,6 +752,7 @@ export class Panel {
 		vector<Button> buttons;
 		bool mouseOver;
 		bool show;
+		SDL_Texture* bgTexture = NULL;
 };
 
 
