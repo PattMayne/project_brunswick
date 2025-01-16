@@ -105,7 +105,7 @@ public:
 		createChooseLimbPanel(ui);
 		creationMode = CreationMode::Review;
 		string messageText = "You created a confirmation panel!";
-		messagePanel = ui.createConfirmationPanel(messageText, ConfirmationButtonType::YesNo);
+		messagePanel = ui.createConfirmationPanel(messageText, ConfirmationButtonType::OkCancel, false);
 		messagePanel.setShow(true);
 
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
@@ -376,7 +376,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 		/* user clicked */
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
 			cout << "user clicked mouse\n";
-			// These events might change the value of screenToLoad
+			/* These events might change the value of screenToLoad. */
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
 

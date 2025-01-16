@@ -117,7 +117,11 @@ export class UI {
 		/* NEXT: make rebuildPanel functions for Character Creation screen. */
 
 		/* Confirmation Text Panel. */
-		Panel createConfirmationPanel(string confirmationText, ConfirmationButtonType confirmationType = ConfirmationButtonType::OkCancel);
+		Panel createConfirmationPanel(
+			string confirmationText,
+			ConfirmationButtonType confirmationType = ConfirmationButtonType::OkCancel,
+			bool includeRefuseButton = true
+		);
 
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
@@ -1980,7 +1984,7 @@ private:
 * Special panel to contain warning or message along with agree or disagree buttons.
 * Must be resized every time there is a new message, to accomodate the text.
 */
-Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonType confirmationType) {
+Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonType confirmationType, bool includeRefuseButton) {
 	if (confirmationText == "") {
 		/* NO text? Return an empty panel with no buttons or dimensions. */
 		Panel newPanel = Panel();
@@ -2045,8 +2049,12 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 		textHeight
 	};
 
+	int agreeBtnRectX =
+		includeRefuseButton ? panelRect.x + (panelRect.w / 2) - (btnRectWidth + (PANEL_PADDING / 2)) :
+		panelRect.x + (panelRect.w / 2) - (btnRectWidth / 2);
+
 	SDL_Rect agreeBtnRect = {
-		panelRect.x + (panelRect.w / 2) - (btnRectWidth + (PANEL_PADDING / 2)),
+		agreeBtnRectX,
 		panelRect.y + panelRect.h - (btnRectHeight + PANEL_PADDING),
 		btnRectWidth,
 		btnRectHeight
@@ -2097,15 +2105,17 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 		ButtonClickStruct(ButtonOption::Agree, -1)
 	);
 
-	buttons.emplace_back(
-		refuseBtnRect,
-		refuseBtnTxtRect,
-		refuseText,
-		buttonFont,
-		colors,
-		mainRenderer,
-		ButtonClickStruct(ButtonOption::Refuse, -1)
-	);
+	if (includeRefuseButton) {
+		buttons.emplace_back(
+			refuseBtnRect,
+			refuseBtnTxtRect,
+			refuseText,
+			buttonFont,
+			colors,
+			mainRenderer,
+			ButtonClickStruct(ButtonOption::Refuse, -1)
+		);
+	}
 
 	return Panel(panelRect, buttons, panelTexture);
 }
