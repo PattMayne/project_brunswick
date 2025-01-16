@@ -104,8 +104,7 @@ public:
 		createLimbLoadedPanel(ui);
 		createChooseLimbPanel(ui);
 		creationMode = CreationMode::Review;
-		string messageText = "You created a confirmation panel!";
-		messagePanel = ui.createConfirmationPanel(messageText, ConfirmationButtonType::OkCancel, false);
+		messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
 		messagePanel.setShow(true);
 
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
@@ -231,6 +230,8 @@ private:
 	void raiseTitleRect() { --titleRect.y; }
 	int getTitleBottomPosition() { return titleRect.y + titleRect.h; }
 	void drawLimb(Limb& limb, UI& ui);
+
+	void showNewMessage(string newMessage, ConfirmationButtonType confirmationType, bool showRefuse, UI& ui = UI::getInstance());
 
 	bool showTitle;
 	bool drawLoadedLimb;
@@ -364,6 +365,11 @@ void printAllLimbs(Character character) {
 	}
 }
 
+void CharacterCreationScreen::showNewMessage(string newMessage, ConfirmationButtonType confirmationType, bool showRefuse, UI& ui) {
+	messagePanel = getNewConfirmationMessage(messagePanel, newMessage, confirmationType, showRefuse);
+	messagePanel.setShow(true);
+}
+
 /* Process user input */
 void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
 	/* User pressed X to close */
@@ -473,17 +479,25 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						* BUTTON should also optionally take a texture as an argument.
 						* ClickStruct has an ITEM ID!!!!!
 						*/
+						
+						/* Make sure there is somewhere to attach the limb. */
+						if (
+							playerCharacter.getAnchorLimbId() >= 0 &&
+							get<0>(playerCharacter.getLimbIdAndJointIndexForConnection(playerCharacter.getAnchorLimbId(), clickStruct.itemID)) < 0
+						) {
+							showNewMessage(
+								Resources::getInstance().getMessageText("NO_FREE_CHAR_JOINTS"),
+								ConfirmationButtonType::OkCancel, false
+							);
+							break;
+						}
 
+						/* Now actually equip the limb if it isn't already equipped. */
 						if (!clickedLimb.isEquipped()) {
 							loadedLimbId = clickStruct.itemID;
 							limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
 
 							if (!limbEquipped) {
-
-								cout << "LIMB IS **NOT** LOADED\n";
-
-								/* Show a MESSAGE that there are not free joints (prior to this actually). */
-
 								break;
 							}
 
@@ -627,7 +641,6 @@ void drawJoints(Limb& limb, UI& ui) {
 		jointColor.g = 255;
 		jointColor.b = 51;
 		jointColor.a = 255; // Alpha (fully opaque)
-
 
 		for (Joint& joint : limb.getJoints()) {
 			Point point = joint.getPoint();

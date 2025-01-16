@@ -36,6 +36,7 @@ export class Resources {
         string getTitle();
         vector<string> getTitleWords();
         string getButtonText(string buttonLabel);
+        string getMessageText(string messageLabel);
         Resolution getDefaultDimensions(WindowResType restype);
         int getFontSize(FontContext fontContext, int windowWidth);
         int getButtonBorder(int windowWidth);
@@ -102,7 +103,7 @@ vector<string> Resources::getTitleWords() {
     return titleWords;
 }
 
-/* Get string values for buttons */
+/* Get string values for buttons. */
 string Resources::getButtonText(string buttonLabel) {
     if (jsonData.contains("BUTTON_TEXT") && jsonData["BUTTON_TEXT"].contains(buttonLabel)) {
         return jsonData["BUTTON_TEXT"][buttonLabel];
@@ -110,6 +111,17 @@ string Resources::getButtonText(string buttonLabel) {
     else {
         cerr << "Key does not exist";
         return "BUTTON";
+    }
+}
+
+/* Get string values for message box. */
+string Resources::getMessageText(string messageLabel) {
+    if (jsonData.contains("MESSAGES") && jsonData["MESSAGES"].contains(messageLabel)) {
+        return jsonData["MESSAGES"][messageLabel];
+    }
+    else {
+        cerr << "Key does not exist";
+        return messageLabel;
     }
 }
 

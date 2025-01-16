@@ -1980,6 +1980,17 @@ private:
 
 };
 
+export Panel getNewConfirmationMessage(
+	Panel& oldConfirmationPanel,
+	string newMessage,
+	ConfirmationButtonType confirmationType,
+	bool includeRefuseButton,
+	UI& ui = UI::getInstance()
+) {
+	oldConfirmationPanel.destroyTextures();
+	return ui.createConfirmationPanel(newMessage, confirmationType, includeRefuseButton);
+}
+
 /*
 * Special panel to contain warning or message along with agree or disagree buttons.
 * Must be resized every time there is a new message, to accomodate the text.
@@ -1989,6 +2000,7 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 		/* NO text? Return an empty panel with no buttons or dimensions. */
 		Panel newPanel = Panel();
 		newPanel.setRect({0,0,0,0});
+		return newPanel;
 	}
 
 	Resources& resources = Resources::getInstance();

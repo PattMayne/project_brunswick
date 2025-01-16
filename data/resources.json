@@ -85,5 +85,8 @@
     "SMALL": 800,
     "MEDIUM": 1200,
     "LARGE": 1919
+  },
+  "MESSAGES": {
+    "NO_FREE_CHAR_JOINTS": "This character has no free joints."
   }
 }

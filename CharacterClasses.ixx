@@ -797,12 +797,15 @@ protected:
 * SECOND int is its free joint ID.
 */
 tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude) {
+	tuple<int, int> failureTuple = make_tuple(-1, -1);
+	if (limbIdToSearch < 0) {
+		return failureTuple;
+	}
+	
 	Limb& limbToSearch = limbs[limbIdToSearch];
-
 	/* Search the joints for a free joint. Hopfeully we find something here. */
 	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
 		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
-
 		if (limbToSearchJoint.isFree()) {
 			return make_tuple(limbIdToSearch, i);			
 		}
@@ -839,7 +842,7 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 	}
 
 	/* Recursive search has failed completely. Return indication of failure. */
-	return make_tuple(-1, -1);
+	return failureTuple;
 }
 
 /*
