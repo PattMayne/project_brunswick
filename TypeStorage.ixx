@@ -34,6 +34,10 @@ export struct Resolution {
 	}
 };
 
+export enum class ConfirmationButtonType {
+	YesNo, OkCancel
+};
+
 /* Dominance Node is a Limb's node in the Dominance Cycle (think Rock, Paper, Scissors). */
 export enum class DominanceNode { Red, Green, Blue };
 export int const dominanceCycleAdvantage = 15;
@@ -68,6 +72,7 @@ export ScreenStruct closingScreenStruct() {
 
 export enum class ButtonOption {
 	NoOption,
+	Agree, Refuse, /* For confirmation panel (OK/Cancel or YES/NO) */
 	Back, /* for any submenu */
 	MainMenu, /* quit back to main menu from any screen */
 	/* Main Menu panel buttons */

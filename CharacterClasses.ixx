@@ -820,10 +820,8 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 			if (connectedLimbId == limbIdToExclude || connectedLimbId < 0) { continue; }
 
 			Limb& nestedLimbToSearch = limbs[connectedLimbId];
-			tuple<int, int> limbIdAndJointIndexForConnection = getLimbIdAndJointIndexForConnection(
-				connectedLimbId,
-				limbIdToExclude
-			);
+			tuple<int, int> limbIdAndJointIndexForConnection =
+				getLimbIdAndJointIndexForConnection(connectedLimbId, limbIdToExclude);
 
 			int limbIdForConnection = get<0>(limbIdAndJointIndexForConnection);
 			int jointIndexForConnection = get<1>(limbIdAndJointIndexForConnection);
@@ -836,8 +834,7 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 				continue;
 			}
 			else {
-				return limbIdAndJointIndexForConnection;
-			}
+				return limbIdAndJointIndexForConnection; }
 		}
 	}
 

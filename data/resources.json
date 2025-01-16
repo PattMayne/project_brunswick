@@ -37,13 +37,18 @@
     "UNLOAD_LIMB": "UNLOAD LIMB",
     "EQUIP_LIMB":  "EQUIP",
 
-
     "BACK": "BACK",
 
     "MOBILE": "360x800",
     "TABLET": "810x1080",
     "DESKTOP": "1600x900",
-    "FULLSCREEN": "FULLSCREEN"
+    "FULLSCREEN": "FULLSCREEN",
+
+    "OK": "OK",
+    "CANCEL": "CANCEL",
+
+    "YES": "YES",
+    "NO":  "NO"
   },
   "BUTTON_BORDER": {
     "SMALL": 10,

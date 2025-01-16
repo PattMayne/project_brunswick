@@ -96,6 +96,7 @@ export class UI {
 		SDL_Window* getMainWindow() { return mainWindow; }
 		TTF_Font* getButtonFont() { return buttonFont; }
 		TTF_Font* getTitleFont() { return titleFont; }
+		TTF_Font* getBodyFont() { return bodyFont; }
 		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
 
 		/* MAIN MENU PANEL. */
@@ -109,15 +110,14 @@ export class UI {
 		void rebuildGameMenuPanel(Panel& gameMenuPanel);
 
 		/* CHARACTER CREATION PANELS. */
-
-
 		Panel createReviewModePanel();
 		Panel createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints); /* Does this need a limb id? */
 		Panel createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs);
 
 		/* NEXT: make rebuildPanel functions for Character Creation screen. */
 
-
+		/* Confirmation Text Panel. */
+		Panel createConfirmationPanel(string confirmationText, ConfirmationButtonType confirmationType = ConfirmationButtonType::OkCancel);
 
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
@@ -660,16 +660,16 @@ void Button::createButtonTextures(
 export class Panel {
 	public:
 		/* constructor */
-		Panel(SDL_Rect incomingRect, vector<Button> incomingButtons) {
+		Panel(SDL_Rect incomingRect, vector<Button> incomingButtons, SDL_Texture* texture = NULL) {
 			rect = incomingRect;
 			buttons = incomingButtons;
 			mouseOver = false;
 			show = false;
+			bgTexture = texture;
 		}
 
 		Panel() {}
 
-		SDL_Rect getRect() { return rect; }
 		vector<Button>& getButtons() { return buttons; }
 
 		/* check if mouse location has hit the panel */
@@ -746,6 +746,9 @@ export class Panel {
 			buttons = {};
 			if (bgTexture != NULL) { SDL_DestroyTexture(bgTexture); }
 		}
+
+		void setRect(SDL_Rect newRect) { rect = newRect; }
+		SDL_Rect getRect() { return rect; }
 
 	private:
 		SDL_Rect rect;
@@ -1972,3 +1975,145 @@ private:
 	int windowHeight;
 
 };
+
+/*
+* Special panel to contain warning or message along with agree or disagree buttons.
+* Must be resized every time there is a new message, to accomodate the text.
+*/
+Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonType confirmationType) {
+	if (confirmationText == "") {
+		/* NO text? Return an empty panel with no buttons or dimensions. */
+		Panel newPanel = Panel();
+		newPanel.setRect({0,0,0,0});
+	}
+
+	Resources& resources = Resources::getInstance();
+	unordered_map<string, SDL_Color> colors = getColors();
+	TTF_Font* buttonFont = getButtonFont();
+	TTF_Font* bodyFont = getBodyFont();
+
+	/* Build the agree / disagree buttons (Must be same size).
+	* So we find which button text is LONGER, then query how wide that SURFACE would be.
+	* That lets us set the dimensions for the buttons,
+	* which lets us set the dimensions for the panel,
+	* which lets us set the positions of the buttons.
+	* THEN we can create the actual buttons and the panel.
+	*/
+
+	string agreeText = confirmationType == ConfirmationButtonType::OkCancel ? resources.getButtonText("OK") : resources.getButtonText("YES");
+	string refuseText = confirmationType == ConfirmationButtonType::OkCancel ? resources.getButtonText("CANCEL") : resources.getButtonText("NO");
+
+	string longestButtonText = agreeText.size() > refuseText.size() ? agreeText : refuseText;
+	int agreeBtnTxtWidth, agreeBtnTxtHeight, refuseBtnTxtWidth, refuseBtnTxtHeight;
+	TTF_SizeUTF8(buttonFont, agreeText.c_str(), &agreeBtnTxtWidth, &agreeBtnTxtHeight);
+	TTF_SizeUTF8(buttonFont, refuseText.c_str(), &refuseBtnTxtWidth, &refuseBtnTxtHeight);
+
+	int longestBtnTxtWidth = agreeBtnTxtWidth > refuseBtnTxtWidth ? agreeBtnTxtWidth : refuseBtnTxtWidth;
+	int longestBtnTextHeight = refuseBtnTxtHeight;
+
+	int btnRectWidth = longestBtnTxtWidth + (buttonPadding * 2);
+	int btnRectHeight = longestBtnTextHeight + (buttonPadding * 2);
+
+	/* Now we have the button dimensions, but not their positions.
+	* Figure out the dimensions of the panel.
+	*/
+
+	SDL_Surface* textSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, confirmationText.c_str(), colors["BTN_TEXT"], 300);
+	int textWidth = textSurface->w;
+	int textHeight = textSurface->h;
+
+	int totalButtonsWidth = (btnRectWidth * 2) + (PANEL_PADDING * 3);
+	int totalPanelTextWidth = textWidth + (PANEL_PADDING * 2);
+
+	int panelRectWidth = totalPanelTextWidth > totalButtonsWidth ? totalPanelTextWidth : totalButtonsWidth;
+	int panelRectHeight = textHeight + btnRectHeight + (PANEL_PADDING * 3);
+
+	SDL_Rect panelRect = {
+		(getWindowWidth() / 2) - (panelRectWidth / 2),
+		(getWindowHeight() / 2) - (panelRectHeight / 2),
+		panelRectWidth,
+		panelRectHeight
+	};
+
+	SDL_Rect textRect = {
+		panelRect.x + (panelRect.w / 2) - (textWidth / 2),
+		panelRect.y + PANEL_PADDING,
+		textWidth,
+		textHeight
+	};
+
+	SDL_Rect agreeBtnRect = {
+		panelRect.x + (panelRect.w / 2) - (btnRectWidth + (PANEL_PADDING / 2)),
+		panelRect.y + panelRect.h - (btnRectHeight + PANEL_PADDING),
+		btnRectWidth,
+		btnRectHeight
+	};
+
+	SDL_Rect refuseBtnRect = {
+		agreeBtnRect.x + agreeBtnRect.w + PANEL_PADDING,
+		agreeBtnRect.y,
+		btnRectWidth,
+		btnRectHeight
+	};
+
+	SDL_Rect agreeBtnTxtRect = {
+		agreeBtnRect.x + (agreeBtnRect.w / 2) - (agreeBtnTxtWidth / 2),
+		agreeBtnRect.y + (agreeBtnRect.h / 2) - (agreeBtnTxtHeight / 2),
+		agreeBtnTxtWidth,
+		agreeBtnTxtHeight
+	};
+
+	SDL_Rect refuseBtnTxtRect = {
+		refuseBtnRect.x + (refuseBtnRect.w / 2) - (refuseBtnTxtWidth / 2),
+		refuseBtnRect.y + (refuseBtnRect.h / 2) - (refuseBtnTxtHeight / 2),
+		refuseBtnTxtWidth,
+		refuseBtnTxtHeight
+	};
+
+	Button agreeButton = Button(
+		agreeBtnRect,
+		agreeBtnTxtRect,
+		agreeText,
+		buttonFont,
+		colors,
+		mainRenderer,
+		ButtonClickStruct(ButtonOption::Agree, -1)
+	);
+
+	Button refuseButton = Button(
+		refuseBtnRect,
+		refuseBtnTxtRect,
+		refuseText,
+		buttonFont,
+		colors,
+		mainRenderer,
+		ButtonClickStruct(ButtonOption::Refuse, -1)
+	);
+
+	/* Create the panel surface. */
+	SDL_Surface* panelSurface = createTransparentSurface(panelRectWidth, panelRectHeight);
+	vector<SDL_Rect> overlayRects = createSurfaceOverlay(panelRect);
+	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["BG_LIGHT"]));
+
+	/* draw the overlay */
+	if (overlayRects.size() > 0) {
+		for (SDL_Rect& oRect : overlayRects) {
+			SDL_FillRect(panelSurface, &oRect, convertSDL_ColorToUint32(panelSurface->format, colors["BG_MED"]));
+		}
+	}
+
+	/* Blit the text onto the panel, make the texture, destroy the surfaces. */
+	SDL_BlitSurface(textSurface, NULL, panelSurface, &textRect);
+	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
+	SDL_FreeSurface(textSurface);
+	SDL_FreeSurface(panelSurface);
+
+	vector<Button> buttons = {
+		agreeButton,
+		refuseButton
+	};
+
+	Panel panel = Panel(panelRect, buttons, panelTexture);
+
+	return panel;
+}

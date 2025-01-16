@@ -463,6 +463,15 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 							loadedLimbId = clickStruct.itemID;
 							limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
 
+							if (!limbEquipped) {
+
+								cout << "LIMB IS **NOT** LOADED\n";
+
+								/* Show a MESSAGE that there are not free joints (prior to this actually). */
+
+								break;
+							}
+
 							if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
 								int screenWidth = ui.getWindowWidth();
 								int screenHeight = ui.getWindowHeight();
