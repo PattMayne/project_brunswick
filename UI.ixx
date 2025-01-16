@@ -2018,7 +2018,7 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 	* Figure out the dimensions of the panel.
 	*/
 
-	SDL_Surface* textSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, confirmationText.c_str(), colors["BTN_TEXT"], 300);
+	SDL_Surface* textSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, confirmationText.c_str(), colors["DARK_TEXT"], 300);
 	int textWidth = textSurface->w;
 	int textHeight = textSurface->h;
 
@@ -2028,6 +2028,8 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 	int panelRectWidth = totalPanelTextWidth > totalButtonsWidth ? totalPanelTextWidth : totalButtonsWidth;
 	int panelRectHeight = textHeight + btnRectHeight + (PANEL_PADDING * 3);
 
+	/* Cerate many SDL_Rects */
+
 	SDL_Rect panelRect = {
 		(getWindowWidth() / 2) - (panelRectWidth / 2),
 		(getWindowHeight() / 2) - (panelRectHeight / 2),
@@ -2035,9 +2037,10 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 		panelRectHeight
 	};
 
+	/* This rect is relative to the panel. */
 	SDL_Rect textRect = {
-		panelRect.x + (panelRect.w / 2) - (textWidth / 2),
-		panelRect.y + PANEL_PADDING,
+		(panelRect.w / 2) - (textWidth / 2),
+		PANEL_PADDING,
 		textWidth,
 		textHeight
 	};
@@ -2057,20 +2060,34 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 	};
 
 	SDL_Rect agreeBtnTxtRect = {
-		agreeBtnRect.x + (agreeBtnRect.w / 2) - (agreeBtnTxtWidth / 2),
-		agreeBtnRect.y + (agreeBtnRect.h / 2) - (agreeBtnTxtHeight / 2),
+		(agreeBtnRect.w / 2) - (agreeBtnTxtWidth / 2),
+		(agreeBtnRect.h / 2) - (agreeBtnTxtHeight / 2),
 		agreeBtnTxtWidth,
 		agreeBtnTxtHeight
 	};
 
 	SDL_Rect refuseBtnTxtRect = {
-		refuseBtnRect.x + (refuseBtnRect.w / 2) - (refuseBtnTxtWidth / 2),
-		refuseBtnRect.y + (refuseBtnRect.h / 2) - (refuseBtnTxtHeight / 2),
+		(refuseBtnRect.w / 2) - (refuseBtnTxtWidth / 2),
+		(refuseBtnRect.h / 2) - (refuseBtnTxtHeight / 2),
 		refuseBtnTxtWidth,
 		refuseBtnTxtHeight
 	};
 
-	Button agreeButton = Button(
+	/* Create the panel surface. */
+	SDL_Surface* panelSurface = createTransparentSurface(panelRectWidth, panelRectHeight);
+	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["BTN_HOVER_BG"]));
+
+	/* Blit the text onto the panel, make the texture, destroy the surfaces. */
+	SDL_BlitSurface(textSurface, NULL, panelSurface, &textRect);
+	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
+	SDL_FreeSurface(textSurface);
+	SDL_FreeSurface(panelSurface);
+
+	/* Create the buttons. */
+
+	vector<Button> buttons;
+
+	buttons.emplace_back(
 		agreeBtnRect,
 		agreeBtnTxtRect,
 		agreeText,
@@ -2080,7 +2097,7 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 		ButtonClickStruct(ButtonOption::Agree, -1)
 	);
 
-	Button refuseButton = Button(
+	buttons.emplace_back(
 		refuseBtnRect,
 		refuseBtnTxtRect,
 		refuseText,
@@ -2090,30 +2107,5 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 		ButtonClickStruct(ButtonOption::Refuse, -1)
 	);
 
-	/* Create the panel surface. */
-	SDL_Surface* panelSurface = createTransparentSurface(panelRectWidth, panelRectHeight);
-	vector<SDL_Rect> overlayRects = createSurfaceOverlay(panelRect);
-	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["BG_LIGHT"]));
-
-	/* draw the overlay */
-	if (overlayRects.size() > 0) {
-		for (SDL_Rect& oRect : overlayRects) {
-			SDL_FillRect(panelSurface, &oRect, convertSDL_ColorToUint32(panelSurface->format, colors["BG_MED"]));
-		}
-	}
-
-	/* Blit the text onto the panel, make the texture, destroy the surfaces. */
-	SDL_BlitSurface(textSurface, NULL, panelSurface, &textRect);
-	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
-	SDL_FreeSurface(textSurface);
-	SDL_FreeSurface(panelSurface);
-
-	vector<Button> buttons = {
-		agreeButton,
-		refuseButton
-	};
-
-	Panel panel = Panel(panelRect, buttons, panelTexture);
-
-	return panel;
+	return Panel(panelRect, buttons, panelTexture);
 }

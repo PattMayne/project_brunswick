@@ -104,6 +104,9 @@ public:
 		createLimbLoadedPanel(ui);
 		createChooseLimbPanel(ui);
 		creationMode = CreationMode::Review;
+		string messageText = "You created a confirmation panel!";
+		messagePanel = ui.createConfirmationPanel(messageText, ConfirmationButtonType::YesNo);
+		messagePanel.setShow(true);
 
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
 		drawLoadedLimb = true;
@@ -211,6 +214,7 @@ private:
 	Panel reviewModePanel;
 	Panel limbLoadedPanel;
 	Panel chooseLimbPanel;
+	Panel messagePanel;
 
 	void drawCharacter(UI& ui);
 
@@ -327,6 +331,7 @@ void CharacterCreationScreen::draw(UI& ui) {
 	reviewModePanel.draw(ui);
 	settingsPanel.draw(ui);
 	//gameMenuPanel.draw(ui);
+	messagePanel.draw(ui);
 	drawCharacter(ui);
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
@@ -375,9 +380,19 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
 
-			if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
-
+			if (messagePanel.getShow() && messagePanel.isInPanel(mouseX, mouseY)) {
 				/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
+				ButtonClickStruct clickStruct = messagePanel.checkButtonClick(mouseX, mouseY);
+
+				switch (clickStruct.buttonOption) {
+				case ButtonOption::Agree:
+					messagePanel.setShow(false);
+					break;
+				case ButtonOption::Refuse:
+					messagePanel.setShow(false);
+					break;
+				}
+			} else if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
 				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
@@ -591,6 +606,7 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	if (reviewModePanel.getShow()) { reviewModePanel.checkMouseOver(mouseX, mouseY); }
 	if (limbLoadedPanel.getShow()) { limbLoadedPanel.checkMouseOver(mouseX, mouseY); }
 	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
+	if (messagePanel.getShow()) { messagePanel.checkMouseOver(mouseX, mouseY); }
 }
 
 /* Remember to delete this SDL_Point pointer if it's not null!
