@@ -157,6 +157,7 @@
   <ItemGroup>
     <None Include="data\maps\map_forest.json" />
     <None Include="data\resources.json" />
+    <None Include="data\schema.sql" />
     <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>

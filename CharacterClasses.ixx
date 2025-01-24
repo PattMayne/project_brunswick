@@ -204,8 +204,8 @@ public:
 	void setModifiedPoint(Point newPoint) { modifiedPoint = newPoint; }
 
 private:
-	Point pointForm;
-	Point modifiedPoint;
+	Point pointForm; /* Not saved to DB. Get fresh from limb form. */
+	Point modifiedPoint; /* NOT point MODIFIER. It's the fully modified point. Saved to DB. */
 	bool isAnchor;
 
 	/* Data about the CONNECTED limb. */

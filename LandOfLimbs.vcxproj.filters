@@ -70,6 +70,7 @@
       <Filter>Maps</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="data\schema.sql" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\json.hpp">
