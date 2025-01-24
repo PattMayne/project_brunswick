@@ -142,6 +142,7 @@
     <ClCompile Include="BattleScreen.ixx" />
     <ClCompile Include="CharacterClasses.ixx" />
     <ClCompile Include="CharacterCreationScreen.ixx" />
+    <ClCompile Include="Database.ixx" />
     <ClCompile Include="GameState.ixx" />
     <ClCompile Include="FormFactory.ixx" />
     <ClCompile Include="LimbFormMasterList.ixx" />
@@ -149,17 +150,20 @@
     <ClCompile Include="MapScreen.ixx" />
     <ClCompile Include="MenuScreen.ixx" />
     <ClCompile Include="Resources.ixx" />
+    <ClCompile Include="sqlite3.c" />
     <ClCompile Include="TypeStorage.ixx" />
     <ClCompile Include="UI.ixx" />
   </ItemGroup>
   <ItemGroup>
     <None Include="data\maps\map_forest.json" />
     <None Include="data\resources.json" />
+    <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\json.hpp" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="sqlite3.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="LandOfLimbs.rc" />
