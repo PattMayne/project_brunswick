@@ -50,3 +50,9 @@ CREATE TABLE IF NOT EXISTS limb_joint (
     FOREIGN KEY(joint_id) REFERENCES joint(id)
 );
 
+CREATE TABLE IF NOT EXISTS character (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    anchor_limb_id INTEGER DEFAULT -1,
+    is_player INTEGER DEFAULT 0
+);
