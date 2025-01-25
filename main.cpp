@@ -58,9 +58,9 @@ void exit(SDL_Surface* surface, SDL_Window* window);
 
 /* Main game loop manages particular screens, which do actual game logic. */
 int main(int argc, char* args[]) {
-	cout << "Hello new world\n";
+	cout << "Game loaded.\n";
 
-	openDB();
+	createDB();
 
 	/* seed the random number generator now for the whole game */
 	srand((unsigned int)time(NULL));

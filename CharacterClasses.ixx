@@ -575,7 +575,20 @@ export class Limb {
 		int textureHeight;
 };
 
+/* When a new roaming limb is created on a map,
+* this struct passes the relevant data to populate
+* in the DB.
+*/
+export struct NewRoamingLimbData {
 
+	NewRoamingLimbData(string formSlug, string name, int mapID, Point position = Point(-1, -1)) :
+		formSlug(formSlug), name(name), mapID(mapID), position(position) {}
+
+	string formSlug;
+	string name;
+	int mapID;
+	Point position;
+};
 
 /*
 * Very minimal parent class.
