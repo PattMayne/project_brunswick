@@ -147,6 +147,7 @@
     <ClCompile Include="FormFactory.ixx" />
     <ClCompile Include="LimbFormMasterList.ixx" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MapClasses.ixx" />
     <ClCompile Include="MapScreen.ixx" />
     <ClCompile Include="MenuScreen.ixx" />
     <ClCompile Include="Resources.ixx" />
