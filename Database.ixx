@@ -133,7 +133,8 @@ export bool createNewMap(Map& map) {
     int mapID = -1;
     bool success = false;
     sqlite3* db;
-    const char* mapSlug = map.getForm().slug.c_str();
+    string slugString = map.getForm().slug;
+    const char* mapSlug = slugString.c_str();
 
     /* Open database. */
     int dbFailed = sqlite3_open(dbPath(), &db);
@@ -237,8 +238,67 @@ export bool createNewMap(Map& map) {
     sqlite3_finalize(blockStatement);
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
 
-    if (!blockError) { success = true; }
-    else {  /* DELETE map and all blocks */ }
+    if (blockError) { 
+        /* DELETE map and all blocks */
+        sqlite3_close(db);
+        return success;
+    }
+
+    cout << map.getRoamingLimbs().size() << " roaming limbs.\n";
+
+    /* Next do a transaction to save all the Roaming Limbs to the database. */
+
+    /* Create statement for adding new Limb object to the database. */
+    const char* insertLimbSQL = "INSERT INTO limb (form_slug, map_id, position_x, position_y) VALUES (?, ?, ?, ?);";
+    sqlite3_stmt* limbStatement;
+
+    /* Prepare the statement before starting the loop. */
+    returnCode = sqlite3_prepare_v2(db, insertLimbSQL, -1, &limbStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB insert statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+    /* Begin the transaction. */
+    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
+    bool limbError = false;
+
+    /* Loop through the Limbs and save each one. */
+    string limbFormSlugString;
+
+    for (Limb& limb : map.getRoamingLimbs()) {
+        limbFormSlugString = limb.getForm().slug;
+
+        sqlite3_bind_text(limbStatement, 1, limbFormSlugString.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(limbStatement, 2, mapID);
+        sqlite3_bind_int(limbStatement, 3, limb.getPosition().x);
+        sqlite3_bind_int(limbStatement, 4, limb.getPosition().y);
+
+        if (sqlite3_step(limbStatement) == SQLITE_DONE) {
+            /* Get the ID of the saved item. */
+            int limbID = static_cast<int>(sqlite3_last_insert_rowid(db));
+            limb.setId(limbID);
+        }
+        else {
+            cerr << "Insert failed for LIMB: " << sqlite3_errmsg(db) << endl;
+            limbError = true;
+            break;
+        }
+
+        sqlite3_reset(limbStatement);
+    }
+
+    /* Finalize the statement, commit the transaction. */
+    sqlite3_finalize(limbStatement);
+    sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
+
+    if (!limbError) { success = true; }
+    else {
+        /* DELETE map and all blocks */
+        sqlite3_close(db);
+        return success;
+    }
+
 
     /* Close the database. */
     sqlite3_close(db);
