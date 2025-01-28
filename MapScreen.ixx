@@ -122,6 +122,7 @@ import CharacterClasses;
 import LimbFormMasterList;
 import UI;
 import MapClasses;
+import Database;
 
 using namespace std;
 
@@ -141,11 +142,27 @@ export class MapScreen {
 		* mapWidth refers to the number of blocks to CREATE.
 		*/
 		MapScreen(string mapSlug) {
+
+			/* TEMPORARY MAP-CREATION SCHEME 
+			* 
+			* PHASE 1:
+			* 1) Get vanilla Forest Map every time.
+			* 2) Save the map immediately after creation.
+			* 
+			* PHASE 2:
+			* 1) Check for EXISTING Forest Map.
+			* 2) LOAD that map from the database if it exists.
+			* 3) If it does NOT exist, do PHASE 1 steps.
+			* 
+			* PHASE 3 comes after creating the BATTLE screen.
+			*/
+
 			mapForm = getMapFormFromSlug(mapSlug);
 			map = Map(mapForm);
-			mapType = MapType::World; /* TODO: once we get the MAP object from the DB (based on the id) we can read its attribute to get its MapType. */
+
+			createNewMap(map);
+
 			screenType = ScreenType::Map;
-			id = 0;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
 			hBlocksTotal = mapForm.blocksWidth;
@@ -194,14 +211,12 @@ export class MapScreen {
 		void decrementCountdown();
 
 		ScreenType getScreenType() { return screenType; }
-		MapType getMapType() { return mapType; }
+		MapType getMapType() { return mapForm.mapType; }
 		MapForm mapForm;
 		void run();
 
 	private:
-		MapType mapType;
 		ScreenType screenType;
-		int id;
 		ScreenStruct screenToLoadStruct;
 		void drawMap(UI& ui);
 		void drawBlock(UI& ui, Block& block, SDL_Rect targetRect);

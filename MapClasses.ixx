@@ -232,6 +232,7 @@ public:
 	int getPathFlipOption() { return pathFlipOption; }
 	int getPathRotateAngle() { return pathRotateAngle; }
 	int getPathTextureIndex() { return pathTextureIndex; }
+	int getId() { return id; }
 
 	/* setters */
 	void setPathRotateAngle(int angle = 0) { pathRotateAngle = angle; }
@@ -241,6 +242,7 @@ public:
 	void setWallTextureIndex(int index) { wallTextureIndex = index; }
 	void setWallIsFlipped(bool flipWall) { wallIsFlipped = flipWall; }
 	void setPathTextureIndex(int index) { pathTextureIndex = index; }
+	void setId(int id) { this->id = id; }
 
 	void loot() {
 		isLooted = true;
@@ -265,6 +267,7 @@ private:
 	int wallTextureIndex;
 	int pathTextureIndex;
 	bool wallIsFlipped;
+	int id;
 };
 
 
@@ -291,7 +294,7 @@ public:
 
 	MapForm getForm() { return mapForm; }
 
-	void setId(int newId) { id = newId; }
+	void setId(int id) { this->id = id; }
 	int getId() { return id; }
 
 private:

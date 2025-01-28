@@ -132,6 +132,7 @@ export struct LandmarkForm {
 
 export struct MapForm {
 	MapLevel mapLevel;
+	MapType mapType;
 	string name;
 	string slug;
 	vector<LimbForm> nativeLimbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */

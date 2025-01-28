@@ -129,7 +129,7 @@ export int createRoamingLimb(Limb& limb, int mapId, Point position) {
 }
 
 
-export bool createMap(Map& map) {
+export bool createNewMap(Map& map) {
     int mapID = -1;
     bool success = false;
     sqlite3* db;
@@ -179,16 +179,15 @@ export bool createMap(Map& map) {
     bool blockError = false;
     for (int y = 0; y < map.getRows().size(); ++y) {
         vector<Block>& row = map.getRows()[y];
-
         for (int x = 0; x < row.size(); ++x) {
             Block& block = row[x];
 
             /* save this particular block to the database. */
 
             /* Create statement for adding new Block object to the database. */
-            const char* insertBlockSQL = "INSERT INTO map (map_id, position_x, position_y, is_floor, is_path) VALUES (?, ?, ?, ?, ?);";
+            const char* insertBlockSQL = "INSERT INTO block (map_id, position_x, position_y, is_floor, is_path) VALUES (?, ?, ?, ?, ?);";
             sqlite3_stmt* blockStatement;
-
+            
             /* Prepare the statement. */
             int returnCode = sqlite3_prepare_v2(db, insertBlockSQL, -1, &blockStatement, nullptr);
             if (returnCode != SQLITE_OK) {
@@ -199,35 +198,34 @@ export bool createMap(Map& map) {
 
             int isFloor = block.getIsFloor() ? 1 : 0;
             int isPath = block.getIsPath() ? 1 : 0;
-
             /* Bind the data and execute the statement. */
-            sqlite3_bind_int(statement, 1, mapID);
-            sqlite3_bind_int(statement, 2, x);
-            sqlite3_bind_int(statement, 3, y);
-            sqlite3_bind_int(statement, 4, isFloor);
-            sqlite3_bind_int(statement, 5, isPath);
+            sqlite3_bind_int(blockStatement, 1, mapID);
+            sqlite3_bind_int(blockStatement, 2, x);
+            sqlite3_bind_int(blockStatement, 3, y);
+            sqlite3_bind_int(blockStatement, 4, isFloor);
+            sqlite3_bind_int(blockStatement, 5, isPath);
 
             returnCode = sqlite3_step(blockStatement);
             if (returnCode != SQLITE_DONE) {
                 cerr << "Insert failed for BLOCK: " << sqlite3_errmsg(db) << endl;
                 sqlite3_finalize(blockStatement);
-                sqlite3_close(db);
-                return success;
+                blockError = true;
+                break;
             }
             else {
                 /* Get the ID of the saved item. */
-                mapID = static_cast<int>(sqlite3_last_insert_rowid(db));
+                int blockID = static_cast<int>(sqlite3_last_insert_rowid(db));
+                block.setId(blockID);
             }
         }
         if (blockError) {
+            cout << "ERROR\n";
             break;
         }
     }
 
-    if (!blockError) {
-        success = true;
-    }
-
+    if (!blockError) { success = true; }
+    else {  /* DELETE map and all blocks */ }
 
     sqlite3_close(db);
     return success;

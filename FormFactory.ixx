@@ -134,6 +134,7 @@ MapForm forestMap() {
 	forestMap.slug = "forest";
 	forestMap.blocksWidth = 100;
 	forestMap.blocksHeight = 100;
+	forestMap.mapType = MapType::World;
 
 	/* create the TEXTURES */
 
