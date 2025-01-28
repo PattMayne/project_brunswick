@@ -113,7 +113,7 @@ export struct ButtonClickStruct {
 	}
 };
 
-/* this POINT should be available everywhere. Where should it be stored? Should there be a Point module? */
+
 export struct Point {
 	Point() { x = 0; y = 0; }
 	Point(int x, int y) : x(x), y(y) {}

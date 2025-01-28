@@ -9,6 +9,8 @@ TABLES TO CREATE:
 * CHARACTER
 * MAP
 * MAP BLOCK
+* LANDMARK
+* SUIT
 
 START with LIMBS:
 
@@ -22,7 +24,6 @@ START with LIMBS:
 CREATE TABLE IF NOT EXISTS limb (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     form_slug TEXT NOT NULL,
-    name TEXT,
     character_id INTEGER DEFAULT -1,
     map_id INTEGER DEFAULT -1,
     hp_mod INTEGER DEFAULT 0,
@@ -61,23 +62,19 @@ CREATE INDEX idx_character_id ON limb (character_id);
 
 CREATE TABLE IF NOT EXISTS map (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL,
-    name TEXT NOT NULL
+    slug TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS row (
-    id INTEGER PRIMARY KEY,
-    map_slug TEXT NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS block (
     id INTEGER PRIMARY KEY,
-    row_id INTEGER NOT NULL,
-    map_slug TEXT NOT NULL,
+    map_id INTEGER NOT NULL,
+    position_x INTEGER NOT NULL,
+    position_y INTEGER NOT NULL,
     is_floor INTEGER DEFAULT 0,
     is_path INTEGER DEFAULT 0,
     is_looted INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_map_slug ON row (map_slug);
-CREATE INDEX idx_row_id ON block (row_id);
+CREATE INDEX idx_map_id ON block (map_id);
+CREATE INDEX idx_position_y ON block (position_y);

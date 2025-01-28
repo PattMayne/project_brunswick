@@ -1,3 +1,22 @@
+/**
+*  ____        _        _
+* |  _ \  __ _| |_ __ _| |__   __ _ ___  ___
+* | | | |/ _` | __/ _` | '_ \ / _` / __|/ _ \
+* | |_| | (_| | || (_| | |_) | (_| \__ \  __/
+* |____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
+* 
+* 
+* The modules for objects which are saved to the database do not import the database themselves.
+* Instead, the screen modules which load those classes also load the database module.
+* The database module also loads all the modules whose classes must be saved to the database.
+* So Limb does not have a save() function.
+* Instead, the database will have a save() function for each class,
+* and the screen modules can call THAT function when needed.
+* The same process applies for getting data from the database,
+* and using that data to create objects.
+*/
+
+
 module;
 export module Database;
 
@@ -10,6 +29,8 @@ import <string>;
 #include "sqlite3.h"
 
 import CharacterClasses;
+import MapClasses;
+import TypeStorage;
 
 using namespace std;
 
@@ -62,30 +83,154 @@ export void createDB() {
 * 
 * NOTE: Do we really need the struct? Maybe we should send a reference to the Limb object and populate it with an id?
 */
-export int createRoamingLimb(NewRoamingLimbData limbData) {
+export int createRoamingLimb(Limb& limb, int mapId, Point position) {
     sqlite3* db;
+    int id = -1;
 
     /* Open database (create if does not exist). */
-    int dbFailed = sqlite3_open("data/limbs_data.db", &db);
+    int dbFailed = sqlite3_open(dbPath(), &db);
     cout << dbFailed << "\n";
-    if (dbFailed == 0) {
-        cout << "Opened Database Successfully." << "\n";
-
-        
-
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return id;
     }
-    else { cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl; }
 
-    /* Close database. */
+    /* Create statement for adding new Limb object to the database. */
+    const char* insertSQL = "INSERT INTO LIMB (form_slug, map_id, position_x, position_y) VALUES (?, ?, ?, ?);";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, insertSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare insert statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return id;
+    }
+
+    /* Bind the data. */
+    sqlite3_bind_text(statement, 1, limb.getForm().slug.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(statement, 2, mapId);
+    sqlite3_bind_int(statement, 3, position.x);
+    sqlite3_bind_int(statement, 4, position.y);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "Insert failed: " << sqlite3_errmsg(db) << endl;  }
+    else {
+        /* Get the ID of the saved item. */
+        id = static_cast<int>(sqlite3_last_insert_rowid(db));
+    }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
     sqlite3_close(db);
 
-    return -1;
+    return id;
 }
 
 
-export int createMap() {
+export bool createMap(Map& map) {
+    int mapID = -1;
+    bool success = false;
+    sqlite3* db;
+    const char* mapSlug = map.getForm().slug.c_str();
 
-    return -1;
+    /* Open database. */
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    cout << dbFailed << "\n";
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return success;
+    }
+
+    /* First save the Map object to the DB. */
+
+    /* Create statement for adding new Map object to the database. */
+    const char* insertSQL = "INSERT INTO map (slug) VALUES (?);";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, insertSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare MAP insert statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return success;
+    }
+
+    /* Bind the data and execute the statement. */
+    sqlite3_bind_text(statement, 1, mapSlug, -1, SQLITE_STATIC);
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) {
+        cerr << "Insert failed for MAP: " << sqlite3_errmsg(db) << endl;
+        sqlite3_finalize(statement);
+        sqlite3_close(db);
+        return success;
+    }
+    else {
+        /* Get the ID of the saved item. */
+        mapID = static_cast<int>(sqlite3_last_insert_rowid(db));
+        map.setId(mapID);
+    }
+
+    /* Finalize statement. */
+    sqlite3_finalize(statement);
+
+    /* Now run a loop to save each  */
+    bool blockError = false;
+    for (int y = 0; y < map.getRows().size(); ++y) {
+        vector<Block>& row = map.getRows()[y];
+
+        for (int x = 0; x < row.size(); ++x) {
+            Block& block = row[x];
+
+            /* save this particular block to the database. */
+
+            /* Create statement for adding new Block object to the database. */
+            const char* insertBlockSQL = "INSERT INTO map (map_id, position_x, position_y, is_floor, is_path) VALUES (?, ?, ?, ?, ?);";
+            sqlite3_stmt* blockStatement;
+
+            /* Prepare the statement. */
+            int returnCode = sqlite3_prepare_v2(db, insertBlockSQL, -1, &blockStatement, nullptr);
+            if (returnCode != SQLITE_OK) {
+                cerr << "Failed to prepare BLOCK insert statement: " << sqlite3_errmsg(db) << endl;
+                blockError = true;
+                break;
+            }
+
+            int isFloor = block.getIsFloor() ? 1 : 0;
+            int isPath = block.getIsPath() ? 1 : 0;
+
+            /* Bind the data and execute the statement. */
+            sqlite3_bind_int(statement, 1, mapID);
+            sqlite3_bind_int(statement, 2, x);
+            sqlite3_bind_int(statement, 3, y);
+            sqlite3_bind_int(statement, 4, isFloor);
+            sqlite3_bind_int(statement, 5, isPath);
+
+            returnCode = sqlite3_step(blockStatement);
+            if (returnCode != SQLITE_DONE) {
+                cerr << "Insert failed for BLOCK: " << sqlite3_errmsg(db) << endl;
+                sqlite3_finalize(blockStatement);
+                sqlite3_close(db);
+                return success;
+            }
+            else {
+                /* Get the ID of the saved item. */
+                mapID = static_cast<int>(sqlite3_last_insert_rowid(db));
+            }
+        }
+        if (blockError) {
+            break;
+        }
+    }
+
+    if (!blockError) {
+        success = true;
+    }
+
+
+    sqlite3_close(db);
+    return success;
 }
 
 

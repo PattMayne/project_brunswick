@@ -289,6 +289,11 @@ public:
 	string getSlug() { return mapForm.slug; }
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
 
+	MapForm getForm() { return mapForm; }
+
+	void setId(int newId) { id = newId; }
+	int getId() { return id; }
+
 private:
 	MapForm mapForm;
 	vector<vector<Block>> rows;
@@ -302,6 +307,7 @@ private:
 	vector<Landmark> landmarks;
 	vector<LimbForm> nativeLimbForms;
 	vector<Limb> roamingLimbs;
+	int id;
 
 	/* Will need a list of NPCs */
 	/* Will need a list of Roaming Limbs */

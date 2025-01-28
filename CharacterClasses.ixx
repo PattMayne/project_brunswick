@@ -299,8 +299,13 @@ export class Limb {
 		Point getLastPosition() { return lastPosition; }
 		void setPosition(Point newPosition) { position = newPosition; }
 		void setLastPosition(Point newPosition) { lastPosition = newPosition; }
+
+		LimbForm getForm() { return form; }
 		string getName() { return name; }
 		string getTexturePath() { return form.texturePath; }
+
+		int getId() { return id; }
+		void setId(int id) { this->id = id; }
 
 		/* GET the FORM (default) values PLUS the modifiers (which can be negative) */
 		int getHP() { return form.hp + hpMod; }
@@ -573,22 +578,9 @@ export class Limb {
 		int rotationAngle;
 		int textureWidth;
 		int textureHeight;
+		int id;
 };
 
-/* When a new roaming limb is created on a map,
-* this struct passes the relevant data to populate
-* in the DB.
-*/
-export struct NewRoamingLimbData {
-
-	NewRoamingLimbData(string formSlug, string name, int mapID, Point position = Point(-1, -1)) :
-		formSlug(formSlug), name(name), mapID(mapID), position(position) {}
-
-	string formSlug;
-	string name;
-	int mapID;
-	Point position;
-};
 
 /*
 * Very minimal parent class.
