@@ -95,7 +95,6 @@
 * 
 * 
 * Destroy all textures for PANELS and LIMBS (on every screen).
-* 
 */
 
 module;
@@ -537,7 +536,7 @@ export void MapScreen::run() {
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
 			if (
-				!animate && /* Drop any events during the animations. */
+				!animate && !startNpcAnimation && /* Drop any events during the animations. */
 				(e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_KEYDOWN) /* Actual events to respond to. */
 			) {
 				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
@@ -1036,6 +1035,7 @@ void MapScreen::decrementCountdown() {
 
 /* destailed documentation for the first function. Other functions follow same process. */
 void MapScreen::requestUp() {
+	if (animate || animationCountdown > 0) { return; }
 	/* Get player character */
 	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	/* get the NEW index of the block they want to move to (along the dimension of change) */
@@ -1057,6 +1057,7 @@ void MapScreen::requestUp() {
 }
 
 void MapScreen::requestDown() {
+	if (animate || animationCountdown > 0) { return; }
 	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int destinationBlockY = playerCharacter.getBlockY() + 1;
 	if (destinationBlockY < vBlocksTotal) {
@@ -1070,6 +1071,7 @@ void MapScreen::requestDown() {
 }
 
 void MapScreen::requestLeft() {
+	if (animate || animationCountdown > 0) { return; }
 	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int destinationBlockX = playerCharacter.getBlockX() - 1;
 	if (destinationBlockX < hBlocksTotal) {
@@ -1083,6 +1085,7 @@ void MapScreen::requestLeft() {
 }
 
 void MapScreen::requestRight() {
+	if (animate || animationCountdown > 0) { return; }
 	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int destinationBlockX = playerCharacter.getBlockX() + 1;
 	if (destinationBlockX < hBlocksTotal) {
