@@ -181,7 +181,9 @@ export bool createNewMap(Map& map) {
     /* Finalize statement. */
     sqlite3_finalize(statement);
 
-    /* Now run a loop to save each block.
+
+    /* 
+    * Now run a loop to save each block.
     * Do a Transaction to reduce time.
     */
 
@@ -297,8 +299,71 @@ export bool createNewMap(Map& map) {
     sqlite3_finalize(limbStatement);
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
 
-    if (!limbError) { success = true; }
+    if (limbError) { /* DELETE map and all blocks and all limbs. */ }
+
+
+
+
+
+
+    /*
+    * Now do a loop to save each Landmark.
+    * 
+    */
+
+    /* Create statement for adding new Landmark object to the database. */
+    const char* insertLandmarkSQL = "INSERT INTO landmark (map_slug, landmark_type, slug, position_x, position_y) VALUES (?, ?, ?, ?, ?);";
+    sqlite3_stmt* landmarkStatement;
+
+    /* Prepare the statement before starting the loop. */
+    returnCode = sqlite3_prepare_v2(db, insertLandmarkSQL, -1, &landmarkStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LANDMARK insert statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+
+    /* Begin the transaction. */
+    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
+    bool landmarkError = false;
+
+    for (Landmark& landmark : map.getLandmarks()) {
+
+        int landmarkType = landmark.getType();
+        string slug = landmark.getSlug();
+
+        /* Bind the data and execute the statement. */
+        sqlite3_bind_text(landmarkStatement, 1, mapSlug, -1, SQLITE_STATIC);
+        sqlite3_bind_int(landmarkStatement, 2, landmarkType);
+        sqlite3_bind_text(landmarkStatement, 3, slug.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(landmarkStatement, 4, landmark.getPosition().x);
+        sqlite3_bind_int(landmarkStatement, 5, landmark.getPosition().y);
+
+        if (sqlite3_step(landmarkStatement) == SQLITE_DONE) {
+            /* Get the ID of the saved item. */
+            int landmarkID = static_cast<int>(sqlite3_last_insert_rowid(db));
+            landmark.setId(landmarkID);
+        }
+        else {
+            cerr << "Insert failed for LANDMARK: " << sqlite3_errmsg(db) << endl;
+            landmarkError = true;
+            break;
+        }
+
+        sqlite3_reset(landmarkStatement);
+    }
+
+    /* Finalize the statement, commit the transaction. */
+    sqlite3_finalize(landmarkStatement);
+    sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
+
+    if (!landmarkError) { success = true; }
     else { /* DELETE map and all blocks and all limbs. */ }
+
+
+    /* STILL TO COME: Characters. */
+
+
 
     /* Close the database. */
     sqlite3_close(db);
@@ -339,8 +404,7 @@ export bool mapObjectExists(string mapSlug) {
 
     /* Execute binded statement. */
     if (sqlite3_step(statement) == SQLITE_ROW) {
-        count = sqlite3_column_int(statement, 0);
-    }
+        count = sqlite3_column_int(statement, 0); }
 
     /* Finalize statement and close DB. */
     sqlite3_finalize(statement);
@@ -476,7 +540,6 @@ export Map loadMap(string mapSlug) {
 
     /* Execute and iterate through results. */
     while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
-
         roamingLimbs.emplace_back(
             sqlite3_column_int(queryLimbsStatement, 0),
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
@@ -485,7 +548,6 @@ export Map loadMap(string mapSlug) {
                 sqlite3_column_int(queryLimbsStatement, 3)
             )
         );
-
     }
 
     if (returnCode != SQLITE_DONE) {

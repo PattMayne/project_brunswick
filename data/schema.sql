@@ -68,13 +68,22 @@ CREATE TABLE IF NOT EXISTS map (
 
 
 CREATE TABLE IF NOT EXISTS block (
-    id INTEGER PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     map_slug TEXT NOT NULL,
     position_x INTEGER NOT NULL,
     position_y INTEGER NOT NULL,
     is_floor INTEGER DEFAULT 0,
     is_path INTEGER DEFAULT 0,
     is_looted INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS landmark (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    map_slug TEXT NOT NULL,
+    landmark_type INTEGER NOT NULL,
+    slug TEXT NOT NULL,
+    position_x INTEGER NOT NULL,
+    position_y INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_map_slug ON block (map_slug);

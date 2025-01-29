@@ -167,7 +167,7 @@ private:
 */
 export class Landmark {
 public:
-	/* constructor */
+	/* constructor (primarily for entrance and exit.) */
 	Landmark(
 		Point position,
 		SDL_Texture* texture,
@@ -178,13 +178,27 @@ public:
 		landmarkType(landmarkType),
 		subjectId(subjectId),
 		position(position)
-	{}
+	{
+		if (landmarkType == Exit) {
+			setSlug("exit"); }
+		else if (landmarkType == Entrance) {
+			setSlug("entrance"); }
+	}
 
 	/* destructor */
 	~Landmark() { /* Texture is managed by MapScreen and will be destroyed at the end of the run() function. */ }
 
 	int getDrawX() { return position.x; }
 	int getDrawY() { return position.y; }
+
+	Point getPosition() { return position; }
+	void setSlug(string slug) { this->slug = slug; }
+	string getSlug() { return slug; }
+	LandmarkType getType() { return landmarkType; }
+
+	int getId() { return id; }
+	void setId(int id) { this->id = id; }
+
 	SDL_Texture* getTexture() { return texture; }
 
 	LandmarkCollisionInfo checkCollision(Point pos) { return checkCollision(pos.x, pos.y); }
@@ -197,6 +211,8 @@ public:
 
 private:
 	/* Point refers to the block grid, not the pixels */
+	int id;
+	string slug;
 	Point position;
 	SDL_Texture* texture;
 	LandmarkType landmarkType;
