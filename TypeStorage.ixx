@@ -101,12 +101,12 @@ export struct ButtonClickStruct {
 	ButtonOption buttonOption;
 	int itemID;
 
-	// constructors
+	/* constructors. */
 	ButtonClickStruct(ButtonOption incomingOption, int incomingID) {
 		buttonOption = incomingOption;
 		itemID = incomingID;
 	}
-	// blank
+	/* blank. */
 	ButtonClickStruct() {
 		buttonOption = ButtonOption::NoOption;
 		itemID = -1;
@@ -123,3 +123,6 @@ export struct Point {
 
 
 export enum LandmarkType { Entrance, Exit, Building, Shrine };
+
+export bool isValidLandmarkType(int value) {
+	return value >= Entrance && value <= Shrine; }

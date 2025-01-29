@@ -172,18 +172,15 @@ public:
 		Point position,
 		SDL_Texture* texture,
 		LandmarkType landmarkType,
-		int subjectId = -1
+		int subjectId,
+		string slug
 	) :
 		texture(texture),
 		landmarkType(landmarkType),
 		subjectId(subjectId),
-		position(position)
-	{
-		if (landmarkType == Exit) {
-			setSlug("exit"); }
-		else if (landmarkType == Entrance) {
-			setSlug("entrance"); }
-	}
+		position(position),
+		slug(slug)
+	{ }
 
 	/* destructor */
 	~Landmark() { /* Texture is managed by MapScreen and will be destroyed at the end of the run() function. */ }
@@ -224,7 +221,8 @@ export Landmark getExitLandmark(Point position) {
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	SDL_Texture* gateTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
 	SDL_FreeSurface(gateSurface);
-	return Landmark(position, gateTexture, LandmarkType::Exit);
+	string slug = "exit";
+	return Landmark(position, gateTexture, LandmarkType::Exit, -1, slug);
 }
 
 export Landmark getEntranceLandmark(Point position) {
@@ -232,7 +230,8 @@ export Landmark getEntranceLandmark(Point position) {
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	SDL_Texture* gateTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
 	SDL_FreeSurface(gateSurface);
-	return Landmark(position, gateTexture, LandmarkType::Entrance);
+	string slug = "entrance";
+	return Landmark(position, gateTexture, LandmarkType::Entrance, -1, slug);
 }
 
 export class Block {
@@ -329,6 +328,8 @@ public:
 	string getName() { return mapForm.name; }
 	string getSlug() { return mapForm.slug; }
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
+
+	void setLandmarks(vector<Landmark> landmarks) { this->landmarks = landmarks; }
 
 	MapForm getForm() { return mapForm; }
 	void randomizePathOptions(Block& block);

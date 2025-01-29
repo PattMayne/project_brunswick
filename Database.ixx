@@ -38,6 +38,13 @@ using namespace std;
 
 const char* dbPath() { return "data/limbs_data.db"; }
 
+export string stringFromUnsignedChar(const unsigned char* c_str) {
+    std::string str;
+    int i{ 0 };
+    while (c_str[i] != '\0') { str += c_str[i++]; }
+    return str;
+}
+
 /* Creates the database and tables if they don't exist. */
 export void createDB() {
     sqlite3* db;
@@ -302,10 +309,6 @@ export bool createNewMap(Map& map) {
     if (limbError) { /* DELETE map and all blocks and all limbs. */ }
 
 
-
-
-
-
     /*
     * Now do a loop to save each Landmark.
     * 
@@ -361,6 +364,7 @@ export bool createNewMap(Map& map) {
     else { /* DELETE map and all blocks and all limbs. */ }
 
 
+
     /* STILL TO COME: Characters. */
 
 
@@ -413,12 +417,6 @@ export bool mapObjectExists(string mapSlug) {
     return count > 0;
 }
 
-export string stringFromUnsignedChar(const unsigned char* c_str) {
-    std::string str;
-    int i{ 0 };
-    while (c_str[i] != '\0') { str += c_str[i++]; }
-    return str;
-}
 
 export Map loadMap(string mapSlug) {
     Map map;
@@ -456,8 +454,6 @@ export Map loadMap(string mapSlug) {
 
     /* Bind the slug value. */
     sqlite3_bind_text(statement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
-
-
 
     /* Execute binded statement. */
     if (sqlite3_step(statement) != SQLITE_ROW) {
@@ -516,7 +512,7 @@ export Map loadMap(string mapSlug) {
         cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
     }
 
-    // Finalize the prepared statement
+    /* Finalize prepared statement. */
     sqlite3_finalize(blocksStatement);
 
     /* The Block objects are populated. Time to get the Limbs. */
@@ -535,7 +531,7 @@ export Map loadMap(string mapSlug) {
         return map;
     }
 
-    /* Bind the id value. */
+    /* Bind the slug value. */
     sqlite3_bind_text(queryLimbsStatement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
 
     /* Execute and iterate through results. */
@@ -555,14 +551,70 @@ export Map loadMap(string mapSlug) {
         return map;
     }
 
-    // Finalize the prepared statement
+    /* Finalize prepared statement. */
     sqlite3_finalize(queryLimbsStatement);
+
+
+
+    /* Get the LANDMARK objects. */
+
+    /* Create statement template for querying Map objects with this slug. */
+    const char* queryLandmarksSQL = "SELECT id, landmark_type, slug, position_x, position_y FROM landmark WHERE map_slug = ?;";
+    sqlite3_stmt* queryLandmarksStatement;
+    returnCode = sqlite3_prepare_v2(db, queryLandmarksSQL, -1, &queryLandmarksStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare landmarks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return map;
+    }
+
+    /* Bind the slug value. */
+    sqlite3_bind_text(queryLandmarksStatement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
+
+    vector<Landmark> landmarks;
+
+    /* Execute and iterate through results. */
+    while ((returnCode = sqlite3_step(queryLandmarksStatement)) == SQLITE_ROW) {
+
+        int landmarkID = sqlite3_column_int(queryLandmarksStatement, 0);
+        int landmarkTypeInt = sqlite3_column_int(queryLandmarksStatement, 1);
+        LandmarkType landmarkType = isValidLandmarkType(landmarkTypeInt) ? static_cast<LandmarkType>(landmarkTypeInt) : Entrance;
+        string landmarkSlug = stringFromUnsignedChar(sqlite3_column_text(queryLandmarksStatement, 2));
+        int positionX = sqlite3_column_int(queryLandmarksStatement, 3);
+        int positionY = sqlite3_column_int(queryLandmarksStatement, 4);
+
+        Point position = Point(positionX, positionY);
+
+        /*
+        * WHEN we start making SHRINE landmarks, we will need to use more of this data and to call a builder
+        * or else call a FORM which will get the TEXTURE.
+        * 
+        * FOR NOW we will just check for entrance and exit, and add them.
+        */
+
+        if (landmarkType == Entrance) {
+            landmarks.emplace_back(getEntranceLandmark(position));
+        } else if (landmarkType == Exit) {
+            landmarks.emplace_back(getExitLandmark(position)); }
+    }
+
+    if (returnCode != SQLITE_DONE) {
+        cerr << "Execution failed (retrieving landmarks): " << sqlite3_errmsg(db) << endl;
+        return map;
+    }
+
+    /* Finalize prepared statement. */
+    sqlite3_finalize(queryLandmarksStatement);
+
+
     /* Close DB. */
     sqlite3_close(db);
 
     /* BUILD THE MAP. */
 
     map = Map(mapForm, roamingLimbs, rows, characterPosition);
+    map.setLandmarks(landmarks);
 
     return map;
 }
