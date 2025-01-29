@@ -233,6 +233,7 @@ public:
 		pathFlipOption = 0;
 		wallTextureIndex = 0;
 		pathTextureIndex = 0;
+		pathRotateAngle = 0;
 		/* 
 		* Must RANDOMIZED:
 		* -- floorTextureIndex
@@ -319,6 +320,7 @@ public:
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
 
 	MapForm getForm() { return mapForm; }
+	void randomizePathOptions(Block& block);
 
 	void setId(int id) { this->id = id; }
 	int getId() { return id; }
@@ -402,7 +404,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	cout << "\n\nThere are " << roamingLimbs.size() << " LIMBS in Roaming Limbs\n\n";
 }
 
-/* Map class constructor to rebuild map from existing pieces.
+/* Map class constructor to rebuild map from DB data.
 *		TO DO:
 * -----> Add Landmarks
 * -----> Add NPCs
@@ -423,26 +425,24 @@ Map::Map(int id, MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block
 	SDL_FreeSurface(characterSurface);
 
 	/* Set wall and floor texture indexes. */
-	for (int i = 0; i < rows.size(); ++i) {
-		vector<Block>& blocks = rows[i];
+	for (int i = 0; i < this->rows.size(); ++i) {
+		vector<Block>& blocks = this->rows[i];
 		for (int k = 0; k < blocks.size(); ++k) {
 			Block& thisBlock = blocks[k];
+
 			thisBlock.setFloorTextureIndex(rand() % mapForm.floorTextures.size());
 			/* set texture values for Wall blocks (defaults if they're not wall blocks). */
 			if (thisBlock.getIsFloor()) {
-				thisBlock.setWallTextureIndex(0);
-				thisBlock.setWallIsFlipped(false);
+				thisBlock.setWallTextureIndex(rand() % mapForm.floorTextures.size());
+				thisBlock.setWallIsFlipped(rand() % 2 == 0);
+
+				if (thisBlock.getIsPath()) {
+					randomizePathOptions(thisBlock);
+				}
 			}
 			else {
 				thisBlock.setWallTextureIndex(rand() % mapForm.wallTextures.size());
 				thisBlock.setWallIsFlipped(rand() % 2 == 0);
-			}
-
-			if (thisBlock.getIsLoaded()) {
-				cout << "LOADED\n";
-			}
-			else {
-				cout << "\nNOT LOADED\n";
 			}
 		}
 	}
@@ -605,6 +605,14 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 	return floorPositions;
 }
 
+void Map::randomizePathOptions(Block& block) {
+	/* Set up PATH BLOCK info. The path can be flipped vertical, horizontal, or not at all. */
+	block.setPathTextureIndex(rand() % mapForm.pathTextures.size());
+	block.setPathFlipOption(rand() % 3);
+	/* The path can also be rotated 90 degrees, 270 degrees, or not at all. */
+	int pathRotateOption = rand() % 3;
+	block.setPathRotateAngle(pathRotateOption == 2 ? 270 : pathRotateOption == 1 ? 90 : 0);
+}
 
 /*
 * When we create a path we want to clear a radius around each block of the central path.
@@ -616,12 +624,7 @@ void Map::floorize(int x, int y, int radius) {
 	Block& thisBlock = rows[y][x];
 	if (thisBlock.getIsPath()) { return; }
 
-	/* Set up PATH BLOCK info. The path can be flipped vertical, horizontal, or not at all. */
-	thisBlock.setPathTextureIndex(rand() % mapForm.pathTextures.size());
-	thisBlock.setPathFlipOption(rand() % 3);
-	/* The path can also be rotated 90 degrees, 270 degrees, or not at all. */
-	int pathRotateOption = rand() % 3;
-	thisBlock.setPathRotateAngle(pathRotateOption == 2 ? 270 : pathRotateOption == 1 ? 90 : 0);
+	randomizePathOptions(thisBlock);
 	thisBlock.setIsPath(true);
 
 	/* If the block was already a floor, don't bother clearing the surrounding blocks. */

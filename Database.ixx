@@ -432,21 +432,21 @@ export Map loadMap(string mapSlug) {
     /* Execute and iterate through results. */
     while ((returnCode = sqlite3_step(blocksStatement)) == SQLITE_ROW) {
         /* Position is not saved in the block. They dictate where in the rows and row the block is set. */
-        int positionX = sqlite3_column_int(blocksStatement, 3);
-        int positionY = sqlite3_column_int(blocksStatement, 4);
+        int positionX = sqlite3_column_int(blocksStatement, 2);
+        int positionY = sqlite3_column_int(blocksStatement, 3);
 
         int id = sqlite3_column_int(blocksStatement, 0);
-        bool isFloor = sqlite3_column_int(blocksStatement, 5) == 1;
-        bool isPath = sqlite3_column_int(blocksStatement, 6) == 1;
-        bool isLooted = sqlite3_column_int(blocksStatement, 7) == 1;
+        bool isFloor = sqlite3_column_int(blocksStatement, 4) == 1;
+        bool isPath = sqlite3_column_int(blocksStatement, 5) == 1;
+        bool isLooted = sqlite3_column_int(blocksStatement, 6) == 1;
 
         if (positionY < rows.size() && positionX < rows[positionY].size()) {
             rows[positionY][positionX] = Block(id, isFloor, isPath, isLooted);
         }
         else {
-            cerr << "Saved position out of bounds of map." << endl;
+            cout << "Saved position out of bounds of map." << endl;
             break;
-        }        
+        }
     }
 
     if (returnCode != SQLITE_DONE) {
