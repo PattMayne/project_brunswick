@@ -203,6 +203,22 @@ private:
 	int subjectId; /* This can be either the MAP id or the SUIT slug??? Needs re-thinking! */
 };
 
+export Landmark getExitLandmark(Point position) {
+	UI& ui = UI::getInstance();
+	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
+	SDL_Texture* gateTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
+	SDL_FreeSurface(gateSurface);
+	return Landmark(position, gateTexture, LandmarkType::Exit);
+}
+
+export Landmark getEntranceLandmark(Point position) {
+	UI& ui = UI::getInstance();
+	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
+	SDL_Texture* gateTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
+	SDL_FreeSurface(gateSurface);
+	return Landmark(position, gateTexture, LandmarkType::Entrance);
+}
+
 export class Block {
 public:
 	/* constructor */
@@ -220,13 +236,6 @@ public:
 		wallTextureIndex = 0;
 		pathTextureIndex = 0;
 		pathRotateAngle = 0;
-		/* 
-		* Must RANDOMIZED:
-		* -- floorTextureIndex
-		* -- pathFlipOption
-		* -- wallTextureIndex
-		* -- pathTextureIndex
-		*/
 		loaded = true;
 	}
 
@@ -289,7 +298,7 @@ public:
 	/* constructors */
 	Map() {};
 	Map(MapForm mapForm);
-	Map(int id, MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition);
+	Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition);
 	vector<vector<Block>>& getRows() { return rows; }
 	vector<Landmark>& getLandmarks() { return landmarks; }
 	MapCharacter& getPlayerCharacter() { return playerCharacter; }
@@ -308,9 +317,6 @@ public:
 	MapForm getForm() { return mapForm; }
 	void randomizePathOptions(Block& block);
 
-	void setId(int id) { this->id = id; }
-	int getId() { return id; }
-
 private:
 	MapForm mapForm;
 	vector<vector<Block>> rows;
@@ -324,7 +330,6 @@ private:
 	vector<Landmark> landmarks;
 	vector<LimbForm> nativeLimbForms;
 	vector<Limb> roamingLimbs;
-	int id;
 
 	/* Will need a list of NPCs */
 	/* Will need a list of Roaming Limbs */
@@ -395,8 +400,8 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 * -----> Add Landmarks
 * -----> Add NPCs
 */
-Map::Map(int id, MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition) :
-	id(id), mapForm(mapForm), roamingLimbs(roamingLimbs), rows(rows) {
+Map::Map( MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition) :
+	mapForm(mapForm), roamingLimbs(roamingLimbs), rows(rows) {
 
 	/* populate characters and limbs after building the map(and its landmarks). */
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
@@ -492,14 +497,9 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 		MapDirection::Up,
 		(rand() % 3) + 1);
 
-	/*
-	* getting the textures for entrance / exit
-	* Store elsewhere later. Possible store a pointer in each block.
-	*/
 
-	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	/* Entrance landmark */
-	landmarks.emplace_back(Point(pathX, pathY), SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
+	landmarks.emplace_back(getEntranceLandmark(Point(pathX, pathY)));
 
 	vector<Point> floorPositions;
 
@@ -559,8 +559,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 	}
 
 	/* Create Exit landmark. */
-	landmarks.emplace_back(Point(pathX, pathY), SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
-	SDL_FreeSurface(gateSurface);
+	landmarks.emplace_back(getExitLandmark(Point(pathX, pathY)));
 
 	/* Set wall and floor texture indexes. */
 	for (int i = 0; i < rows.size(); ++i) {

@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS limb (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     form_slug TEXT NOT NULL,
     character_id INTEGER DEFAULT -1,
-    map_id INTEGER DEFAULT -1,
+    map_slug TEXT,
     hp_mod INTEGER DEFAULT 0,
     strength_mod INTEGER DEFAULT 0,
     speed_mod INTEGER DEFAULT 0,
@@ -55,14 +55,13 @@ CREATE TABLE IF NOT EXISTS character (
     map_slug TEXT
 );
 
-CREATE INDEX idx_limb_id ON joint (limb_id);
-CREATE INDEX idx_character_id ON limb (character_id);
+CREATE INDEX IF NOT EXISTS idx_limb_id ON joint (limb_id);
+CREATE INDEX IF NOT EXISTS idx_character_id ON limb (character_id);
 
 /* MAP TABLES. */
 
 CREATE TABLE IF NOT EXISTS map (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL,
+    slug PRIMARY KEY,
     character_x INTEGER DEFAULT 0,
     character_y INTEGER DEFAULT 0
 );
@@ -70,7 +69,7 @@ CREATE TABLE IF NOT EXISTS map (
 
 CREATE TABLE IF NOT EXISTS block (
     id INTEGER PRIMARY KEY,
-    map_id INTEGER NOT NULL,
+    map_slug TEXT NOT NULL,
     position_x INTEGER NOT NULL,
     position_y INTEGER NOT NULL,
     is_floor INTEGER DEFAULT 0,
@@ -78,5 +77,5 @@ CREATE TABLE IF NOT EXISTS block (
     is_looted INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_map_id ON block (map_id);
-CREATE INDEX idx_position_y ON block (position_y);
+CREATE INDEX IF NOT EXISTS idx_map_slug ON block (map_slug);
+CREATE INDEX IF NOT EXISTS idx_position_y ON block (position_y);

@@ -84,8 +84,10 @@ export void createDB() {
 * then the ID is sent back to create the actual Limb.
 * 
 * NOTE: Do we really need the struct? Maybe we should send a reference to the Limb object and populate it with an id?
+* 
+* 
 */
-export int createRoamingLimb(Limb& limb, int mapId, Point position) {
+export int createRoamingLimb(Limb& limb, string mapSlug, Point position) {
     sqlite3* db;
     int id = -1;
 
@@ -98,7 +100,7 @@ export int createRoamingLimb(Limb& limb, int mapId, Point position) {
     }
 
     /* Create statement for adding new Limb object to the database. */
-    const char* insertSQL = "INSERT INTO LIMB (form_slug, map_id, position_x, position_y) VALUES (?, ?, ?, ?);";
+    const char* insertSQL = "INSERT INTO LIMB (form_slug, map_slug, position_x, position_y) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* statement;
 
     /* Prepare the statement. */
@@ -109,9 +111,11 @@ export int createRoamingLimb(Limb& limb, int mapId, Point position) {
         return id;
     }
 
+    string limbFormSlugString = limb.getForm().slug;
+
     /* Bind the data. */
-    sqlite3_bind_text(statement, 1, limb.getForm().slug.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(statement, 2, mapId);
+    sqlite3_bind_text(statement, 1, limbFormSlugString.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(statement, 2, mapSlug.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_int(statement, 3, position.x);
     sqlite3_bind_int(statement, 4, position.y);
 
@@ -132,7 +136,6 @@ export int createRoamingLimb(Limb& limb, int mapId, Point position) {
 
 
 export bool createNewMap(Map& map) {
-    int mapID = -1;
     bool success = false;
     sqlite3* db;
     string slugString = map.getForm().slug;
@@ -174,11 +177,6 @@ export bool createNewMap(Map& map) {
         sqlite3_close(db);
         return success;
     }
-    else {
-        /* Get the ID of the saved item. */
-        mapID = static_cast<int>(sqlite3_last_insert_rowid(db));
-        map.setId(mapID);
-    }
 
     /* Finalize statement. */
     sqlite3_finalize(statement);
@@ -188,7 +186,7 @@ export bool createNewMap(Map& map) {
     */
 
     /* Create statement for adding new Block object to the database. */
-    const char* insertBlockSQL = "INSERT INTO block (map_id, position_x, position_y, is_floor, is_path) VALUES (?, ?, ?, ?, ?);";
+    const char* insertBlockSQL = "INSERT INTO block (map_slug, position_x, position_y, is_floor, is_path) VALUES (?, ?, ?, ?, ?);";
     sqlite3_stmt* blockStatement;
 
     /* Prepare the statement before starting the loop. */
@@ -216,7 +214,7 @@ export bool createNewMap(Map& map) {
             isFloor = block.getIsFloor() ? 1 : 0;
             isPath = block.getIsPath() ? 1 : 0;
             /* Bind the data and execute the statement. */
-            sqlite3_bind_int(blockStatement, 1, mapID);
+            sqlite3_bind_text(blockStatement, 1, mapSlug, -1, SQLITE_STATIC);
             sqlite3_bind_int(blockStatement, 2, x);
             sqlite3_bind_int(blockStatement, 3, y);
             sqlite3_bind_int(blockStatement, 4, isFloor);
@@ -256,7 +254,7 @@ export bool createNewMap(Map& map) {
     /* Next do a transaction to save all the Roaming Limbs to the database. */
 
     /* Create statement for adding new Limb object to the database. */
-    const char* insertLimbSQL = "INSERT INTO limb (form_slug, map_id, position_x, position_y) VALUES (?, ?, ?, ?);";
+    const char* insertLimbSQL = "INSERT INTO limb (form_slug, map_slug, position_x, position_y) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* limbStatement;
 
     /* Prepare the statement before starting the loop. */
@@ -277,7 +275,7 @@ export bool createNewMap(Map& map) {
         limbFormSlugString = limb.getForm().slug;
 
         sqlite3_bind_text(limbStatement, 1, limbFormSlugString.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_int(limbStatement, 2, mapID);
+        sqlite3_bind_text(limbStatement, 2, mapSlug, -1, SQLITE_STATIC);
         sqlite3_bind_int(limbStatement, 3, limb.getPosition().x);
         sqlite3_bind_int(limbStatement, 4, limb.getPosition().y);
 
@@ -361,7 +359,6 @@ export string stringFromUnsignedChar(const unsigned char* c_str) {
 export Map loadMap(string mapSlug) {
     Map map;
     MapForm mapForm = getMapFormFromSlug(mapSlug);
-    int mapID;
     vector<Limb> roamingLimbs;
     vector<vector<Block>> rows(mapForm.blocksHeight);
 
@@ -380,15 +377,15 @@ export Map loadMap(string mapSlug) {
     }
 
 
-    /* GET THE MAP ID. */
+    /* GET THE MAP OBJECT. */
 
     /* Create statement template for querying Map objects with this slug. */
-    const char* queryMapIdSQL = "SELECT * FROM map WHERE slug = ?;";
+    const char* queryMapSQL = "SELECT * FROM map WHERE slug = ?;";
     sqlite3_stmt* statement;
-    int returnCode = sqlite3_prepare_v2(db, queryMapIdSQL, -1, &statement, nullptr);
+    int returnCode = sqlite3_prepare_v2(db, queryMapSQL, -1, &statement, nullptr);
 
     if (returnCode != SQLITE_OK) {
-        std::cerr << "Failed to prepare map id retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        cerr << "Failed to prepare map id retrieval statement: " << sqlite3_errmsg(db) << endl;
         sqlite3_close(db);
         return map;
     }
@@ -396,18 +393,20 @@ export Map loadMap(string mapSlug) {
     /* Bind the slug value. */
     sqlite3_bind_text(statement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
 
+
+
     /* Execute binded statement. */
     if (sqlite3_step(statement) != SQLITE_ROW) {
-        std::cerr << "Failed to retrieve MAP ID: " << sqlite3_errmsg(db) << std::endl;
+        cerr << "Failed to retrieve MAP: " << sqlite3_errmsg(db) << endl;
         return map;
     }
-
-    mapID = sqlite3_column_int(statement, 0);
+    
     Point characterPosition = Point(
-        sqlite3_column_int(statement, 2),
-        sqlite3_column_int(statement, 3)
+        sqlite3_column_int(statement, 1),
+        sqlite3_column_int(statement, 2)
     );
-    cout << "MAP ID: " << mapID << "\n\n";
+
+    cout << "Point: " << characterPosition.x << ", " << characterPosition.y << "\n";
 
     /* Finalize map ID retrieval statement. */
     sqlite3_finalize(statement);
@@ -416,7 +415,7 @@ export Map loadMap(string mapSlug) {
     /* GET THE BLOCKS FROM THE DB. */
 
     /* Create statement template for querying Map objects with this slug. */
-    const char* queryBlocksSQL = "SELECT * FROM block WHERE map_id = ?;";
+    const char* queryBlocksSQL = "SELECT * FROM block WHERE map_slug = ?;";
     sqlite3_stmt* blocksStatement;
     returnCode = sqlite3_prepare_v2(db, queryBlocksSQL, -1, &blocksStatement, nullptr);
 
@@ -426,8 +425,8 @@ export Map loadMap(string mapSlug) {
         return map;
     }
 
-    /* Bind the id value. */
-    sqlite3_bind_int(blocksStatement, 1, mapID);
+    /* Bind the slug value. */
+    sqlite3_bind_text(blocksStatement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
 
     /* Execute and iterate through results. */
     while ((returnCode = sqlite3_step(blocksStatement)) == SQLITE_ROW) {
@@ -462,7 +461,7 @@ export Map loadMap(string mapSlug) {
     /* GET THE LIMBS FROM THE DB. */
 
     /* Create statement template for querying Map objects with this slug. */
-    const char* queryLimbsSQL = "SELECT id, form_slug, position_x, position_y FROM limb WHERE map_id = ?;";
+    const char* queryLimbsSQL = "SELECT id, form_slug, position_x, position_y FROM limb WHERE map_slug = ?;";
     sqlite3_stmt* queryLimbsStatement;
     returnCode = sqlite3_prepare_v2(db, queryLimbsSQL, -1, &queryLimbsStatement, nullptr);
 
@@ -473,7 +472,7 @@ export Map loadMap(string mapSlug) {
     }
 
     /* Bind the id value. */
-    sqlite3_bind_int(queryLimbsStatement, 1, mapID);
+    sqlite3_bind_text(queryLimbsStatement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
 
     /* Execute and iterate through results. */
     while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
@@ -501,7 +500,7 @@ export Map loadMap(string mapSlug) {
 
     /* BUILD THE MAP. */
 
-    map = Map(mapID, mapForm, roamingLimbs, rows, characterPosition);
+    map = Map(mapForm, roamingLimbs, rows, characterPosition);
 
     return map;
 }
