@@ -689,8 +689,8 @@ void MapScreen::drawLandmarks(UI& ui) {
 		Landmark& landmark = landmarks[i];
 		lX = landmark.getDrawX();
 		lY = landmark.getDrawY();
-		targetRect.w = landmark.getBlocksWidth() * blockWidth;
-		targetRect.h = landmark.getBlocksHeight() * blockWidth;
+		targetRect.w = blockWidth;
+		targetRect.h = blockWidth;
 
 		if (
 			lX >= drawStartX &&

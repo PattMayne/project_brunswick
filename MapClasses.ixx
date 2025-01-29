@@ -169,53 +169,37 @@ export class Landmark {
 public:
 	/* constructor */
 	Landmark(
-		Point drawStartBlockPosition,
-		int blocksWidth,
-		int blocksHeight,
+		Point position,
 		SDL_Texture* texture,
 		LandmarkType landmarkType,
 		int subjectId = -1
 	) :
 		texture(texture),
 		landmarkType(landmarkType),
-		blocksWidth(blocksWidth),
-		blocksHeight(blocksHeight),
 		subjectId(subjectId),
-		drawStartBlockPosition(drawStartBlockPosition)
+		position(position)
 	{}
 
 	/* destructor */
 	~Landmark() { /* Texture is managed by MapScreen and will be destroyed at the end of the run() function. */ }
 
-	int getDrawX() { return drawStartBlockPosition.x; }
-	int getDrawY() { return drawStartBlockPosition.y; }
-	int getBlocksWidth() { return blocksWidth; }
-	int getBlocksHeight() { return blocksHeight; }
+	int getDrawX() { return position.x; }
+	int getDrawY() { return position.y; }
 	SDL_Texture* getTexture() { return texture; }
 
 	LandmarkCollisionInfo checkCollision(Point pos) { return checkCollision(pos.x, pos.y); }
-
 	LandmarkCollisionInfo checkCollision(int x, int y) {
-		/* Check if coordinate args are within range. */
-		if (
-			x >= drawStartBlockPosition.x &&
-			x < drawStartBlockPosition.x +blocksWidth &&
-			y >= drawStartBlockPosition.y &&
-			y < drawStartBlockPosition.y + blocksHeight
-		) {
+		if (x == position.x && y == position.y) {
 			return { true, landmarkType, subjectId };
 		}
 
-		return { false, landmarkType, -1 };
-	}
+		return { false, landmarkType, -1 };	}
 
 private:
 	/* Point refers to the block grid, not the pixels */
-	Point drawStartBlockPosition;
+	Point position;
 	SDL_Texture* texture;
 	LandmarkType landmarkType;
-	int blocksWidth;
-	int blocksHeight;
 	int subjectId; /* This can be either the MAP id or the SUIT slug??? Needs re-thinking! */
 };
 
@@ -515,7 +499,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	/* Entrance landmark */
-	landmarks.emplace_back(Point(pathX, pathY), 1, 1, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
+	landmarks.emplace_back(Point(pathX, pathY), SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Entrance);
 
 	vector<Point> floorPositions;
 
@@ -575,7 +559,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 	}
 
 	/* Create Exit landmark. */
-	landmarks.emplace_back(Point(pathX, pathY), 1, 1, SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
+	landmarks.emplace_back(Point(pathX, pathY), SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface), LandmarkType::Exit);
 	SDL_FreeSurface(gateSurface);
 
 	/* Set wall and floor texture indexes. */
