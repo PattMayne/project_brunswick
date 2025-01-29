@@ -292,6 +292,38 @@ export class Limb {
 			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
 		}
 
+		/* Constructor to rebuild a ROAMING limb from DB. */
+		Limb(int id, LimbForm form, Point position) :
+			id(id), form(form), position(position)
+		{
+			lastPosition = Point(0, 0);
+			isAnchor = false;
+			name = form.name;
+			/*
+			* Get the TEXTURE.
+			* Get the JOINTS.
+			*/
+
+			/* get Limb texture */
+
+			UI& ui = UI::getInstance();
+			SDL_Surface* limbSurface = IMG_Load(form.texturePath.c_str());
+			texture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), limbSurface);
+			SDL_FreeSurface(limbSurface);
+			/* TO DO: ERROR HANDLING FOR TEXTURE. */
+
+			/* Build actual Joints from the LimbForm. */
+
+			for (Point& jointPoint : form.jointPoints) {
+				/* new Limb constructor (must later accomadate existing joints from existing Limbs. */
+				joints.emplace_back(jointPoint);
+			}
+
+			drawRect = { 0, 0, 0, 0 };
+			rotationAngle = 0;
+			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
+		}
+
 		/*  */
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }

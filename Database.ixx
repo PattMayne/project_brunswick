@@ -31,6 +31,8 @@ import <string>;
 import CharacterClasses;
 import MapClasses;
 import TypeStorage;
+import LimbFormMasterList;
+import FormFactory;
 
 using namespace std;
 
@@ -135,6 +137,8 @@ export bool createNewMap(Map& map) {
     sqlite3* db;
     string slugString = map.getForm().slug;
     const char* mapSlug = slugString.c_str();
+    int playerX = map.getPlayerCharacter().getBlockX();
+    int playerY = map.getPlayerCharacter().getBlockY();
 
     /* Open database. */
     int dbFailed = sqlite3_open(dbPath(), &db);
@@ -147,7 +151,7 @@ export bool createNewMap(Map& map) {
     /* First save the Map object to the DB. */
 
     /* Create statement for adding new Map object to the database. */
-    const char* insertSQL = "INSERT INTO map (slug) VALUES (?);";
+    const char* insertSQL = "INSERT INTO map (slug, character_x, character_y) VALUES (?, ?, ?);";
     sqlite3_stmt* statement;
 
     /* Prepare the statement. */
@@ -160,7 +164,10 @@ export bool createNewMap(Map& map) {
 
     /* Bind the data and execute the statement. */
     sqlite3_bind_text(statement, 1, mapSlug, -1, SQLITE_STATIC);
+    sqlite3_bind_int(statement, 2, playerX);
+    sqlite3_bind_int(statement, 3, playerY);
     returnCode = sqlite3_step(statement);
+
     if (returnCode != SQLITE_DONE) {
         cerr << "Insert failed for MAP: " << sqlite3_errmsg(db) << endl;
         sqlite3_finalize(statement);
@@ -293,18 +300,12 @@ export bool createNewMap(Map& map) {
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
 
     if (!limbError) { success = true; }
-    else {
-        /* DELETE map and all blocks */
-        sqlite3_close(db);
-        return success;
-    }
-
+    else { /* DELETE map and all blocks and all limbs. */ }
 
     /* Close the database. */
     sqlite3_close(db);
     return success;
 }
-
 
 export bool mapObjectExists(string mapSlug) {
     /*
@@ -348,4 +349,159 @@ export bool mapObjectExists(string mapSlug) {
     sqlite3_close(db);
 
     return count > 0;
+}
+
+export string stringFromUnsignedChar(const unsigned char* c_str) {
+    std::string str;
+    int i{ 0 };
+    while (c_str[i] != '\0') { str += c_str[i++]; }
+    return str;
+}
+
+export Map loadMap(string mapSlug) {
+    Map map;
+    MapForm mapForm = getMapFormFromSlug(mapSlug);
+    int mapID;
+    vector<Limb> roamingLimbs;
+    vector<vector<Block>> rows(mapForm.blocksHeight);
+
+    /* Give each vector of blocks a size. */
+    for (vector<Block>& vecOfBlocks : rows) {
+        vecOfBlocks = vector<Block>(mapForm.blocksWidth);
+    }
+
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return map;
+    }
+
+
+    /* GET THE MAP ID. */
+
+    /* Create statement template for querying Map objects with this slug. */
+    const char* queryMapIdSQL = "SELECT * FROM map WHERE slug = ?;";
+    sqlite3_stmt* statement;
+    int returnCode = sqlite3_prepare_v2(db, queryMapIdSQL, -1, &statement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare map id retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return map;
+    }
+
+    /* Bind the slug value. */
+    sqlite3_bind_text(statement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
+
+    /* Execute binded statement. */
+    if (sqlite3_step(statement) != SQLITE_ROW) {
+        std::cerr << "Failed to retrieve MAP ID: " << sqlite3_errmsg(db) << std::endl;
+        return map;
+    }
+
+    mapID = sqlite3_column_int(statement, 0);
+    Point characterPosition = Point(
+        sqlite3_column_int(statement, 2),
+        sqlite3_column_int(statement, 3)
+    );
+    cout << "MAP ID: " << mapID << "\n\n";
+
+    /* Finalize map ID retrieval statement. */
+    sqlite3_finalize(statement);
+
+
+    /* GET THE BLOCKS FROM THE DB. */
+
+    /* Create statement template for querying Map objects with this slug. */
+    const char* queryBlocksSQL = "SELECT * FROM block WHERE map_id = ?;";
+    sqlite3_stmt* blocksStatement;
+    returnCode = sqlite3_prepare_v2(db, queryBlocksSQL, -1, &blocksStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return map;
+    }
+
+    /* Bind the id value. */
+    sqlite3_bind_int(blocksStatement, 1, mapID);
+
+    /* Execute and iterate through results. */
+    while ((returnCode = sqlite3_step(blocksStatement)) == SQLITE_ROW) {
+        /* Position is not saved in the block. They dictate where in the rows and row the block is set. */
+        int positionX = sqlite3_column_int(blocksStatement, 3);
+        int positionY = sqlite3_column_int(blocksStatement, 4);
+
+        int id = sqlite3_column_int(blocksStatement, 0);
+        bool isFloor = sqlite3_column_int(blocksStatement, 5) == 1;
+        bool isPath = sqlite3_column_int(blocksStatement, 6) == 1;
+        bool isLooted = sqlite3_column_int(blocksStatement, 7) == 1;
+
+        if (positionY < rows.size() && positionX < rows[positionY].size()) {
+            rows[positionY][positionX] = Block(id, isFloor, isPath, isLooted);
+        }
+        else {
+            cerr << "Saved position out of bounds of map." << endl;
+            break;
+        }        
+    }
+
+    if (returnCode != SQLITE_DONE) {
+        cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
+    }
+
+    // Finalize the prepared statement
+    sqlite3_finalize(blocksStatement);
+
+    /* The Block objects are populated. Time to get the Limbs. */
+
+
+    /* GET THE LIMBS FROM THE DB. */
+
+    /* Create statement template for querying Map objects with this slug. */
+    const char* queryLimbsSQL = "SELECT id, form_slug, position_x, position_y FROM limb WHERE map_id = ?;";
+    sqlite3_stmt* queryLimbsStatement;
+    returnCode = sqlite3_prepare_v2(db, queryLimbsSQL, -1, &queryLimbsStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return map;
+    }
+
+    /* Bind the id value. */
+    sqlite3_bind_int(queryLimbsStatement, 1, mapID);
+
+    /* Execute and iterate through results. */
+    while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
+
+        roamingLimbs.emplace_back(
+            sqlite3_column_int(queryLimbsStatement, 0),
+            getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
+            Point(
+                sqlite3_column_int(queryLimbsStatement, 2),
+                sqlite3_column_int(queryLimbsStatement, 3)
+            )
+        );
+
+    }
+
+    if (returnCode != SQLITE_DONE) {
+        cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
+        return map;
+    }
+
+    // Finalize the prepared statement
+    sqlite3_finalize(queryLimbsStatement);
+    /* Close DB. */
+    sqlite3_close(db);
+
+    /* BUILD THE MAP. */
+
+    map = Map(mapID, mapForm, roamingLimbs, rows, characterPosition);
+
+    return map;
 }

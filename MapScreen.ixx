@@ -158,9 +158,16 @@ export class MapScreen {
 			*/
 
 			mapForm = getMapFormFromSlug(mapSlug);
-			map = Map(mapForm);
 
-			createNewMap(map);
+			if (mapObjectExists(mapSlug)) {
+				/* Load existing map. */
+				map = loadMap(mapSlug);
+				cout << "Loaded map successfully\n";
+			}
+			else {				
+				map = Map(mapForm);
+				createNewMap(map);
+			}
 
 			screenType = ScreenType::Map;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
@@ -180,6 +187,7 @@ export class MapScreen {
 			buildMapDisplay();
 			createTitleTexture(ui);
 			limbAngle = 0;
+			cout << "Finished constructor\n";
 		}
 
 		/* Destructor */
@@ -455,20 +463,20 @@ export void MapScreen::run() {
 
 	/* Making the Limbs rotate; */
 	int spriteAnimMax = 15;
-	bool reverseSprintAnim = false;
-
+	bool reverseSpriteAnimation = false;
+	
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
 		frameStartTime = SDL_GetTicks();
 		bool startNpcAnimation = false;
-
+		
 		if (animate && animationCountdown < 1) {
 			/* counter has run out but animate is still true. */
-
+			
 			bool landmarkCollided = false;
 			bool npcCollided = false;
 			bool limbCollided = false;
-
+			
 			if (animationType == AnimationType::Player) {
 				/*
 				* Player animation has finished.
@@ -479,16 +487,16 @@ export void MapScreen::run() {
 				animationType = AnimationType::None;
 				lastDrawStartX = drawStartX;
 				lastDrawStartY = drawStartY;
-
+				
 				/* check for collisions (animation is done, player is ON new block and/or NPCs have moved ONTO new blocks */
 
 				/* collisions with LANDMARK: */
 
 				MapCharacter& playerCharacter = map.getPlayerCharacter();
-
+				
 				for (Landmark landmark : map.getLandmarks()) {
 					LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
-
+					
 					if (collisionInfo.hasCollided) {
 						cout << "HIT LANDMARK\n";
 						landmarkCollided = true;
@@ -501,9 +509,9 @@ export void MapScreen::run() {
 							cout << "YOU CANNOT LEAVE THIS WAY\n";
 							/* TO DO: animate PUSHING the character OFF the entrance??? */
 						}
-					}
+					}					
 				}
-
+				
 				/* Collisions with NPCs */
 
 				/* Collisions with LIMBs */
@@ -582,18 +590,21 @@ export void MapScreen::run() {
 		}
 
 		/* check the sprite anim situation (wiggling Roaming Limbs, bouncing NPCs.). */
+		/* What is reverse sprint animation? Probably supposed to be reversed SPRITE animation. */
 
-		if (reverseSprintAnim) {
+		if (reverseSpriteAnimation) {
 			if (limbAngle > spriteAnimMax * -1) {
 				--limbAngle; }
 			else {
-				reverseSprintAnim = !reverseSprintAnim; }			
+				reverseSpriteAnimation = !reverseSpriteAnimation;
+			}
 		}
 		else {
 			if (limbAngle < spriteAnimMax) {
-				++limbAngle; }
+				++limbAngle;
+			}
 			else {
-				reverseSprintAnim = !reverseSprintAnim; }
+				reverseSpriteAnimation = !reverseSpriteAnimation; }
 		}
 	}
 
@@ -647,17 +658,15 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
 	SDL_RenderClear(ui.getMainRenderer());
-	
+
 	if (!animate) { blockAnimationIncrement = 0; }
 	else {
 		/* Get the distance for the camera to travel in this iteration of the animation sequence. (used in multiple draw functions) */
 		int baseIncrement = (blockWidth / animationIncrementFraction);
 		blockAnimationIncrement = (baseIncrement * (animationIncrementFraction - animationCountdown)) + baseIncrement; }
-
 	drawMap(ui);
 	drawLandmarks(ui);
 	drawCharacters(ui);
-
 	if (showTitle) {
 		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE); }
 
@@ -670,7 +679,7 @@ void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 void MapScreen::drawLandmarks(UI& ui) {
 	/* NOW draw all LANDMARKS */
 	/* This is SIMPLISTIC FOR NOW. Real buildings come LATER. (new algorithms for each building TYPE!! */
-
+	
 	SDL_Rect targetRect = { 0, 0, blockWidth, blockWidth };
 	vector<Landmark>& landmarks = map.getLandmarks();
 	int lX = 0;
@@ -723,8 +732,10 @@ void MapScreen::drawCharacters(UI& ui) {
 void MapScreen::drawPlayerCharacter(UI& ui) {
 	SDL_Rect characterRect = { 0, 0, blockWidth, blockWidth };
 	MapCharacter& playerCharacter = map.getPlayerCharacter();
+
 	int blockX = playerCharacter.getBlockX();
 	int blockY = playerCharacter.getBlockY();
+	
 	characterRect.x = (blockX - drawStartX) * blockWidth;
 	characterRect.y = (blockY - drawStartY) * blockWidth;
 
@@ -733,7 +744,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	* If close to a horizontal edge, and moving horizontally, animate the character.
 	* Player has different animation dynamics from the map blocks.
 	*/
-
+	
 	if (animate && animationType == AnimationType::Player) {
 		animateMovingObject(characterRect, blockX, blockY, playerCharacter.getLastPosition()); }
 
@@ -844,7 +855,7 @@ void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 		getFloorTexture(block.getFloorTextureIndex()),
 		NULL, &targetRect,
 		0, NULL, SDL_FLIP_NONE);
-
+	
 	/* Draw wall if it's not a floor. */
 	if (!block.getIsFloor()) {
 		SDL_RenderCopyEx(
@@ -854,8 +865,10 @@ void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 			0, NULL,
 			block.getWallIsFlipped() ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE
 		);
+		//cout << "NOT A FLOOR\n";
 	}
 	else if (block.getIsPath()) {
+		//cout << "IS A PATH\n";
 		int pathFlipOption = block.getPathFlipOption();
 		SDL_RenderCopyEx(
 			ui.getMainRenderer(),
@@ -866,6 +879,7 @@ void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 			pathFlipOption == 2 ? SDL_FLIP_VERTICAL : pathFlipOption == 1 ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE
 		);
 	}
+
 }
 
 void MapScreen::drawMap(UI& ui) {
@@ -887,10 +901,8 @@ void MapScreen::drawMap(UI& ui) {
 	/* start with the TOP ROW that we want to draw, then work our way down. */
 	for (int y = drawStartY; y < drawStartY + yViewRes; ++y) {
 		vector<Block>& blocks = rows[y];
-
 		/* Start with the left-most BLOCK that we want to draw, then work our way across. */
 		for (int x = drawStartX; x < drawStartX + xViewRes; ++x) {
-			
 			if (animate && animationType == AnimationType::Player) {
 
 				/* Shifting DOWN or UP. */
@@ -913,7 +925,8 @@ void MapScreen::drawMap(UI& ui) {
 			}
 			else {
 				targetRect.x = (x - drawStartX) * blockWidth;
-				targetRect.y = (y - drawStartY) * blockWidth; }			
+				targetRect.y = (y - drawStartY) * blockWidth; }
+
 			drawBlock(ui, blocks[x], targetRect);
 		}
 	}
@@ -979,6 +992,7 @@ void MapScreen::setDrawStartBlock() {
 	/* get the IDEAL position for the camera (with the player in the center) */
 	int idealX = playerX - (xViewRes / 2);
 	int idealY = playerY - (yViewRes / 2);
+	cout << "PlayerX: " << playerX << ", PlayerY: " << playerY << "\n";
 
 	/* save the camera's recent position (in case this function is called because it changed) */
 	lastDrawStartX = drawStartX;
@@ -988,6 +1002,9 @@ void MapScreen::setDrawStartBlock() {
 	* unless the character is close to either edge, in which case we use maxDrawStart or 0. */
 	drawStartX = idealX >= 0 && idealX <= maxDrawStartX ? idealX : idealX > maxDrawStartX ? maxDrawStartX : 0;
 	drawStartY = idealY >= 0 && idealY <= maxDrawStartY ? idealY : idealY > maxDrawStartY ? maxDrawStartY : 0;
+
+	cout << "Draw Start X: " << drawStartX << "\n";
+	cout << "Draw Start Y: " << drawStartY << "\n";
 }
 
 
@@ -1030,13 +1047,13 @@ void MapScreen::requestUp() {
 		/* If the new block is a floor, move there */
 		if (destinationBlock.getIsFloor()) {
 			/* Change the character's position */
-			map.getPlayerCharacter().move(Direction::Up);
+			map.getPlayerCharacter().move(MapDirection::Up);
 			/* Change the block to draw based on the character's new position. */
 			setDrawStartBlock();
 			/* Instead of immediately displaying the move, we start a move animation. */
 			startAnimationCountdown(AnimationType::Player);
 		}
-	}	
+	}
 }
 
 void MapScreen::requestDown() {
@@ -1045,7 +1062,7 @@ void MapScreen::requestDown() {
 	if (destinationBlockY < vBlocksTotal) {
 		Block& destinationBlock = map.getRows()[destinationBlockY][playerCharacter.getBlockX()];
 		if (destinationBlock.getIsFloor()) {
-			map.getPlayerCharacter().move(Direction::Down);
+			map.getPlayerCharacter().move(MapDirection::Down);
 			setDrawStartBlock();
 			startAnimationCountdown(AnimationType::Player);
 		}
@@ -1058,7 +1075,7 @@ void MapScreen::requestLeft() {
 	if (destinationBlockX < hBlocksTotal) {
 		Block& destinationBlock = map.getRows()[playerCharacter.getBlockY()][destinationBlockX];
 		if (destinationBlock.getIsFloor()) {
-			map.getPlayerCharacter().move(Direction::Left);
+			map.getPlayerCharacter().move(MapDirection::Left);
 			setDrawStartBlock();
 			startAnimationCountdown(AnimationType::Player);
 		}
@@ -1071,7 +1088,7 @@ void MapScreen::requestRight() {
 	if (destinationBlockX < hBlocksTotal) {
 		Block& destinationBlock = map.getRows()[playerCharacter.getBlockY()][destinationBlockX];
 		if (destinationBlock.getIsFloor()) {
-			map.getPlayerCharacter().move(Direction::Right);
+			map.getPlayerCharacter().move(MapDirection::Right);
 			setDrawStartBlock();
 			startAnimationCountdown(AnimationType::Player);
 		}
@@ -1159,7 +1176,7 @@ void MapScreen::handleMousedown(SDL_Event& e, bool& running, Panel& settingsPane
 			rebuildDisplay(settingsPanel, gameMenuPanel);
 			break;
 		case ButtonOption::Back:
-			// switch to other panel
+			/* Switch to other panel. */
 			settingsPanel.setShow(false);
 			gameMenuPanel.setShow(true);
 			break;

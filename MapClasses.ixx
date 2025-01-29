@@ -41,7 +41,7 @@ import UI;
 using namespace std;
 
 
-export enum Direction { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
+export enum MapDirection { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
 
 /* This is what a Landmark's checkCollision function will return. */
 export struct LandmarkCollisionInfo {
@@ -61,10 +61,10 @@ export struct LandmarkCollisionInfo {
 */
 export struct SubPath {
 	int seed;
-	Direction direction;
+	MapDirection direction;
 	int radius;
 
-	SubPath(int iSeed, Direction iDirection, int iRadius) {
+	SubPath(int iSeed, MapDirection iDirection, int iRadius) {
 		direction = iDirection;
 		seed = iSeed;
 		radius = iRadius;
@@ -97,6 +97,10 @@ public:
 	Point getPosition() { return blockPosition; }
 	Point getLastPosition() { return lastBlockPosition; }
 
+	void setBlockPosition(Point blockPosition) {
+		this->blockPosition = blockPosition;
+	}
+
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 	void setTexture(SDL_Texture* incomingTexture) {
 		if (texture) {
@@ -110,29 +114,29 @@ public:
 		lastBlockPosition.y = blockPosition.y;
 	}
 
-	bool move(Direction direction, int distance = 1) {
+	bool move(MapDirection direction, int distance = 1) {
 		bool moved = false;
 		/* This will become more complicated when we do animations. */
 		/* Checking for obstacles must be done by MapScreen object.
 		* When this is called, we follow blindly. */
 
 		switch (direction) {
-		case Direction::Up:
+		case MapDirection::Up:
 			updateLastBlock();
 			blockPosition.y -= distance;
 			moved = true;
 			break;
-		case Direction::Down:
+		case MapDirection::Down:
 			updateLastBlock();
 			blockPosition.y += distance;
 			moved = true;
 			break;
-		case Direction::Left:
+		case MapDirection::Left:
 			updateLastBlock();
 			blockPosition.x -= distance;
 			moved = true;
 			break;
-		case Direction::Right:
+		case MapDirection::Right:
 			updateLastBlock();
 			blockPosition.x += distance;
 			moved = true;
@@ -218,11 +222,31 @@ public:
 	/* constructor */
 	Block(bool isFloor = true)
 		: isFloor(isFloor), floorTextureIndex(0), isPath(false), pathFlipOption(0), pathRotateAngle(0), wallTextureIndex(0), pathTextureIndex(0) {
+		loaded = false;
+	}
+
+	/* Rebuilding block from DB. */
+	Block(int id, bool isFloor, bool isPath, bool isLooted) :
+		id(id), isFloor(isFloor), isPath(isPath), isLooted(isLooted)
+	{
+		floorTextureIndex = 0;
+		pathFlipOption = 0;
+		wallTextureIndex = 0;
+		pathTextureIndex = 0;
+		/* 
+		* Must RANDOMIZED:
+		* -- floorTextureIndex
+		* -- pathFlipOption
+		* -- wallTextureIndex
+		* -- pathTextureIndex
+		*/
+		loaded = true;
 	}
 
 	/* getters */
 	bool getIsFloor() { return isFloor; }
 	bool getIsLooted() { return isLooted; }
+	bool getIsLoaded() { return loaded; }
 
 	int getFloorTextureIndex() { return floorTextureIndex; }
 	void setFloorTextureIndex(int index) { floorTextureIndex = index; }
@@ -268,15 +292,17 @@ private:
 	int pathTextureIndex;
 	bool wallIsFlipped;
 	int id;
+	bool loaded = false;
 };
 
 
 /* The Map object contains all the blocks from the DB. */
 export class Map {
 public:
-	/* constructor */
+	/* constructors */
 	Map() {};
 	Map(MapForm mapForm);
+	Map(int id, MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition);
 	vector<vector<Block>>& getRows() { return rows; }
 	vector<Landmark>& getLandmarks() { return landmarks; }
 	MapCharacter& getPlayerCharacter() { return playerCharacter; }
@@ -338,7 +364,7 @@ private:
 */
 
 
-/* Map class constructor */
+/* Map class constructor for brand new map. */
 Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	/*
 	* Currently we create a new map every time we load the Map Screen.
@@ -376,8 +402,54 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	cout << "\n\nThere are " << roamingLimbs.size() << " LIMBS in Roaming Limbs\n\n";
 }
 
+/* Map class constructor to rebuild map from existing pieces.
+*		TO DO:
+* -----> Add Landmarks
+* -----> Add NPCs
+*/
+Map::Map(int id, MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition) :
+	id(id), mapForm(mapForm), roamingLimbs(roamingLimbs), rows(rows) {
+
+	/* populate characters and limbs after building the map(and its landmarks). */
+	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
+
+	UI& ui = UI::getInstance();
+
+	/* create Player Character */
+	/* get character texture */
+	SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
+	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
+	playerCharacter = MapCharacter(CharacterType::Player, characterTexture, characterPosition.x, characterPosition.y);
+	SDL_FreeSurface(characterSurface);
+
+	/* Set wall and floor texture indexes. */
+	for (int i = 0; i < rows.size(); ++i) {
+		vector<Block>& blocks = rows[i];
+		for (int k = 0; k < blocks.size(); ++k) {
+			Block& thisBlock = blocks[k];
+			thisBlock.setFloorTextureIndex(rand() % mapForm.floorTextures.size());
+			/* set texture values for Wall blocks (defaults if they're not wall blocks). */
+			if (thisBlock.getIsFloor()) {
+				thisBlock.setWallTextureIndex(0);
+				thisBlock.setWallIsFlipped(false);
+			}
+			else {
+				thisBlock.setWallTextureIndex(rand() % mapForm.wallTextures.size());
+				thisBlock.setWallIsFlipped(rand() % 2 == 0);
+			}
+
+			if (thisBlock.getIsLoaded()) {
+				cout << "LOADED\n";
+			}
+			else {
+				cout << "\nNOT LOADED\n";
+			}
+		}
+	}
+}
+
 /*
-* Build the actual grid.
+* Build the actual grid of Block objects.
 * Returns a vector of Points which are the coordinates for all Floor objects.
 */
 vector<Point> Map::buildMap(MapForm mapForm) {
@@ -431,7 +503,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 
 	SubPath subPath = SubPath(
 		(rand() % 5) + 2,
-		Direction::Up,
+		MapDirection::Up,
 		(rand() % 3) + 1);
 
 	/*
@@ -450,7 +522,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 
 		/* choose the next block to floorize */
 		switch (subPath.direction) {
-		case Direction::Up:
+		case MapDirection::Up:
 			if (pathY > 0) { /* We ARE allowed to hit the ceiling (FOR NOW this ends the pathmaking) */
 				--pathY;
 			}
@@ -459,7 +531,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 				subPath.seed = 0;
 			}
 			break;
-		case Direction::Down:
+		case MapDirection::Down:
 			if (pathY < rows.size() - 2) { /* We are NOT allowed to hit the bottom again. */
 				++pathY;
 			}
@@ -468,7 +540,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 				subPath.seed = 0;
 			}
 			break;
-		case Direction::Left:
+		case MapDirection::Left:
 			if (pathX > 3) { /* We are NOT allowed to hit the left wall. */
 				--pathX;
 			}
@@ -477,7 +549,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 				subPath.seed = 0;
 			}
 			break;
-		case Direction::Right:
+		case MapDirection::Right:
 			if (pathX < rows[pathY].size() - 2) { /* We are NOT allowed to hit the right wall. */
 				++pathX;
 			}
@@ -494,7 +566,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 
 		if (subPath.seed < 1) {
 			/* refresh seed */
-			subPath.direction = static_cast<Direction>(rand() % Direction::Total);
+			subPath.direction = static_cast<MapDirection>(rand() % MapDirection::Total);
 			subPath.seed = (rand() % 12) + 1;
 			subPath.radius = rand() % 4;
 		}

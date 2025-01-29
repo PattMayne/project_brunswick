@@ -62,7 +62,9 @@ CREATE INDEX idx_character_id ON limb (character_id);
 
 CREATE TABLE IF NOT EXISTS map (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    slug TEXT NOT NULL
+    slug TEXT NOT NULL,
+    character_x INTEGER DEFAULT 0,
+    character_y INTEGER DEFAULT 0
 );
 
 
