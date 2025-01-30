@@ -132,10 +132,10 @@ struct AcquiredLimb {
 	SDL_Texture* texture;
 	int countdown;
 	int rotationAngle;
-	SDL_Rect rect;
+	SDL_Rect diffRect;
 
-	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect rect) :
-		texture(texture), countdown(countdown), rotationAngle(rotationAngle), rect(rect) {}
+	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect diffRect) :
+		texture(texture), countdown(countdown), rotationAngle(rotationAngle), diffRect(diffRect) {}
 };
 
 
@@ -242,6 +242,7 @@ export class MapScreen {
 		void drawCharacters(UI& ui);
 		void drawPlayerCharacter(UI& ui);
 		void drawRoamingLimbs(UI& ui);
+		void drawAcquiredLimbs(UI& ui);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 
 		bool moveLimb(Limb& roamingLimb);
@@ -276,7 +277,7 @@ export class MapScreen {
 		bool animate;
 		int animationIncrementFraction = 20;
 		int animationCountdown;
-		int limbCollisionCountdown;
+		int limbCollisionCountdown = 70;
 		int blockAnimationIncrement;
 		AnimationType animationType;
 
@@ -742,6 +743,7 @@ void MapScreen::drawCharacters(UI& ui) {
 	*/
 	drawRoamingLimbs(ui);
 	drawPlayerCharacter(ui);
+	drawAcquiredLimbs(ui);
 }
 
 void MapScreen::drawPlayerCharacter(UI& ui) {
@@ -860,6 +862,64 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 			NULL, &limbRect,
 			limbAngle, NULL, SDL_FLIP_NONE
 		);
+	}
+}
+
+void MapScreen::drawAcquiredLimbs(UI& ui) {
+	/* We need the player's current block position data as a reference point for drawing each limb. */
+	Point playerPosition = map.getPlayerCharacter().getPosition();
+	int playerX = (playerPosition.x - drawStartX) * blockWidth;
+	int playerY = (playerPosition.y - drawStartY) * blockWidth;
+
+	for (int i = acquiredLimbStructs.size() - 1; i >= 0; --i) {
+		AcquiredLimb& aLimbStruct = acquiredLimbStructs[i];
+
+		/* If the countdown is finished, or if the draw rect will be too small, remove this limb from the queue. */
+		if (aLimbStruct.countdown < 1 || aLimbStruct.diffRect.w < ((blockWidth - 3) * -1)) {
+			acquiredLimbStructs.erase(acquiredLimbStructs.begin() + i);
+			continue;
+		}
+
+		/*
+		* Increment the angle so it spins during the whole animation.
+		* Make the limb grow large quickly for the first part of the animation countdown.
+		* Then make the limb shrink more quickly.
+		* Size differentials are stored in the acquired limb struct.
+		* The actual rect is based on the character's current location block, altered by those differentials.
+		*/
+
+		aLimbStruct.rotationAngle += 7;
+
+		if (aLimbStruct.countdown > 25) {
+			/* Growing BIGGER slowly. */
+			aLimbStruct.diffRect.x -= 1;
+			aLimbStruct.diffRect.y -= 1;
+			aLimbStruct.diffRect.w += 2;
+			aLimbStruct.diffRect.h += 2;
+		}
+		else {
+			/* Growing SMALLER quickly. */
+			aLimbStruct.diffRect.x += 3;
+			aLimbStruct.diffRect.y += 3;
+			aLimbStruct.diffRect.w -= 6;
+			aLimbStruct.diffRect.h -= 6;
+		}
+
+		SDL_Rect limbRect = {
+			playerX + aLimbStruct.diffRect.x,
+			playerY + aLimbStruct.diffRect.y,
+			blockWidth + aLimbStruct.diffRect.w,
+			blockWidth + aLimbStruct.diffRect.h
+		};
+
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			aLimbStruct.texture,
+			NULL, &limbRect,
+			aLimbStruct.rotationAngle, NULL, SDL_FLIP_NONE
+		);
+
+		--aLimbStruct.countdown;
 	}
 }
 
@@ -1073,12 +1133,12 @@ bool MapScreen::checkLimbCollision() {
 			roamingLimbs.erase(roamingLimbs.begin() + i);
 
 			/* Make object for limb collision animation. */
-			SDL_Rect limbRect = { playerPosition.x, playerPosition.y, blockWidth, blockWidth };
+			SDL_Rect diffRect = { 0, 0, 0, 0 };
 			acquiredLimbStructs.emplace_back(
 				thisLimb.getTexture(),
 				limbCollisionCountdown,
 				thisLimb.getRotationAngle(),
-				limbRect
+				diffRect
 			);
 
 			cout << "OBTAINED NEW LIMB: " << thisLimb.getName() << "\n";
