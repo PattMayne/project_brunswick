@@ -461,6 +461,7 @@ export void MapScreen::run() {
 	/* Making the Limbs rotate; */
 	int spriteAnimMax = 15;
 	bool reverseSpriteAnimation = false;
+	vector<int> collidedLimbIDs; /* Contains the database IDs, not the vector indexes. */
 	
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
@@ -497,9 +498,28 @@ export void MapScreen::run() {
 				* --> Animate the limb (grows BIGGER while spinning in a circle, then grows VERY SMALL (still spinning) and disappears)
 				* --> THEN either let the LIMBS/NPCs move, or it's the player's turn (MUST add new ENUM for whose TURN it is, or find some other way to indicate turn).
 				* 
+				* Do we need a collision animation queue?
+				* We need to check both NPC and Limb collisions BEFORE starting either animation.
+				* 
 				*/
 
+				Point playerPosition = map.getPlayerCharacter().getPosition();
 
+				for (int i = map.getRoamingLimbs().size() - 1; i >= 0; --i) {
+					Limb& thisLimb = map.getRoamingLimbs()[i];
+					Point limbPosition = thisLimb.getPosition();
+					if (thisLimb.getPosition().equals(playerPosition)) {
+						/* Move limb from map to character. */
+						MapCharacter& playerCharacter = map.getPlayerCharacter();
+						vector<Limb>& roamingLimbs = map.getRoamingLimbs();
+						int characterId = playerCharacter.getId();
+						playerCharacter.addLimb(thisLimb);
+						thisLimb.setCharacterId(characterId);
+						roamingLimbs.erase(roamingLimbs.begin() + i);
+
+						cout << "OBTAINED NEW LIMB: " << thisLimb.getName() << "\n";
+					}
+				}
 
 
 

@@ -340,6 +340,9 @@ export class Limb {
 		int getId() { return id; }
 		void setId(int id) { this->id = id; }
 
+		int getCharacterId() { return characterId; }
+		void setCharacterId(int id) { characterId = id; }
+
 		/* GET the FORM (default) values PLUS the modifiers (which can be negative) */
 		int getHP() { return form.hp + hpMod; }
 		int getStrength() { return form.strength + strengthMod; }
@@ -611,6 +614,7 @@ export class Limb {
 		int rotationAngle;
 		int textureWidth;
 		int textureHeight;
+		int characterId;
 		int id;
 };
 
@@ -642,6 +646,7 @@ public:
 
 	int getType() { return characterType; }
 	void setId(int id) { this->id = id; }
+	int getId() { return id; }
 	vector<Limb>& getLimbs() { return limbs; }
 	bool equipLimb(int limbId);
 	void clearSuit() {

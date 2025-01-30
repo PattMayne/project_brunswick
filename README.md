@@ -94,7 +94,7 @@ Limb definitions will be hard-coded in some kind of properties file. I'm not sur
 Each world map will have "suits" which are native to that map. In each world, the suits have been scrambled and their Limbs scattered across the map. The player must collect one of each of their limbs and put them back together on a shrine/pedestal. Then order is restored and the player can move on to the next world map.
 
 
-### Possible Sequel(s)
+## Possible Sequel(s)
 
 I was going to have story-quests, including buildings and friendly NPCs, as well as Dungeons (maps within the maps). But that's too ambitious for the first game, in my current position. Instead I'm going to focus on perfecting this game as a minimalist action-puzzle game, barely more than a card game on a map, but to make those basic features mind-blowing. If this game sells enough, then I'll work on a sequel which turns it into more of an RPG, and hire artists to make limbs, whole creatures and worlds custom-made for this game style.
 

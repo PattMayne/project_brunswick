@@ -119,6 +119,10 @@ export struct Point {
 	Point(int x, int y) : x(x), y(y) {}
 	int x;
 	int y;
+
+	bool equals(Point point) {
+		return point.x == x && point.y == y;
+	}
 };
 
 
