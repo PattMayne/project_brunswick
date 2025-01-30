@@ -128,6 +128,16 @@ using namespace std;
 
 enum class AnimationType { Player, NPC, Collision, None }; /* This is about whose TURN it is. */
 
+struct AcquiredLimb {
+	SDL_Texture* texture;
+	int countdown;
+	int rotationAngle;
+	SDL_Rect rect;
+
+	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect rect) :
+		texture(texture), countdown(countdown), rotationAngle(rotationAngle), rect(rect) {}
+};
+
 
 /* Map Screen class: where we navigate worlds, dungeons, and buildings. */
 export class MapScreen {
@@ -199,7 +209,7 @@ export class MapScreen {
 				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); } }
 
 			/* Destroy all the textures in the roamingLimbs */
-			vector<Limb> roamingLimbs = map.getRoamingLimbs();
+			vector<Limb>& roamingLimbs = map.getRoamingLimbs();
 			for (int i = 0; i < roamingLimbs.size(); i++) {
 				SDL_Texture* textureToDestroy = roamingLimbs[i].getTexture();
 				if (textureToDestroy) { SDL_DestroyTexture(textureToDestroy); } }
@@ -219,6 +229,9 @@ export class MapScreen {
 		MapType getMapType() { return mapForm.mapType; }
 		MapForm mapForm;
 		void run();
+
+		bool checkLimbCollision();
+		vector<Limb> acquiredLimbs;
 
 	private:
 		ScreenType screenType;
@@ -263,6 +276,7 @@ export class MapScreen {
 		bool animate;
 		int animationIncrementFraction = 20;
 		int animationCountdown;
+		int limbCollisionCountdown;
 		int blockAnimationIncrement;
 		AnimationType animationType;
 
@@ -302,9 +316,9 @@ export class MapScreen {
 		int maxDrawStartX = 0;
 		int maxDrawStartY = 0;
 
-
 		int limbAngle;
 
+		vector<AcquiredLimb> acquiredLimbStructs;
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
 		*/
@@ -490,42 +504,6 @@ export void MapScreen::run() {
 
 				/* collisions with LANDMARK: */
 
-				/*
-				* 
-				* WHEN the player lands on a LIMB (or a limb lands on a player):
-				* --> Add limb to player inventory (map.getPlayerCharacter().addLimb(limb);
-				* --> Remove limb from roamingLimbs (  roamingLimbs.erase(roamingLimbs.begin() + index);  )
-				* --> Animate the limb (grows BIGGER while spinning in a circle, then grows VERY SMALL (still spinning) and disappears)
-				* --> THEN either let the LIMBS/NPCs move, or it's the player's turn (MUST add new ENUM for whose TURN it is, or find some other way to indicate turn).
-				* 
-				* Do we need a collision animation queue?
-				* We need to check both NPC and Limb collisions BEFORE starting either animation.
-				* 
-				*/
-
-				Point playerPosition = map.getPlayerCharacter().getPosition();
-
-				for (int i = map.getRoamingLimbs().size() - 1; i >= 0; --i) {
-					Limb& thisLimb = map.getRoamingLimbs()[i];
-					Point limbPosition = thisLimb.getPosition();
-					if (thisLimb.getPosition().equals(playerPosition)) {
-						/* Move limb from map to character. */
-						MapCharacter& playerCharacter = map.getPlayerCharacter();
-						vector<Limb>& roamingLimbs = map.getRoamingLimbs();
-						int characterId = playerCharacter.getId();
-						playerCharacter.addLimb(thisLimb);
-						thisLimb.setCharacterId(characterId);
-						roamingLimbs.erase(roamingLimbs.begin() + i);
-
-						cout << "OBTAINED NEW LIMB: " << thisLimb.getName() << "\n";
-					}
-				}
-
-
-
-
-
-
 				MapCharacter& playerCharacter = map.getPlayerCharacter();
 				
 				for (Landmark landmark : map.getLandmarks()) {
@@ -549,8 +527,9 @@ export void MapScreen::run() {
 				/* Collisions with NPCs */
 
 				/* Collisions with LIMBs */
+				 checkLimbCollision();
 
-				if (!landmarkCollided && !npcCollided && !limbCollided) {
+				if (!landmarkCollided && !npcCollided) {
 					/* start the NPC animation. */
 					startNpcAnimation = true;
 				}
@@ -565,6 +544,8 @@ export void MapScreen::run() {
 				* This time check for collisions between Limbs, so they can become NPCs.
 				* But also check for Limbs or NPCs who moved onto the Player's block.
 				*/
+
+				checkLimbCollision();
 			}
 		}
 
@@ -1051,6 +1032,62 @@ void MapScreen::decrementCountdown() {
 		animationCountdown = 0;}
 }
 
+
+/* Limb Collision Animation Functions. */
+
+
+/*
+*
+* WHEN the player lands on a LIMB (or a limb lands on a player):
+* --> Add limb to player inventory (map.getPlayerCharacter().addLimb(limb);
+* --> Remove limb from roamingLimbs (  roamingLimbs.erase(roamingLimbs.begin() + index);  )
+* --> Animate the limb (grows BIGGER while spinning in a circle, then grows VERY SMALL (still spinning) and disappears)
+* --> THEN either let the LIMBS/NPCs move, or it's the player's turn (MUST add new ENUM for whose TURN it is, or find some other way to indicate turn).
+*
+* Do we need a collision animation queue?
+* We need to check both NPC and Limb collisions BEFORE starting either animation.
+*
+* ANIMATION:
+* -- We will NOT hold up gameplay for these animations.
+* --- Instead, make a vector of structs which hold Limb texture, rect, rotationAngle, and Countdown.
+* --- The rotationAngle of the Limb will start wherever it was, then increment by 15 degrees each iteration.
+* --- A function will decrement the countdown, increment (and then decrement) the size of the limb's rect,
+* --- and remove items after they reach zero.
+*
+*/
+bool MapScreen::checkLimbCollision() {
+	bool collisionDetected = false;
+	Point playerPosition = map.getPlayerCharacter().getPosition();
+
+	for (int i = map.getRoamingLimbs().size() - 1; i >= 0; --i) {
+		Limb& thisLimb = map.getRoamingLimbs()[i];
+		Point limbPosition = thisLimb.getPosition();
+		if (thisLimb.getPosition().equals(playerPosition)) {
+
+			/* Move limb from map to character. */
+			MapCharacter& playerCharacter = map.getPlayerCharacter();
+			vector<Limb>& roamingLimbs = map.getRoamingLimbs();
+			int characterId = playerCharacter.getId();
+			playerCharacter.addLimb(thisLimb);
+			thisLimb.setCharacterId(characterId);
+			roamingLimbs.erase(roamingLimbs.begin() + i);
+
+			/* Make object for limb collision animation. */
+			SDL_Rect limbRect = { playerPosition.x, playerPosition.y, blockWidth, blockWidth };
+			acquiredLimbStructs.emplace_back(
+				thisLimb.getTexture(),
+				limbCollisionCountdown,
+				thisLimb.getRotationAngle(),
+				limbRect
+			);
+
+			cout << "OBTAINED NEW LIMB: " << thisLimb.getName() << "\n";
+			cout << "ACQUIRED " << acquiredLimbStructs.size() << " LIMBS SO FAR\n";
+			collisionDetected = true;
+		}
+	}
+	return collisionDetected;
+}
 
 
 /*
