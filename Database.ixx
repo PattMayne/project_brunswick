@@ -466,8 +466,6 @@ export Map loadMap(string mapSlug) {
         sqlite3_column_int(statement, 2)
     );
 
-    cout << "Point: " << characterPosition.x << ", " << characterPosition.y << "\n";
-
     /* Finalize map ID retrieval statement. */
     sqlite3_finalize(statement);
 
@@ -612,7 +610,6 @@ export Map loadMap(string mapSlug) {
     sqlite3_close(db);
 
     /* BUILD THE MAP. */
-
     map = Map(mapForm, roamingLimbs, rows, characterPosition);
     map.setLandmarks(landmarks);
 

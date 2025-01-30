@@ -317,12 +317,8 @@ public:
 	vector<vector<Block>>& getRows() { return rows; }
 	vector<Landmark>& getLandmarks() { return landmarks; }
 	MapCharacter& getPlayerCharacter() { return playerCharacter; }
-	SDL_Texture* getFloorTexture(int index) {
-		return mapForm.floorTextures[index];
-	}
-	SDL_Texture* getWallTexture(int index) {
-		return mapForm.wallTextures[index];
-	}
+	SDL_Texture* getFloorTexture(int index) { return mapForm.floorTextures[index]; }
+	SDL_Texture* getWallTexture(int index) { return mapForm.wallTextures[index]; }
 	SDL_Texture* getPathTexture(int index) { return mapForm.pathTextures[index]; }
 	vector<Limb>& getRoamingLimbs() { return roamingLimbs; }
 	string getName() { return mapForm.name; }

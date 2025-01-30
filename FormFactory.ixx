@@ -196,7 +196,6 @@ MapForm forestMap() {
 /* Get the basic Map data struct based on slug ID parameter value. */
 export MapForm getMapFormFromSlug(string slug) {
 	if (slug == "forest") {
-		cout << "string check worked\n";
 		return forestMap();
 	}
 	cout << "string check FAILED\n";

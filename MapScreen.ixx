@@ -161,7 +161,6 @@ export class MapScreen {
 			if (mapObjectExists(mapSlug)) {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
-				cout << "Loaded map successfully\n";
 			}
 			else {				
 				map = Map(mapForm);
@@ -186,7 +185,6 @@ export class MapScreen {
 			buildMapDisplay();
 			createTitleTexture(ui);
 			limbAngle = 0;
-			cout << "Finished constructor\n";
 		}
 
 		/* Destructor */
@@ -490,6 +488,23 @@ export void MapScreen::run() {
 				/* check for collisions (animation is done, player is ON new block and/or NPCs have moved ONTO new blocks */
 
 				/* collisions with LANDMARK: */
+
+				/*
+				* 
+				* WHEN the player lands on a LIMB (or a limb lands on a player):
+				* --> Add limb to player inventory (map.getPlayerCharacter().addLimb(limb);
+				* --> Remove limb from roamingLimbs (  roamingLimbs.erase(roamingLimbs.begin() + index);  )
+				* --> Animate the limb (grows BIGGER while spinning in a circle, then grows VERY SMALL (still spinning) and disappears)
+				* --> THEN either let the LIMBS/NPCs move, or it's the player's turn (MUST add new ENUM for whose TURN it is, or find some other way to indicate turn).
+				* 
+				*/
+
+
+
+
+
+
+
 
 				MapCharacter& playerCharacter = map.getPlayerCharacter();
 				
@@ -991,7 +1006,6 @@ void MapScreen::setDrawStartBlock() {
 	/* get the IDEAL position for the camera (with the player in the center) */
 	int idealX = playerX - (xViewRes / 2);
 	int idealY = playerY - (yViewRes / 2);
-	cout << "PlayerX: " << playerX << ", PlayerY: " << playerY << "\n";
 
 	/* save the camera's recent position (in case this function is called because it changed) */
 	lastDrawStartX = drawStartX;
@@ -1001,9 +1015,6 @@ void MapScreen::setDrawStartBlock() {
 	* unless the character is close to either edge, in which case we use maxDrawStart or 0. */
 	drawStartX = idealX >= 0 && idealX <= maxDrawStartX ? idealX : idealX > maxDrawStartX ? maxDrawStartX : 0;
 	drawStartY = idealY >= 0 && idealY <= maxDrawStartY ? idealY : idealY > maxDrawStartY ? maxDrawStartY : 0;
-
-	cout << "Draw Start X: " << drawStartX << "\n";
-	cout << "Draw Start Y: " << drawStartY << "\n";
 }
 
 

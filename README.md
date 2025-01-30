@@ -1,18 +1,16 @@
 # Land of Limbs
 
-This is a very early **work in progress.**
+This is a **work in progress.** It's an action-puzzle game with modular characters made from limbs that snap together.
 
-Currently I'm setting up the absolute basic UI framework.
-
-I already worked out the basic game mechanics with Java for Android. I'll rewrite those behaviors for C++ for this desktop app.
+Currently I've implemented basic mechanics for the Map Screen and the Character Creation Screen. Some data is stored to the database. Once the database is more fully implemented, I'll make the Battle Screen.
 
 Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/PattMayne/LimbsCyberpunk)
 
 ### Technologies:
 
-**Language:** C++, JSON
+**Language:** C++, JSON, SQL
 
-**Libraries:** SDL2, SDL_TTF, SDL_Image, nlohmann (JSON)
+**Libraries:** SDL2, SDL_TTF, SDL_Image, nlohmann (JSON), SQLite3
  
 ## TO DO:
 
@@ -33,9 +31,7 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
     - [x] No buttons without panels! Every button is in a panel.
 - [x] Make other screens as DUMMY screens
   - [x] Map screen
-    - [ ] outside/main (world / non-safe by default, until solved) screen
-    - [ ] inside (building / safe) screen
-    - [ ] inside (dungeon / unsafe by default, until solved) screen
+    - [x] outside/main (world / non-safe by default, until solved) screenx
   - [x] Character Creation screen
   - [x] Battle screen
 - [x] Build actual MAP screen
@@ -44,24 +40,23 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
         - [x] Landmarks will be defined in JSON, scattered procedurally and saved to SQLite DB.
     - [x] Map designer screen?
         - [x] NO DESIGNER SCREEN
-    - [ ] Save generated map to SQLite DB
-- [ ] Build Character Creation Screen
+    - [x] Save generated map to SQLite DB
+- [x] Build Character Creation Screen
     - [x] Recursively connect limbs.
-    - [ ] Draw all the limbs.
-    - [ ] Rotate the limbs.
-    - [ ] Move connected limb to next joint (more recursive searching).
-    - [ ] Change anchor joint of connected limb.
+    - [x] Draw all the limbs.
+    - [x] Rotate the limbs.
+    - [x] Move connected limb to next joint (more recursive searching).
+    - [x] Change anchor joint of connected limb.
 - [x] Represent some STATIC limbs
 - [ ] Incorporate LIMBS and AVATARS into MAP screen
     - [x] LIMBS
     - [ ] AVATARS
 - [ ] Build Battle Screen
 - [ ] When closing program close each font with TTF_CloseFont()
-- [ ] incorporate SQLite database
-    - [ ] must download the sqlite3.h header file (#include <sqlite3.h>)
+- [x] incorporate SQLite database
+    - [x] must download the sqlite3.h header file (#include <sqlite3.h>)
 - [x] MOBILE proportions are wack. Must unwack. Maybe this will be about SCALING.
     - [x] Button size and Font size are the main issue. Button size is based on font size. So **font size should adjust automatically based on screen size.**
-- [ ]  Possibly install conanfile or vcpkg to handle libraries (SDL2 or SDL3, json)
 - [x] Make a Resources module to encapsulate string and int resources
     - [x] Make a JSON file
     - [x] Put all strings in JSON file
@@ -97,3 +92,12 @@ Limb definitions will be hard-coded in some kind of properties file. I'm not sur
 ### Winning the Game
 
 Each world map will have "suits" which are native to that map. In each world, the suits have been scrambled and their Limbs scattered across the map. The player must collect one of each of their limbs and put them back together on a shrine/pedestal. Then order is restored and the player can move on to the next world map.
+
+
+### Possible Sequel(s)
+
+I was going to have story-quests, including buildings and friendly NPCs, as well as Dungeons (maps within the maps). But that's too ambitious for the first game, in my current position. Instead I'm going to focus on perfecting this game as a minimalist action-puzzle game, barely more than a card game on a map, but to make those basic features mind-blowing. If this game sells enough, then I'll work on a sequel which turns it into more of an RPG, and hire artists to make limbs, whole creatures and worlds custom-made for this game style.
+
+A third game could expand on the RPG elements even further, and be isometric for enhanced weirdness and realism.
+
+An online version would include limb-farms, allow artists to upload their own designs (or even launch their own federated instances) and feature true territorial warfare.

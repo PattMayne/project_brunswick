@@ -650,6 +650,10 @@ public:
 		anchorLimbId = -1;
 	}
 
+	void addLimb(Limb& newLimb) {
+		limbs.emplace_back(newLimb);
+	}
+
 	void unEquipLimb(int limbId) {
 		/* First check if this is the anchor limb. */
 		if (anchorLimbId == limbId) {
@@ -702,13 +706,12 @@ public:
 		vector<tuple<int, int, bool>> jointsData;
 
 		for (int i = 0; i < limbs.size(); ++i) {
-			if (i == limbToSkipId) {
-				continue;
-			}
+			if (i == limbToSkipId) { continue; }
 
 			Limb& thisLimb = limbs[i];
 
 			if (!thisLimb.isEquipped()) { continue; }
+
 			vector<Joint>& theseJoints = thisLimb.getJoints();
 
 			for (int k = 0; k < theseJoints.size(); ++k) {
