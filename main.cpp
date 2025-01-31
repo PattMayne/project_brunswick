@@ -68,6 +68,12 @@ int main(int argc, char* args[]) {
 	/* instantiate the UI instance, and hold the reference for eventual destruction in this file. */
 	UI& ui = UI::getInstance();
 	GameState& gameState = GameState::getInstance();
+	gameState.setPlayerID(createPlayerCharacterOrGetID());
+
+	if (gameState.getPlayerID() < 1) {
+		cout << "ERROR: No player character\n";
+		return -1;
+	}
 	
 	ScreenStruct screenToLoadStruct = closingScreenStruct();
 	bool running = true;

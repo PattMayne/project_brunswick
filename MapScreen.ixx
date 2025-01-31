@@ -940,10 +940,8 @@ void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 			0, NULL,
 			block.getWallIsFlipped() ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE
 		);
-		//cout << "NOT A FLOOR\n";
 	}
 	else if (block.getIsPath()) {
-		//cout << "IS A PATH\n";
 		int pathFlipOption = block.getPathFlipOption();
 		SDL_RenderCopyEx(
 			ui.getMainRenderer(),

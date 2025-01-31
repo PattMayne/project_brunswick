@@ -28,12 +28,14 @@ export class GameState {
 		/* getters */
 		ScreenStruct getScreenStruct() { return screenStruct; }
 		ScreenType getScreenType() { return screenStruct.screenType; }
-		int getScreenId() { return screenStruct.id;  }
+		int getScreenId() { return screenStruct.id; }
+		int getPlayerID() { return playerID; }
 
 		/* setters */
 		void setScreenStruct(ScreenStruct incomingStruct) { screenStruct = incomingStruct; }
 		void setScreenId(int incomingId) { screenStruct.id = incomingId; }
 		void setScreenType(ScreenType incomingScreenType) { screenStruct.screenType = incomingScreenType; }
+		void setPlayerID(int id) { playerID = id; }
 
 	private:
 		/* Constructor is private to prevent outside instantiation */
@@ -48,4 +50,5 @@ export class GameState {
 
 		/* current screen data (main.cpp reads this for the screen to load) */
 		ScreenStruct screenStruct;
+		int playerID;
 };

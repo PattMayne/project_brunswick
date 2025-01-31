@@ -615,3 +615,97 @@ export Map loadMap(string mapSlug) {
 
     return map;
 }
+
+export int createPlayerCharacterOrGetID() {
+
+    /*
+    * First check if player character already exists.
+    * If it does, get the ID and return the ID.
+    * If it does not exist, create the player character and return the ID.
+    */
+
+    int count = 0;
+    int playerID = -1;
+
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+    /* Create statement template for querying the count. */
+    const char* queryCountSQL = "SELECT COUNT(*) FROM character WHERE is_player = 1;";
+    sqlite3_stmt* statement;
+    int returnCode = sqlite3_prepare_v2(db, queryCountSQL, -1, &statement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return false;
+    }
+
+    /* Execute statement. */
+    if (sqlite3_step(statement) == SQLITE_ROW) {
+        count = sqlite3_column_int(statement, 0);
+    }
+
+    /* Finalize statement. */
+    sqlite3_finalize(statement);
+
+    if (count > 0) {
+        /* Player character exists. Get the ID. */
+
+        /* Create statement template for querying the id. */
+        const char* queryIDSQL = "SELECT id FROM character WHERE is_player = 1;";
+        sqlite3_stmt* idStatement;
+        returnCode = sqlite3_prepare_v2(db, queryIDSQL, -1, &idStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return false;
+        }
+
+        /* Execute statement. */
+        if (sqlite3_step(idStatement) == SQLITE_ROW) {
+            playerID = sqlite3_column_int(idStatement, 0);
+            sqlite3_finalize(idStatement);
+            sqlite3_close(db);
+            cout << "Player ID retrieved: " << playerID << "\n";
+            return playerID;
+        }
+
+        /* Finalize statement. */
+        sqlite3_finalize(idStatement);
+    }
+
+
+    /* Player character does not exist. Create it. */
+
+    const char* newCharacterSQL = "INSERT INTO character (name, is_player) VALUES (?, ?);";
+    sqlite3_stmt* newCharStatement;
+    returnCode = sqlite3_prepare_v2(db, newCharacterSQL, -1, &newCharStatement, nullptr);
+
+    /* Bind values. */
+    const char* name = "Player";
+    int isPlayerBoolInt = 1;
+    sqlite3_bind_text(newCharStatement, 1, name, -1, SQLITE_STATIC);
+    sqlite3_bind_int(newCharStatement, 2, isPlayerBoolInt);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(newCharStatement);
+    if (returnCode != SQLITE_DONE) { cerr << "Insert Player Character failed: " << sqlite3_errmsg(db) << endl; }
+    else {
+        /* Get the ID of the saved item. */
+        playerID = static_cast<int>(sqlite3_last_insert_rowid(db));
+    }
+
+    /* Close DB. */
+    sqlite3_finalize(newCharStatement);
+    sqlite3_close(db);
+
+    return playerID;
+}
