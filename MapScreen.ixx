@@ -195,6 +195,7 @@ export class MapScreen {
 			buildMapDisplay();
 			createTitleTexture(ui);
 			limbAngle = 0;
+			cout << "There are " << map.getRoamingLimbs().size() << " roaming limbs\n";
 		}
 
 		/* Destructor */
@@ -1121,6 +1122,7 @@ bool MapScreen::checkLimbCollision() {
 		Limb& thisLimb = map.getRoamingLimbs()[i];
 		Point limbPosition = thisLimb.getPosition();
 		if (thisLimb.getPosition().equals(playerPosition)) {
+			GameState& gameState = GameState::getInstance();
 
 			/* Move limb from map to character. */
 			MapCharacter& playerCharacter = map.getPlayerCharacter();
@@ -1141,6 +1143,7 @@ bool MapScreen::checkLimbCollision() {
 
 			cout << "OBTAINED NEW LIMB: " << thisLimb.getName() << "\n";
 			cout << "ACQUIRED " << acquiredLimbStructs.size() << " LIMBS SO FAR\n";
+			updateLimbOwner(thisLimb.getId(), gameState.getPlayerID());
 			collisionDetected = true;
 		}
 	}

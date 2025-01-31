@@ -141,6 +141,47 @@ export int createRoamingLimb(Limb& limb, string mapSlug, Point position) {
     return id;
 }
 
+/* When a limb changes owner. */
+export bool updateLimbOwner(int limbID, int newCharacterID) {
+    bool success = false;
+    sqlite3* db;
+
+    /* Open database. */
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    cout << dbFailed << "\n";
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return success;
+    }
+
+    /* No need to change the map_slug because map only loads non-owned limbs. */
+    const char* updateSQL = "UPDATE limb SET character_id = ? WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return success;
+    }
+
+    /* Bind the values. */
+    sqlite3_bind_int(statement, 1, newCharacterID);
+    sqlite3_bind_int(statement, 2, limbID);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "Insert failed: " << sqlite3_errmsg(db) << endl; }
+    else { success = true; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+
+    return success;
+}
+
 
 export bool createNewMap(Map& map) {
     bool success = false;
@@ -519,7 +560,7 @@ export Map loadMap(string mapSlug) {
     /* GET THE LIMBS FROM THE DB. */
 
     /* Create statement template for querying Map objects with this slug. */
-    const char* queryLimbsSQL = "SELECT id, form_slug, position_x, position_y FROM limb WHERE map_slug = ?;";
+    const char* queryLimbsSQL = "SELECT id, form_slug, position_x, position_y, character_id FROM limb WHERE map_slug = ? AND character_id < 1;";
     sqlite3_stmt* queryLimbsStatement;
     returnCode = sqlite3_prepare_v2(db, queryLimbsSQL, -1, &queryLimbsStatement, nullptr);
 
@@ -542,6 +583,8 @@ export Map loadMap(string mapSlug) {
                 sqlite3_column_int(queryLimbsStatement, 3)
             )
         );
+        cout << "Character ID: " << sqlite3_column_int(queryLimbsStatement, 4) << "\n";
+        cout << "There are " << roamingLimbs.size() << " roaming limbs\n";
     }
 
     if (returnCode != SQLITE_DONE) {
