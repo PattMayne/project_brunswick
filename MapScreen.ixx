@@ -1119,18 +1119,18 @@ bool MapScreen::checkLimbCollision() {
 	Point playerPosition = map.getPlayerCharacter().getPosition();
 
 	for (int i = map.getRoamingLimbs().size() - 1; i >= 0; --i) {
-		Limb& thisLimb = map.getRoamingLimbs()[i];
-		Point limbPosition = thisLimb.getPosition();
-		if (thisLimb.getPosition().equals(playerPosition)) {
+		if (map.getRoamingLimbs()[i].getPosition().equals(playerPosition)) {
+			collisionDetected = true;
+			Limb& thisLimb = map.getRoamingLimbs()[i];
 			GameState& gameState = GameState::getInstance();
+			int playerCharID = gameState.getPlayerID();
 
 			/* Move limb from map to character. */
 			MapCharacter& playerCharacter = map.getPlayerCharacter();
 			vector<Limb>& roamingLimbs = map.getRoamingLimbs();
-			int characterId = playerCharacter.getId();
 			playerCharacter.addLimb(thisLimb);
-			thisLimb.setCharacterId(characterId);
-			roamingLimbs.erase(roamingLimbs.begin() + i);
+			updateLimbOwner(thisLimb.getId(), playerCharID);
+			thisLimb.setCharacterId(playerCharID);
 
 			/* Make object for limb collision animation. */
 			SDL_Rect diffRect = { 0, 0, 0, 0 };
@@ -1141,10 +1141,8 @@ bool MapScreen::checkLimbCollision() {
 				diffRect
 			);
 
-			cout << "OBTAINED NEW LIMB: " << thisLimb.getName() << "\n";
-			cout << "ACQUIRED " << acquiredLimbStructs.size() << " LIMBS SO FAR\n";
-			updateLimbOwner(thisLimb.getId(), gameState.getPlayerID());
-			collisionDetected = true;
+			/* Remove from list at the end to avoid changing the item referenced by i. */
+			roamingLimbs.erase(roamingLimbs.begin() + i);
 		}
 	}
 	return collisionDetected;

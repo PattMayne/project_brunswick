@@ -170,9 +170,11 @@ export bool updateLimbOwner(int limbID, int newCharacterID) {
     sqlite3_bind_int(statement, 1, newCharacterID);
     sqlite3_bind_int(statement, 2, limbID);
 
+    cout << "Updated Limb ID: " << limbID << "\n";
+
     /* Execute the statement. */
     returnCode = sqlite3_step(statement);
-    if (returnCode != SQLITE_DONE) { cerr << "Insert failed: " << sqlite3_errmsg(db) << endl; }
+    if (returnCode != SQLITE_DONE) { cerr << "Update failed: " << sqlite3_errmsg(db) << endl; }
     else { success = true; }
 
     /* Finalize statement and close database. */
@@ -575,6 +577,7 @@ export Map loadMap(string mapSlug) {
 
     /* Execute and iterate through results. */
     while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
+        cout << "Limb ID: " << sqlite3_column_int(queryLimbsStatement, 0) << "\n";
         roamingLimbs.emplace_back(
             sqlite3_column_int(queryLimbsStatement, 0),
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
@@ -583,8 +586,6 @@ export Map loadMap(string mapSlug) {
                 sqlite3_column_int(queryLimbsStatement, 3)
             )
         );
-        cout << "Character ID: " << sqlite3_column_int(queryLimbsStatement, 4) << "\n";
-        cout << "There are " << roamingLimbs.size() << " roaming limbs\n";
     }
 
     if (returnCode != SQLITE_DONE) {
