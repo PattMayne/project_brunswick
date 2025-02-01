@@ -255,7 +255,7 @@ export class MapScreen {
 		void drawCharacters(UI& ui);
 		void drawPlayerCharacter(UI& ui);
 		void drawRoamingLimbs(UI& ui);
-		void drawAcquiredLimbs(UI& ui);
+		void drawAcquiredLimbs(UI& ui, int playerX, int playerY);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 
 		bool moveLimb(Limb& roamingLimb);
@@ -320,6 +320,7 @@ export class MapScreen {
 		void requestDown();
 		void requestLeft();
 		void requestRight();
+		void moveCharacter(MapDirection direction);
 
 		int drawStartX = 0;
 		int drawStartY = 0;
@@ -758,7 +759,6 @@ void MapScreen::drawCharacters(UI& ui) {
 	*/
 	drawRoamingLimbs(ui);
 	drawPlayerCharacter(ui);
-	drawAcquiredLimbs(ui);
 }
 
 void MapScreen::drawPlayerCharacter(UI& ui) {
@@ -786,6 +786,65 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		NULL, &characterRect,
 		0, NULL, SDL_FLIP_NONE
 	);
+
+	drawAcquiredLimbs(ui, characterRect.x, characterRect.y);
+}
+
+/*
+* Call this within the drawPlayerCharacter function so we don't have to calculate the location again.
+* Also, the acquired limbs can be considered part of the player character.
+*/
+void MapScreen::drawAcquiredLimbs(UI& ui, int playerX, int playerY) {
+	for (int i = acquiredLimbStructs.size() - 1; i >= 0; --i) {
+		AcquiredLimb& aLimbStruct = acquiredLimbStructs[i];
+
+		/* If the countdown is finished, or if the draw rect will be too small, remove this limb from the queue. */
+		if (aLimbStruct.countdown < 1 || aLimbStruct.diffRect.w < ((blockWidth - 3) * -1)) {
+			acquiredLimbStructs.erase(acquiredLimbStructs.begin() + i);
+			continue;
+		}
+
+		/*
+		* Increment the angle so it spins during the whole animation.
+		* Make the limb grow large quickly for the first part of the animation countdown.
+		* Then make the limb shrink more quickly.
+		* Size differentials are stored in the acquired limb struct.
+		* The actual rect is based on the character's current location block, altered by those differentials.
+		*/
+
+		aLimbStruct.rotationAngle += 7;
+
+		if (aLimbStruct.countdown > 25) {
+			/* Growing BIGGER slowly. */
+			aLimbStruct.diffRect.x -= 1;
+			aLimbStruct.diffRect.y -= 1;
+			aLimbStruct.diffRect.w += 2;
+			aLimbStruct.diffRect.h += 2;
+		}
+		else {
+			/* Growing SMALLER quickly. */
+			aLimbStruct.diffRect.x += 3;
+			aLimbStruct.diffRect.y += 3;
+			aLimbStruct.diffRect.w -= 6;
+			aLimbStruct.diffRect.h -= 6;
+		}
+
+		SDL_Rect limbRect = {
+			playerX + aLimbStruct.diffRect.x,
+			playerY + aLimbStruct.diffRect.y,
+			blockWidth + aLimbStruct.diffRect.w,
+			blockWidth + aLimbStruct.diffRect.h
+		};
+
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			aLimbStruct.texture,
+			NULL, &limbRect,
+			aLimbStruct.rotationAngle, NULL, SDL_FLIP_NONE
+		);
+
+		--aLimbStruct.countdown;
+	}
 }
 
 /*
@@ -880,63 +939,6 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 	}
 }
 
-void MapScreen::drawAcquiredLimbs(UI& ui) {
-	/* We need the player's current block position data as a reference point for drawing each limb. */
-	Point playerPosition = map.getPlayerCharacter().getPosition();
-	int playerX = (playerPosition.x - drawStartX) * blockWidth;
-	int playerY = (playerPosition.y - drawStartY) * blockWidth;
-
-	for (int i = acquiredLimbStructs.size() - 1; i >= 0; --i) {
-		AcquiredLimb& aLimbStruct = acquiredLimbStructs[i];
-
-		/* If the countdown is finished, or if the draw rect will be too small, remove this limb from the queue. */
-		if (aLimbStruct.countdown < 1 || aLimbStruct.diffRect.w < ((blockWidth - 3) * -1)) {
-			acquiredLimbStructs.erase(acquiredLimbStructs.begin() + i);
-			continue;
-		}
-
-		/*
-		* Increment the angle so it spins during the whole animation.
-		* Make the limb grow large quickly for the first part of the animation countdown.
-		* Then make the limb shrink more quickly.
-		* Size differentials are stored in the acquired limb struct.
-		* The actual rect is based on the character's current location block, altered by those differentials.
-		*/
-
-		aLimbStruct.rotationAngle += 7;
-
-		if (aLimbStruct.countdown > 25) {
-			/* Growing BIGGER slowly. */
-			aLimbStruct.diffRect.x -= 1;
-			aLimbStruct.diffRect.y -= 1;
-			aLimbStruct.diffRect.w += 2;
-			aLimbStruct.diffRect.h += 2;
-		}
-		else {
-			/* Growing SMALLER quickly. */
-			aLimbStruct.diffRect.x += 3;
-			aLimbStruct.diffRect.y += 3;
-			aLimbStruct.diffRect.w -= 6;
-			aLimbStruct.diffRect.h -= 6;
-		}
-
-		SDL_Rect limbRect = {
-			playerX + aLimbStruct.diffRect.x,
-			playerY + aLimbStruct.diffRect.y,
-			blockWidth + aLimbStruct.diffRect.w,
-			blockWidth + aLimbStruct.diffRect.h
-		};
-
-		SDL_RenderCopyEx(
-			ui.getMainRenderer(),
-			aLimbStruct.texture,
-			NULL, &limbRect,
-			aLimbStruct.rotationAngle, NULL, SDL_FLIP_NONE
-		);
-
-		--aLimbStruct.countdown;
-	}
-}
 
 void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 	/* always draw floor. */
@@ -1174,6 +1176,18 @@ bool MapScreen::checkLimbCollision() {
 *				Do an animated transition for these moves (maybe).
 */
 
+void MapScreen::moveCharacter(MapDirection direction) {
+	/* Change the character's position */
+	bool moved = map.getPlayerCharacter().move(direction);
+	if (moved) {
+		/* Change the block to draw based on the character's new position. */
+		setDrawStartBlock();
+		/* Instead of immediately displaying the move, we start a move animation. */
+		startAnimationCountdown(AnimationType::Player);
+		updatePlayerMapLocation(map.getSlug(), map.getPlayerCharacter().getPosition());
+	}
+}
+
 /* destailed documentation for the first function. Other functions follow same process. */
 void MapScreen::requestUp() {
 	if (animate || animationCountdown > 0) { return; }
@@ -1187,12 +1201,7 @@ void MapScreen::requestUp() {
 		Block& destinationBlock = map.getRows()[destinationBlockY][playerCharacter.getBlockX()];
 		/* If the new block is a floor, move there */
 		if (destinationBlock.getIsFloor()) {
-			/* Change the character's position */
-			map.getPlayerCharacter().move(MapDirection::Up);
-			/* Change the block to draw based on the character's new position. */
-			setDrawStartBlock();
-			/* Instead of immediately displaying the move, we start a move animation. */
-			startAnimationCountdown(AnimationType::Player);
+			moveCharacter(MapDirection::Up);
 		}
 	}
 }
@@ -1204,9 +1213,7 @@ void MapScreen::requestDown() {
 	if (destinationBlockY < vBlocksTotal) {
 		Block& destinationBlock = map.getRows()[destinationBlockY][playerCharacter.getBlockX()];
 		if (destinationBlock.getIsFloor()) {
-			map.getPlayerCharacter().move(MapDirection::Down);
-			setDrawStartBlock();
-			startAnimationCountdown(AnimationType::Player);
+			moveCharacter(MapDirection::Down);
 		}
 	}
 }
@@ -1218,9 +1225,7 @@ void MapScreen::requestLeft() {
 	if (destinationBlockX < hBlocksTotal) {
 		Block& destinationBlock = map.getRows()[playerCharacter.getBlockY()][destinationBlockX];
 		if (destinationBlock.getIsFloor()) {
-			map.getPlayerCharacter().move(MapDirection::Left);
-			setDrawStartBlock();
-			startAnimationCountdown(AnimationType::Player);
+			moveCharacter(MapDirection::Left);
 		}
 	}
 }
@@ -1232,9 +1237,7 @@ void MapScreen::requestRight() {
 	if (destinationBlockX < hBlocksTotal) {
 		Block& destinationBlock = map.getRows()[playerCharacter.getBlockY()][destinationBlockX];
 		if (destinationBlock.getIsFloor()) {
-			map.getPlayerCharacter().move(MapDirection::Right);
-			setDrawStartBlock();
-			startAnimationCountdown(AnimationType::Player);
+			moveCharacter(MapDirection::Right);
 		}
 	}
 }

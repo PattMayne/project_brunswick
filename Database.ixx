@@ -607,6 +607,48 @@ export int createPlayerCharacterOrGetID() {
 */
 
 
+export void updatePlayerMapLocation(string slugString, Point position) {
+    sqlite3* db;
+    const char* mapSlug = slugString.c_str();
+
+    /* Open database. */
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    cout << dbFailed << "\n";
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return;
+    }
+
+    /* Create statement for updating player position in a Map table entry in the DB. */
+    const char* insertSQL = "UPDATE map SET character_x = ?, character_y = ? WHERE slug = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, insertSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare MAP update statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return;
+    }
+
+    /* Bind the data and execute the statement. */
+    sqlite3_bind_int(statement, 1, position.x);
+    sqlite3_bind_int(statement, 2, position.y);
+    sqlite3_bind_text(statement, 3, mapSlug, -1, SQLITE_STATIC);
+    returnCode = sqlite3_step(statement);
+
+    if (returnCode != SQLITE_DONE) {
+        cerr << "Insert failed for MAP: " << sqlite3_errmsg(db) << endl;
+        sqlite3_finalize(statement);
+        return;
+    }
+
+    /* Finalize statement. */
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+}
+
+
 export bool createNewMap(Map& map) {
     bool success = false;
     sqlite3* db;
