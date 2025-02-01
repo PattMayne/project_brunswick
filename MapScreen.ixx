@@ -612,8 +612,10 @@ export void MapScreen::run() {
 			for (Limb& limb : map.getRoamingLimbs()) {
 				moveLimb(limb); }
 
-			/* Then start the Animation of the movement. */
+			/* Save the new locations. */
+			updateLimbsLocation(map.getRoamingLimbs());
 
+			/* Then start the Animation of the movement. */
 			startAnimationCountdown(AnimationType::NPC);
 			startNpcAnimation = false;
 		}

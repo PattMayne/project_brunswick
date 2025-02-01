@@ -88,11 +88,22 @@ export void createDB() {
     sqlite3_close(db);
 }
 
-/*
+/**
 * 
 * 
-* LIMB-RELATED FUNCTIONS
 * 
+*  _     _           _           ____      _       _           _
+* | |   (_)_ __ ___ | |__       |  _ \ ___| | __ _| |_ ___  __| |
+* | |   | | '_ ` _ \| '_ \ _____| |_) / _ \ |/ _` | __/ _ \/ _` |
+* | |___| | | | | | | |_) |_____|  _ <  __/ | (_| | ||  __/ (_| |
+* |_____|_|_| |_| |_|_.__/   _  |_| \_\___|_|\__,_|\__\___|\__,_|
+* |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
+* | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
+* |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
+* |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
+* 
+* 
+* Limb-Related Functions
 * 
 */
 
@@ -191,11 +202,70 @@ export bool updateLimbOwner(int limbID, int newCharacterID) {
     return success;
 }
 
-
 /*
+* When the list of roamingLimbs in the map have all moved to a new location,
+* send them here and update the database.
+*/
+export void updateLimbsLocation(vector<Limb>& limbs) {
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return;
+    }
+
+    const char* updateSQL = "UPDATE limb SET position_x = ?, position_y = ? WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB POSITION UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return;
+    }
+
+    /* Begin the transaction. */
+    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
+
+    for (int i = 0; i < limbs.size(); ++i) {
+        Point position = limbs[i].getPosition();
+        sqlite3_bind_int(statement, 1, position.x);
+        sqlite3_bind_int(statement, 2, position.y);
+        sqlite3_bind_int(statement, 3, limbs[i].getId());
+
+        if (sqlite3_step(statement) != SQLITE_DONE) {
+            cerr << "Update failed for LIMB: " << sqlite3_errmsg(db) << endl;
+            break;
+        }
+
+        sqlite3_reset(statement);
+    }
+
+    /* Finalize the statement, commit the transaction. */
+    sqlite3_finalize(statement);
+    sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
+
+}
+
+/**
 * 
 * 
-* CHARACTER-RELATED FUNCTIONS
+*   ____ _                          _
+*  / ___| |__   __ _ _ __ __ _  ___| |_ ___ _ __
+* | |   | '_ \ / _` | '__/ _` |/ __| __/ _ \ '__|____
+* | |___| | | | (_| | | | (_| | (__| ||  __/ | |_____|
+*  \____|_| |_|\__,_|_|  \__,_|\___|\__\___|_|
+* |  _ \ ___| | __ _| |_ ___  __| |
+* | |_) / _ \ |/ _` | __/ _ \/ _` |
+* |  _ <  __/ | (_| | ||  __/ (_| |
+* |_|_\_\___|_|\__,_|\__\___|\__,_|
+* |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
+* | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
+* |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
+* |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
 * 
 * 
 */
@@ -520,10 +590,18 @@ export int createPlayerCharacterOrGetID() {
 }
 
 
-/*
+/**
 * 
 * 
-* MAP-RELATED FUNCTIONS.
+*  __  __                   ____      _       _           _
+* |  \/  | __ _ _ __       |  _ \ ___| | __ _| |_ ___  __| |
+* | |\/| |/ _` | '_ \ _____| |_) / _ \ |/ _` | __/ _ \/ _` |
+* | |  | | (_| | |_) |_____|  _ <  __/ | (_| | ||  __/ (_| |
+* |_|__|_|\__,_| .__/    _ |_| \_\___|_|\__,_|\__\___|\__,_|
+* |  ___|   _ _|_|   ___| |_(_) ___  _ __  ___
+* | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
+* |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
+* |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
 * 
 * 
 */

@@ -344,7 +344,6 @@ export class Limb {
 		void setPosition(Point newPosition) { position = newPosition; }
 		void setLastPosition(Point newPosition) { lastPosition = newPosition; }
 
-
 		/* GET the FORM (default) values PLUS the modifiers (which can be negative) */
 		int getHP() { return form.hp + hpMod; }
 		int getStrength() { return form.strength + strengthMod; }
