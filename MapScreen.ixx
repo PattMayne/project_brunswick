@@ -151,6 +151,7 @@ export class MapScreen {
 		* mapWidth refers to the number of blocks to CREATE.
 		*/
 		MapScreen(string mapSlug) {
+			UI& ui = UI::getInstance();
 
 			/* TEMPORARY MAP-CREATION SCHEME 
 			* 
@@ -171,11 +172,20 @@ export class MapScreen {
 			if (mapObjectExists(mapSlug)) {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
+				map.setPlayerCharacter(loadPlayerMapCharacter());
+				updatePlayerMap(mapSlug);
 			}
 			else {
+				/* Create new map. */
 				map = Map(mapForm);
 				createNewMap(map);
 				updatePlayerMap(mapSlug);
+
+				/* get character texture (MUST DELETE AFTER WE START DRAWING RAW LIMBS ONTO THE MAP INSTEAD.) */
+				SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
+				SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
+				SDL_FreeSurface(characterSurface);
+				map.getPlayerCharacter().setTexture(characterTexture);
 			}
 
 			screenType = ScreenType::Map;
@@ -189,13 +199,13 @@ export class MapScreen {
 			showTitle = true;
 			titleCountdown = 140;
 
-			UI& ui = UI::getInstance();
 			setViewResAndBlockWidth(ui);
 			setMaxDrawBlock();
 			setDrawStartBlock();
 			buildMapDisplay();
 			createTitleTexture(ui);
 			limbAngle = 0;
+
 			cout << "There are " << map.getRoamingLimbs().size() << " roaming limbs\n";
 			cout << "Player has " << map.getPlayerCharacter().getLimbs().size() << " limbs\n";
 		}

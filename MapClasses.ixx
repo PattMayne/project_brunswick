@@ -105,9 +105,10 @@ public:
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 	void setTexture(SDL_Texture* incomingTexture) {
 		if (texture) {
+			cout << "Already texture\n";
 			SDL_DestroyTexture(texture);
-			texture = incomingTexture;
 		}
+		texture = incomingTexture;
 	}
 
 	void updateLastBlock() {
@@ -327,6 +328,7 @@ public:
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
 
 	void setLandmarks(vector<Landmark> landmarks) { this->landmarks = landmarks; }
+	void setPlayerCharacter(MapCharacter playerCharacter) { this->playerCharacter = playerCharacter; }
 
 	MapForm getForm() { return mapForm; }
 	void randomizePathOptions(Block& block);

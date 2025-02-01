@@ -27,6 +27,9 @@ import <unordered_map>;
 import <fstream>;
 import <string>;
 #include "sqlite3.h"
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_ttf.h"
 
 import CharacterClasses;
 import MapClasses;
@@ -34,6 +37,7 @@ import TypeStorage;
 import LimbFormMasterList;
 import FormFactory;
 import GameState;
+import UI;
 
 using namespace std;
 
@@ -196,7 +200,7 @@ export bool updateLimbOwner(int limbID, int newCharacterID) {
 * 
 */
 
-
+/* Update the MAP_SLUG of the Character player. */
 export bool updatePlayerMap(string newMapSlug) {
     bool success = false;
     GameState& gameState = GameState::getInstance();
@@ -239,13 +243,15 @@ export bool updatePlayerMap(string newMapSlug) {
 }
 
 
-export Character loadPlayerCharacter(int characterID) {
+export MapCharacter loadPlayerMapCharacter() {
+    GameState& gameState = GameState::getInstance();
+    int characterID = gameState.getPlayerID();
     string name;
     string mapSlug;
     int anchorLimbID; /* Get from the limbs. */
     int battleID; /* For later, when battles actually exist. */
     bool isPlayer = true;
-    Character character = Character(CharacterType::None);
+    MapCharacter character = MapCharacter(CharacterType::None);
 
     /* Open database. */
     sqlite3* db;
@@ -260,9 +266,9 @@ export Character loadPlayerCharacter(int characterID) {
     /* GET THE CHARACTER OBJECT. */
 
     /* Create statement template for getting the character. */
-    const char* queryMapSQL = "SELECT * FROM character WHERE id = ?;";
+    const char* queryCharacterSQL = "SELECT * FROM character WHERE id = ?;";
     sqlite3_stmt* characterStatement;
-    int returnCode = sqlite3_prepare_v2(db, queryMapSQL, -1, &characterStatement, nullptr);
+    int returnCode = sqlite3_prepare_v2(db, queryCharacterSQL, -1, &characterStatement, nullptr);
 
     if (returnCode != SQLITE_OK) {
         cerr << "Failed to prepare character retrieval statement: " << sqlite3_errmsg(db) << endl;
@@ -341,7 +347,10 @@ export Character loadPlayerCharacter(int characterID) {
         limb.setId(limbID);
 
         character.addLimb(limb);
+        cout << "added limb " << limbName << "\n";
     }
+
+    cout << "Player has " << character.getLimbs().size() << " limbs (in DATABASE module)\n";
 
     if (returnCode != SQLITE_DONE) {
         cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
@@ -351,12 +360,67 @@ export Character loadPlayerCharacter(int characterID) {
     /* Finalize prepared statement. */
     sqlite3_finalize(queryLimbsStatement);
 
-    character = Character(CharacterType::Player);
+    character.setType(CharacterType::Player);
     character.setName(name);
     character.setId(characterID);
     character.setAnchorLimbId(anchorLimbID);
 
+
+
+
+    /*
+    *  NOW get the blockPosition from the Map table.
+    * ( also, temporarily get the texture... will replace with uilding from limbs of course. )
+    * 
+    * THE ABOVE CODE was all normal Character code.
+    * That code must be put into a struct which can be handed to any derivative class,
+    * to avoid repeating code.
+    * THAT FUNCTION will take a db object as a parameter.
+    */
+
+    /* Create statement template for querying Map objects with this slug. */
+    const char* queryMapSQL = "SELECT character_x, character_y FROM map WHERE slug = ?;";
+    sqlite3_stmt* statement;
+    returnCode = sqlite3_prepare_v2(db, queryMapSQL, -1, &statement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare map retrieval statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return character;
+    }
+
+    /* Bind the slug value. */
+    sqlite3_bind_text(statement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
+
+    /* Execute binded statement. */
+    if (sqlite3_step(statement) != SQLITE_ROW) {
+        cerr << "Failed to retrieve MAP: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+
+    Point characterPosition = Point(
+        sqlite3_column_int(statement, 0),
+        sqlite3_column_int(statement, 1)
+    );
+
+    /* Finally actually set the block position. */
+    character.setBlockPosition(characterPosition);
+
+    /* Finalize map ID retrieval statement. */
+    sqlite3_finalize(statement);
     sqlite3_close(db);
+    cout << "We really reached the end of the character loading, so what's wrong?\n";
+
+    cout << "Player has " << character.getLimbs().size() << " limbs in DB module\n";
+
+    
+    /* get character texture (MUST DELETE AFTER WE START DRAWING RAW LIMBS ONTO THE MAP INSTEAD.) */
+    UI& ui = UI::getInstance();
+    SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
+    SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
+    SDL_FreeSurface(characterSurface);
+    character.setTexture(characterTexture);
+
     return character;
 }
 
@@ -771,7 +835,7 @@ export Map loadMap(string mapSlug) {
     int returnCode = sqlite3_prepare_v2(db, queryMapSQL, -1, &statement, nullptr);
 
     if (returnCode != SQLITE_OK) {
-        cerr << "Failed to prepare map id retrieval statement: " << sqlite3_errmsg(db) << endl;
+        cerr << "Failed to prepare map retrieval statement: " << sqlite3_errmsg(db) << endl;
         sqlite3_close(db);
         return map;
     }
@@ -858,7 +922,7 @@ export Map loadMap(string mapSlug) {
 
     /* Execute and iterate through results. */
     while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
-        cout << "Limb ID: " << sqlite3_column_int(queryLimbsStatement, 0) << "\n";
+        //cout << "Limb ID: " << sqlite3_column_int(queryLimbsStatement, 0) << "\n";
         roamingLimbs.emplace_back(
             sqlite3_column_int(queryLimbsStatement, 0),
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
