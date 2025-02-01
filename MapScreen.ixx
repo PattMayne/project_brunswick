@@ -175,6 +175,7 @@ export class MapScreen {
 			else {
 				map = Map(mapForm);
 				createNewMap(map);
+				updatePlayerMap(mapSlug);
 			}
 
 			screenType = ScreenType::Map;

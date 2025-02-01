@@ -389,7 +389,8 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	* from the DB.
 	*/
 
-	vector<Point> floorPositions = buildMap(mapForm); /* Build the actual grid for the first time. Receive a list of floor coordinates. */
+	/* Build the actual grid for the first time. Receive a list of floor coordinates. */
+	vector<Point> floorPositions = buildMap(mapForm);
 
 	/* populate characters and limbs after building the map(and its landmarks). */
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
