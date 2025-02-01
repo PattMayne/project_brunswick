@@ -33,6 +33,7 @@ import MapClasses;
 import TypeStorage;
 import LimbFormMasterList;
 import FormFactory;
+import GameState;
 
 using namespace std;
 
@@ -71,13 +72,11 @@ export void createDB() {
             else {
                 cerr << "SQL error: " << errMsg << endl;
                 sqlite3_free(errMsg); }
-
         }
         else {
             cerr << "Could not open file: " << schemaFilename << endl;
             return;
         }
-
     }
     else { cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl; }
 
@@ -87,12 +86,7 @@ export void createDB() {
 
 /*
 * When a new Limb is created on a Map object, use this function to create the limb in the database.
-* The NewRoamingLimbData object should be created first, then sent here to create the object in the DB,
-* then the ID is sent back to create the actual Limb.
-* 
-* NOTE: Do we really need the struct? Maybe we should send a reference to the Limb object and populate it with an id?
-* 
-* 
+* Then the ID is sent back to create the actual Limb.
 */
 export int createRoamingLimb(Limb& limb, string mapSlug, Point position) {
     sqlite3* db;
@@ -461,11 +455,135 @@ export bool mapObjectExists(string mapSlug) {
 }
 
 
+export Character loadPlayerCharacter(int characterID) {
+    string name;
+    string mapSlug;
+    int anchorLimbID; /* Get from the limbs. */
+    int battleID; /* For later, when battles actually exist. */
+    bool isPlayer = true;
+    Character character = Character(CharacterType::None);
+
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+    
+
+    /* GET THE CHARACTER OBJECT. */
+
+    /* Create statement template for getting the character. */
+    const char* queryMapSQL = "SELECT * FROM character WHERE id = ?;";
+    sqlite3_stmt* characterStatement;
+    int returnCode = sqlite3_prepare_v2(db, queryMapSQL, -1, &characterStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare character retrieval statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return character;
+    }
+
+    /* Bind the id value. */
+    sqlite3_bind_int(characterStatement, 1, characterID);
+
+    /* Execute binded statement. */
+    if (sqlite3_step(characterStatement) != SQLITE_ROW) {
+        cerr << "Failed to retrieve MAP: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+
+    name = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 1));
+    anchorLimbID = sqlite3_column_int(characterStatement, 2);
+    mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 4));
+    battleID = sqlite3_column_int(characterStatement, 5);
+
+    /* Finalize statement. */
+    sqlite3_finalize(characterStatement);
+
+
+    /* GET THE LIMBS. */
+
+    /* Create statement template for querying Map objects with this slug. */
+    const char* queryLimbsSQL = "SELECT * FROM limb WHERE character_id = ?;";
+    sqlite3_stmt* queryLimbsStatement;
+    returnCode = sqlite3_prepare_v2(db, queryLimbsSQL, -1, &queryLimbsStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare limbs retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return character;
+    }
+
+    /* Bind the slug value. */
+    sqlite3_bind_int(queryLimbsStatement, 1, characterID);
+
+    /* Execute and iterate through results. */
+    while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
+
+        int limbID = sqlite3_column_int(queryLimbsStatement, 0);
+        LimbForm limbForm = getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1)));
+        string mapSlug = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 3));
+        int hpMod = sqlite3_column_int(queryLimbsStatement, 4);
+        int strengthMod = sqlite3_column_int(queryLimbsStatement, 5);
+        int speedMod = sqlite3_column_int(queryLimbsStatement, 6);
+        int intelligenceMod = sqlite3_column_int(queryLimbsStatement, 7);
+        int posX = sqlite3_column_int(queryLimbsStatement, 8);
+        int posY = sqlite3_column_int(queryLimbsStatement, 9);
+        int rotationAngle = sqlite3_column_int(queryLimbsStatement, 10);
+        bool isAnchor = sqlite3_column_int(queryLimbsStatement, 11) == 1;
+        bool isFlipped = sqlite3_column_int(queryLimbsStatement, 12) == 1;
+        string limbName = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 13));
+
+        Point position = Point(posX, posY);
+
+        Limb limb = Limb(sqlite3_column_int(queryLimbsStatement, 0),
+            getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
+            position
+        );
+
+        limb.setName(limbName);
+        limb.modifyHP(hpMod);
+        limb.modifyStrength(strengthMod);
+        limb.modifySpeed(speedMod);
+        limb.modifyIntelligence(intelligenceMod);
+        limb.rotate(rotationAngle);
+        limb.setFlipped(isFlipped);
+        limb.setAnchor(isAnchor);
+        limb.setMapSlug(mapSlug);
+        limb.setCharacterId(characterID);
+        limb.setId(limbID);
+
+        character.addLimb(limb);
+    }
+
+    if (returnCode != SQLITE_DONE) {
+        cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+
+    /* Finalize prepared statement. */
+    sqlite3_finalize(queryLimbsStatement);
+
+    character = Character(CharacterType::Player);
+    character.setName(name);
+    character.setId(characterID);
+    character.setAnchorLimbId(anchorLimbID);
+
+    sqlite3_close(db);
+    return character;
+}
+
+
+
 export Map loadMap(string mapSlug) {
     Map map;
     MapForm mapForm = getMapFormFromSlug(mapSlug);
     vector<Limb> roamingLimbs;
     vector<vector<Block>> rows(mapForm.blocksHeight);
+    GameState& gameState = GameState::getInstance();
 
     /* Give each vector of blocks a size. */
     for (vector<Block>& vecOfBlocks : rows) {

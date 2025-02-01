@@ -81,10 +81,11 @@ export struct SubPath {
 */
 export class MapCharacter : public Character {
 public:
-	MapCharacter() : Character() {}
+	MapCharacter(CharacterType characterType = CharacterType::None) : Character(characterType) {}
 
-	MapCharacter(CharacterType characterType, SDL_Texture* texture, int x, int y) :
-		Character(characterType), texture(texture), blockPosition(x, y), lastBlockPosition(x, y) {
+	/* There will be no texture. The character will be drawn from their limbs. */
+	MapCharacter(CharacterType characterType, int x, int y) :
+		Character(characterType), blockPosition(x, y), lastBlockPosition(x, y) {
 	}
 
 	~MapCharacter() {}
@@ -149,7 +150,7 @@ public:
 	}
 
 private:
-	Point blockPosition;
+	Point blockPosition; /* This can be saved in the MAP table, so we always return. No need to save it in the Character table. */
 	Point lastBlockPosition;
 	SDL_Texture* texture;
 };
@@ -413,7 +414,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 * -----> Add Landmarks
 * -----> Add NPCs
 */
-Map::Map( MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition) :
+Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition) :
 	mapForm(mapForm), roamingLimbs(roamingLimbs), rows(rows) {
 
 	/* populate characters and limbs after building the map(and its landmarks). */
@@ -425,8 +426,21 @@ Map::Map( MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows
 	/* get character texture */
 	SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
 	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
-	playerCharacter = MapCharacter(CharacterType::Player, characterTexture, characterPosition.x, characterPosition.y);
 	SDL_FreeSurface(characterSurface);
+
+	/* 
+	* PROBLEM
+	* 
+	* How can I load from the database when the database imports this module?
+	* 
+	* SOLUTION:
+	* Map constructor must take pre-built Character object in constructor.
+	* The Screen will create the character object (or maybe the Database will).
+	* 
+	*/
+
+	playerCharacter = MapCharacter(CharacterType::Player, characterPosition.x, characterPosition.y);
+	playerCharacter.setTexture(characterTexture);
 
 	/* Set wall and floor texture indexes. */
 	for (int i = 0; i < this->rows.size(); ++i) {
@@ -597,8 +611,9 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 	/* get character texture */
 	SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
 	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
-	playerCharacter = MapCharacter(CharacterType::Player, characterTexture, playerX, playerY);
 	SDL_FreeSurface(characterSurface);
+	playerCharacter = MapCharacter(CharacterType::Player, playerX, playerY);
+	playerCharacter.setTexture(characterTexture);
 
 	return floorPositions;
 }

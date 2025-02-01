@@ -43,7 +43,7 @@ import UI;
 
 using namespace std;
 
-export enum CharacterType { Player, Hostile, Friendly }; /* NOT a CLASS because we want to use it as int. */
+export enum CharacterType { Player, Hostile, Friendly, None }; /* NOT a CLASS because we want to use it as int. */
 /* Red beats Green (fire consumes life), Green beats Blue (life consumes water), Blue beats Red (water extinguishes fire) */
 export enum class LimbState { Free, Owned, Equipped }; /* If it is OWNED or EQUIPPED, then there must be a character id. Every character should exist in the DB.*/
 
@@ -327,21 +327,23 @@ export class Limb {
 		/*  */
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
-		bool save() { /* SAVE this limb to the database. (save the MODIFICATIONS) */ return true; }
 		Point getPosition() { return position; }
 		Point getLastPosition() { return lastPosition; }
+		LimbForm getForm() { return form; }
+
+		string getName() { return name; }
+		string getTexturePath() { return form.texturePath; }
+		int getCharacterId() { return characterId; }
+		string getMapSlug() { return mapSlug; }
+		int getId() { return id; }
+
+		void setId(int id) { this->id = id; }
+		void setName(string newName) { name = newName; }
+		void setCharacterId(int id) { characterId = id; }
+		void setMapSlug(string newSlug) { mapSlug = newSlug; }
 		void setPosition(Point newPosition) { position = newPosition; }
 		void setLastPosition(Point newPosition) { lastPosition = newPosition; }
 
-		LimbForm getForm() { return form; }
-		string getName() { return name; }
-		string getTexturePath() { return form.texturePath; }
-
-		int getId() { return id; }
-		void setId(int id) { this->id = id; }
-
-		int getCharacterId() { return characterId; }
-		void setCharacterId(int id) { characterId = id; }
 
 		/* GET the FORM (default) values PLUS the modifiers (which can be negative) */
 		int getHP() { return form.hp + hpMod; }
@@ -600,6 +602,7 @@ export class Limb {
 	protected:
 		LimbForm form;
 		string name;
+		string mapSlug;
 		int hpMod;
 		int strengthMod;
 		int speedMod;
@@ -643,6 +646,10 @@ public:
 	~Character() {}
 	Character(CharacterType characterType) :
 		characterType(characterType), anchorLimbId(-1) {}
+
+	string getName() { return name; }
+	void setName(string newName) { name = newName; }
+	void setType(CharacterType type) { characterType = type; }
 
 	int getType() { return characterType; }
 	void setId(int id) { this->id = id; }
@@ -832,6 +839,7 @@ protected:
 	int id;
 	int anchorLimbId; /* Currently using INDEX for dev purposes... will replace with actual DB ID. */
 	vector<Limb> limbs;
+	string name;
 };
 
 /* 

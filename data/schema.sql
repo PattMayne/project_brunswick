@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS limb (
     position_y INTEGER DEFAULT 0,
     rotation_angle INTEGER DEFAULT 0,
     is_anchor INTEGER DEFAULT 0,
-    is_flipped INTEGER DEFAULT 0
+    is_flipped INTEGER DEFAULT 0,
+    name TEXT DEFAULT 'Limb'
 );
 
 CREATE TABLE IF NOT EXISTS joint (
@@ -52,7 +53,8 @@ CREATE TABLE IF NOT EXISTS character (
     name TEXT NOT NULL,
     anchor_limb_id INTEGER DEFAULT -1,
     is_player INTEGER DEFAULT 0,
-    map_slug TEXT
+    map_slug TEXT,
+    battle_id INTEGER NOT NULL DEFAULT -1
 );
 
 CREATE INDEX IF NOT EXISTS idx_limb_id ON joint (limb_id);

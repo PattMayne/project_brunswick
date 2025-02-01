@@ -172,7 +172,7 @@ export class MapScreen {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
 			}
-			else {				
+			else {
 				map = Map(mapForm);
 				createNewMap(map);
 			}
@@ -196,6 +196,7 @@ export class MapScreen {
 			createTitleTexture(ui);
 			limbAngle = 0;
 			cout << "There are " << map.getRoamingLimbs().size() << " roaming limbs\n";
+			cout << "Player has " << map.getPlayerCharacter().getLimbs().size() << " limbs\n";
 		}
 
 		/* Destructor */
