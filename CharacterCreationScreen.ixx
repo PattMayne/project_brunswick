@@ -68,6 +68,7 @@ import TypeStorage;
 import GameState;
 import Resources;
 import UI;
+import Database;
 
 using namespace std;
 
@@ -91,7 +92,7 @@ public:
 		UI& ui = UI::getInstance();
 		getBackgroundTexture(ui);
 		createTitleTexture(ui);
-		playerCharacter = buildPlayerCharacter();
+		playerCharacter = loadPlayerCharacter();
 		limbLoaded = false;
 		loadedLimbId = -1;
 		showTitle = true;

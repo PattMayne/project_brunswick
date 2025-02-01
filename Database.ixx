@@ -312,7 +312,139 @@ export bool updatePlayerMap(string newMapSlug) {
     return success;
 }
 
+/* 
+* Same as loadPlayerMapCharacter but without map-related stuff.
+* Should extract most of this to make a struct that serves them both!
+* May use same system to create loadPlayerBattleCharacter too.
+*/
+export Character loadPlayerCharacter() {
+    GameState& gameState = GameState::getInstance();
+    int characterID = gameState.getPlayerID();
+    string name;
+    string mapSlug;
+    int anchorLimbID; /* Get from the limbs. */
+    int battleID; /* For later, when battles actually exist. */
+    bool isPlayer = true;
+    Character character = Character(CharacterType::None);
 
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+
+
+    /* GET THE CHARACTER OBJECT. */
+
+    /* Create statement template for getting the character. */
+    const char* queryCharacterSQL = "SELECT * FROM character WHERE id = ?;";
+    sqlite3_stmt* characterStatement;
+    int returnCode = sqlite3_prepare_v2(db, queryCharacterSQL, -1, &characterStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare character retrieval statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return character;
+    }
+
+    /* Bind the id value. */
+    sqlite3_bind_int(characterStatement, 1, characterID);
+
+    /* Execute binded statement. */
+    if (sqlite3_step(characterStatement) != SQLITE_ROW) {
+        cerr << "Failed to retrieve MAP: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+
+    name = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 1));
+    anchorLimbID = sqlite3_column_int(characterStatement, 2);
+    mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 4));
+    battleID = sqlite3_column_int(characterStatement, 5);
+
+    /* Finalize statement. */
+    sqlite3_finalize(characterStatement);
+
+
+    /* GET THE LIMBS. */
+
+    /* Create statement template for querying Map objects with this slug. */
+    const char* queryLimbsSQL = "SELECT * FROM limb WHERE character_id = ?;";
+    sqlite3_stmt* queryLimbsStatement;
+    returnCode = sqlite3_prepare_v2(db, queryLimbsSQL, -1, &queryLimbsStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare limbs retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return character;
+    }
+
+    /* Bind the slug value. */
+    sqlite3_bind_int(queryLimbsStatement, 1, characterID);
+
+    /* Execute and iterate through results. */
+    while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
+
+        int limbID = sqlite3_column_int(queryLimbsStatement, 0);
+        LimbForm limbForm = getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1)));
+        string mapSlug = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 3));
+        int hpMod = sqlite3_column_int(queryLimbsStatement, 4);
+        int strengthMod = sqlite3_column_int(queryLimbsStatement, 5);
+        int speedMod = sqlite3_column_int(queryLimbsStatement, 6);
+        int intelligenceMod = sqlite3_column_int(queryLimbsStatement, 7);
+        int posX = sqlite3_column_int(queryLimbsStatement, 8);
+        int posY = sqlite3_column_int(queryLimbsStatement, 9);
+        int rotationAngle = sqlite3_column_int(queryLimbsStatement, 10);
+        bool isAnchor = sqlite3_column_int(queryLimbsStatement, 11) == 1;
+        bool isFlipped = sqlite3_column_int(queryLimbsStatement, 12) == 1;
+        string limbName = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 13));
+
+        Point position = Point(posX, posY);
+
+        Limb limb = Limb(sqlite3_column_int(queryLimbsStatement, 0),
+            getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
+            position
+        );
+
+        limb.setName(limbName);
+        limb.modifyHP(hpMod);
+        limb.modifyStrength(strengthMod);
+        limb.modifySpeed(speedMod);
+        limb.modifyIntelligence(intelligenceMod);
+        limb.rotate(rotationAngle);
+        limb.setFlipped(isFlipped);
+        limb.setAnchor(isAnchor);
+        limb.setMapSlug(mapSlug);
+        limb.setCharacterId(characterID);
+        limb.setId(limbID);
+
+        character.addLimb(limb);
+        cout << "added limb " << limbName << "\n";
+    }
+
+    cout << "Player has " << character.getLimbs().size() << " limbs (in DATABASE module)\n";
+
+    if (returnCode != SQLITE_DONE) {
+        cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+
+    /* Finalize prepared statement. */
+    sqlite3_finalize(queryLimbsStatement);
+
+    character.setType(CharacterType::Player);
+    character.setName(name);
+    character.setId(characterID);
+    character.setAnchorLimbId(anchorLimbID);
+
+    cout << "Player has " << character.getLimbs().size() << " limbs in DB module\n";
+
+    return character;
+}
+
+/* Same as loadPlayerCharacter, but adding the map-related stuff. */
 export MapCharacter loadPlayerMapCharacter() {
     GameState& gameState = GameState::getInstance();
     int characterID = gameState.getPlayerID();
@@ -441,7 +573,7 @@ export MapCharacter loadPlayerMapCharacter() {
     /*
     *  NOW get the blockPosition from the Map table.
     * ( also, temporarily get the texture... will replace with uilding from limbs of course. )
-    * 
+    *
     * THE ABOVE CODE was all normal Character code.
     * That code must be put into a struct which can be handed to any derivative class,
     * to avoid repeating code.
@@ -483,7 +615,7 @@ export MapCharacter loadPlayerMapCharacter() {
 
     cout << "Player has " << character.getLimbs().size() << " limbs in DB module\n";
 
-    
+
     /* get character texture (MUST DELETE AFTER WE START DRAWING RAW LIMBS ONTO THE MAP INSTEAD.) */
     UI& ui = UI::getInstance();
     SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
