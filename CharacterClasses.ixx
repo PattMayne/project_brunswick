@@ -165,20 +165,22 @@ public:
 		isAnchor = false;
 		connectedLimbId = -1;
 		anchorJointIndex = -1;
+		id = -1;
 	}
 
 	/* When we create a new Joint for a new Limb. */
-	Joint(Point point) : pointForm(point), isAnchor(false), connectedLimbId(-1), anchorJointIndex(-1) {
+	Joint(Point pointForm) : pointForm(pointForm), isAnchor(false), connectedLimbId(-1), anchorJointIndex(-1) {
 		resetModifiedPoint();
 	}
 
 	/* When we load a joint from the database. */
-	Joint(Point point, bool isAnchor, int connectedLimbId, int anchorJointIndex, int rotationAngle) :
-		pointForm(point), isAnchor(isAnchor), connectedLimbId(connectedLimbId), anchorJointIndex(anchorJointIndex)
+	Joint(Point pointForm, bool isAnchor, int connectedLimbId, int anchorJointIndex, int rotationAngle, int id = -1) :
+		pointForm(pointForm), isAnchor(isAnchor), connectedLimbId(connectedLimbId), anchorJointIndex(anchorJointIndex), id(id)
 	{
 		resetModifiedPoint();
 	}
 
+	void setId(int id) { this->id = id; }
 	void setAnchor(bool makeAnchor = true) { isAnchor = makeAnchor; }
 	void connectLimb(int limbId, int jointIndex) {
 		connectedLimbId = limbId;
@@ -194,6 +196,7 @@ public:
 		return !isAnchor && connectedLimbId < 0;
 	}
 
+	int getId() { return id; }
 	bool getIsAnchor() { return isAnchor; }
 	int getConnectedLimbId() { return connectedLimbId; }
 	int getChildLimbAnchorJointIndex() { return anchorJointIndex; }
@@ -212,6 +215,7 @@ private:
 	/* Data about the CONNECTED limb. */
 	int connectedLimbId;
 	int anchorJointIndex;
+	int id;
 };
 
 
@@ -261,7 +265,7 @@ Point getRotatedPoint(Point anchorPoint, Point pointToRotate, int rotationAngle)
 */
 export class Limb {
 	public:
-		/* constructor */
+		/* constructor for NEW Limb. */
 		Limb(LimbForm form) : form(form) {
 			name = form.name; /* Name can POSSIBLE be changed (no plans for this yet) */
 			hpMod = 0;
@@ -292,7 +296,8 @@ export class Limb {
 			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
 		}
 
-		/* Constructor to rebuild a ROAMING limb from DB. */
+		/* Constructor to rebuild a ROAMING limb from DB.
+		*/
 		Limb(int id, LimbForm form, Point position) :
 			id(id), form(form), position(position)
 		{

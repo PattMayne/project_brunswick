@@ -472,6 +472,7 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 /*
 * Build the actual grid of Block objects.
 * Returns a vector of Points which are the coordinates for all Floor objects.
+* The Floor Points are used to populate the map with Roaming Limbs.
 */
 vector<Point> Map::buildMap(MapForm mapForm) {
 	/*

@@ -108,57 +108,6 @@ export void createDB() {
 */
 
 
-/*
-* When a new Limb is created on a Map object, use this function to create the limb in the database.
-* Then the ID is sent back to create the actual Limb.
-*/
-export int createRoamingLimb(Limb& limb, string mapSlug, Point position) {
-    sqlite3* db;
-    int id = -1;
-
-    /* Open database (create if does not exist). */
-    int dbFailed = sqlite3_open(dbPath(), &db);
-    cout << dbFailed << "\n";
-    if (dbFailed != 0) {
-        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
-        return id;
-    }
-
-    /* Create statement for adding new Limb object to the database. */
-    const char* insertSQL = "INSERT INTO LIMB (form_slug, map_slug, position_x, position_y) VALUES (?, ?, ?, ?);";
-    sqlite3_stmt* statement;
-
-    /* Prepare the statement. */
-    int returnCode = sqlite3_prepare_v2(db, insertSQL, -1, &statement, nullptr);
-    if (returnCode != SQLITE_OK) {
-        cerr << "Failed to prepare insert statement: " << sqlite3_errmsg(db) << endl;
-        sqlite3_close(db);
-        return id;
-    }
-
-    string limbFormSlugString = limb.getForm().slug;
-
-    /* Bind the data. */
-    sqlite3_bind_text(statement, 1, limbFormSlugString.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_text(statement, 2, mapSlug.c_str(), -1, SQLITE_STATIC);
-    sqlite3_bind_int(statement, 3, position.x);
-    sqlite3_bind_int(statement, 4, position.y);
-
-    /* Execute the statement. */
-    returnCode = sqlite3_step(statement);
-    if (returnCode != SQLITE_DONE) { cerr << "Insert failed: " << sqlite3_errmsg(db) << endl;  }
-    else {
-        /* Get the ID of the saved item. */
-        id = static_cast<int>(sqlite3_last_insert_rowid(db));
-    }
-
-    /* Finalize statement and close database. */
-    sqlite3_finalize(statement);
-    sqlite3_close(db);
-
-    return id;
-}
-
 /* When a limb changes owner. */
 export bool updateLimbOwner(int limbID, int newCharacterID) {
     bool success = false;
@@ -780,7 +729,11 @@ export void updatePlayerMapLocation(string slugString, Point position) {
     sqlite3_close(db);
 }
 
-
+/*
+* When the player first enters a particular map, so the map is built for the first time,
+* we send the built map here to be saved to the database.
+* So we save the map itself, the blocks, the limbs, and the limbs' joints.
+*/
 export bool createNewMap(Map& map) {
     bool success = false;
     sqlite3* db;
@@ -831,6 +784,7 @@ export bool createNewMap(Map& map) {
     /* 
     * Now run a loop to save each block.
     * Do a Transaction to reduce time.
+    * 
     */
 
     /* Create statement for adding new Block object to the database. */
@@ -899,16 +853,32 @@ export bool createNewMap(Map& map) {
 
     cout << map.getRoamingLimbs().size() << " roaming limbs.\n";
 
-    /* Next do a transaction to save all the Roaming Limbs to the database. */
+    /* 
+    * Next do a transaction to save all the Roaming Limbs to the database.
+    * Also save their Joint objects to the database in the same transaction.
+    */
 
-    /* Create statement for adding new Limb object to the database. */
+    /* Create statements for adding new Limb and Joint objects to the database. */
     const char* insertLimbSQL = "INSERT INTO limb (form_slug, map_slug, position_x, position_y) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* limbStatement;
 
-    /* Prepare the statement before starting the loop. */
+    /* Prepare the statements before starting the loop.
+    * Start with LIMB statement
+    */
     returnCode = sqlite3_prepare_v2(db, insertLimbSQL, -1, &limbStatement, nullptr);
     if (returnCode != SQLITE_OK) {
         cerr << "Failed to prepare LIMB insert statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+    /* Create statement for adding new JOINT object to the database. */
+    const char* insertJointSQL = "INSERT INTO joint (vector_index, limb_id) VALUES (?, ?);";
+    sqlite3_stmt* jointStatement;
+
+    /* Prepare the JOINT statement before starting the loop. */
+    returnCode = sqlite3_prepare_v2(db, insertJointSQL, -1, &jointStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare JOINT insert statement: " << sqlite3_errmsg(db) << endl;
         return false;
     }
 
@@ -931,25 +901,57 @@ export bool createNewMap(Map& map) {
             /* Get the ID of the saved item. */
             int limbID = static_cast<int>(sqlite3_last_insert_rowid(db));
             limb.setId(limbID);
+
+            /* Loop through this limb's JOINT objects and save each of them to the DB.
+            * Use the statement created just beneath the LIMB statement.
+            */
+            bool jointError = false;
+            for (int i = 0; i < limb.getJoints().size(); ++i) {
+                Joint& joint = limb.getJoints()[i];
+
+                sqlite3_bind_int(jointStatement, 1, i); /* vector_index */
+                sqlite3_bind_int(jointStatement, 2, limbID); /* limb ID */
+
+                if (sqlite3_step(jointStatement) == SQLITE_DONE) {
+                    joint.setId(static_cast<int>(sqlite3_last_insert_rowid(db)));
+                }
+                else {
+                    cerr << "Insert failed for JOINT: " << sqlite3_errmsg(db) << endl;
+                    jointError = true;
+                    break;
+                }
+
+                /* Reset the JOINT statement for the next loop. */
+                sqlite3_reset(jointStatement);
+            }
+
+            if (jointError) { /* TO DO: DELETE map and all blocks and all limbs. */ }
         }
         else {
             cerr << "Insert failed for LIMB: " << sqlite3_errmsg(db) << endl;
             limbError = true;
             break;
         }
-
+        
+        /* Reset the LIMB statement for the next loop. */
         sqlite3_reset(limbStatement);
     }
 
-    /* Finalize the statement, commit the transaction. */
+    /* Finalize the statements, commit the transaction. */
+    sqlite3_finalize(jointStatement);
     sqlite3_finalize(limbStatement);
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
 
-    if (limbError) { /* DELETE map and all blocks and all limbs. */ }
+    if (limbError) { /* TO DO: DELETE map and all blocks and all limbs. */ }
 
+
+    
 
     /*
+    * 
+    * 
     * Now do a loop to save each Landmark.
+    * 
     * 
     */
 

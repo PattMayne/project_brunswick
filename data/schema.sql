@@ -42,8 +42,8 @@ CREATE TABLE IF NOT EXISTS joint (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     vector_index INTEGER NOT NULL,
     limb_id INTEGER NOT NULL,
-    position_x INTEGER DEFAULT 0,
-    position_y INTEGER DEFAULT 0,
+    position_x INTEGER DEFAULT 0, /* modified point x */
+    position_y INTEGER DEFAULT 0, /* modified point y */
     is_anchor INTEGER DEFAULT 0,
     conntected_limb_id INTEGER DEFAULT -1,
     anchor_joint_index INTEGER DEFAULT -1
