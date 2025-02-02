@@ -352,9 +352,68 @@ export Character loadPlayerCharacter() {
 
         Point position = Point(posX, posY);
 
+
+        /* Get the JOINTS for this Limb. */
+        /* Start by querying the count to see how big the vector should be. */
+        const char* queryCountJointsSQL = "SELECT COUNT(*) FROM joint WHERE limb_id = ?;";
+        sqlite3_stmt* queryCountJointsStatement;
+        returnCode = sqlite3_prepare_v2(db, queryCountJointsSQL, -1, &queryCountJointsStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare JOINTS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return character;
+        }
+
+        sqlite3_bind_int(queryCountJointsStatement, 1, limbID);
+
+        /* Execute count query. */
+        int jointCount = 0;
+        if (sqlite3_step(queryCountJointsStatement) == SQLITE_ROW) {
+            jointCount = sqlite3_column_int(queryCountJointsStatement, 0);
+        }
+        sqlite3_finalize(queryCountJointsStatement);
+
+        vector<Joint> joints(jointCount);
+
+
+        /* Now get the JOINTS themselves. */
+        const char* queryJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
+        sqlite3_stmt* queryJointsStatement;
+        returnCode = sqlite3_prepare_v2(db, queryJointsSQL, -1, &queryJointsStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return character;
+        }
+
+        /* Bind the ID value. */
+        sqlite3_bind_int(queryJointsStatement, 1, limbID);
+        int jointsReturnCode;
+
+        while ((jointsReturnCode = sqlite3_step(queryJointsStatement)) == SQLITE_ROW) {
+            int jointID = sqlite3_column_int(queryJointsStatement, 0);
+            int vectorIndex = sqlite3_column_int(queryJointsStatement, 1);
+            Point pointForm = Point(
+                sqlite3_column_int(queryJointsStatement, 3),
+                sqlite3_column_int(queryJointsStatement, 4));
+            Point modifiedPoint = Point(
+                sqlite3_column_int(queryJointsStatement, 5),
+                sqlite3_column_int(queryJointsStatement, 6));
+            bool isAnchor = sqlite3_column_int(queryJointsStatement, 7) == 1;
+            int connectedLimbID = sqlite3_column_int(queryJointsStatement, 8);
+            int anchorJointIndex = sqlite3_column_int(queryJointsStatement, 9);
+            int rotationAngle = sqlite3_column_int(queryJointsStatement, 10);
+
+            Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, rotationAngle, jointID);
+            if (vectorIndex < jointCount) { joints[vectorIndex] = joint; }
+        }
+
         Limb limb = Limb(sqlite3_column_int(queryLimbsStatement, 0),
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
-            position
+            position,
+            joints
         );
 
         limb.setName(limbName);
@@ -478,11 +537,70 @@ export MapCharacter loadPlayerMapCharacter() {
         bool isFlipped = sqlite3_column_int(queryLimbsStatement, 12) == 1;
         string limbName = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 13));
 
-        Point position = Point(posX, posY);
+        Point limbPosition = Point(posX, posY);
+
+        /* Get the JOINTS for this Limb. */
+        /* Start by querying the count to see how big the vector should be. */
+        const char* queryCountJointsSQL = "SELECT COUNT(*) FROM joint WHERE limb_id = ?;";
+        sqlite3_stmt* queryCountJointsStatement;
+        returnCode = sqlite3_prepare_v2(db, queryCountJointsSQL, -1, &queryCountJointsStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare JOINTS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return character;
+        }
+
+        sqlite3_bind_int(queryCountJointsStatement, 1, limbID);
+
+        /* Execute count query. */
+        int jointCount = 0;
+        if (sqlite3_step(queryCountJointsStatement) == SQLITE_ROW) {
+            jointCount = sqlite3_column_int(queryCountJointsStatement, 0);
+        }
+        sqlite3_finalize(queryCountJointsStatement);
+
+        vector<Joint> joints(jointCount);
+
+
+        /* Now get the JOINTS themselves. */
+        const char* queryJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
+        sqlite3_stmt* queryJointsStatement;
+        returnCode = sqlite3_prepare_v2(db, queryJointsSQL, -1, &queryJointsStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return character;
+        }
+
+        /* Bind the ID value. */
+        sqlite3_bind_int(queryJointsStatement, 1, limbID);
+        int jointsReturnCode;
+
+        while ((jointsReturnCode = sqlite3_step(queryJointsStatement)) == SQLITE_ROW) {
+            int jointID = sqlite3_column_int(queryJointsStatement, 0);
+            int vectorIndex = sqlite3_column_int(queryJointsStatement, 1);
+            Point pointForm = Point(
+                sqlite3_column_int(queryJointsStatement, 3),
+                sqlite3_column_int(queryJointsStatement, 4));
+            Point modifiedPoint = Point(
+                sqlite3_column_int(queryJointsStatement, 5),
+                sqlite3_column_int(queryJointsStatement, 6));
+            bool isAnchor = sqlite3_column_int(queryJointsStatement, 7) == 1;
+            int connectedLimbID = sqlite3_column_int(queryJointsStatement, 8);
+            int anchorJointIndex = sqlite3_column_int(queryJointsStatement, 9);
+            int rotationAngle = sqlite3_column_int(queryJointsStatement, 10);
+
+            Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, rotationAngle, jointID);
+            if (vectorIndex < jointCount) { joints[vectorIndex] = joint; }
+        }
+
 
         Limb limb = Limb(sqlite3_column_int(queryLimbsStatement, 0),
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
-            position
+            limbPosition,
+            joints
         );
 
         limb.setName(limbName);
@@ -872,7 +990,8 @@ export bool createNewMap(Map& map) {
     }
 
     /* Create statement for adding new JOINT object to the database. */
-    const char* insertJointSQL = "INSERT INTO joint (vector_index, limb_id) VALUES (?, ?);";
+    const char* insertJointSQL = "INSERT INTO joint (vector_index, limb_id, point_form_x, point_form_y, "
+        "modified_point_x, modified_point_y) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* jointStatement;
 
     /* Prepare the JOINT statement before starting the loop. */
@@ -911,6 +1030,10 @@ export bool createNewMap(Map& map) {
 
                 sqlite3_bind_int(jointStatement, 1, i); /* vector_index */
                 sqlite3_bind_int(jointStatement, 2, limbID); /* limb ID */
+                sqlite3_bind_int(jointStatement, 3, joint.getFormPoint().x); /* point form x */
+                sqlite3_bind_int(jointStatement, 4, joint.getFormPoint().y); /* point form y */
+                sqlite3_bind_int(jointStatement, 5, joint.getPoint().x); /* modified point x */
+                sqlite3_bind_int(jointStatement, 6, joint.getPoint().y); /* modified point y */
 
                 if (sqlite3_step(jointStatement) == SQLITE_DONE) {
                     joint.setId(static_cast<int>(sqlite3_last_insert_rowid(db)));
@@ -944,8 +1067,6 @@ export bool createNewMap(Map& map) {
 
     if (limbError) { /* TO DO: DELETE map and all blocks and all limbs. */ }
 
-
-    
 
     /*
     * 
@@ -1006,7 +1127,7 @@ export bool createNewMap(Map& map) {
 
 
 
-    /* STILL TO COME: Characters. */
+    /* STILL TO COME: Characters (NPCs). */
 
 
 
@@ -1158,15 +1279,24 @@ export Map loadMap(string mapSlug) {
     /* The Block objects are populated. Time to get the Limbs. */
 
 
-    /* GET THE LIMBS FROM THE DB. */
+    /*
+    * 
+    * 
+    * 
+    * GET THE ROAMING LIMBS FROM THE DB.
+    * 
+    * 
+    * 
+    */
 
     /* Create statement template for querying Map objects with this slug. */
-    const char* queryLimbsSQL = "SELECT id, form_slug, position_x, position_y, character_id FROM limb WHERE map_slug = ? AND character_id < 1;";
+    const char* queryLimbsSQL = "SELECT id, form_slug, position_x, position_y, "
+        "character_id FROM limb WHERE map_slug = ? AND character_id < 1;";
     sqlite3_stmt* queryLimbsStatement;
     returnCode = sqlite3_prepare_v2(db, queryLimbsSQL, -1, &queryLimbsStatement, nullptr);
-
+        
     if (returnCode != SQLITE_OK) {
-        std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        std::cerr << "Failed to prepare LIMBS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
         sqlite3_close(db);
         return map;
     }
@@ -1176,14 +1306,72 @@ export Map loadMap(string mapSlug) {
 
     /* Execute and iterate through results. */
     while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
-        //cout << "Limb ID: " << sqlite3_column_int(queryLimbsStatement, 0) << "\n";
+        int limbID = sqlite3_column_int(queryLimbsStatement, 0);
+
+        /* Get the JOINTS for this Limb. */
+        /* Start by querying the count to see how big the vector should be. */
+        const char* queryCountJointsSQL = "SELECT COUNT(*) FROM joint WHERE limb_id = ?;";
+        sqlite3_stmt* queryCountJointsStatement;
+        returnCode = sqlite3_prepare_v2(db, queryCountJointsSQL, -1, &queryCountJointsStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare JOINTS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return map;
+        }
+
+        sqlite3_bind_int(queryCountJointsStatement, 1, limbID);
+
+        /* Execute count query. */
+        int rowCount = 0;
+        if (sqlite3_step(queryCountJointsStatement) == SQLITE_ROW) {
+            rowCount = sqlite3_column_int(queryCountJointsStatement, 0); }
+        sqlite3_finalize(queryCountJointsStatement);
+
+
+        /* Now Get the JOINT itself */
+        const char* queryJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
+        sqlite3_stmt* queryJointsStatement;
+        returnCode = sqlite3_prepare_v2(db, queryJointsSQL, -1, &queryJointsStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return map;
+        }
+
+        /* Bind the ID value. */
+        sqlite3_bind_int(queryJointsStatement, 1, limbID);
+        int jointsReturnCode;
+        vector<Joint> joints(rowCount);
+
+        while ((jointsReturnCode = sqlite3_step(queryJointsStatement)) == SQLITE_ROW) {
+            int jointID = sqlite3_column_int(queryJointsStatement, 0);
+            int vectorIndex = sqlite3_column_int(queryJointsStatement, 1);
+            Point pointForm = Point(
+                sqlite3_column_int(queryJointsStatement, 3),
+                sqlite3_column_int(queryJointsStatement, 4));
+            Point modifiedPoint = Point(
+                sqlite3_column_int(queryJointsStatement, 5),
+                sqlite3_column_int(queryJointsStatement, 6));
+            bool isAnchor = sqlite3_column_int(queryJointsStatement, 7) == 1;
+            int connectedLimbID = sqlite3_column_int(queryJointsStatement, 8);
+            int anchorJointIndex = sqlite3_column_int(queryJointsStatement, 9);
+            int rotationAngle = sqlite3_column_int(queryJointsStatement, 10);
+
+            Joint joint = Joint( pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, rotationAngle, jointID);
+            if (vectorIndex < rowCount) { joints[vectorIndex] = joint; }
+        }
+
+        /* Create the actual Limb (with its joints) and add to RoamingLimbs vector. */
         roamingLimbs.emplace_back(
-            sqlite3_column_int(queryLimbsStatement, 0),
+            limbID,
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
             Point(
                 sqlite3_column_int(queryLimbsStatement, 2),
                 sqlite3_column_int(queryLimbsStatement, 3)
-            )
+            ),
+            joints
         );
     }
 
@@ -1194,6 +1382,7 @@ export Map loadMap(string mapSlug) {
 
     /* Finalize prepared statement. */
     sqlite3_finalize(queryLimbsStatement);
+
 
 
 

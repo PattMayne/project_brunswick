@@ -174,11 +174,22 @@ public:
 	}
 
 	/* When we load a joint from the database. */
-	Joint(Point pointForm, bool isAnchor, int connectedLimbId, int anchorJointIndex, int rotationAngle, int id = -1) :
-		pointForm(pointForm), isAnchor(isAnchor), connectedLimbId(connectedLimbId), anchorJointIndex(anchorJointIndex), id(id)
-	{
-		resetModifiedPoint();
-	}
+	Joint(
+		Point pointForm,
+		Point modifiedPoint,
+		bool isAnchor,
+		int connectedLimbId,
+		int anchorJointIndex,
+		int rotationAngle,
+		int id = -1
+	) :
+		pointForm(pointForm),
+		modifiedPoint(modifiedPoint),
+		isAnchor(isAnchor),
+		connectedLimbId(connectedLimbId),
+		anchorJointIndex(anchorJointIndex),
+		id(id)
+	{ }
 
 	void setId(int id) { this->id = id; }
 	void setAnchor(bool makeAnchor = true) { isAnchor = makeAnchor; }
@@ -208,7 +219,7 @@ public:
 	void setModifiedPoint(Point newPoint) { modifiedPoint = newPoint; }
 
 private:
-	Point pointForm; /* Not saved to DB. Get fresh from limb form. */
+	Point pointForm; /* ORIGINAL point from LimbForm. */
 	Point modifiedPoint; /* NOT point MODIFIER. It's the fully modified point. Saved to DB. */
 	bool isAnchor;
 
@@ -298,8 +309,8 @@ export class Limb {
 
 		/* Constructor to rebuild a ROAMING limb from DB.
 		*/
-		Limb(int id, LimbForm form, Point position) :
-			id(id), form(form), position(position)
+		Limb(int id, LimbForm form, Point position, vector<Joint> joints) :
+			id(id), form(form), position(position), joints(joints)
 		{
 			lastPosition = Point(0, 0);
 			isAnchor = false;
@@ -316,13 +327,6 @@ export class Limb {
 			texture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), limbSurface);
 			SDL_FreeSurface(limbSurface);
 			/* TO DO: ERROR HANDLING FOR TEXTURE. */
-
-			/* Build actual Joints from the LimbForm. */
-
-			for (Point& jointPoint : form.jointPoints) {
-				/* new Limb constructor (must later accomadate existing joints from existing Limbs. */
-				joints.emplace_back(jointPoint);
-			}
 
 			drawRect = { 0, 0, 0, 0 };
 			rotationAngle = 0;
