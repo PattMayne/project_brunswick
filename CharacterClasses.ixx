@@ -661,6 +661,17 @@ public:
 		anchorLimbId = -1;
 	}
 
+	Limb& getLimbById(int id) {
+		for (Limb& limb : limbs) {
+			if (limb.getId() == id) {
+				return limb;
+			}
+		}
+		cout << "ERROR! LIMB NOT FOUND! MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!";
+		/* UNSAFE! DO NOT KEEP THIS! */
+		return limbs[0];
+	}
+
 	void addLimb(Limb& newLimb) {
 		limbs.emplace_back(newLimb);
 	}
@@ -677,7 +688,7 @@ public:
 					joint.detachLimb(); } } }
 
 		/* recursively unequip limbs and child limbs. */
-		Limb& baseLimb = limbs[limbId];
+		Limb& baseLimb = getLimbById(limbId);
 		for (int i = 0; i < baseLimb.getJoints().size(); ++i) {
 			Joint& joint = baseLimb.getJoints()[i];
 			int connectedLimbId = joint.getConnectedLimbId();
@@ -694,20 +705,12 @@ public:
 
 			for (int k = 0; k < theseJoints.size(); ++k) {
 				if (theseJoints[k].getConnectedLimbId() == childLimbId) {
-					return i;
+					return limbs[i].getId();
 				}
 			}
 		}
 
 		return -1;
-	}
-
-	Limb& getLimbById(int limbId) {
-		/* FOR NOW return limb by vector index.
-		* This is where we'll search for the limb with the actual DB ID later.
-		*/
-
-		return limbs[limbId];
 	}
 
 	/*
@@ -717,17 +720,17 @@ public:
 		vector<tuple<int, int, bool>> jointsData;
 
 		for (int i = 0; i < limbs.size(); ++i) {
-			if (i == limbToSkipId) { continue; }
-
 			Limb& thisLimb = limbs[i];
+			int thisLimbId = thisLimb.getId();
 
+			if (thisLimbId == limbToSkipId) { continue; }
 			if (!thisLimb.isEquipped()) { continue; }
 
 			vector<Joint>& theseJoints = thisLimb.getJoints();
 
 			for (int k = 0; k < theseJoints.size(); ++k) {
 				Joint& thisJoint = theseJoints[k];
-				tuple<int, int, bool> thisTuple = make_tuple(i, k, thisJoint.isFree());
+				tuple<int, int, bool> thisTuple = make_tuple(thisLimbId, k, thisJoint.isFree());
 				jointsData.push_back(thisTuple);
 			}
 		}
@@ -737,7 +740,7 @@ public:
 
 
 	int getAnchorLimbId() { return anchorLimbId; }
-	Limb& getAnchorLimb() { return limbs[anchorLimbId]; }
+	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude = -1);
 	void setAnchorLimbId(int newId) { anchorLimbId = newId; }
 
@@ -746,15 +749,17 @@ public:
 	* Also, cycle back to the beginning of the list once we reach the end.
 	*/
 	bool shiftChildLimb(int childLimbId) {
+
 		if (getAnchorLimbId() == childLimbId) {
 			/* Don't do it if this is the anchor limb (no parent limb with limbs through which to cycle). */
 			return false;
 		}
 		else {
+
 			/* Try to get the parent limb ID and the parent limb itself. */
 			int parentLimbId = getParentLimbId(childLimbId);
 			if (parentLimbId < 0) { return false; }
-			Limb& parentLimb = getLimbs()[parentLimbId];
+			Limb& parentLimb = getLimbById(parentLimbId);
 
 			/* Try to get the index of the joint (in the parent limb) holding the loaded limb. */
 			int parentJointIndex = -1;
@@ -772,21 +777,26 @@ public:
 
 			/* Find out where the PARENT joint is located in that list. */
 			int parentJointIndexInJointsDataVector = -1;
-
+			cout << "Trying next character joint 99999\n";
 			for (int i = 0; i < jointsData.size(); ++i) {
 
 				int thisLimbId = get<0>(jointsData[i]);
 				int thisJointId = get<1>(jointsData[i]);
+
+				//cout << "This limb id: " << thisLimbId
 
 				if (thisLimbId == parentLimbId && thisJointId == parentJointIndex) {
 					parentJointIndexInJointsDataVector = i;
 				}
 			}
 
-			if (parentJointIndexInJointsDataVector < 0) { return false; }
+			if (parentJointIndexInJointsDataVector < 0) {
+				cout << "parentJointIndexInJointsDataVector is less than zero\n";
+				return false;
+			}
 
 			/* Now check ABOVE the current location for a free joint. */
-
+			cout << "Trying next character joint 99999.222222\n";
 			int newParentJointIndex = -1;
 			int newParentLimbId = -1;
 
@@ -802,7 +812,7 @@ public:
 			}
 
 			/* Check IF we got one from above. And if not, get one from below. */
-
+			cout << "Trying next character joint 99999.55555\n";
 			if (parentJointIndexInJointsDataVector > 0 && (newParentJointIndex < 0 || newParentLimbId < 0)) {
 				for (int i = 0; i < parentJointIndexInJointsDataVector; ++i) {
 					bool thisJointIsFree = get<2>(jointsData[i]);
@@ -813,7 +823,7 @@ public:
 					}
 				}
 			}
-
+			cout << "Trying next character joint 99999.99999\n";
 			/* If we caught something, do the switch. */
 			if (newParentJointIndex >= 0 && newParentLimbId >= 0) {
 				/* Detach limb from old parent. */
@@ -829,7 +839,7 @@ public:
 				}
 			}
 		}
-
+		cout << "HUH ?????\n";
 		return false;
 	}
 
@@ -847,15 +857,15 @@ protected:
 * 
 * Returns a tuple.
 * FIRST int is the limb id.
-* SECOND int is its free joint ID.
+* SECOND int is its free joint index. (will I have to replace joint indexes with DB IDs too?).
 */
 tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude) {
 	tuple<int, int> failureTuple = make_tuple(-1, -1);
-	if (limbIdToSearch < 0) {
+	if (limbIdToSearch < 1) {
 		return failureTuple;
 	}
 	
-	Limb& limbToSearch = limbs[limbIdToSearch];
+	Limb& limbToSearch = getLimbById(limbIdToSearch);
 	/* Search the joints for a free joint. Hopfeully we find something here. */
 	for (int i = 0; i < limbToSearch.getJoints().size(); ++i) {
 		Joint& limbToSearchJoint = limbToSearch.getJoints()[i];
@@ -875,7 +885,7 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 			int connectedLimbId = limbToSearchJoint.getConnectedLimbId();
 			if (connectedLimbId == limbIdToExclude || connectedLimbId < 0) { continue; }
 
-			Limb& nestedLimbToSearch = limbs[connectedLimbId];
+			Limb& nestedLimbToSearch = getLimbById(connectedLimbId);
 			tuple<int, int> limbIdAndJointIndexForConnection =
 				getLimbIdAndJointIndexForConnection(connectedLimbId, limbIdToExclude);
 
@@ -905,7 +915,7 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 * for an available joint.
 */
 bool Character::equipLimb(int limbId) {
-	Limb& limbToEquip = limbs[limbId];// THIS will get the limb WITH the ID later, not by index!
+	Limb& limbToEquip = getLimbById(limbId);// THIS will get the limb WITH the ID later, not by index!
 	if (limbToEquip.isEquipped()) {
 		cout << "Limb is already equipped!\n";
 		return false;
@@ -931,7 +941,7 @@ bool Character::equipLimb(int limbId) {
 		return false;
 	}
 
-	Joint& jointToConnect = limbs[limbIdForConnection].getJoints()[jointIndexForConnection];
+	Joint& jointToConnect = getLimbById(limbIdForConnection).getJoints()[jointIndexForConnection];
 
 	/* Now connect the actual limb (find a free joint on the limb we're trying to connect). */
 	for (int i = 0; i < limbToEquip.getJoints().size(); ++i) {
@@ -943,7 +953,6 @@ bool Character::equipLimb(int limbId) {
 			return true;
 		}
 	}
-
 	/* Failed to find a free joint on the limb we've been trying to equip (unlikely... should be impossible). */
 	return false;
 }

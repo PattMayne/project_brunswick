@@ -128,21 +128,23 @@ public:
 			limbLoadedPanel.destroyTextures();
 		}
 
+		cout << "CREATING PANEL 00000\n";
+
 		bool loadedLimbHasExtraJoints = false;
 		bool characterHasExtraJoints = false;
 
-		if (loadedLimbId > -1) {
-			Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+		if (loadedLimbId > 0) {
+			Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 			int anchorLimbId = playerCharacter.getAnchorLimbId();
 			if (loadedLimb.getFreeJointIndexes().size() > 1 && loadedLimbId != anchorLimbId) {
 				loadedLimbHasExtraJoints = true; }
 
-			if (anchorLimbId > -1 && loadedLimbId != playerCharacter.getAnchorLimbId()) {
+			if (anchorLimbId > 0 && loadedLimbId != playerCharacter.getAnchorLimbId()) {
 				tuple<int, int> limbIdAndJointIndexForConnection = playerCharacter.getLimbIdAndJointIndexForConnection(anchorLimbId, loadedLimbId);
 				int possibleConnectorLimbId = get<0>(limbIdAndJointIndexForConnection);
 				int possibleConnectorJointId = get<1>(limbIdAndJointIndexForConnection);
 
-				if (possibleConnectorLimbId >= 0 && possibleConnectorJointId >= 0 && possibleConnectorLimbId != loadedLimbId) {
+				if (possibleConnectorLimbId > 0 && possibleConnectorJointId >= 0 && possibleConnectorLimbId != loadedLimbId) {
 					characterHasExtraJoints = true;
 				}
 			}
@@ -161,10 +163,9 @@ public:
 		vector<Limb>& inventoryLimbs = playerCharacter.getLimbs();
 
 		for (int i = 0; i < inventoryLimbs.size(); ++i) {
-			/* FOR NOW we want the index. But when we bring in the database, we will use the ID. So the LimbButtonData says id instead of index. */
 			Limb& thisLimb = inventoryLimbs[i];
 			if (!thisLimb.isEquipped()) {
-				limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), i);
+				limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
 			}
 		}
 
@@ -468,8 +469,8 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				UI& ui = UI::getInstance();
 
 				/* If we sent in a limb id/index: */
-				if (clickStruct.itemID >= 0) {
-					Limb& clickedLimb = playerCharacter.getLimbs()[clickStruct.itemID];
+				if (clickStruct.itemID > 0) {
+					Limb& clickedLimb = playerCharacter.getLimbById(clickStruct.itemID);
 					bool limbEquipped = false;
 
 					/* see what button might have been clicked : */
@@ -478,12 +479,12 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						/*
 						* Get the limb index. Where should it be stored? Edit the BUTTON.
 						* BUTTON should also optionally take a texture as an argument.
-						* ClickStruct has an ITEM ID!!!!!
+						* ClickStruct has a DB ID!!!!!
 						*/
-						
+
 						/* Make sure there is somewhere to attach the limb. */
 						if (
-							playerCharacter.getAnchorLimbId() >= 0 &&
+							playerCharacter.getAnchorLimbId() > 0 &&
 							get<0>(playerCharacter.getLimbIdAndJointIndexForConnection(playerCharacter.getAnchorLimbId(), clickStruct.itemID)) < 0
 						) {
 							showNewMessage(
@@ -492,15 +493,13 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 							);
 							break;
 						}
-
+						
 						/* Now actually equip the limb if it isn't already equipped. */
 						if (!clickedLimb.isEquipped()) {
 							loadedLimbId = clickStruct.itemID;
 							limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
-
-							if (!limbEquipped) {
-								break;
-							}
+							
+							if (!limbEquipped) { break; }
 
 							if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
 								int screenWidth = ui.getWindowWidth();
@@ -518,9 +517,12 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 									limbHeight
 								});
 							}
-
+							cout << "TRYING for 3rd nested limb 00000\n";
+							// 3rd nested limb SOMETIMES breaks in the following function.
 							createLimbLoadedPanel();
+							cout << "TRYING for 3rd nested limb 11111\n";
 							changeCreationMode(CreationMode::LimbLoaded);
+							cout << "TRYING for 3rd nested limb 22222\n";
 						}
 						//printAllLimbs(playerCharacter);
 						
@@ -560,8 +562,9 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					* Maybe put this in a function in the character class.
 					*/
 
-					if (loadedLimbId >= 0) {
-						bool switched = playerCharacter.shiftChildLimb(loadedLimbId); }
+					if (loadedLimbId > 0) {
+						bool switched = playerCharacter.shiftChildLimb(loadedLimbId);
+					}
 
 					break;
 				case ButtonOption::NextLimbJoint:
@@ -570,20 +573,20 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						break;
 					}
 					else {
-						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						bool anchorShifted = loadedLimb.shiftAnchorLimb();
 						break;
 					}
 
 				case ButtonOption::RotateClockwise:
-					if (loadedLimbId >= 0 && loadedLimbId < playerCharacter.getLimbs().size()) {
-						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+					if (loadedLimbId > 0) {
+						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						loadedLimb.rotate(15);
 					}
 					break;
 				case ButtonOption::RotateCounterClockwise:
-					if (loadedLimbId >= 0 && loadedLimbId < playerCharacter.getLimbs().size()) {
-						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+					if (loadedLimbId > 0) {
+						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						loadedLimb.rotate(-15);
 					}
 					break;
@@ -595,7 +598,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					*/
 					if (loadedLimbId >= 0) {
 						cout << "UNLOADING LIMB #" << loadedLimbId << "?????\n";
-						Limb& loadedLimb = playerCharacter.getLimbs()[loadedLimbId];
+						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
 							playerCharacter.setAnchorLimbId(-1); }
 						playerCharacter.unEquipLimb(loadedLimbId);
@@ -693,7 +696,6 @@ void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
 }
 
 void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
-	vector<Limb>& limbs = playerCharacter.getLimbs();
 	vector<Joint>& anchorJoints = parentLimb.getJoints();
 	SDL_Rect& parentRect = parentLimb.getDrawRect();
 
@@ -703,7 +705,7 @@ void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
 		if (connectedLimbId < 0) { continue; }
 
 		Point anchorJointPoint = anchorJoint.getPoint();
-		Limb& connectedLimb = limbs[anchorJoint.getConnectedLimbId()];
+		Limb& connectedLimb = playerCharacter.getLimbById(anchorJoint.getConnectedLimbId());
 
 		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
 		Joint& connectedLimbAnchorJoint = connectedLimb.getAnchorJoint();
