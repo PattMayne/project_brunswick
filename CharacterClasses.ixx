@@ -225,7 +225,7 @@ private:
 
 	/* Data about the CONNECTED limb. */
 	int connectedLimbId;
-	int anchorJointIndex;
+	int anchorJointIndex; /* This is the anchor joint of the CHILD limb. */
 	int id;
 };
 
@@ -360,9 +360,15 @@ export class Limb {
 		int getIntelligence() { return form.intelligence + intelligenceMod; }
 		int getRotationAngle() { return rotationAngle; }
 
+		int getHpMod() { return hpMod; }
+		int getStrengthMod() { return strengthMod; }
+		int getSpeedMod() { return speedMod; }
+		int getIntelligenceMod() { return intelligenceMod; }
+
 		SDL_Rect& getDrawRect() { return drawRect; }
 		SDL_Texture* getTexture() { return texture; }
 		bool getIsAnchor() { return isAnchor; }
+		bool getIsFlipped() { return flipped; }
 
 		/* SET the modifiers. */
 

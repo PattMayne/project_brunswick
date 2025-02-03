@@ -48,8 +48,7 @@ CREATE TABLE IF NOT EXISTS joint (
     modified_point_y INTEGER DEFAULT 0,
     is_anchor INTEGER DEFAULT 0,
     conntected_limb_id INTEGER DEFAULT -1,
-    anchor_joint_index INTEGER DEFAULT -1,
-    rotation_angle INTEGER DEFAULT 0
+    anchor_joint_index INTEGER DEFAULT -1
 );
 
 CREATE TABLE IF NOT EXISTS character (

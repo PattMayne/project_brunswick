@@ -196,7 +196,7 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
     /* Finalize the statement, commit the transaction. */
     sqlite3_finalize(statement);
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
-
+    sqlite3_close(db);
 }
 
 /**
@@ -218,6 +218,136 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
 * 
 * 
 */
+
+/*
+* Update all attributes of a character's limbs and their joints.
+* To be used when SAVING limb setup in Character Creation Screen.
+*/
+export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>& limbs) {
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return;
+    }
+
+
+    /* First update the Character. */
+
+    const char* updateCharacterSQL = "UPDATE character SET anchor_limb_id = ? WHERE id = ?;";
+    sqlite3_stmt* updateCharacterstatement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateCharacterSQL, -1, &updateCharacterstatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare CHARACTER UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return;
+    }
+
+    /* Bind the values. */
+    sqlite3_bind_int(updateCharacterstatement, 1, anchorLimbId);
+    sqlite3_bind_int(updateCharacterstatement, 2, characterId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(updateCharacterstatement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update failed: " << sqlite3_errmsg(db) << endl; }
+
+    /* Finalize statement. */
+    sqlite3_finalize(updateCharacterstatement);
+
+
+    /* 
+    * 
+    * Now do a transaction and update all limbs and their joints.
+    * 
+    */
+
+    const char* updateLimbSQL = "UPDATE limb SET map_slug = ?, hp_mod = ?, strength_mod = ?, "
+        "speed_mod = ?, intelligence_mod = ?, position_x = ?, position_y = ?, rotation_angle = ?, is_anchor = ?, "
+        "is_flipped = ? WHERE character_id = ?;";
+    sqlite3_stmt* updateLimbStatement;
+
+    /* Prepare the LIMB statement (to be binded and reset for each Limb). */
+    returnCode = sqlite3_prepare_v2(db, updateLimbSQL, -1, &updateLimbStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return;
+    }
+
+    const char* updateJointSQL = "UPDATE joint SET vector_index = ?, modified_point_x = ?, modified_point_y = ?, "
+        "is_anchor = ?, connected_limb_id = ?, anchor_joint_index = ? WHERE limb_id = ?;";
+    sqlite3_stmt* updateJointStatement;
+
+    /* Prepare the JOINT statement (to be binded and reset for each joint of each Limb). */
+    returnCode = sqlite3_prepare_v2(db, updateJointSQL, -1, &updateJointStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return;
+    }
+
+
+    /* Begin the transaction. */
+    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
+
+    for (Limb& limb : limbs) {
+        /* Bind the values for each limb. */
+        int isAnchorInt = limb.getIsAnchor() ? 1 : 0;
+        int isFlippedInt = limb.getIsFlipped() ? 1 : 0;
+        sqlite3_bind_text(updateLimbStatement, 1, limb.getMapSlug().c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(updateLimbStatement, 2, limb.getHpMod());
+        sqlite3_bind_int(updateLimbStatement, 3, limb.getStrengthMod());
+        sqlite3_bind_int(updateLimbStatement, 4, limb.getSpeedMod());
+        sqlite3_bind_int(updateLimbStatement, 5, limb.getIntelligenceMod());
+        sqlite3_bind_int(updateLimbStatement, 6, limb.getPosition().x);
+        sqlite3_bind_int(updateLimbStatement, 7, limb.getPosition().y);
+        sqlite3_bind_int(updateLimbStatement, 8, limb.getRotationAngle());
+        sqlite3_bind_int(updateLimbStatement, 9, isAnchorInt);
+        sqlite3_bind_int(updateLimbStatement, 10, isFlippedInt);
+        sqlite3_bind_int(updateLimbStatement, 11, characterId);
+
+        /* Execute the statement. */
+        returnCode = sqlite3_step(updateLimbStatement);
+        if (returnCode != SQLITE_DONE) { cerr << "Update Limb failed: " << sqlite3_errmsg(db) << endl; }
+
+        /* NOW update each JOINT for this LIMB. */
+
+        for (int i = 0; i < limb.getJoints().size(); ++i) {
+            Joint& joint = limb.getJoints()[i];
+            Point modifiedPoint = joint.getPoint();
+            int isAnchorInt = joint.getIsAnchor() ? 1 : 0;
+
+            sqlite3_bind_int(updateJointStatement, 1, i);
+            sqlite3_bind_int(updateJointStatement, 2, modifiedPoint.x);
+            sqlite3_bind_int(updateJointStatement, 3, modifiedPoint.y);
+            sqlite3_bind_int(updateJointStatement, 4, isAnchorInt);
+            sqlite3_bind_int(updateJointStatement, 5, joint.getConnectedLimbId());
+            sqlite3_bind_int(updateJointStatement, 6, joint.getChildLimbAnchorJointIndex());
+            sqlite3_bind_int(updateJointStatement, 7, limb.getId());
+
+            /* Execute the statement. */
+            returnCode = sqlite3_step(updateJointStatement);
+            if (returnCode != SQLITE_DONE) { cerr << "Update Joint failed: " << sqlite3_errmsg(db) << endl; }
+
+            /* Reset the JOINT statement for the next joint. */
+            sqlite3_reset(updateJointStatement);
+        }
+
+        /* Reset the LIMB statement for the next limb. */
+        sqlite3_reset(updateLimbStatement);
+    }
+
+    sqlite3_finalize(updateLimbStatement);
+    sqlite3_finalize(updateJointStatement);
+    sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
+
+    sqlite3_close(db);
+}
+
 
 /* Update the MAP_SLUG of the Character player. */
 export bool updatePlayerMap(string newMapSlug) {
