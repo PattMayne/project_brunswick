@@ -265,40 +265,36 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
     * 
     */
 
-    const char* updateLimbSQL = "UPDATE limb SET map_slug = ?, hp_mod = ?, strength_mod = ?, "
-        "speed_mod = ?, intelligence_mod = ?, position_x = ?, position_y = ?, rotation_angle = ?, is_anchor = ?, "
-        "is_flipped = ? WHERE character_id = ?;";
-    sqlite3_stmt* updateLimbStatement;
-
-    /* Prepare the LIMB statement (to be binded and reset for each Limb). */
-    returnCode = sqlite3_prepare_v2(db, updateLimbSQL, -1, &updateLimbStatement, nullptr);
-    if (returnCode != SQLITE_OK) {
-        cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
-        sqlite3_close(db);
-        return;
-    }
-
-    const char* updateJointSQL = "UPDATE joint SET vector_index = ?, modified_point_x = ?, modified_point_y = ?, "
-        "is_anchor = ?, connected_limb_id = ?, anchor_joint_index = ? WHERE limb_id = ?;";
-    sqlite3_stmt* updateJointStatement;
-
-    /* Prepare the JOINT statement (to be binded and reset for each joint of each Limb). */
-    returnCode = sqlite3_prepare_v2(db, updateJointSQL, -1, &updateJointStatement, nullptr);
-    if (returnCode != SQLITE_OK) {
-        cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
-        sqlite3_close(db);
-        return;
-    }
-
-
     /* Begin the transaction. */
     sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
-
+    int f = 5;
     for (Limb& limb : limbs) {
+        const char* updateLimbSQL = "UPDATE limb SET map_slug = ?, hp_mod = ?, strength_mod = ?, "
+            "speed_mod = ?, intelligence_mod = ?, position_x = ?, position_y = ?, rotation_angle = ?, is_anchor = ?, "
+            "is_flipped = ?, character_id = ? WHERE id = ?;";
+        sqlite3_stmt* updateLimbStatement;
+
+        /* Prepare the LIMB statement (to be binded and reset for each Limb). */
+        returnCode = sqlite3_prepare_v2(db, updateLimbSQL, -1, &updateLimbStatement, nullptr);
+        if (returnCode != SQLITE_OK) {
+            cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
+            sqlite3_close(db);
+            return;
+        }
+
+        ++f;
         /* Bind the values for each limb. */
         int isAnchorInt = limb.getIsAnchor() ? 1 : 0;
         int isFlippedInt = limb.getIsFlipped() ? 1 : 0;
-        sqlite3_bind_text(updateLimbStatement, 1, limb.getMapSlug().c_str(), -1, SQLITE_STATIC);
+
+        cout << "Limb " << limb.getName() << " is anchor: " << isAnchorInt << " and map slug: " << limb.getMapSlug() << "\n";
+        cout << "SLUG: " << limb.getMapSlug().c_str() << "\n";
+        cout << "f: " << f << "\n";
+
+        string mapSlugString = limb.getMapSlug();
+        const char* mapSlug = mapSlugString.c_str();
+
+        sqlite3_bind_text(updateLimbStatement, 1, mapSlug, -1, SQLITE_STATIC);
         sqlite3_bind_int(updateLimbStatement, 2, limb.getHpMod());
         sqlite3_bind_int(updateLimbStatement, 3, limb.getStrengthMod());
         sqlite3_bind_int(updateLimbStatement, 4, limb.getSpeedMod());
@@ -309,42 +305,56 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
         sqlite3_bind_int(updateLimbStatement, 9, isAnchorInt);
         sqlite3_bind_int(updateLimbStatement, 10, isFlippedInt);
         sqlite3_bind_int(updateLimbStatement, 11, characterId);
+        sqlite3_bind_int(updateLimbStatement, 12, limb.getId());
 
         /* Execute the statement. */
         returnCode = sqlite3_step(updateLimbStatement);
-        if (returnCode != SQLITE_DONE) { cerr << "Update Limb failed: " << sqlite3_errmsg(db) << endl; }
+        if (returnCode != SQLITE_DONE) {
+            cerr << "Update Limb failed: " << sqlite3_errmsg(db) << endl;
+        }
+        else {
+            cout << "Doing the JOINTS\n";
+            /* NOW update each JOINT for this LIMB. */
 
-        /* NOW update each JOINT for this LIMB. */
+            for (int i = 0; i < limb.getJoints().size(); ++i) {
+                const char* updateJointSQL = "UPDATE joint SET vector_index = ?, modified_point_x = ?, modified_point_y = ?, "
+                    "is_anchor = ?, connected_limb_id = ?, anchor_joint_index = ? WHERE limb_id = ?;";
+                sqlite3_stmt* updateJointStatement;
 
-        for (int i = 0; i < limb.getJoints().size(); ++i) {
-            Joint& joint = limb.getJoints()[i];
-            Point modifiedPoint = joint.getPoint();
-            int isAnchorInt = joint.getIsAnchor() ? 1 : 0;
+                /* Prepare the JOINT statement (to be binded and reset for each joint of each Limb). */
+                returnCode = sqlite3_prepare_v2(db, updateJointSQL, -1, &updateJointStatement, nullptr);
+                if (returnCode != SQLITE_OK) {
+                    cerr << "Failed to prepare JOINT UPDATE statement: " << sqlite3_errmsg(db) << endl;
+                    sqlite3_close(db);
+                    return;
+                }
 
-            sqlite3_bind_int(updateJointStatement, 1, i);
-            sqlite3_bind_int(updateJointStatement, 2, modifiedPoint.x);
-            sqlite3_bind_int(updateJointStatement, 3, modifiedPoint.y);
-            sqlite3_bind_int(updateJointStatement, 4, isAnchorInt);
-            sqlite3_bind_int(updateJointStatement, 5, joint.getConnectedLimbId());
-            sqlite3_bind_int(updateJointStatement, 6, joint.getChildLimbAnchorJointIndex());
-            sqlite3_bind_int(updateJointStatement, 7, limb.getId());
+                Joint& joint = limb.getJoints()[i];
+                Point modifiedPoint = joint.getPoint();
+                int isAnchorJointInt = joint.getIsAnchor() ? 1 : 0;
 
-            /* Execute the statement. */
-            returnCode = sqlite3_step(updateJointStatement);
-            if (returnCode != SQLITE_DONE) { cerr << "Update Joint failed: " << sqlite3_errmsg(db) << endl; }
+                sqlite3_bind_int(updateJointStatement, 1, i);
+                sqlite3_bind_int(updateJointStatement, 2, modifiedPoint.x);
+                sqlite3_bind_int(updateJointStatement, 3, modifiedPoint.y);
+                sqlite3_bind_int(updateJointStatement, 4, isAnchorJointInt);
+                sqlite3_bind_int(updateJointStatement, 5, joint.getConnectedLimbId());
+                sqlite3_bind_int(updateJointStatement, 6, joint.getChildLimbAnchorJointIndex());
+                sqlite3_bind_int(updateJointStatement, 7, limb.getId());
 
-            /* Reset the JOINT statement for the next joint. */
-            sqlite3_reset(updateJointStatement);
+                /* Execute the statement. */
+                returnCode = sqlite3_step(updateJointStatement);
+                if (returnCode != SQLITE_DONE) { cerr << "Update Joint failed: " << sqlite3_errmsg(db) << endl; }
+
+                sqlite3_finalize(updateJointStatement);
+            }
         }
 
-        /* Reset the LIMB statement for the next limb. */
-        sqlite3_reset(updateLimbStatement);
+
+        sqlite3_finalize(updateLimbStatement);
     }
 
-    sqlite3_finalize(updateLimbStatement);
-    sqlite3_finalize(updateJointStatement);
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
-
+    cout << "REACHED THE END but it's still messed up.\n";
     sqlite3_close(db);
 }
 
@@ -1491,6 +1501,7 @@ export Map loadMap(string mapSlug) {
 
             Joint joint = Joint( pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, rotationAngle, jointID);
             if (vectorIndex < rowCount) { joints[vectorIndex] = joint; }
+            sqlite3_finalize(queryJointsStatement);
         }
 
         /* Create the actual Limb (with its joints) and add to RoamingLimbs vector. */
@@ -1510,7 +1521,6 @@ export Map loadMap(string mapSlug) {
         return map;
     }
 
-    /* Finalize prepared statement. */
     sqlite3_finalize(queryLimbsStatement);
 
 
