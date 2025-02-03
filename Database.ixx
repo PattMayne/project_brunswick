@@ -1474,8 +1474,7 @@ export Map loadMap(string mapSlug) {
         int jointsReturnCode;
         vector<Joint> joints(rowCount);
         while ((jointsReturnCode = sqlite3_step(queryJointsStatement)) == SQLITE_ROW) {
-            int jointID = sqlite3_column_int(queryJointsStatement, 0);
-            
+            int jointID = sqlite3_column_int(queryJointsStatement, 0);            
             int vectorIndex = sqlite3_column_int(queryJointsStatement, 1);
             
             Point pointForm = Point(
@@ -1489,7 +1488,7 @@ export Map loadMap(string mapSlug) {
             bool isAnchor = sqlite3_column_int(queryJointsStatement, 7) == 1;
             int connectedLimbID = sqlite3_column_int(queryJointsStatement, 8);
             int anchorJointIndex = sqlite3_column_int(queryJointsStatement, 9);
-            Joint joint = Joint( pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
+            Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
             if (vectorIndex < rowCount) { joints[vectorIndex] = joint; }
         }
         sqlite3_finalize(queryJointsStatement);
@@ -1511,7 +1510,7 @@ export Map loadMap(string mapSlug) {
 
     sqlite3_finalize(queryLimbsStatement);
 
-
+    cout << "STILL BROKEN 00000\n";
 
 
     /* Get the LANDMARK objects. */
@@ -1565,13 +1564,11 @@ export Map loadMap(string mapSlug) {
     /* Finalize prepared statement. */
     sqlite3_finalize(queryLandmarksStatement);
 
-
     /* Close DB. */
     sqlite3_close(db);
 
     /* BUILD THE MAP. */
     map = Map(mapForm, roamingLimbs, rows, characterPosition);
     map.setLandmarks(landmarks);
-
     return map;
 }

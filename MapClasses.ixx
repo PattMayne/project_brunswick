@@ -159,13 +159,8 @@ private:
 
 
 /*
-* How do we add FUNCTIONS to the Landmark objects?
-* This may be where we need lambdas
-*    [](){}
-*		[variables brought in from parent scope](parameters called at runtime){ logic which possibly returns something }
-*
-* OR do we let MapScreen handle that, and just let the Landmark class detect collisions?
-*
+* Entrance, Exit, and Shrines are landmarks.
+* In sequels this will include buildings (portals to maps with friendly NPCs) and portals to dungeons (maps with more unfriendly NPCs).
 */
 export class Landmark {
 public:
@@ -441,10 +436,11 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 	* The Screen will create the character object (or maybe the Database will).
 	* 
 	*/
-
+	cout << "MAP CONSTRUCTING 00000\n";
 	playerCharacter = MapCharacter(CharacterType::Player, characterPosition.x, characterPosition.y);
+	cout << "MAP CONSTRUCTING 11111\n";
 	playerCharacter.setTexture(characterTexture);
-
+	cout << "MAP CONSTRUCTING 22222\n";
 	/* Set wall and floor texture indexes. */
 	for (int i = 0; i < this->rows.size(); ++i) {
 		vector<Block>& blocks = this->rows[i];

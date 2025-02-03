@@ -199,12 +199,9 @@ public:
 
 	void detachLimb() {
 		connectedLimbId = -1;
-		anchorJointIndex = -1;
-	}
+		anchorJointIndex = -1; }
 
-	bool isFree() {
-		return !isAnchor && connectedLimbId < 0;
-	}
+	bool isFree() { return !isAnchor && connectedLimbId < 0; }
 
 	int getId() { return id; }
 	bool getIsAnchor() { return isAnchor; }
@@ -213,8 +210,7 @@ public:
 	Point getFormPoint() { return pointForm; }
 	Point getPoint() { return modifiedPoint; }
 	void resetModifiedPoint() {
-		modifiedPoint = { pointForm.x, pointForm.y };
-	}
+		modifiedPoint = { pointForm.x, pointForm.y }; }
 	void setModifiedPoint(Point newPoint) { modifiedPoint = newPoint; }
 
 private:
@@ -651,11 +647,10 @@ export class Limb {
 export class Character {
 public:
 	Character() {
-		anchorLimbId = -1;
-	}
+		anchorLimbId = -1; }
 	~Character() {}
 	Character(CharacterType characterType) :
-		characterType(characterType), anchorLimbId(-1) {}
+		characterType(characterType), anchorLimbId(-1) { }
 
 	string getName() { return name; }
 	void setName(string newName) { name = newName; }
@@ -848,6 +843,15 @@ public:
 		cout << "HUH ?????\n";
 		return false;
 	}
+
+	vector<Limb>& getEquippedLimbs() {
+		vector<Limb> equippedLimbs;
+		for (Limb limb : limbs) {
+			if (limb.isEquipped()) {
+				equippedLimbs.push_back(limb); } }
+		return equippedLimbs;
+	}
+
 
 protected:
 	CharacterType characterType;
