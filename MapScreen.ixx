@@ -171,7 +171,9 @@ export class MapScreen {
 
 			if (mapObjectExists(mapSlug)) {
 				/* Load existing map. */
+				cout << "TRYING to load MAP SCREEN 11111\n";
 				map = loadMap(mapSlug);
+				cout << "TRYING to load MAP SCREEN 22222\n";
 				map.setPlayerCharacter(loadPlayerMapCharacter());
 				updatePlayerMap(mapSlug);
 			}
@@ -468,6 +470,8 @@ export void MapScreen::run() {
 	settingsPanel.setShow(false);
 	gameMenuPanel.setShow(true);
 
+	cout << "TRYING to load MAP 11111\n";
+
 	/*
 	* PANELS TO COME:
 	* * navigation panel
@@ -491,7 +495,7 @@ export void MapScreen::run() {
 	int spriteAnimMax = 15;
 	bool reverseSpriteAnimation = false;
 	vector<int> collidedLimbIDs; /* Contains the database IDs, not the vector indexes. */
-	
+	cout << "TRYING to load MAP 55555\n";
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
 		frameStartTime = SDL_GetTicks();

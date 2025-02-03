@@ -535,9 +535,8 @@ export Character loadPlayerCharacter() {
             bool isAnchor = sqlite3_column_int(queryJointsStatement, 7) == 1;
             int connectedLimbID = sqlite3_column_int(queryJointsStatement, 8);
             int anchorJointIndex = sqlite3_column_int(queryJointsStatement, 9);
-            int rotationAngle = sqlite3_column_int(queryJointsStatement, 10);
 
-            Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, rotationAngle, jointID);
+            Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
             if (vectorIndex < jointCount) { joints[vectorIndex] = joint; }
         }
 
@@ -721,9 +720,8 @@ export MapCharacter loadPlayerMapCharacter() {
             bool isAnchor = sqlite3_column_int(queryJointsStatement, 7) == 1;
             int connectedLimbID = sqlite3_column_int(queryJointsStatement, 8);
             int anchorJointIndex = sqlite3_column_int(queryJointsStatement, 9);
-            int rotationAngle = sqlite3_column_int(queryJointsStatement, 10);
 
-            Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, rotationAngle, jointID);
+            Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
             if (vectorIndex < jointCount) { joints[vectorIndex] = joint; }
         }
 
@@ -1317,7 +1315,7 @@ export Map loadMap(string mapSlug) {
     vector<Limb> roamingLimbs;
     vector<vector<Block>> rows(mapForm.blocksHeight);
     GameState& gameState = GameState::getInstance();
-
+    
     /* Give each vector of blocks a size. */
     for (vector<Block>& vecOfBlocks : rows) {
         vecOfBlocks = vector<Block>(mapForm.blocksWidth);
@@ -1345,7 +1343,7 @@ export Map loadMap(string mapSlug) {
         sqlite3_close(db);
         return map;
     }
-
+    
     /* Bind the slug value. */
     sqlite3_bind_text(statement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
 
@@ -1376,7 +1374,7 @@ export Map loadMap(string mapSlug) {
         sqlite3_close(db);
         return map;
     }
-
+    
     /* Bind the slug value. */
     sqlite3_bind_text(blocksStatement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
 
@@ -1408,7 +1406,7 @@ export Map loadMap(string mapSlug) {
     sqlite3_finalize(blocksStatement);
 
     /* The Block objects are populated. Time to get the Limbs. */
-
+    
 
     /*
     * 
@@ -1458,7 +1456,7 @@ export Map loadMap(string mapSlug) {
         if (sqlite3_step(queryCountJointsStatement) == SQLITE_ROW) {
             rowCount = sqlite3_column_int(queryCountJointsStatement, 0); }
         sqlite3_finalize(queryCountJointsStatement);
-
+        
 
         /* Now Get the JOINT itself */
         const char* queryJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
@@ -1475,26 +1473,26 @@ export Map loadMap(string mapSlug) {
         sqlite3_bind_int(queryJointsStatement, 1, limbID);
         int jointsReturnCode;
         vector<Joint> joints(rowCount);
-
         while ((jointsReturnCode = sqlite3_step(queryJointsStatement)) == SQLITE_ROW) {
             int jointID = sqlite3_column_int(queryJointsStatement, 0);
+            
             int vectorIndex = sqlite3_column_int(queryJointsStatement, 1);
+            
             Point pointForm = Point(
                 sqlite3_column_int(queryJointsStatement, 3),
                 sqlite3_column_int(queryJointsStatement, 4));
+            
             Point modifiedPoint = Point(
                 sqlite3_column_int(queryJointsStatement, 5),
                 sqlite3_column_int(queryJointsStatement, 6));
+            
             bool isAnchor = sqlite3_column_int(queryJointsStatement, 7) == 1;
             int connectedLimbID = sqlite3_column_int(queryJointsStatement, 8);
             int anchorJointIndex = sqlite3_column_int(queryJointsStatement, 9);
-            int rotationAngle = sqlite3_column_int(queryJointsStatement, 10);
-
-            Joint joint = Joint( pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, rotationAngle, jointID);
+            Joint joint = Joint( pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
             if (vectorIndex < rowCount) { joints[vectorIndex] = joint; }
-            sqlite3_finalize(queryJointsStatement);
         }
-
+        sqlite3_finalize(queryJointsStatement);
         /* Create the actual Limb (with its joints) and add to RoamingLimbs vector. */
         roamingLimbs.emplace_back(
             limbID,
@@ -1504,8 +1502,7 @@ export Map loadMap(string mapSlug) {
                 sqlite3_column_int(queryLimbsStatement, 3)
             ),
             joints
-        );
-    }
+        );    }
 
     if (returnCode != SQLITE_DONE) {
         cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;

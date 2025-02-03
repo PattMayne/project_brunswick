@@ -180,7 +180,6 @@ public:
 		bool isAnchor,
 		int connectedLimbId,
 		int anchorJointIndex,
-		int rotationAngle,
 		int id = -1
 	) :
 		pointForm(pointForm),
