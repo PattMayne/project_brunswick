@@ -699,6 +699,7 @@ public:
 		/* Next remove reference from parent limb. */
 		for (Limb& limb : limbs) {
 			for (Joint& joint : limb.getJoints()) {
+				joint.resetModifiedPoint();
 				if (joint.getConnectedLimbId() == limbId) {
 					joint.detachLimb(); } } }
 
@@ -792,13 +793,10 @@ public:
 
 			/* Find out where the PARENT joint is located in that list. */
 			int parentJointIndexInJointsDataVector = -1;
-			cout << "Trying next character joint 99999\n";
 			for (int i = 0; i < jointsData.size(); ++i) {
 
 				int thisLimbId = get<0>(jointsData[i]);
 				int thisJointId = get<1>(jointsData[i]);
-
-				//cout << "This limb id: " << thisLimbId
 
 				if (thisLimbId == parentLimbId && thisJointId == parentJointIndex) {
 					parentJointIndexInJointsDataVector = i;
@@ -806,12 +804,10 @@ public:
 			}
 
 			if (parentJointIndexInJointsDataVector < 0) {
-				cout << "parentJointIndexInJointsDataVector is less than zero\n";
 				return false;
 			}
 
 			/* Now check ABOVE the current location for a free joint. */
-			cout << "Trying next character joint 99999.222222\n";
 			int newParentJointIndex = -1;
 			int newParentLimbId = -1;
 
@@ -827,7 +823,6 @@ public:
 			}
 
 			/* Check IF we got one from above. And if not, get one from below. */
-			cout << "Trying next character joint 99999.55555\n";
 			if (parentJointIndexInJointsDataVector > 0 && (newParentJointIndex < 0 || newParentLimbId < 0)) {
 				for (int i = 0; i < parentJointIndexInJointsDataVector; ++i) {
 					bool thisJointIsFree = get<2>(jointsData[i]);
@@ -838,7 +833,7 @@ public:
 					}
 				}
 			}
-			cout << "Trying next character joint 99999.99999\n";
+
 			/* If we caught something, do the switch. */
 			if (newParentJointIndex >= 0 && newParentLimbId >= 0) {
 				/* Detach limb from old parent. */

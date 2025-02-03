@@ -267,7 +267,7 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
 
     /* Begin the transaction. */
     sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
-    int f = 5;
+
     for (Limb& limb : limbs) {
         const char* updateLimbSQL = "UPDATE limb SET map_slug = ?, hp_mod = ?, strength_mod = ?, "
             "speed_mod = ?, intelligence_mod = ?, position_x = ?, position_y = ?, rotation_angle = ?, is_anchor = ?, "
@@ -282,14 +282,9 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
             return;
         }
 
-        ++f;
         /* Bind the values for each limb. */
         int isAnchorInt = limb.getIsAnchor() ? 1 : 0;
         int isFlippedInt = limb.getIsFlipped() ? 1 : 0;
-
-        cout << "Limb " << limb.getName() << " is anchor: " << isAnchorInt << " and map slug: " << limb.getMapSlug() << "\n";
-        cout << "SLUG: " << limb.getMapSlug().c_str() << "\n";
-        cout << "f: " << f << "\n";
 
         string mapSlugString = limb.getMapSlug();
         const char* mapSlug = mapSlugString.c_str();
@@ -313,12 +308,12 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
             cerr << "Update Limb failed: " << sqlite3_errmsg(db) << endl;
         }
         else {
-            cout << "Doing the JOINTS\n";
             /* NOW update each JOINT for this LIMB. */
-
             for (int i = 0; i < limb.getJoints().size(); ++i) {
+                Joint& joint = limb.getJoints()[i];
+
                 const char* updateJointSQL = "UPDATE joint SET vector_index = ?, modified_point_x = ?, modified_point_y = ?, "
-                    "is_anchor = ?, connected_limb_id = ?, anchor_joint_index = ? WHERE limb_id = ?;";
+                    "is_anchor = ?, connected_limb_id = ?, anchor_joint_index = ? WHERE id = ?;";
                 sqlite3_stmt* updateJointStatement;
 
                 /* Prepare the JOINT statement (to be binded and reset for each joint of each Limb). */
@@ -329,7 +324,7 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
                     return;
                 }
 
-                Joint& joint = limb.getJoints()[i];
+                
                 Point modifiedPoint = joint.getPoint();
                 int isAnchorJointInt = joint.getIsAnchor() ? 1 : 0;
 
@@ -339,13 +334,14 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
                 sqlite3_bind_int(updateJointStatement, 4, isAnchorJointInt);
                 sqlite3_bind_int(updateJointStatement, 5, joint.getConnectedLimbId());
                 sqlite3_bind_int(updateJointStatement, 6, joint.getChildLimbAnchorJointIndex());
-                sqlite3_bind_int(updateJointStatement, 7, limb.getId());
+                sqlite3_bind_int(updateJointStatement, 7, joint.getId());
 
                 /* Execute the statement. */
                 returnCode = sqlite3_step(updateJointStatement);
                 if (returnCode != SQLITE_DONE) { cerr << "Update Joint failed: " << sqlite3_errmsg(db) << endl; }
 
                 sqlite3_finalize(updateJointStatement);
+                cout << "APPARENTLY SAVED THE JOINT but really I didn't save the joint??\n";
             }
         }
 

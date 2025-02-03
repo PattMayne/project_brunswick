@@ -270,6 +270,7 @@ export void CharacterCreationScreen::run() {
 	/* loop and event control */
 	SDL_Event e;
 	bool running = true;
+	
 
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
@@ -520,12 +521,9 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 									limbHeight
 								});
 							}
-							cout << "TRYING for 3rd nested limb 00000\n";
 							// 3rd nested limb SOMETIMES breaks in the following function.
 							createLimbLoadedPanel();
-							cout << "TRYING for 3rd nested limb 11111\n";
 							changeCreationMode(CreationMode::LimbLoaded);
-							cout << "TRYING for 3rd nested limb 22222\n";
 						}
 						//printAllLimbs(playerCharacter);
 						
