@@ -323,7 +323,6 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
                     sqlite3_close(db);
                     return;
                 }
-
                 
                 Point modifiedPoint = joint.getPoint();
                 int isAnchorJointInt = joint.getIsAnchor() ? 1 : 0;
@@ -341,16 +340,12 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
                 if (returnCode != SQLITE_DONE) { cerr << "Update Joint failed: " << sqlite3_errmsg(db) << endl; }
 
                 sqlite3_finalize(updateJointStatement);
-                cout << "APPARENTLY SAVED THE JOINT but really I didn't save the joint??\n";
             }
         }
-
-
         sqlite3_finalize(updateLimbStatement);
     }
 
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
-    cout << "REACHED THE END but it's still messed up.\n";
     sqlite3_close(db);
 }
 
