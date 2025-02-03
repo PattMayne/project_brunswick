@@ -411,11 +411,9 @@ export class Limb {
 
 		bool isEquipped() {
 			if (getIsAnchor()) {
-				return true;
-			}
+				return true; }
 			for (Joint& joint : joints) {
-				if (!joint.isFree()) { return true; }
-			}
+				if (!joint.isFree()) { return true; } }
 			return false;
 		}
 
@@ -435,8 +433,7 @@ export class Limb {
 		Joint& getAnchorJoint() {
 			for (Joint& joint : joints) {
 				if (joint.getIsAnchor()) {
-					return joint;
-				}
+					return joint; }
 			}
 			/* THIS IS NOT SAFE. */
 			return joints[0];

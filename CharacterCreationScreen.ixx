@@ -172,6 +172,8 @@ public:
 		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
 	}
 
+	void setAnchorLimbDrawRect(UI& ui);
+
 	void changeCreationMode(CreationMode creationMode) {
 		this->creationMode = creationMode;
 
@@ -263,14 +265,14 @@ export void CharacterCreationScreen::run() {
 
 	/* Timeout data */
 	const int TARGET_FPS = 120;
-	const int FRAME_DELAY = 1200 / TARGET_FPS; // milliseconds per frame
-	Uint32 frameStartTime; // Tick count when this particular frame began
-	int frameTimeElapsed; // how much time has elapsed during this frame
+	const int FRAME_DELAY = 1200 / TARGET_FPS; /* milliseconds per frame. */
+	Uint32 frameStartTime; /* Tick count when this particular frame began. */
+	int frameTimeElapsed; /* how much time has elapsed during this frame. */
 
 	/* loop and event control */
 	SDL_Event e;
 	bool running = true;
-	
+	setAnchorLimbDrawRect(ui);
 
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
@@ -371,6 +373,24 @@ void printAllLimbs(Character character) {
 void CharacterCreationScreen::showNewMessage(string newMessage, ConfirmationButtonType confirmationType, bool showRefuse, UI& ui) {
 	messagePanel = getNewConfirmationMessage(messagePanel, newMessage, confirmationType, showRefuse);
 	messagePanel.setShow(true);
+}
+
+void CharacterCreationScreen::setAnchorLimbDrawRect(UI& ui = UI::getInstance()) {
+	if (playerCharacter.getAnchorLimbId() < 0) { return; }
+	int screenWidth = ui.getWindowWidth();
+	int screenHeight = ui.getWindowHeight();
+	Limb& anchorLimb = playerCharacter.getAnchorLimb();
+
+	/* FOR NOW we will use the natural size of the textures (for different sized screens we might need to adjust this). */
+	int limbWidth, limbHeight;
+	SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &limbWidth, &limbHeight);
+
+	anchorLimb.setDrawRect({
+		(screenWidth / 2) - (limbWidth / 2),
+		(screenHeight / 2) - (limbHeight / 2),
+		limbWidth,
+		limbHeight
+		});
 }
 
 /* Process user input */
@@ -506,22 +526,9 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 							if (!limbEquipped) { break; }
 
 							if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
-								int screenWidth = ui.getWindowWidth();
-								int screenHeight = ui.getWindowHeight();
-								Limb& anchorLimb = playerCharacter.getAnchorLimb();
-
-								/* FOR NOW we will use the natural size of the textures (for different sized screens we might need to adjust this). */
-								int limbWidth, limbHeight;
-								SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &limbWidth, &limbHeight);
-
-								anchorLimb.setDrawRect({
-									(screenWidth / 2) - (limbWidth / 2),
-									(screenHeight / 2) - (limbHeight / 2),
-									limbWidth,
-									limbHeight
-								});
+								setAnchorLimbDrawRect(ui);
 							}
-							// 3rd nested limb SOMETIMES breaks in the following function.
+
 							createLimbLoadedPanel();
 							changeCreationMode(CreationMode::LimbLoaded);
 						}
@@ -692,6 +699,7 @@ void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
 		NULL, &limb.getDrawRect(),
 		limb.getRotationAngle(), rotationPoint, SDL_FLIP_NONE
 	);
+
 	if (rotationPoint != NULL) { delete rotationPoint; }
 	if (DRAW_JOINTS) { drawJoints(limb, ui); } /* For debugging. */
 }
