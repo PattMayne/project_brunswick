@@ -111,6 +111,7 @@ public:
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
 		drawLoadedLimb = true;
 		loadedLimbCountdown = 20;
+		playerCharacter.setRotationPointsSDL();
 	}
 
 	/* Destructor */
@@ -524,13 +525,12 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 							limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
 							
 							if (!limbEquipped) { break; }
-
 							if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
-								setAnchorLimbDrawRect(ui);
-							}
+								setAnchorLimbDrawRect(ui); }
 
 							createLimbLoadedPanel();
 							changeCreationMode(CreationMode::LimbLoaded);
+							clickedLimb.setRotationPointSDL();
 						}
 						//printAllLimbs(playerCharacter);
 						
@@ -707,8 +707,8 @@ void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
 		Limb& connectedLimb = playerCharacter.getLimbById(anchorJoint.getConnectedLimbId());
 
 		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
-		Joint& connectedLimbAnchorJoint = connectedLimb.getAnchorJoint();
-		Point connectedLimbAnchorJointPoint = connectedLimbAnchorJoint.getPoint();
+		//Joint& connectedLimbAnchorJoint = connectedLimb.getAnchorJoint();
+		Point connectedLimbAnchorJointPoint = connectedLimb.getAnchorJoint().getPoint();
 
 		/* First offset by parent limb location,
 		* then by the JOINT to which we are connected.

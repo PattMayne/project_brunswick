@@ -281,6 +281,7 @@ export class Limb {
 			position = Point(50, 95);
 			lastPosition = Point(0, 0);
 			isAnchor = false;
+			rotationPointSDL = SDL_Point(0, 0);
 
 			/* get Limb texture */
 
@@ -609,11 +610,13 @@ export class Limb {
 		*  TO DO: Maybe we should replace ALL Point objects with SDL_Points to avoid using this function so often?
 		* Or just for the Joint Points.
 		*/
-		SDL_Point getRotationPointSDL() {
-			if (getAnchorJointId() < 0) { return SDL_Point(0, 0); }
+		void setRotationPointSDL() {
+			if (getAnchorJointId() < 0) { return; }
 			Point anchorPoint = getJoints()[getAnchorJointId()].getPoint();
-			return SDL_Point(anchorPoint.x, anchorPoint.y);
+			rotationPointSDL = SDL_Point(anchorPoint.x, anchorPoint.y);
 		}
+
+		SDL_Point getRotationPointSDL() { return rotationPointSDL; }
 
 	protected:
 		LimbForm form;
@@ -635,6 +638,7 @@ export class Limb {
 		int textureHeight;
 		int characterId;
 		int id;
+		SDL_Point rotationPointSDL;
 };
 
 
@@ -676,6 +680,12 @@ public:
 			limb.unEquip(); }
 		anchorLimbId = -1;
 	}
+
+	void setRotationPointsSDL() {
+		for (Limb& limb : limbs) {
+			limb.setRotationPointSDL();
+		}
+	}	
 
 	Limb& getLimbById(int id) {
 		for (Limb& limb : limbs) {
