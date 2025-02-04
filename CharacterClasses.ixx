@@ -613,8 +613,7 @@ export class Limb {
 		*/
 		void setRotationPointSDL() {
 			if (getAnchorJointId() < 0) {
-
-				rotationPointSDL = SDL_Point(100, 100);
+				rotationPointSDL = SDL_Point(textureWidth/2, textureHeight/2);
 				return;
 			}
 			Point anchorPoint = getJoints()[getAnchorJointId()].getPoint();
