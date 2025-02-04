@@ -635,15 +635,6 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	if (messagePanel.getShow()) { messagePanel.checkMouseOver(mouseX, mouseY); }
 }
 
-/* Remember to delete this SDL_Point pointer if it's not null!
-*  TO DO: Maybe we should replace ALL Point objects with SDL_Points to avoid using this function so often?
-* Or just for the Joint Points.
-*/
-SDL_Point* getRotationPointSDL(Limb& limb, int anchorJointId) {
-	if (anchorJointId < 0) { return NULL; }
-	Point anchorPoint = limb.getJoints()[anchorJointId].getPoint();
-	return new SDL_Point(anchorPoint.x, anchorPoint.y);
-}
 
 
 /* FOR DEBUGGING: Draw a box over each Joint.*/
@@ -691,16 +682,15 @@ void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
 	* Further consideration is necessary.
 	* Maybe I do need a rotationPoint member which holds an SDL_Point pointer... GOOD IDEA.
 	*/
-	SDL_Point* rotationPoint = getRotationPointSDL(limb, limb.getAnchorJointId());
+	SDL_Point rotationPoint = limb.getRotationPointSDL();
 
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
 		limb.getTexture(),
 		NULL, &limb.getDrawRect(),
-		limb.getRotationAngle(), rotationPoint, SDL_FLIP_NONE
+		limb.getRotationAngle(), &rotationPoint, SDL_FLIP_NONE
 	);
 
-	if (rotationPoint != NULL) { delete rotationPoint; }
 	if (DRAW_JOINTS) { drawJoints(limb, ui); } /* For debugging. */
 }
 

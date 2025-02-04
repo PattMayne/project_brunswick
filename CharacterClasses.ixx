@@ -605,6 +605,16 @@ export class Limb {
 			return false;
 		}
 
+		/* 
+		*  TO DO: Maybe we should replace ALL Point objects with SDL_Points to avoid using this function so often?
+		* Or just for the Joint Points.
+		*/
+		SDL_Point getRotationPointSDL() {
+			if (getAnchorJointId() < 0) { return SDL_Point(0, 0); }
+			Point anchorPoint = getJoints()[getAnchorJointId()].getPoint();
+			return SDL_Point(anchorPoint.x, anchorPoint.y);
+		}
+
 	protected:
 		LimbForm form;
 		string name;
