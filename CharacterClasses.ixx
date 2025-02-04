@@ -442,6 +442,7 @@ export class Limb {
 					return i;
 				}
 			}
+			cout << "LIMB has NO ANCHOR?\n";
 			return -1;
 		}
 
@@ -458,15 +459,15 @@ export class Limb {
 		int rotate(int angleIncrement) {
 			rotationAngle = normalizeAngle(rotationAngle + angleIncrement);
 
+			/* If this LIMB has no ANCHOR JOINT then it's the anchor limb, so rotate on the center instead of on a joint. */
+			Point anchorPoint =
+				//getAnchorJointId() < 0 ? joint.getPoint() : /* THIS is to test the getRotatedPoint */
+				getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) :
+				getAnchorJoint().getFormPoint();
+
 			/* Now update all the joint points (except the anchor point). */
 			for (Joint& joint : joints) {
 				if (!joint.getIsAnchor()) {
-					/* If this LIMB has no ANCHOR JOINT then it's the anchor limb, so rotate on the center instead of on a joint. */
-					Point anchorPoint =
-						//getAnchorJointId() < 0 ? joint.getPoint() : /* THIS is to test the getRotatedPoint */
-						getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) :
-						getAnchorJoint().getFormPoint();
-
 					joint.setModifiedPoint(getRotatedPoint(anchorPoint, joint.getFormPoint(), rotationAngle));
 				}
 			}
@@ -611,7 +612,11 @@ export class Limb {
 		* Or just for the Joint Points.
 		*/
 		void setRotationPointSDL() {
-			if (getAnchorJointId() < 0) { return; }
+			if (getAnchorJointId() < 0) {
+
+				rotationPointSDL = SDL_Point(100, 100);
+				return;
+			}
 			Point anchorPoint = getJoints()[getAnchorJointId()].getPoint();
 			rotationPointSDL = SDL_Point(anchorPoint.x, anchorPoint.y);
 		}
@@ -710,7 +715,6 @@ public:
 		/* Next remove reference from parent limb. */
 		for (Limb& limb : limbs) {
 			for (Joint& joint : limb.getJoints()) {
-				joint.resetModifiedPoint();
 				if (joint.getConnectedLimbId() == limbId) {
 					joint.detachLimb(); } } }
 
@@ -718,6 +722,7 @@ public:
 		Limb& baseLimb = getLimbById(limbId);
 		for (int i = 0; i < baseLimb.getJoints().size(); ++i) {
 			Joint& joint = baseLimb.getJoints()[i];
+			joint.resetModifiedPoint();
 			int connectedLimbId = joint.getConnectedLimbId();
 			if (connectedLimbId >= 0) {
 				unEquipLimb(connectedLimbId); } }
