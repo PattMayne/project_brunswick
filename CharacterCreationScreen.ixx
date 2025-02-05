@@ -103,8 +103,8 @@ public:
 		gameMenuPanel = ui.createGameMenuPanel();
 		reviewModePanel = ui.createReviewModePanel();
 		createLimbLoadedPanel(ui);
-		createChooseLimbPanel(ui);
-		creationMode = CreationMode::Review;
+		createChooseLimbPanel();
+		changeCreationMode(CreationMode::Review);
 		messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
 		messagePanel.setShow(true);
 
@@ -113,6 +113,7 @@ public:
 		loadedLimbCountdown = 20;
 		playerCharacter.setAnchorJointIDs();
 		playerCharacter.setRotationPointsSDL();
+		loadedLimbIsAlreadyEquipped = false;
 	}
 
 	/* Destructor */
@@ -154,7 +155,8 @@ public:
 		limbLoadedPanel = ui.createLimbLoadedModePanel(loadedLimbHasExtraJoints, characterHasExtraJoints);
 	}
 
-	void createChooseLimbPanel(UI& ui = UI::getInstance()) {
+	void createChooseLimbPanel(bool showEquippedLimbs = false) {
+		UI& ui = UI::getInstance();
 		/* Destroy textures if they already exist. */
 		if (chooseLimbPanel.getButtons().size() > 0) {
 			chooseLimbPanel.destroyTextures();
@@ -166,12 +168,12 @@ public:
 
 		for (int i = 0; i < inventoryLimbs.size(); ++i) {
 			Limb& thisLimb = inventoryLimbs[i];
-			if (!thisLimb.isEquipped()) {
+			if (thisLimb.isEquipped() == showEquippedLimbs) {
 				limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
 			}
 		}
 
-		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs);
+		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs);
 	}
 
 	void setAnchorLimbDrawRect(UI& ui);
@@ -181,12 +183,14 @@ public:
 
 		switch(creationMode){
 		case CreationMode::ChooseLimb:
+			createChooseLimbPanel();
 			chooseLimbPanel.setShow(true);
 			reviewModePanel.setShow(false);
 			limbLoadedPanel.setShow(false);
 			break;
 		case CreationMode::Review:
-			chooseLimbPanel.setShow(false);
+			createChooseLimbPanel(true);
+			chooseLimbPanel.setShow(true);
 			reviewModePanel.setShow(true);
 			limbLoadedPanel.setShow(false);
 			break;
@@ -241,6 +245,7 @@ private:
 	bool drawLoadedLimb;
 	int titleCountdown;
 	int loadedLimbCountdown;
+	bool loadedLimbIsAlreadyEquipped; /* When we are RE-LOADING an already-equipped limb, so UNLOADING means going back to REVIEW menu. */
 
 	Character playerCharacter;
 	CreationMode creationMode;
@@ -458,7 +463,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				}
 			}
 			else if (reviewModePanel.getShow() && reviewModePanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICK REVIEW MENU \n\n";
+				cout << "\n\nCLICKED REVIEW MENU \n\n";
 				ButtonClickStruct clickStruct = reviewModePanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
@@ -471,18 +476,15 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					reviewModePanel.setShow(false);
 					break;
 				case ButtonOption::ShowLimbs:
-					createChooseLimbPanel();
-					chooseLimbPanel.setShow(true);
-					reviewModePanel.setShow(false);
+					changeCreationMode(CreationMode::ChooseLimb);
 					break;
 				case ButtonOption::ClearSuit:
 					cout << "CLEARING SUIT\n";
 					playerCharacter.clearSuit();
+					changeCreationMode(CreationMode::Review);
 					break;
 				case ButtonOption::SaveSuit:
-
 					updateCharacterLimbs(gameState.getPlayerID(), playerCharacter.getAnchorLimbId(), playerCharacter.getLimbs());
-
 					cout << "SAVING SUIT\n";
 					break;
 				default:
@@ -508,8 +510,10 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						* ClickStruct has a DB ID!!!!!
 						*/
 
-						/* Make sure there is somewhere to attach the limb. */
-						if (
+						/* Make sure there is somewhere to attach the limb 
+						* (if it NEEDS a new attachment because it's NOT already equipped... we allow loading an already-equipped limb).
+						*/
+						if (!clickedLimb.isEquipped() &&
 							playerCharacter.getAnchorLimbId() > 0 &&
 							get<0>(playerCharacter.getLimbIdAndJointIndexForConnection(playerCharacter.getAnchorLimbId(), clickStruct.itemID)) < 0
 						) {
@@ -519,28 +523,27 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 							);
 							break;
 						}
-						
+
+						loadedLimbId = clickStruct.itemID;
+
 						/* Now actually equip the limb if it isn't already equipped. */
 						if (!clickedLimb.isEquipped()) {
-							loadedLimbId = clickStruct.itemID;
 							limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
 							
-							if (!limbEquipped) { break; }
-							if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
-								setAnchorLimbDrawRect(ui); }
-
-							createLimbLoadedPanel();
-							changeCreationMode(CreationMode::LimbLoaded);
-							clickedLimb.setRotationPointSDL();
-
-							/* I shouldn't have to do this here. It should be done in equipLimb. */
-							//playerCharacter.setChildLimbDrawRect(playerCharacter.getAnchorLimb(), ui);
+							if (!limbEquipped) {
+								loadedLimbId = -1;
+								break; }
 						}
-						//printAllLimbs(playerCharacter);
-						
+
+						if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
+							setAnchorLimbDrawRect(ui);
+						}
+						loadedLimbIsAlreadyEquipped = creationMode == CreationMode::Review;
+						createLimbLoadedPanel();
+						changeCreationMode(CreationMode::LimbLoaded);
+						clickedLimb.setRotationPointSDL();
+
 						break;
-					default:
-						cout << "ERROR\n";
 					}
 				}
 				else {
@@ -556,7 +559,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				}
 			}
 			else if (limbLoadedPanel.getShow() && limbLoadedPanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICK REVIEW MENU \n\n";
+				cout << "\n\nCLICK LOADED LIMB MENU \n\n";
 				ButtonClickStruct clickStruct = limbLoadedPanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
 
@@ -565,7 +568,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				case ButtonOption::Equip:
 					loadedLimbId = -1;
 					changeCreationMode(CreationMode::Review);
-					cout << "\nEQUIPPING LOADED LIMB\n";
+					loadedLimbIsAlreadyEquipped = false;
 					break;
 				case ButtonOption::NextCharJoint:
 					/* 
@@ -576,6 +579,10 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 
 					if (loadedLimbId > 0) {
 						bool switched = playerCharacter.shiftChildLimb(loadedLimbId);
+						/* Reset all joints. */
+						playerCharacter.setAnchorJointIDs();
+						playerCharacter.setRotationPointsSDL();
+						playerCharacter.setChildLimbDrawRect(playerCharacter.getAnchorLimb(), ui);
 					}
 
 					break;
@@ -586,7 +593,13 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					}
 					else {
 						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
+						cout << "LIMB: " << loadedLimb.getForm().slug << "\n";
 						bool anchorShifted = loadedLimb.shiftAnchorLimb();
+						if (anchorShifted) {
+							playerCharacter.setAnchorJointIDs();
+							playerCharacter.setRotationPointsSDL();
+							playerCharacter.setChildLimbDrawRect(playerCharacter.getAnchorLimb(), ui);
+						}
 						break;
 					}
 
@@ -594,28 +607,36 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					if (loadedLimbId > 0) {
 						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						loadedLimb.rotate(15);
+						/* Make all the child limbs follow the rotation. */
+						playerCharacter.setChildLimbDrawRect(loadedLimb, ui);
 					}
 					break;
 				case ButtonOption::RotateCounterClockwise:
 					if (loadedLimbId > 0) {
 						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						loadedLimb.rotate(-15);
+						/* Make all the child limbs follow the rotation. */
+						playerCharacter.setChildLimbDrawRect(loadedLimb, ui);
 					}
 					break;
 				case ButtonOption::UnloadLimb:
-					cout << "UNLOADING LIMB #" << loadedLimbId << "\n";
 					/*
 					* Unequip that limb.
 					* Go back to the ChooseLimb mode.
 					*/
 					if (loadedLimbId >= 0) {
-						cout << "UNLOADING LIMB #" << loadedLimbId << "?????\n";
 						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
 							playerCharacter.setAnchorLimbId(-1); }
 						playerCharacter.unEquipLimb(loadedLimbId);
 					}
-					changeCreationMode(CreationMode::ChooseLimb);
+
+					if (loadedLimbIsAlreadyEquipped) {
+						changeCreationMode(CreationMode::Review);
+						loadedLimbIsAlreadyEquipped = false; }
+					else {
+						changeCreationMode(CreationMode::ChooseLimb); }
+					
 					loadedLimbId = -1;
 					break;
 				default:

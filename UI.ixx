@@ -112,7 +112,7 @@ export class UI {
 		/* CHARACTER CREATION PANELS. */
 		Panel createReviewModePanel();
 		Panel createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints); /* Does this need a limb id? */
-		Panel createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs);
+		Panel createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton);
 
 		/* NEXT: make rebuildPanel functions for Character Creation screen. */
 
@@ -205,7 +205,7 @@ export class UI {
 
 		tuple<SDL_Rect, vector<Button>> createReviewModePanelComponents();
 		tuple<SDL_Rect, vector<Button>> createLimbLoadedModePanelComponents(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints);
-		tuple<SDL_Rect, vector<Button>> createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs);
+		tuple<SDL_Rect, vector<Button>> createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton);
 
 		vector<PreButtonStruct> getReviewModePreButtonStructs();
 		vector<PreButtonStruct> getLimbLoadedModePreButtonStructs(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints);
@@ -1465,7 +1465,7 @@ export SDL_Surface* centerSurfaceInRect(SDL_Surface* surfaceToCenter, SDL_Rect r
 * -- make it responsive (columnsCount decreases with screen size).
 * -- Do pagination (still keep Back button for EVERY page... but also add NEXT and PREVIOUS).
 */
-tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs) {
+tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton) {
 	SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
 	int columnsCount = 10;
 	int buttonWidth = (windowWidth - ((PANEL_PADDING * columnsCount) + PANEL_PADDING)) / columnsCount;
@@ -1476,6 +1476,9 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 	for (int i = 0; i < limbBtnDataStructs.size() + 1; ++i) {
 		/* Many things change for the back button option (final option). */
 		bool isBackButton = i == limbBtnDataStructs.size();
+		if (isBackButton && !drawBackButton) {
+			continue;
+		}
 		
 		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));
 		int rectY = i < columnsCount ? PANEL_PADDING :
@@ -1551,8 +1554,8 @@ Panel UI::createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characte
 	return Panel(panelRect, buttons);
 }
 
-Panel UI::createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs) {
-	auto [panelRect, buttons] = createChooseLimbModePanelComponents(limbBtnDataStructs);
+Panel UI::createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton = true) {
+	auto [panelRect, buttons] = createChooseLimbModePanelComponents(limbBtnDataStructs, drawBackButton);
 	return Panel(panelRect, buttons);
 }
 

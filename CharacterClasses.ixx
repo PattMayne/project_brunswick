@@ -715,22 +715,18 @@ public:
 
 	void setRotationPointsSDL() {
 		for (Limb& limb : limbs) {
-			limb.setRotationPointSDL();
-		}
-	}
+			limb.setRotationPointSDL(); } }
 
 	void setAnchorJointIDs() {
 		for (Limb& limb : limbs) {
-			limb.setAnchorJointId();
-		}
-	}
+			limb.setAnchorJointId(); } }
 
 	Limb& getLimbById(int id) {
 		for (Limb& limb : limbs) {
 			if (limb.getId() == id) {
-				return limb;
-			}
+				return limb; }
 		}
+
 		cout << "ERROR! LIMB NOT FOUND! MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!";
 		/* UNSAFE! DO NOT KEEP THIS! */
 		return limbs[0];
@@ -886,6 +882,9 @@ public:
 					childLimb.setAnchorJointId();
 					int loadedLimbAnchorJointId = childLimb.getAnchorJointId();
 					newParentJoint.connectLimb(childLimbId, loadedLimbAnchorJointId);
+					/* Reset all joints. */
+					setAnchorJointIDs();
+					setChildLimbDrawRect(getAnchorLimb(), UI::getInstance());
 					return true; }
 			}
 		}
