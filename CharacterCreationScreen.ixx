@@ -111,6 +111,7 @@ public:
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
 		drawLoadedLimb = true;
 		loadedLimbCountdown = 20;
+		playerCharacter.setAnchorJointIDs();
 		playerCharacter.setRotationPointsSDL();
 	}
 
@@ -198,7 +199,6 @@ public:
 	}
 
 	ScreenType getScreenType() { return screenType; }
-	void drawChildLimbs(Limb& parentLimb, UI& ui);
 	void run();
 
 private:
@@ -234,7 +234,6 @@ private:
 	void createTitleTexture(UI& ui);
 	void raiseTitleRect() { --titleRect.y; }
 	int getTitleBottomPosition() { return titleRect.y + titleRect.h; }
-	void drawLimb(Limb& limb, UI& ui);
 
 	void showNewMessage(string newMessage, ConfirmationButtonType confirmationType, bool showRefuse, UI& ui = UI::getInstance());
 
@@ -274,6 +273,8 @@ export void CharacterCreationScreen::run() {
 	SDL_Event e;
 	bool running = true;
 	setAnchorLimbDrawRect(ui);
+	playerCharacter.setChildLimbDrawRect(playerCharacter.getAnchorLimb(), ui);
+	playerCharacter.buildDrawLimbList();
 
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
@@ -531,6 +532,9 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 							createLimbLoadedPanel();
 							changeCreationMode(CreationMode::LimbLoaded);
 							clickedLimb.setRotationPointSDL();
+
+							/* I shouldn't have to do this here. It should be done in equipLimb. */
+							//playerCharacter.setChildLimbDrawRect(playerCharacter.getAnchorLimb(), ui);
 						}
 						//printAllLimbs(playerCharacter);
 						
@@ -671,65 +675,7 @@ void drawJoints(Limb& limb, UI& ui) {
 		}
 }
 
-/*
-* Drawing limb. This can possible be moved to Limb class (we'll see if the Map and Battle draw functions are different).
-*/
-void CharacterCreationScreen::drawLimb(Limb& limb, UI& ui) {
-	/* rotationPoint should already be an SDL_Point in the Joint object.
-	* My Point object is redundant.
-	* WAIT... MAYBE NOT.
-	* There is no "rotation point", there are just joint points or else NULL.
-	* Further consideration is necessary.
-	* Maybe I do need a rotationPoint member which holds an SDL_Point pointer... GOOD IDEA.
-	*/
-	SDL_Point rotationPoint = limb.getRotationPointSDL();
 
-	SDL_RenderCopyEx(
-		ui.getMainRenderer(),
-		limb.getTexture(),
-		NULL, &limb.getDrawRect(),
-		limb.getRotationAngle(), &rotationPoint, SDL_FLIP_NONE
-	);
-
-	if (DRAW_JOINTS) { drawJoints(limb, ui); } /* For debugging. */
-}
-
-void CharacterCreationScreen::drawChildLimbs(Limb& parentLimb, UI& ui) {
-	vector<Joint>& anchorJoints = parentLimb.getJoints();
-	SDL_Rect& parentRect = parentLimb.getDrawRect();
-
-	for (int i = 0; i < anchorJoints.size(); ++i) {
-		Joint& anchorJoint = anchorJoints[i];
-		int connectedLimbId = anchorJoint.getConnectedLimbId();
-		if (connectedLimbId < 0) { continue; }
-
-		Point anchorJointPoint = anchorJoint.getPoint();
-		Limb& connectedLimb = playerCharacter.getLimbById(anchorJoint.getConnectedLimbId());
-
-		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
-		//Joint& connectedLimbAnchorJoint = connectedLimb.getAnchorJoint();
-		Point connectedLimbAnchorJointPoint = connectedLimb.getAnchorJoint().getPoint();
-
-		/* First offset by parent limb location,
-		* then by the JOINT to which we are connected.
-		* THEN offset by THIS limb's anchor joint
-		*/
-
-		connectedLimb.setDrawRect({
-			parentRect.x + anchorJointPoint.x - connectedLimbAnchorJointPoint.x,
-			parentRect.y + anchorJointPoint.y - connectedLimbAnchorJointPoint.y,
-			parentRect.w,
-			parentRect.h
-		});
-
-		/* Skip "loaded" limb when drawLoadedLimb is false (for hot blinking action). */
-		if (connectedLimbId != loadedLimbId || drawLoadedLimb) {
-			drawLimb(connectedLimb, ui); }
-
-		/* Recursively draw all THIS limb's child limbs. */
-		drawChildLimbs(connectedLimb, ui);
-	}
-}
 
 /*
 * Draw each limb.
@@ -767,19 +713,23 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 
 
 	/* 
-	* We will want the draw order to eventually be (optionally) different from the hierarchy... so each will need its own SDL_Rect.
+	* Experimenting with a draw order which is (optionally) different from the hierarchy... so each will need its own SDL_Rect.
 	* So this algorithm which currently DRAWS each limb... will eventually need to SET each rect and draw LATER.
 	* But we DO NOT want to calculate each rect for each frame of the animation.
 	* SO we will instead make an unordered_map of RECTs and LIMBs, and update them...
 	* NO... instead it will be a vector of new structs?
 	* We'll figure it out later... we need the draw order, the rect, the angle, many things...
+	* 
+	* I'd like to replace this list of ids with a list of vector indexes.
+	* We can save a list of IDs to the DB, and use that to build a list of indexes
+	* so we don't need to search the limbs to get the one with the right id for every limb for every frame.
 	*/
 
 
-	/* Skip "loaded" limb when drawLoadedLimb is false (for hot blinking action). */
-	if (anchorLimbId != loadedLimbId || drawLoadedLimb) {
-		drawLimb(anchorLimb, ui); }
-
-	/* Now the recursion... a "draw all limbs" function. */
-	drawChildLimbs(anchorLimb, ui);
+	for (int id: playerCharacter.getDrawLimbList()) {		
+		/* Skip "loaded" limb when drawLoadedLimb is false (for hot blinking action). */
+		if (id != loadedLimbId || drawLoadedLimb) {
+			playerCharacter.getLimbById(id).draw(ui);
+		}
+	}
 }

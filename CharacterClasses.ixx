@@ -301,6 +301,7 @@ export class Limb {
 			drawRect = { 0, 0, 0, 0 };
 			rotationAngle = 0;
 			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
+			setAnchorJointId();
 		}
 
 		/* Constructor to rebuild a ROAMING limb from DB.
@@ -327,6 +328,7 @@ export class Limb {
 			drawRect = { 0, 0, 0, 0 };
 			rotationAngle = 0;
 			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
+			setAnchorJointId();
 		}
 
 		/*  */
@@ -416,6 +418,7 @@ export class Limb {
 		void setAnchor(bool isAnchor = true) {
 			this->isAnchor = isAnchor; }
 
+		/* TO DO: This must also remove the limb id from the character's drawLimbList. */
 		void unEquip() {
 			for (Joint& joint : joints) {
 				joint.setAnchor(false);
@@ -435,15 +438,19 @@ export class Limb {
 			return joints[0];
 		}
 
-		int getAnchorJointId() {
+		void setAnchorJointId() {
 			for (int i = 0; i < joints.size(); ++i) {
 				Joint& joint = joints[i];
 				if (joint.getIsAnchor()) {
-					return i;
+					anchorJointId = i;
+					return;
 				}
 			}
-			cout << "LIMB has NO ANCHOR?\n";
-			return -1;
+			anchorJointId = -1;
+		}
+
+		int getAnchorJointId() {
+			return anchorJointId;
 		}
 
 		void setDrawRect(SDL_Rect drawRect) {
@@ -612,15 +619,34 @@ export class Limb {
 		* Or just for the Joint Points.
 		*/
 		void setRotationPointSDL() {
+			setAnchorJointId();
 			if (getAnchorJointId() < 0) {
-				rotationPointSDL = SDL_Point(textureWidth/2, textureHeight/2);
-				return;
-			}
-			Point anchorPoint = getJoints()[getAnchorJointId()].getPoint();
-			rotationPointSDL = SDL_Point(anchorPoint.x, anchorPoint.y);
+				rotationPointSDL = SDL_Point(textureWidth/2, textureHeight/2); }
+			else {
+				Point anchorPoint = getJoints()[getAnchorJointId()].getPoint();
+				rotationPointSDL = SDL_Point(anchorPoint.x, anchorPoint.y); }
 		}
 
 		SDL_Point getRotationPointSDL() { return rotationPointSDL; }
+		void draw(UI& ui, bool drawJoints = false) {
+			/* rotationPoint should already be an SDL_Point in the Joint object.
+				* My Point object is redundant.
+				* WAIT... MAYBE NOT.
+				* There is no "rotation point", there are just joint points or else NULL.
+				* Further consideration is necessary.
+				* Maybe I do need a rotationPoint member which holds an SDL_Point pointer... GOOD IDEA.
+				*/
+
+			SDL_RenderCopyEx(
+				ui.getMainRenderer(),
+				getTexture(),
+				NULL, &getDrawRect(),
+				getRotationAngle(), &rotationPointSDL, SDL_FLIP_NONE
+			);
+
+			//if (drawJoints) { drawJoints(limb, ui); } /* For debugging. */
+		}
+
 
 	protected:
 		LimbForm form;
@@ -643,6 +669,7 @@ export class Limb {
 		int characterId;
 		int id;
 		SDL_Point rotationPointSDL;
+		int anchorJointId;
 };
 
 
@@ -683,13 +710,20 @@ public:
 		for (Limb& limb : limbs) {
 			limb.unEquip(); }
 		anchorLimbId = -1;
+		drawLimbList = {};
 	}
 
 	void setRotationPointsSDL() {
 		for (Limb& limb : limbs) {
 			limb.setRotationPointSDL();
 		}
-	}	
+	}
+
+	void setAnchorJointIDs() {
+		for (Limb& limb : limbs) {
+			limb.setAnchorJointId();
+		}
+	}
 
 	Limb& getLimbById(int id) {
 		for (Limb& limb : limbs) {
@@ -727,6 +761,7 @@ public:
 				unEquipLimb(connectedLimbId); } }
 
 		baseLimb.unEquip();
+		buildDrawLimbList();
 	}
 
 	int getParentLimbId(int childLimbId) {
@@ -736,9 +771,7 @@ public:
 
 			for (int k = 0; k < theseJoints.size(); ++k) {
 				if (theseJoints[k].getConnectedLimbId() == childLimbId) {
-					return limbs[i].getId();
-				}
-			}
+					return limbs[i].getId(); } }
 		}
 
 		return -1;
@@ -774,6 +807,7 @@ public:
 	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude = -1);
 	void setAnchorLimbId(int newId) { anchorLimbId = newId; }
+	void setChildLimbDrawRect(Limb& parentLimb, UI& ui);
 
 	/*
 	* Move the loaded limb to the next available joint in the character's equipped limbs.
@@ -814,13 +848,10 @@ public:
 				int thisJointId = get<1>(jointsData[i]);
 
 				if (thisLimbId == parentLimbId && thisJointId == parentJointIndex) {
-					parentJointIndexInJointsDataVector = i;
-				}
+					parentJointIndexInJointsDataVector = i; }
 			}
 
-			if (parentJointIndexInJointsDataVector < 0) {
-				return false;
-			}
+			if (parentJointIndexInJointsDataVector < 0) { return false; }
 
 			/* Now check ABOVE the current location for a free joint. */
 			int newParentJointIndex = -1;
@@ -832,10 +863,7 @@ public:
 					if (thisJointIsFree) {
 						newParentLimbId = get<0>(jointsData[i]);
 						newParentJointIndex = get<1>(jointsData[i]);
-						break;
-					}
-				}
-			}
+						break; } } }
 
 			/* Check IF we got one from above. And if not, get one from below. */
 			if (parentJointIndexInJointsDataVector > 0 && (newParentJointIndex < 0 || newParentLimbId < 0)) {
@@ -844,27 +872,24 @@ public:
 					if (thisJointIsFree) {
 						newParentLimbId = get<0>(jointsData[i]);
 						newParentJointIndex = get<1>(jointsData[i]);
-						break;
-					}
-				}
-			}
+						break; } } }
 
 			/* If we caught something, do the switch. */
 			if (newParentJointIndex >= 0 && newParentLimbId >= 0) {
 				/* Detach limb from old parent. */
 				Limb& newParentLimb = getLimbById(newParentLimbId);
 
-				if (newParentLimb.isEquipped()) {
+				if (newParentLimb.isEquipped()) {					
 					parentLimb.getJoints()[parentJointIndex].detachLimb();
 					Joint& newParentJoint = newParentLimb.getJoints()[newParentJointIndex];
-					int loadedLimbAnchorJointId = getLimbById(childLimbId).getAnchorJointId();
+					Limb& childLimb = getLimbById(childLimbId);
+					childLimb.setAnchorJointId();
+					int loadedLimbAnchorJointId = childLimb.getAnchorJointId();
 					newParentJoint.connectLimb(childLimbId, loadedLimbAnchorJointId);
-
-					return true;
-				}
+					return true; }
 			}
 		}
-		cout << "HUH ?????\n";
+
 		return false;
 	}
 
@@ -876,6 +901,25 @@ public:
 		return equippedLimbs;
 	}
 
+	vector<int>& getDrawLimbList() { return drawLimbList; }
+
+	/* This is currently DUMB, in that it ignores player preference.
+	* We can smartify it later.
+	* 
+	* 
+	* LATER:
+	* Make this a list of INDEXES for easy/efficient access.
+	* We can store a list of IDs in the DB, but build a list of INDEXES from that!
+	*/
+	void buildDrawLimbList() {
+		drawLimbList = {};
+		for (Limb& limb : limbs) {
+			if (limb.isEquipped()) {
+				drawLimbList.push_back(limb.getId());
+			}
+		}
+	}
+
 
 protected:
 	CharacterType characterType;
@@ -883,6 +927,7 @@ protected:
 	int anchorLimbId; /* Currently using INDEX for dev purposes... will replace with actual DB ID. */
 	vector<Limb> limbs;
 	string name;
+	vector<int> drawLimbList;
 };
 
 /* 
@@ -949,6 +994,7 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 * for an available joint.
 */
 bool Character::equipLimb(int limbId) {
+	UI& ui = UI::getInstance();
 	Limb& limbToEquip = getLimbById(limbId);// THIS will get the limb WITH the ID later, not by index!
 	if (limbToEquip.isEquipped()) {
 		cout << "Limb is already equipped!\n";
@@ -959,6 +1005,8 @@ bool Character::equipLimb(int limbId) {
 	if (anchorLimbId < 0) {
 		anchorLimbId = limbId;
 		limbToEquip.setAnchor(true);
+		drawLimbList.push_back(limbId);
+		setChildLimbDrawRect(getAnchorLimb(), ui);
 		return true;
 	}
 
@@ -984,11 +1032,52 @@ bool Character::equipLimb(int limbId) {
 		if (jointToEquip.isFree()) {
 			jointToEquip.setAnchor(true);
 			jointToConnect.connectLimb(limbId, i);
+			drawLimbList.push_back(limbId);
+			setChildLimbDrawRect(getAnchorLimb(), ui);
 			return true;
 		}
 	}
 	/* Failed to find a free joint on the limb we've been trying to equip (unlikely... should be impossible). */
 	return false;
+}
+
+/*
+* Set the SDL_Rect for child limbds, recursively.
+* The SDL_Rect for the anchor limb must be set by the screen FIRST. Then call this function.
+* Scale will be baked into the parentRect and the modifiedPoint of each joint.
+*/
+void Character::setChildLimbDrawRect(Limb& parentLimb, UI& ui) {
+	/* Get the "parent" limb's SDL_Rect (for reference) and joints (to access each connected limb). */
+	vector<Joint>& anchorJoints = parentLimb.getJoints();
+	SDL_Rect& parentRect = parentLimb.getDrawRect();
+
+	/* For each joint, get the connected limb and set its rect. Then recursively set ITS child limbs' SDL_Rects. */
+	for (int i = 0; i < anchorJoints.size(); ++i) {
+		Joint& anchorJoint = anchorJoints[i];
+		int connectedLimbId = anchorJoint.getConnectedLimbId();
+		if (connectedLimbId < 0) { continue; }
+
+		Point anchorJointPoint = anchorJoint.getPoint();
+		Limb& connectedLimb = getLimbById(anchorJoint.getConnectedLimbId());
+
+		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
+		Point connectedLimbAnchorJointPoint = connectedLimb.getAnchorJoint().getPoint();
+
+		/* First offset by parent limb location,
+		* then by the JOINT to which we are connected.
+		* THEN offset by THIS limb's anchor joint
+		*/
+
+		connectedLimb.setDrawRect({
+			parentRect.x + anchorJointPoint.x - connectedLimbAnchorJointPoint.x,
+			parentRect.y + anchorJointPoint.y - connectedLimbAnchorJointPoint.y,
+			parentRect.w,
+			parentRect.h
+			});
+
+		/* Recursively draw all THIS limb's child limbs. */
+		setChildLimbDrawRect(connectedLimb, ui);
+	}
 }
 
 /*
