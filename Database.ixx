@@ -271,7 +271,7 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
     for (Limb& limb : limbs) {
         const char* updateLimbSQL = "UPDATE limb SET map_slug = ?, hp_mod = ?, strength_mod = ?, "
             "speed_mod = ?, intelligence_mod = ?, position_x = ?, position_y = ?, rotation_angle = ?, is_anchor = ?, "
-            "is_flipped = ?, character_id = ? WHERE id = ?;";
+            "is_flipped = ?, character_id = ?, draw_order = ? WHERE id = ?;";
         sqlite3_stmt* updateLimbStatement;
 
         /* Prepare the LIMB statement (to be binded and reset for each Limb). */
@@ -300,7 +300,8 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
         sqlite3_bind_int(updateLimbStatement, 9, isAnchorInt);
         sqlite3_bind_int(updateLimbStatement, 10, isFlippedInt);
         sqlite3_bind_int(updateLimbStatement, 11, characterId);
-        sqlite3_bind_int(updateLimbStatement, 12, limb.getId());
+        sqlite3_bind_int(updateLimbStatement, 12, limb.getDrawOrder());
+        sqlite3_bind_int(updateLimbStatement, 13, limb.getId());
 
         /* Execute the statement. */
         returnCode = sqlite3_step(updateLimbStatement);
@@ -480,6 +481,7 @@ export Character loadPlayerCharacter() {
         bool isAnchor = sqlite3_column_int(queryLimbsStatement, 11) == 1;
         bool isFlipped = sqlite3_column_int(queryLimbsStatement, 12) == 1;
         string limbName = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 13));
+        int drawOrder = sqlite3_column_int(queryLimbsStatement, 14);
 
         Point position = Point(posX, posY);
 
@@ -543,7 +545,8 @@ export Character loadPlayerCharacter() {
         Limb limb = Limb(sqlite3_column_int(queryLimbsStatement, 0),
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
             position,
-            joints
+            joints,
+            drawOrder
         );
 
         limb.setName(limbName);
@@ -666,6 +669,7 @@ export MapCharacter loadPlayerMapCharacter() {
         bool isAnchor = sqlite3_column_int(queryLimbsStatement, 11) == 1;
         bool isFlipped = sqlite3_column_int(queryLimbsStatement, 12) == 1;
         string limbName = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 13));
+        int drawOrder = sqlite3_column_int(queryLimbsStatement, 14);
 
         Point limbPosition = Point(posX, posY);
 
@@ -729,7 +733,8 @@ export MapCharacter loadPlayerMapCharacter() {
         Limb limb = Limb(sqlite3_column_int(queryLimbsStatement, 0),
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
             limbPosition,
-            joints
+            joints,
+            drawOrder
         );
 
         limb.setName(limbName);

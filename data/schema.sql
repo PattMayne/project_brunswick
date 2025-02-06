@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS limb (
     rotation_angle INTEGER DEFAULT 0,
     is_anchor INTEGER DEFAULT 0,
     is_flipped INTEGER DEFAULT 0,
-    name TEXT DEFAULT 'Limb'
+    name TEXT DEFAULT 'Limb',
+    draw_order INTEGER DEFAULT -1
 );
 
 CREATE TABLE IF NOT EXISTS joint (

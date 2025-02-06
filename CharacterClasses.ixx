@@ -302,12 +302,13 @@ export class Limb {
 			rotationAngle = 0;
 			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
 			setAnchorJointId();
+			drawOrder = -1;
 		}
 
 		/* Constructor to rebuild a ROAMING limb from DB.
 		*/
-		Limb(int id, LimbForm form, Point position, vector<Joint> joints) :
-			id(id), form(form), position(position), joints(joints)
+		Limb(int id, LimbForm form, Point position, vector<Joint> joints, int drawOrder = -1) :
+			id(id), form(form), position(position), joints(joints), drawOrder(drawOrder)
 		{
 			lastPosition = Point(0, 0);
 			isAnchor = false;
@@ -337,6 +338,7 @@ export class Limb {
 		Point getPosition() { return position; }
 		Point getLastPosition() { return lastPosition; }
 		LimbForm getForm() { return form; }
+		int getDrawOrder() { return drawOrder; }
 
 		string getName() { return name; }
 		string getTexturePath() { return form.texturePath; }
@@ -344,6 +346,7 @@ export class Limb {
 		string getMapSlug() { return mapSlug; }
 		int getId() { return id; }
 
+		void setDrawOrder(int newDrawOrder) { this->drawOrder = newDrawOrder; }
 		void setId(int id) { this->id = id; }
 		void setName(string newName) { name = newName; }
 		void setCharacterId(int id) { characterId = id; }
@@ -670,6 +673,7 @@ export class Limb {
 		int id;
 		SDL_Point rotationPointSDL;
 		int anchorJointId;
+		int drawOrder;
 };
 
 
@@ -710,7 +714,7 @@ public:
 		for (Limb& limb : limbs) {
 			limb.unEquip(); }
 		anchorLimbId = -1;
-		drawLimbList = {};
+		drawLimbListIDs = {};
 	}
 
 	void setRotationPointsSDL() {
@@ -900,7 +904,7 @@ public:
 		return equippedLimbs;
 	}
 
-	vector<int>& getDrawLimbList() { return drawLimbList; }
+	vector<int>& getDrawLimbList() { return drawLimbListIDs; }
 
 	/* This is currently DUMB, in that it ignores player preference.
 	* We can smartify it later.
@@ -911,12 +915,17 @@ public:
 	* We can store a list of IDs in the DB, but build a list of INDEXES from that!
 	*/
 	void buildDrawLimbList() {
-		drawLimbList = {};
+		drawLimbListIDs = {};
 		for (Limb& limb : limbs) {
 			if (limb.isEquipped()) {
-				drawLimbList.push_back(limb.getId());
+				addToDrawLimbList(limb.getId());
 			}
 		}
+	}
+
+	void addToDrawLimbList(int limbId) {
+		drawLimbListIDs.push_back(limbId);
+		/**/
 	}
 
 
@@ -926,7 +935,8 @@ protected:
 	int anchorLimbId; /* Currently using INDEX for dev purposes... will replace with actual DB ID. */
 	vector<Limb> limbs;
 	string name;
-	vector<int> drawLimbList;
+	vector<int> drawLimbListIDs;
+	vector<int> drawLimbListIndexes;
 };
 
 /* 
@@ -1004,7 +1014,7 @@ bool Character::equipLimb(int limbId) {
 	if (anchorLimbId < 0) {
 		anchorLimbId = limbId;
 		limbToEquip.setAnchor(true);
-		drawLimbList.push_back(limbId);
+		addToDrawLimbList(limbId);
 		setChildLimbDrawRect(getAnchorLimb(), ui);
 		return true;
 	}
@@ -1031,7 +1041,7 @@ bool Character::equipLimb(int limbId) {
 		if (jointToEquip.isFree()) {
 			jointToEquip.setAnchor(true);
 			jointToConnect.connectLimb(limbId, i);
-			drawLimbList.push_back(limbId);
+			addToDrawLimbList(limbId);
 			setChildLimbDrawRect(getAnchorLimb(), ui);
 			return true;
 		}
