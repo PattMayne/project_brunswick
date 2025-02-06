@@ -756,25 +756,15 @@ void CharacterCreationScreen::drawCharacter(UI& ui) {
 	int screenHeight = ui.getWindowHeight();
 	SDL_Rect screenRect = { 0, 0, screenWidth, screenHeight };
 
-
 	/* 
-	* Experimenting with a draw order which is (optionally) different from the hierarchy... so each will need its own SDL_Rect.
-	* So this algorithm which currently DRAWS each limb... will eventually need to SET each rect and draw LATER.
-	* But we DO NOT want to calculate each rect for each frame of the animation.
-	* SO we will instead make an unordered_map of RECTs and LIMBs, and update them...
-	* NO... instead it will be a vector of new structs?
-	* We'll figure it out later... we need the draw order, the rect, the angle, many things...
-	* 
-	* I'd like to replace this list of ids with a list of vector indexes.
-	* We can save a list of IDs to the DB, and use that to build a list of indexes
-	* so we don't need to search the limbs to get the one with the right id for every limb for every frame.
+	* Drawing based on vector index instead of searching for limb with ID each time.
 	*/
+	for (int index : playerCharacter.getDrawLimbIndexes()) {
+		Limb& limbToDraw = playerCharacter.getLimbs()[index];
 
-
-	for (int id: playerCharacter.getDrawLimbList()) {		
 		/* Skip "loaded" limb when drawLoadedLimb is false (for hot blinking action). */
-		if (id != loadedLimbId || drawLoadedLimb) {
-			playerCharacter.getLimbById(id).draw(ui);
+		if (limbToDraw.getId() != loadedLimbId || drawLoadedLimb) {
+			limbToDraw.draw(ui);
 		}
 	}
 }

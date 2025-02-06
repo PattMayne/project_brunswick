@@ -725,7 +725,7 @@ public:
 
 	bool shiftChildLimb(int childLimbId);
 	vector<Limb> getEquippedLimbs();
-	vector<int>& getDrawLimbList() { return drawLimbListIDs; }
+	vector<int>& getDrawLimbIDs() { return drawLimbListIDs; }
 
 	void getChildLimbsRecursively(Limb& parentLimb, vector<Limb>& childLimbs);
 
@@ -752,6 +752,7 @@ public:
 				limb.setDrawOrder(-1);
 			}
 		}
+		setLimbDrawOrder(drawLimbListIDs);
 	}
 
 	void addToDrawLimbList(int limbId) {
@@ -772,14 +773,14 @@ public:
 
 		for (int i = 0; i < drawLimbListIDs.size(); ++i) {
 			for (int k = 0; k < limbs.size(); ++k) {
-				if (limbs[k].getId() == id) {
+				if (limbs[k].getId() == drawLimbListIDs[i]) {
 					drawLimbListIndexes[i] = k;
 				}
 			}
 		}
 	}
 
-	vector<int> getDrawLimbListIndexes() {
+	vector<int> getDrawLimbIndexes() {
 		return drawLimbListIndexes;
 	}
 
