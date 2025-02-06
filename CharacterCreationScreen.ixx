@@ -61,6 +61,7 @@ import <string>;
 import <iostream>;
 import <vector>;
 import <unordered_map>;
+import <algorithm>;
 
 import CharacterClasses;
 import FormFactory;
@@ -79,6 +80,7 @@ enum class CreationMode {
 	ChooseLimb, /* Show list of limbs. */
 	LimbLoaded /* Limb is loaded. Show LoadedLimb Panel. */
 };
+
 
 /* Map Screen class: where we navigate worlds, dungeons, and buildings. */
 export class CharacterCreationScreen {
@@ -103,7 +105,7 @@ public:
 		gameMenuPanel = ui.createGameMenuPanel();
 		reviewModePanel = ui.createReviewModePanel();
 		createLimbLoadedPanel(ui);
-		createChooseLimbPanel();
+		createChooseLimbPanel(false);
 		changeCreationMode(CreationMode::Review);
 		messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
 		messagePanel.setShow(true);
@@ -122,86 +124,10 @@ public:
 		SDL_DestroyTexture(titleTexture);
 	}
 
-	/* When we load the limb we need a panel with certain buttons to manipulate the loaded limb.
-	* Some buttons might not be necessary, so check if we have enough joints to move the limb around.
-	*/
-	void createLimbLoadedPanel(UI& ui = UI::getInstance()) {
-		/* Destroy textures if they already exist. */
-		if (limbLoadedPanel.getButtons().size() > 0) {
-			limbLoadedPanel.destroyTextures();
-		}
-
-		cout << "CREATING PANEL 00000\n";
-
-		bool loadedLimbHasExtraJoints = false;
-		bool characterHasExtraJoints = false;
-
-		if (loadedLimbId > 0) {
-			Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
-			int anchorLimbId = playerCharacter.getAnchorLimbId();
-			if (loadedLimb.getFreeJointIndexes().size() > 1 && loadedLimbId != anchorLimbId) {
-				loadedLimbHasExtraJoints = true; }
-
-			if (anchorLimbId > 0 && loadedLimbId != playerCharacter.getAnchorLimbId()) {
-				tuple<int, int> limbIdAndJointIndexForConnection = playerCharacter.getLimbIdAndJointIndexForConnection(anchorLimbId, loadedLimbId);
-				int possibleConnectorLimbId = get<0>(limbIdAndJointIndexForConnection);
-				int possibleConnectorJointId = get<1>(limbIdAndJointIndexForConnection);
-
-				if (possibleConnectorLimbId > 0 && possibleConnectorJointId >= 0 && possibleConnectorLimbId != loadedLimbId) {
-					characterHasExtraJoints = true;
-				}
-			}
-		}
-		limbLoadedPanel = ui.createLimbLoadedModePanel(loadedLimbHasExtraJoints, characterHasExtraJoints);
-	}
-
-	void createChooseLimbPanel(bool showEquippedLimbs = false) {
-		UI& ui = UI::getInstance();
-		/* Destroy textures if they already exist. */
-		if (chooseLimbPanel.getButtons().size() > 0) {
-			chooseLimbPanel.destroyTextures();
-		}
-
-		/* Build a vector of data structures so the UI can build the panel of Limb buttons. */
-		vector<LimbButtonData> limbBtnDataStructs;
-		vector<Limb>& inventoryLimbs = playerCharacter.getLimbs();
-
-		for (int i = 0; i < inventoryLimbs.size(); ++i) {
-			Limb& thisLimb = inventoryLimbs[i];
-			if (thisLimb.isEquipped() == showEquippedLimbs) {
-				limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
-			}
-		}
-
-		chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs);
-	}
-
+	void createLimbLoadedPanel(UI& ui);
+	void createChooseLimbPanel(bool showEquippedLimbs);
 	void setAnchorLimbDrawRect(UI& ui);
-
-	void changeCreationMode(CreationMode creationMode) {
-		this->creationMode = creationMode;
-
-		switch(creationMode){
-		case CreationMode::ChooseLimb:
-			createChooseLimbPanel();
-			chooseLimbPanel.setShow(true);
-			reviewModePanel.setShow(false);
-			limbLoadedPanel.setShow(false);
-			break;
-		case CreationMode::Review:
-			createChooseLimbPanel(true);
-			chooseLimbPanel.setShow(true);
-			reviewModePanel.setShow(true);
-			limbLoadedPanel.setShow(false);
-			break;
-		case CreationMode::LimbLoaded:
-			chooseLimbPanel.setShow(false);
-			reviewModePanel.setShow(false);
-			limbLoadedPanel.setShow(true);
-		break;
-		}
-	}
-
+	void changeCreationMode(CreationMode creationMode);
 	ScreenType getScreenType() { return screenType; }
 	void run();
 
@@ -240,6 +166,7 @@ private:
 	int getTitleBottomPosition() { return titleRect.y + titleRect.h; }
 
 	void showNewMessage(string newMessage, ConfirmationButtonType confirmationType, bool showRefuse, UI& ui = UI::getInstance());
+	void loadLimbAttempt(int limbToLoadID);
 
 	bool showTitle;
 	bool drawLoadedLimb;
@@ -250,6 +177,100 @@ private:
 	Character playerCharacter;
 	CreationMode creationMode;
 };
+
+
+
+/* When we load the limb we need a panel with certain buttons to manipulate the loaded limb.
+* Some buttons might not be necessary, so check if we have enough joints to move the limb around.
+*/
+void CharacterCreationScreen::createLimbLoadedPanel(UI& ui = UI::getInstance()) {
+	/* Destroy textures if they already exist. */
+	if (limbLoadedPanel.getButtons().size() > 0) {
+		limbLoadedPanel.destroyTextures(); }
+
+	bool loadedLimbHasExtraJoints = false;
+	bool characterHasExtraJoints = false;
+
+	if (loadedLimbId > 0) {
+		Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
+		int anchorLimbId = playerCharacter.getAnchorLimbId();
+		if (loadedLimb.getFreeJointIndexes().size() > 1 && loadedLimbId != anchorLimbId) {
+			loadedLimbHasExtraJoints = true;
+		}
+
+		if (anchorLimbId > 0 && loadedLimbId != playerCharacter.getAnchorLimbId()) {
+			tuple<int, int> limbIdAndJointIndexForConnection = playerCharacter.getLimbIdAndJointIndexForConnection(anchorLimbId, loadedLimbId);
+			int possibleConnectorLimbId = get<0>(limbIdAndJointIndexForConnection);
+			int possibleConnectorJointId = get<1>(limbIdAndJointIndexForConnection);
+
+			if (possibleConnectorLimbId > 0 && possibleConnectorJointId >= 0 && possibleConnectorLimbId != loadedLimbId) {
+				characterHasExtraJoints = true;
+			}
+		}
+	}
+	limbLoadedPanel = ui.createLimbLoadedModePanel(loadedLimbHasExtraJoints, characterHasExtraJoints);
+}
+
+
+
+/* 
+* Create the panel which displays a list of buttons, one button for each limb.
+* Depending on the context, we will either load the NON-EQUIPPED limbs, or the EQUIPPED limbs.
+* In Review Mode we load the equipped limbs (so we can manipulate them).
+* In ChooseLimb mode we load the non-equipped limbs.
+* Panel must be rebuilt every time we load/equip or unequip a limb.
+*/
+void CharacterCreationScreen::createChooseLimbPanel(bool showEquippedLimbs = false) {
+	UI& ui = UI::getInstance();
+	/* Destroy textures if they already exist. */
+	if (chooseLimbPanel.getButtons().size() > 0) {
+		chooseLimbPanel.destroyTextures();
+	}
+
+	/* Build a vector of data structures so the UI can build the panel of Limb buttons. */
+	vector<LimbButtonData> limbBtnDataStructs;
+	vector<Limb>& inventoryLimbs = playerCharacter.getLimbs();
+
+	for (int i = 0; i < inventoryLimbs.size(); ++i) {
+		Limb& thisLimb = inventoryLimbs[i];
+		if (thisLimb.isEquipped() == showEquippedLimbs) {
+			limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
+		}
+	}
+
+	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs);
+}
+
+
+/*
+* CreationMode indicates whether a list of limbs should be shown,
+* or a panel to manipulate a loaded limb,
+* or the main panel for reviewing the current character.
+* Changing the mode changes the panels.
+*/
+void CharacterCreationScreen::changeCreationMode(CreationMode creationMode) {
+	this->creationMode = creationMode;
+
+	switch (creationMode) {
+	case CreationMode::ChooseLimb:
+		createChooseLimbPanel();
+		chooseLimbPanel.setShow(true);
+		reviewModePanel.setShow(false);
+		limbLoadedPanel.setShow(false);
+		break;
+	case CreationMode::Review:
+		createChooseLimbPanel(true);
+		chooseLimbPanel.setShow(true);
+		reviewModePanel.setShow(true);
+		limbLoadedPanel.setShow(false);
+		break;
+	case CreationMode::LimbLoaded:
+		chooseLimbPanel.setShow(false);
+		reviewModePanel.setShow(false);
+		limbLoadedPanel.setShow(true);
+		break;
+	}
+}
 
 void CharacterCreationScreen::getBackgroundTexture(UI& ui) {
 	int windowHeight, windowWidth;
@@ -400,6 +421,63 @@ void CharacterCreationScreen::setAnchorLimbDrawRect(UI& ui = UI::getInstance()) 
 		});
 }
 
+
+/*
+* When the user clicks on a limb to load it (whether the limb is already loading or freshly equipping it)
+* We call this function.
+*/
+void CharacterCreationScreen::loadLimbAttempt(int limbToLoadID) {
+	/* clickStruct.buttonOption stores a limb ID from the database. The ID of the limb to load.*/
+
+	UI& ui = UI::getInstance();
+	Limb& clickedLimb = playerCharacter.getLimbById(limbToLoadID);
+	bool limbEquipped = false;
+
+	/* Make sure there is somewhere to attach the limb
+	* (only if it NEEDS a new attachment because it's NOT already equipped...
+	* ...we allow loading an already-equipped limb, but that case does NOT require this check).
+	*/
+	if (!clickedLimb.isEquipped() &&
+		playerCharacter.getAnchorLimbId() > 0 &&
+		get<0>(playerCharacter.getLimbIdAndJointIndexForConnection(playerCharacter.getAnchorLimbId(), limbToLoadID)) < 0
+		) {
+		showNewMessage(
+			Resources::getInstance().getMessageText("NO_FREE_CHAR_JOINTS"),
+			ConfirmationButtonType::OkCancel, false
+		);
+		return;
+	}
+
+	/*
+	* To set the draw order of the limbs, we set the draw order of the clicked limb to the SIZE of the vector of limbs.
+	* Then at the end we rebuild the draLimbList which brings everything down to the floor (starts at 0 and increments).
+	* 
+	*/
+
+	clickedLimb.setDrawOrder(playerCharacter.getEquippedLimbs().size());
+	loadedLimbId = limbToLoadID;
+
+	/* Now actually equip the limb if it isn't already equipped. */
+	if (!clickedLimb.isEquipped()) {
+		limbEquipped = playerCharacter.equipLimb(limbToLoadID);
+		if (!limbEquipped) {
+			loadedLimbId = -1;
+			clickedLimb.setDrawOrder(-1);
+			return;
+		}
+	}
+
+	if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
+		setAnchorLimbDrawRect(ui);
+	}
+
+	loadedLimbIsAlreadyEquipped = creationMode == CreationMode::Review;
+	createLimbLoadedPanel();
+	changeCreationMode(CreationMode::LimbLoaded);
+	clickedLimb.setRotationPointSDL();
+	playerCharacter.buildDrawLimbList();
+}
+
 /* Process user input */
 void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
 	/* User pressed X to close */
@@ -494,68 +572,14 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 			else if (chooseLimbPanel.getShow() && chooseLimbPanel.isInPanel(mouseX, mouseY)) {
 				cout << "\n\nCLICK LIMB MENU \n\n";
 				ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
-				UI& ui = UI::getInstance();
+				int limbToLoadID = clickStruct.itemID;
 
 				/* If we sent in a limb id/index: */
-				if (clickStruct.itemID > 0) {
-					Limb& clickedLimb = playerCharacter.getLimbById(clickStruct.itemID);
-					bool limbEquipped = false;
-
-					/* see what button might have been clicked : */
-					switch (clickStruct.buttonOption) {
-					case ButtonOption::LoadLimb:
-						/*
-						* Get the limb index. Where should it be stored? Edit the BUTTON.
-						* BUTTON should also optionally take a texture as an argument.
-						* ClickStruct has a DB ID!!!!!
-						*/
-
-						/* Make sure there is somewhere to attach the limb 
-						* (if it NEEDS a new attachment because it's NOT already equipped... we allow loading an already-equipped limb).
-						*/
-						if (!clickedLimb.isEquipped() &&
-							playerCharacter.getAnchorLimbId() > 0 &&
-							get<0>(playerCharacter.getLimbIdAndJointIndexForConnection(playerCharacter.getAnchorLimbId(), clickStruct.itemID)) < 0
-						) {
-							showNewMessage(
-								Resources::getInstance().getMessageText("NO_FREE_CHAR_JOINTS"),
-								ConfirmationButtonType::OkCancel, false
-							);
-							break;
-						}
-
-						loadedLimbId = clickStruct.itemID;
-
-						/* Now actually equip the limb if it isn't already equipped. */
-						if (!clickedLimb.isEquipped()) {
-							limbEquipped = playerCharacter.equipLimb(clickStruct.itemID);
-							
-							if (!limbEquipped) {
-								loadedLimbId = -1;
-								break; }
-						}
-
-						if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
-							setAnchorLimbDrawRect(ui);
-						}
-						loadedLimbIsAlreadyEquipped = creationMode == CreationMode::Review;
-						createLimbLoadedPanel();
-						changeCreationMode(CreationMode::LimbLoaded);
-						clickedLimb.setRotationPointSDL();
-
-						break;
-					}
+				if (clickStruct.buttonOption == ButtonOption::LoadLimb && limbToLoadID > 0) {
+					loadLimbAttempt(limbToLoadID);
 				}
-				else {
-					/* see what button might have been clicked : */
-					switch (clickStruct.buttonOption) {
-					case ButtonOption::Back:
-						// switch to other panel
-						changeCreationMode(CreationMode::Review);
-						break;
-					default:
-						cout << "ERROR\n";
-					}
+				else if(clickStruct.buttonOption == ButtonOption::Back) {
+					changeCreationMode(CreationMode::Review);
 				}
 			}
 			else if (limbLoadedPanel.getShow() && limbLoadedPanel.isInPanel(mouseX, mouseY)) {
