@@ -940,6 +940,7 @@ public:
 			tHeight
 			});
 
+		setRotationPointsSDL();
 		setChildLimbDrawRects(anchorLimb, ui);
 		buildDrawLimbList();
 

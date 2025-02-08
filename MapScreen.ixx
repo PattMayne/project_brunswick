@@ -173,7 +173,9 @@ export class MapScreen {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
 				map.setPlayerCharacter(loadPlayerMapCharacter());
-				map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
+				if (map.getPlayerCharacter().getEquippedLimbs().size() > 0) {
+					map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
+				}
 				updatePlayerMap(mapSlug);
 			}
 			else {
@@ -182,12 +184,17 @@ export class MapScreen {
 				createNewMap(map);
 				updatePlayerMap(mapSlug);
 
-				/* get character texture (MUST DELETE AFTER WE START DRAWING RAW LIMBS ONTO THE MAP INSTEAD.) */
-				SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
-				SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
-				SDL_FreeSurface(characterSurface);
-				//map.getPlayerCharacter().setTexture(characterTexture);
-				map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
+
+				if (map.getPlayerCharacter().getEquippedLimbs().size() > 0 ) {
+					map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
+				}
+				else {
+					/* Must replace with DEFAULT LIMBS. */
+					SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
+					SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
+					SDL_FreeSurface(characterSurface);
+					map.getPlayerCharacter().setTexture(characterTexture);
+				}
 			}
 
 			screenType = ScreenType::Map;
@@ -195,7 +202,6 @@ export class MapScreen {
 
 			hBlocksTotal = mapForm.blocksWidth;
 			vBlocksTotal = mapForm.blocksHeight;
-
 			animationType = AnimationType::None;
 
 			showTitle = true;
@@ -207,9 +213,6 @@ export class MapScreen {
 			buildMapDisplay();
 			createTitleTexture(ui);
 			limbAngle = 0;
-
-			cout << "There are " << map.getRoamingLimbs().size() << " roaming limbs\n";
-			cout << "Player has " << map.getPlayerCharacter().getLimbs().size() << " limbs\n";
 		}
 
 		/* Destructor */
@@ -788,7 +791,6 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		NULL, &characterRect,
 		0, NULL, SDL_FLIP_NONE
 	);
-
 
 	drawAcquiredLimbs(ui, characterRect.x, characterRect.y);
 }
