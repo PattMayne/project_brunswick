@@ -436,11 +436,12 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 	* The Screen will create the character object (or maybe the Database will).
 	* 
 	*/
-	cout << "MAP CONSTRUCTING 00000\n";
 	playerCharacter = MapCharacter(CharacterType::Player, characterPosition.x, characterPosition.y);
-	cout << "MAP CONSTRUCTING 11111\n";
+
+	cout << "MAP CONSTRUCTING 00000\n";
 	playerCharacter.setTexture(characterTexture);
-	cout << "MAP CONSTRUCTING 22222\n";
+	cout << "MAP CONSTRUCTING 11111\n";
+
 	/* Set wall and floor texture indexes. */
 	for (int i = 0; i < this->rows.size(); ++i) {
 		vector<Block>& blocks = this->rows[i];

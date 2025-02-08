@@ -1,4 +1,9 @@
 module;
+
+#include "SDL.h"
+#include "SDL_image.h"
+#include "SDL_ttf.h"
+
 export module TypeStorage;
 
 export enum class ScreenType {
@@ -62,6 +67,13 @@ export ScreenStruct closingScreenStruct() {
 	ScreenStruct closingScreenStruct(ScreenType::NoScreen, -1);
 	return closingScreenStruct;
 }
+
+export struct AvatarAndDrawRect {
+	AvatarAndDrawRect(SDL_Texture* texture, SDL_Rect rect) : avatar(texture), drawRect(rect) {}
+	SDL_Texture* avatar;
+	SDL_Rect drawRect;
+};
+
 
 /* PANEL BUTTON ENUMS
 * Each panel has a list of buttons.

@@ -171,10 +171,9 @@ export class MapScreen {
 
 			if (mapObjectExists(mapSlug)) {
 				/* Load existing map. */
-				cout << "TRYING to load MAP SCREEN 11111\n";
 				map = loadMap(mapSlug);
-				cout << "TRYING to load MAP SCREEN 22222\n";
 				map.setPlayerCharacter(loadPlayerMapCharacter());
+				map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
 				updatePlayerMap(mapSlug);
 			}
 			else {
@@ -187,7 +186,8 @@ export class MapScreen {
 				SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
 				SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 				SDL_FreeSurface(characterSurface);
-				map.getPlayerCharacter().setTexture(characterTexture);
+				//map.getPlayerCharacter().setTexture(characterTexture);
+				map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
 			}
 
 			screenType = ScreenType::Map;
@@ -790,6 +790,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		NULL, &characterRect,
 		0, NULL, SDL_FLIP_NONE
 	);
+
 
 	drawAcquiredLimbs(ui, characterRect.x, characterRect.y);
 }

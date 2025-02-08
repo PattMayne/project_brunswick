@@ -563,7 +563,6 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					break;
 				case ButtonOption::SaveSuit:
 					updateCharacterLimbs(gameState.getPlayerID(), playerCharacter.getAnchorLimbId(), playerCharacter.getLimbs());
-					playerCharacter.setAvatarDimensions(0);
 					cout << "SAVING SUIT\n";
 					break;
 				default:

@@ -66,6 +66,9 @@ struct AvatarDimensionsStruct {
 		bottommost = 0;
 		rightmostTextureWidth = 0;
 		bottommostTextureHeight = 0;
+		avatarWidth = 0;
+		avatarHeight = 0;
+		greaterDimension = 0;
 	}
 
 	int leftmost;
@@ -74,7 +77,11 @@ struct AvatarDimensionsStruct {
 	int bottommost;
 	int rightmostTextureWidth;
 	int bottommostTextureHeight;
+	int avatarWidth;
+	int avatarHeight;
+	int greaterDimension;
 };
+
 
 /*
 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -712,17 +719,10 @@ export class Limb {
 */
 export class Character {
 public:
-	Character()
-	{
-		anchorLimbId = -1;
-		drawScale = 1.00;
-	}
+	Character() : anchorLimbId(-1) {}
 	~Character() { }
 	Character(CharacterType characterType) : 
-		characterType(characterType), anchorLimbId(-1)
-	{
-		drawScale = 1.00;
-	}
+		characterType(characterType), anchorLimbId(-1) {}
 
 	string getName() { return name; }
 	void setName(string newName) { name = newName; }
@@ -843,22 +843,20 @@ public:
 		}
 	}
 
+	/*
+	* This cycles through the equipped limbs and finds out how high and wide the drawn avatar will be.
+	* It saves the important information to dimStruct, which can then be used to render the avatar
+	* into a texture.
+	*/
 
-	void setAvatarDimensions(int maxAvatarWidth) {
-
+	SDL_Texture* createAvatar() {
 		UI& ui = UI::getInstance();
-		drawScale = 1.00;
 		Limb& anchorLimb = getAnchorLimb();
 
 		int tWidth = 0;
 		int tHeight = 0;
 
 		SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &tWidth, &tHeight);
-
-		if (maxAvatarWidth <= tWidth || maxAvatarWidth <= tHeight) {
-			/* Scale will be 1:1. */
-			return;
-		}
 
 		int left = 0;
 		int top = 0;
@@ -898,15 +896,74 @@ public:
 		*/
 		checkChildLimbsForAvatarBoundaries(anchorLimb, dimStruct);
 
-		/* NOW set the SCALE. */
+		dimStruct.avatarWidth = (dimStruct.rightmost + dimStruct.rightmostTextureWidth) - dimStruct.leftmost;
+		dimStruct.avatarHeight = (dimStruct.bottommost + dimStruct.bottommostTextureHeight) - dimStruct.topmost;
+		dimStruct.greaterDimension = dimStruct.avatarHeight > dimStruct.avatarWidth ? dimStruct.avatarHeight : dimStruct.avatarWidth;
+		//dimStruct.greaterDimension += dimStruct.rightmostTextureWidth / 4;
 
-		int avatarWidth = (dimStruct.rightmost + dimStruct.rightmostTextureWidth) - dimStruct.leftmost;
-		int avatarHeight = (dimStruct.bottommost + dimStruct.bottommostTextureHeight) - dimStruct.topmost;
-		int greaterDimension = avatarHeight > avatarWidth ? avatarHeight : avatarWidth;
+		/* Now build the actual avatar. */
 
-		drawScale = greaterDimension / maxAvatarWidth; /* Should this be an int, and a percentage? */
+		SDL_Renderer* renderer = ui.getMainRenderer();
 
-		/* Now set the drawRects AGAIN, and also the modifiedPoint of each Joint. */
+
+
+		/* Create offscreen texture where we will draw the avatar (to then store as a texture). */
+		SDL_Texture* offscreenTexture = SDL_CreateTexture(
+			renderer,
+			SDL_PIXELFORMAT_RGBA8888,
+			SDL_TEXTUREACCESS_TARGET,
+			dimStruct.greaterDimension, dimStruct.greaterDimension);
+
+		if (offscreenTexture == NULL) {
+			cout << "TEXTURE ERROR\n";
+			SDL_Log("Failed to create offscreen texture: %s", SDL_GetError());
+		}
+
+		SDL_SetTextureBlendMode(offscreenTexture, SDL_BLENDMODE_BLEND);
+
+		/* Set the render target to the off - screen texture, and clear with transparent color. */
+		SDL_SetRenderTarget(renderer, offscreenTexture);
+		// Enable blending for the renderer
+		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+		SDL_RenderClear(renderer);
+
+		/* Reset the drawRects (giving anchorLimb the correct offset, and all some margin for rotation) and draw limbs. */
+
+		anchorLimb.setDrawRect({
+			0 - dimStruct.leftmost,
+			0 - dimStruct.topmost,
+			tWidth,
+			tHeight
+			});
+
+		setChildLimbDrawRects(anchorLimb, ui);
+
+		buildDrawLimbList();
+
+		// Render textures onto the off-screen texture
+		anchorLimb.draw(ui);
+		cout << "Are we drawing anchorLimb?\n";
+
+		for (int index : getDrawLimbIndexes()) {
+			Limb& limbToDraw = getLimbs()[index];
+
+			// Ensure your limb textures support blending
+			SDL_SetTextureBlendMode(limbToDraw.getTexture(), SDL_BLENDMODE_BLEND);
+
+			limbToDraw.draw(ui);
+			//SDL_RenderCopy(renderer, limbToDraw.getTexture(), NULL, &limbToDraw.getDrawRect());
+			cout << "Drawing " << limbToDraw.getForm().slug << "\n";
+		}
+
+		SDL_RenderPresent(renderer);
+
+		/* Reset the render target back to the default (the window). */
+		SDL_SetRenderTarget(renderer, NULL);
+
+		// now test it by drawing to the top corner.
+
+		return offscreenTexture;
 	}
 
 protected:
@@ -917,7 +974,6 @@ protected:
 	string name;
 	vector<int> drawLimbListIDs;
 	vector<int> drawLimbListIndexes;
-	float drawScale;
 };
 
 
