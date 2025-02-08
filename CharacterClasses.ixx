@@ -58,6 +58,24 @@ export struct SuitLimbPlacement {
 
 export bool compareDrawOrder(Limb& limbA, Limb& limbB);
 
+struct AvatarDimensionsStruct {
+	AvatarDimensionsStruct() {
+		leftmost = 0;
+		rightmost = 0;
+		topmost = 0;
+		bottommost = 0;
+		rightmostTextureWidth = 0;
+		bottommostTextureHeight = 0;
+	}
+
+	int leftmost;
+	int rightmost;
+	int topmost;
+	int bottommost;
+	int rightmostTextureWidth;
+	int bottommostTextureHeight;
+};
+
 /*
 * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * ~  _____ ___  ____  __  __                  ~
@@ -694,11 +712,17 @@ export class Limb {
 */
 export class Character {
 public:
-	Character() {
-		anchorLimbId = -1; }
-	~Character() {}
-	Character(CharacterType characterType) :
-		characterType(characterType), anchorLimbId(-1) { }
+	Character()
+	{
+		anchorLimbId = -1;
+		drawScale = 1.00;
+	}
+	~Character() { }
+	Character(CharacterType characterType) : 
+		characterType(characterType), anchorLimbId(-1)
+	{
+		drawScale = 1.00;
+	}
 
 	string getName() { return name; }
 	void setName(string newName) { name = newName; }
@@ -721,21 +745,20 @@ public:
 	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude = -1);
 	void setAnchorLimbId(int newId) { anchorLimbId = newId; }
-	void setChildLimbDrawRect(Limb& parentLimb, UI& ui);
+	void setChildLimbDrawRects(Limb& parentLimb, UI& ui);
 
 	bool shiftChildLimb(int childLimbId);
 	vector<Limb> getEquippedLimbs();
 	vector<int>& getDrawLimbIDs() { return drawLimbListIDs; }
-
 	void getChildLimbsRecursively(Limb& parentLimb, vector<Limb>& childLimbs);
 
-	/* This is currently DUMB, in that it ignores player preference.
-	* We can smartify it later.
-	* 
-	* 
-	* LATER:
-	* Make this a list of INDEXES for easy/efficient access.
-	* We can store a list of IDs in the DB, but build a list of INDEXES from that!
+
+	/* 
+	*  Ultimately builds the vector of the indexes of the limbs which are equipped,
+	* and therefore need to be drawn. Builds that vector according to their draw order.
+	* The order in which they are to be drawn.
+	* This allows any screen's draw function to get an easy list of indexes to
+	* quickly grab each limb to draw, during each frame.
 	*/
 	void buildDrawLimbList() {
 		drawLimbListIDs = {};
@@ -755,12 +778,11 @@ public:
 		setLimbDrawOrder(drawLimbListIDs);
 	}
 
+	/* Takes an ID (from DB) of a limb, adds it to the list of IDs to draw,
+	* then sets the list of vectors to draw.
+	*/
 	void addToDrawLimbList(int limbId) {
 		drawLimbListIDs.push_back(limbId);
-		setLimbDrawOrder(drawLimbListIDs);
-	}
-
-	void setLimbDrawOrder() {
 		setLimbDrawOrder(drawLimbListIDs);
 	}
 
@@ -780,8 +802,111 @@ public:
 		}
 	}
 
-	vector<int> getDrawLimbIndexes() {
-		return drawLimbListIndexes;
+	void setLimbDrawOrder() { setLimbDrawOrder(drawLimbListIDs); }
+	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
+
+
+	/* AnchorLimb must set its boundaries before calling this recursive function on its child limbs. */
+	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct) {
+		for (Joint& joint : parentLimb.getJoints()) {
+			int connectedLimbId = joint.getConnectedLimbId();
+
+			if (connectedLimbId >= 0) {
+				Limb& connectedLimb = getLimbById(connectedLimbId);
+				SDL_Rect drawRect = connectedLimb.getDrawRect();
+
+				int tWidth;
+				int tHeight;
+				SDL_QueryTexture(connectedLimb.getTexture(), NULL, NULL, &tWidth, &tHeight);
+
+				/* Now we actually check the dimensions. */
+
+				if (drawRect.x < dimStruct.leftmost) {
+					dimStruct.leftmost = drawRect.x;
+				}
+				else if ((drawRect.x + tWidth) > (dimStruct.rightmost + dimStruct.rightmostTextureWidth)) {
+					dimStruct.rightmost = drawRect.x;
+					dimStruct.rightmostTextureWidth = tWidth;
+				}
+
+				if (drawRect.y < dimStruct.topmost) {
+					dimStruct.topmost = drawRect.y;
+				}
+				else if ((drawRect.y + tHeight) > (dimStruct.bottommost + dimStruct.bottommostTextureHeight)) {
+					dimStruct.bottommost = drawRect.y;
+					dimStruct.bottommostTextureHeight = tHeight;
+				}
+
+				/* Now check this limb's child limbs. */
+				checkChildLimbsForAvatarBoundaries(connectedLimb, dimStruct);
+			}
+		}
+	}
+
+
+	void setAvatarDimensions(int maxAvatarWidth) {
+
+		UI& ui = UI::getInstance();
+		drawScale = 1.00;
+		Limb& anchorLimb = getAnchorLimb();
+
+		int tWidth = 0;
+		int tHeight = 0;
+
+		SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &tWidth, &tHeight);
+
+		if (maxAvatarWidth <= tWidth || maxAvatarWidth <= tHeight) {
+			/* Scale will be 1:1. */
+			return;
+		}
+
+		int left = 0;
+		int top = 0;
+		int right = tWidth;
+		int bottom = tHeight;
+
+		/* Set drawRects of all equipped limbs from starting point of 0
+		*  for calculating
+		*/
+		anchorLimb.setDrawRect({
+			0,
+			0,
+			tWidth,
+			tHeight
+			});
+
+		setChildLimbDrawRects(anchorLimb, ui);
+
+		/*
+		* NOW:
+		* --> Get the leftmost x value of all equipped drawRects.
+		* --> Get the rightmost x value of all equipepd drawRects, and add the texture width of that limb.
+		* --> Get the topmost y value of all equipped drawRects.
+		* --> Get the bottommost y value of all equipped drawRects, and add the texture height of that limb.
+		* We need a STRUCT to pass in which holds:
+		* --> leftmost, topmost, rightmost, bottommost, rightmostTextureWidth, bottommostTextureHeight
+		*
+		*/
+
+		/* For now the anchorLimb sets the size of the avatar. */
+		AvatarDimensionsStruct dimStruct = AvatarDimensionsStruct();
+		dimStruct.bottommostTextureHeight = tHeight;
+		dimStruct.rightmostTextureWidth = tWidth;
+
+		/* Recursively search attached limbs for the extreme dimensions of the avatar.
+		* This is IMPERFECT because it currently does NOT account for rotating the boundary textures... but maybe that's okay.
+		*/
+		checkChildLimbsForAvatarBoundaries(anchorLimb, dimStruct);
+
+		/* NOW set the SCALE. */
+
+		int avatarWidth = (dimStruct.rightmost + dimStruct.rightmostTextureWidth) - dimStruct.leftmost;
+		int avatarHeight = (dimStruct.bottommost + dimStruct.bottommostTextureHeight) - dimStruct.topmost;
+		int greaterDimension = avatarHeight > avatarWidth ? avatarHeight : avatarWidth;
+
+		drawScale = greaterDimension / maxAvatarWidth; /* Should this be an int, and a percentage? */
+
+		/* Now set the drawRects AGAIN, and also the modifiedPoint of each Joint. */
 	}
 
 protected:
@@ -792,7 +917,9 @@ protected:
 	string name;
 	vector<int> drawLimbListIDs;
 	vector<int> drawLimbListIndexes;
+	float drawScale;
 };
+
 
 /*
 * CHARACTER CLASS FUNCTIONS.
@@ -1029,7 +1156,7 @@ bool Character::shiftChildLimb(int childLimbId) {
 				newParentJoint.connectLimb(childLimbId, loadedLimbAnchorJointId);
 				/* Reset all joints. */
 				setAnchorJointIDs();
-				setChildLimbDrawRect(getAnchorLimb(), UI::getInstance());
+				setChildLimbDrawRects(getAnchorLimb(), UI::getInstance());
 				return true;
 			}
 		}
@@ -1113,7 +1240,7 @@ bool Character::equipLimb(int limbId) {
 	if (anchorLimbId < 0) {
 		anchorLimbId = limbId;
 		limbToEquip.setAnchor(true);
-		setChildLimbDrawRect(getAnchorLimb(), ui);
+		setChildLimbDrawRects(getAnchorLimb(), ui);
 		return true;
 	}
 
@@ -1139,7 +1266,7 @@ bool Character::equipLimb(int limbId) {
 		if (jointToEquip.isFree()) {
 			jointToEquip.setAnchor(true);
 			jointToConnect.connectLimb(limbId, i);
-			setChildLimbDrawRect(getAnchorLimb(), ui);
+			setChildLimbDrawRects(getAnchorLimb(), ui);
 			return true;
 		}
 	}
@@ -1152,19 +1279,19 @@ bool Character::equipLimb(int limbId) {
 * The SDL_Rect for the anchor limb must be set by the screen FIRST. Then call this function.
 * Scale will be baked into the parentRect and the modifiedPoint of each joint.
 */
-void Character::setChildLimbDrawRect(Limb& parentLimb, UI& ui) {
+void Character::setChildLimbDrawRects(Limb& parentLimb, UI& ui) {
 	/* Get the "parent" limb's SDL_Rect (for reference) and joints (to access each connected limb). */
-	vector<Joint>& anchorJoints = parentLimb.getJoints();
+	vector<Joint>& parentJoints = parentLimb.getJoints();
 	SDL_Rect& parentRect = parentLimb.getDrawRect();
 
 	/* For each joint, get the connected limb and set its rect. Then recursively set ITS child limbs' SDL_Rects. */
-	for (int i = 0; i < anchorJoints.size(); ++i) {
-		Joint& anchorJoint = anchorJoints[i];
-		int connectedLimbId = anchorJoint.getConnectedLimbId();
+	for (int i = 0; i < parentJoints.size(); ++i) {
+		Joint& parentJoint = parentJoints[i];
+		int connectedLimbId = parentJoint.getConnectedLimbId();
 		if (connectedLimbId < 0) { continue; }
 
-		Point anchorJointPoint = anchorJoint.getPoint();
-		Limb& connectedLimb = getLimbById(anchorJoint.getConnectedLimbId());
+		Point parentJointPoint = parentJoint.getPoint();
+		Limb& connectedLimb = getLimbById(parentJoint.getConnectedLimbId());
 
 		/* make sure it has an anchor joint (make a function which checks???)... if not, return and stop drawing. */
 		Point connectedLimbAnchorJointPoint = connectedLimb.getAnchorJoint().getPoint();
@@ -1175,14 +1302,14 @@ void Character::setChildLimbDrawRect(Limb& parentLimb, UI& ui) {
 		*/
 
 		connectedLimb.setDrawRect({
-			parentRect.x + anchorJointPoint.x - connectedLimbAnchorJointPoint.x,
-			parentRect.y + anchorJointPoint.y - connectedLimbAnchorJointPoint.y,
+			parentRect.x + parentJointPoint.x - connectedLimbAnchorJointPoint.x,
+			parentRect.y + parentJointPoint.y - connectedLimbAnchorJointPoint.y,
 			parentRect.w,
 			parentRect.h
 			});
 
 		/* Recursively draw all THIS limb's child limbs. */
-		setChildLimbDrawRect(connectedLimb, ui);
+		setChildLimbDrawRects(connectedLimb, ui);
 	}
 }
 

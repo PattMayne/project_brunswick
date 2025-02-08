@@ -299,7 +299,7 @@ export void CharacterCreationScreen::run() {
 	SDL_Event e;
 	bool running = true;
 	setAnchorLimbDrawRect(ui);
-	playerCharacter.setChildLimbDrawRect(playerCharacter.getAnchorLimb(), ui);
+	playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
 	playerCharacter.buildDrawLimbList();
 
 	while (running) {
@@ -563,6 +563,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					break;
 				case ButtonOption::SaveSuit:
 					updateCharacterLimbs(gameState.getPlayerID(), playerCharacter.getAnchorLimbId(), playerCharacter.getLimbs());
+					playerCharacter.setAvatarDimensions(0);
 					cout << "SAVING SUIT\n";
 					break;
 				default:
@@ -606,7 +607,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						/* Reset all joints. */
 						playerCharacter.setAnchorJointIDs();
 						playerCharacter.setRotationPointsSDL();
-						playerCharacter.setChildLimbDrawRect(playerCharacter.getAnchorLimb(), ui);
+						playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
 					}
 
 					break;
@@ -622,7 +623,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						if (anchorShifted) {
 							playerCharacter.setAnchorJointIDs();
 							playerCharacter.setRotationPointsSDL();
-							playerCharacter.setChildLimbDrawRect(playerCharacter.getAnchorLimb(), ui);
+							playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
 						}
 						break;
 					}
@@ -632,7 +633,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						loadedLimb.rotate(15);
 						/* Make all the child limbs follow the rotation. */
-						playerCharacter.setChildLimbDrawRect(loadedLimb, ui);
+						playerCharacter.setChildLimbDrawRects(loadedLimb, ui);
 					}
 					break;
 				case ButtonOption::RotateCounterClockwise:
@@ -640,7 +641,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
 						loadedLimb.rotate(-15);
 						/* Make all the child limbs follow the rotation. */
-						playerCharacter.setChildLimbDrawRect(loadedLimb, ui);
+						playerCharacter.setChildLimbDrawRects(loadedLimb, ui);
 					}
 					break;
 				case ButtonOption::UnloadLimb:
