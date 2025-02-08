@@ -901,11 +901,13 @@ public:
 		dimStruct.greaterDimension = dimStruct.avatarHeight > dimStruct.avatarWidth ? dimStruct.avatarHeight : dimStruct.avatarWidth;
 		//dimStruct.greaterDimension += dimStruct.rightmostTextureWidth / 4;
 
-		/* Now build the actual avatar. */
+		/* Now build the actual avatar.
+		* We will draw (render) the limb textures to an off-screen texture,
+		* then return that texture as the avatar.
+		* Some work is done to ensure transparency (setting the blend mode, using the right pixel format, clearing with 0 alpha).
+		*/
 
 		SDL_Renderer* renderer = ui.getMainRenderer();
-
-
 
 		/* Create offscreen texture where we will draw the avatar (to then store as a texture). */
 		SDL_Texture* offscreenTexture = SDL_CreateTexture(
@@ -917,19 +919,20 @@ public:
 		if (offscreenTexture == NULL) {
 			cout << "TEXTURE ERROR\n";
 			SDL_Log("Failed to create offscreen texture: %s", SDL_GetError());
+			return NULL;
 		}
 
+		/* Set the blend mode of the offscreen texture (to allow transparency). */
 		SDL_SetTextureBlendMode(offscreenTexture, SDL_BLENDMODE_BLEND);
 
-		/* Set the render target to the off - screen texture, and clear with transparent color. */
+		/* Set the render target to the off-screen texture, and clear with transparent color. */
 		SDL_SetRenderTarget(renderer, offscreenTexture);
-		// Enable blending for the renderer
+		/* Enable blending for the renderer. */
 		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 		SDL_RenderClear(renderer);
 
 		/* Reset the drawRects (giving anchorLimb the correct offset, and all some margin for rotation) and draw limbs. */
-
 		anchorLimb.setDrawRect({
 			0 - dimStruct.leftmost,
 			0 - dimStruct.topmost,
@@ -938,30 +941,18 @@ public:
 			});
 
 		setChildLimbDrawRects(anchorLimb, ui);
-
 		buildDrawLimbList();
-
-		// Render textures onto the off-screen texture
-		anchorLimb.draw(ui);
-		cout << "Are we drawing anchorLimb?\n";
 
 		for (int index : getDrawLimbIndexes()) {
 			Limb& limbToDraw = getLimbs()[index];
-
-			// Ensure your limb textures support blending
+			/* Ensure limb texture supports blending. */
 			SDL_SetTextureBlendMode(limbToDraw.getTexture(), SDL_BLENDMODE_BLEND);
-
 			limbToDraw.draw(ui);
-			//SDL_RenderCopy(renderer, limbToDraw.getTexture(), NULL, &limbToDraw.getDrawRect());
-			cout << "Drawing " << limbToDraw.getForm().slug << "\n";
 		}
 
 		SDL_RenderPresent(renderer);
-
 		/* Reset the render target back to the default (the window). */
 		SDL_SetRenderTarget(renderer, NULL);
-
-		// now test it by drawing to the top corner.
 
 		return offscreenTexture;
 	}

@@ -437,10 +437,7 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 	* 
 	*/
 	playerCharacter = MapCharacter(CharacterType::Player, characterPosition.x, characterPosition.y);
-
-	cout << "MAP CONSTRUCTING 00000\n";
-	playerCharacter.setTexture(characterTexture);
-	cout << "MAP CONSTRUCTING 11111\n";
+	playerCharacter.setTexture(characterTexture); /* Placeholder. */
 
 	/* Set wall and floor texture indexes. */
 	for (int i = 0; i < this->rows.size(); ++i) {
