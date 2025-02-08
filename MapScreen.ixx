@@ -155,16 +155,20 @@ export class MapScreen {
 
 			/* TEMPORARY MAP-CREATION SCHEME 
 			* 
-			* PHASE 1:
+			* PHASE 1 (DONE):
 			* 1) Get vanilla Forest Map every time.
 			* 2) Save the map immediately after creation.
 			* 
-			* PHASE 2:
+			* PHASE 2 (PRESENT PHASE IMPLEMENTED):
 			* 1) Check for EXISTING Forest Map.
 			* 2) LOAD that map from the database if it exists.
 			* 3) If it does NOT exist, do PHASE 1 steps.
 			* 
-			* PHASE 3 comes after creating the BATTLE screen.
+			* PHASE 3:
+			* 1) Load shrines for each native NPC.
+			* 2) Path creation is built on connecting those shrines to the entrance and exit.
+			* 3) Hostile NPC-creation on limb collision.
+			* 4) Collision with hostile NPC goes to Battle screen.
 			*/
 
 			mapForm = getMapFormFromSlug(mapSlug);
@@ -492,9 +496,10 @@ export void MapScreen::run() {
 	bool running = true;
 	animate = false;
 
-	/* Making the Limbs rotate; */
+	/* Making the Limbs rotate. */
 	int spriteAnimMax = 15;
 	bool reverseSpriteAnimation = false;
+
 	vector<int> collidedLimbIDs; /* Contains the database IDs, not the vector indexes. */
 
 	while (running) {
@@ -626,8 +631,7 @@ export void MapScreen::run() {
 			startNpcAnimation = false;
 		}
 
-		/* check the sprite anim situation (wiggling Roaming Limbs, bouncing NPCs.). */
-		/* What is reverse sprint animation? Probably supposed to be reversed SPRITE animation. */
+		/* check the sprite anim situation (wiggling Roaming Limbs, bouncing NPCs.) */
 
 		if (reverseSpriteAnimation) {
 			if (limbAngle > spriteAnimMax * -1) {
@@ -789,7 +793,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		ui.getMainRenderer(),
 		playerCharacter.getTexture(),
 		NULL, &characterRect,
-		0, NULL, SDL_FLIP_NONE
+		-limbAngle, NULL, SDL_FLIP_NONE
 	);
 
 	drawAcquiredLimbs(ui, characterRect.x, characterRect.y);
@@ -1290,7 +1294,7 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 		requestRight();
 		break;
 	default:
-		cout << e.key.keysym.sym << "\n";
+		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";
 	}
 
 	// cout << "Block Width: " << blockWidth << "\n";

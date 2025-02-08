@@ -562,10 +562,7 @@ export Character loadPlayerCharacter() {
         limb.setId(limbID);
 
         character.addLimb(limb);
-        cout << "added limb " << limbName << "\n";
     }
-
-    cout << "Player has " << character.getLimbs().size() << " limbs (in DATABASE module)\n";
 
     if (returnCode != SQLITE_DONE) {
         cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
@@ -579,8 +576,6 @@ export Character loadPlayerCharacter() {
     character.setName(name);
     character.setId(characterID);
     character.setAnchorLimbId(anchorLimbID);
-
-    cout << "Player has " << character.getLimbs().size() << " limbs in DB module\n";
 
     return character;
 }
@@ -750,7 +745,6 @@ export MapCharacter loadPlayerMapCharacter() {
         limb.setId(limbID);
 
         character.addLimb(limb);
-        cout << "added limb " << limbName << "\n";
     }
 
     cout << "Player has " << character.getLimbs().size() << " limbs (in DATABASE module)\n";
@@ -812,10 +806,6 @@ export MapCharacter loadPlayerMapCharacter() {
     /* Finalize map ID retrieval statement. */
     sqlite3_finalize(statement);
     sqlite3_close(db);
-    cout << "We really reached the end of the character loading, so what's wrong?\n";
-
-    cout << "Player has " << character.getLimbs().size() << " limbs in DB module\n";
-
 
     /* get character texture (MUST DELETE AFTER WE START DRAWING RAW LIMBS ONTO THE MAP INSTEAD.) */
     UI& ui = UI::getInstance();
@@ -946,7 +936,6 @@ export void updatePlayerMapLocation(string slugString, Point position) {
 
     /* Open database. */
     int dbFailed = sqlite3_open(dbPath(), &db);
-    cout << dbFailed << "\n";
     if (dbFailed != 0) {
         cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
         return;
@@ -1506,7 +1495,8 @@ export Map loadMap(string mapSlug) {
                 sqlite3_column_int(queryLimbsStatement, 3)
             ),
             joints
-        );    }
+        );
+    }
 
     if (returnCode != SQLITE_DONE) {
         cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
@@ -1514,9 +1504,6 @@ export Map loadMap(string mapSlug) {
     }
 
     sqlite3_finalize(queryLimbsStatement);
-
-    cout << "STILL BROKEN 00000\n";
-
 
     /* Get the LANDMARK objects. */
 
