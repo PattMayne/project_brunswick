@@ -217,6 +217,7 @@ export class MapScreen {
 			buildMapDisplay();
 			createTitleTexture(ui);
 			limbAngle = 0;
+			npcHeight = 0;
 		}
 
 		/* Destructor */
@@ -341,6 +342,7 @@ export class MapScreen {
 		int maxDrawStartY = 0;
 
 		int limbAngle;
+		int npcHeight;
 
 		vector<AcquiredLimb> acquiredLimbStructs;
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
@@ -500,6 +502,11 @@ export void MapScreen::run() {
 	int spriteAnimMax = 15;
 	bool reverseSpriteAnimation = false;
 
+	/* Making the NPCs bounce. */
+	int npcAnimMax = 5;
+	bool reverseNpcAnimation = false;
+	bool animateNpcThisFrame = false;
+
 	vector<int> collidedLimbIDs; /* Contains the database IDs, not the vector indexes. */
 
 	while (running) {
@@ -647,6 +654,27 @@ export void MapScreen::run() {
 			else {
 				reverseSpriteAnimation = !reverseSpriteAnimation; }
 		}
+
+
+		if (animateNpcThisFrame) {
+			if (reverseNpcAnimation) {
+				if (npcHeight > npcAnimMax * -1) {
+					--npcHeight;
+				}
+				else {
+					reverseNpcAnimation = !reverseNpcAnimation;
+				}
+			}
+			else {
+				if (npcHeight < npcAnimMax) {
+					++npcHeight;
+				}
+				else {
+					reverseNpcAnimation = !reverseNpcAnimation;
+				}
+			}
+		}
+		animateNpcThisFrame = !animateNpcThisFrame;
 	}
 
 	/* set the next screen to load */
@@ -771,14 +799,14 @@ void MapScreen::drawCharacters(UI& ui) {
 }
 
 void MapScreen::drawPlayerCharacter(UI& ui) {
-	SDL_Rect characterRect = { 0, 0, blockWidth, blockWidth };
+	SDL_Rect characterRect = { 0, 0, blockWidth, blockWidth }; /* This should be a member of MapScreen or Character. */
 	MapCharacter& playerCharacter = map.getPlayerCharacter();
 
 	int blockX = playerCharacter.getBlockX();
 	int blockY = playerCharacter.getBlockY();
 	
 	characterRect.x = (blockX - drawStartX) * blockWidth;
-	characterRect.y = (blockY - drawStartY) * blockWidth;
+	characterRect.y = ((blockY - drawStartY) * blockWidth) + npcHeight;
 
 	/* Check if we are animating AND close to an edge.
 	* If close to a vertical edge, and moving vertically, animate the character.
@@ -793,7 +821,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		ui.getMainRenderer(),
 		playerCharacter.getTexture(),
 		NULL, &characterRect,
-		-limbAngle, NULL, SDL_FLIP_NONE
+		0, NULL, SDL_FLIP_NONE
 	);
 
 	drawAcquiredLimbs(ui, characterRect.x, characterRect.y);

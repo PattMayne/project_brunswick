@@ -37,6 +37,7 @@ import <string>;
 import <vector>;
 import <tuple>;
 import <cmath>;
+import <limits>;
 
 import TypeStorage;
 import UI;
@@ -866,13 +867,7 @@ public:
 		/* Set drawRects of all equipped limbs from starting point of 0
 		*  for calculating
 		*/
-		anchorLimb.setDrawRect({
-			0,
-			0,
-			tWidth,
-			tHeight
-			});
-
+		anchorLimb.setDrawRect({ 0, 0, tWidth, tHeight });
 		setChildLimbDrawRects(anchorLimb, ui);
 
 		/*
@@ -899,7 +894,7 @@ public:
 		dimStruct.avatarWidth = (dimStruct.rightmost + dimStruct.rightmostTextureWidth) - dimStruct.leftmost;
 		dimStruct.avatarHeight = (dimStruct.bottommost + dimStruct.bottommostTextureHeight) - dimStruct.topmost;
 		dimStruct.greaterDimension = dimStruct.avatarHeight > dimStruct.avatarWidth ? dimStruct.avatarHeight : dimStruct.avatarWidth;
-		//dimStruct.greaterDimension += dimStruct.rightmostTextureWidth / 4;
+		int offscreenTextureDimension = dimStruct.greaterDimension + (dimStruct.rightmostTextureWidth * 2);
 
 		/* Now build the actual avatar.
 		* We will draw (render) the limb textures to an off-screen texture,
@@ -914,7 +909,7 @@ public:
 			renderer,
 			SDL_PIXELFORMAT_RGBA8888,
 			SDL_TEXTUREACCESS_TARGET,
-			dimStruct.greaterDimension, dimStruct.greaterDimension);
+			offscreenTextureDimension, offscreenTextureDimension);
 
 		if (offscreenTexture == NULL) {
 			cout << "TEXTURE ERROR\n";
@@ -934,8 +929,8 @@ public:
 
 		/* Reset the drawRects (giving anchorLimb the correct offset, and all some margin for rotation) and draw limbs. */
 		anchorLimb.setDrawRect({
-			0 - dimStruct.leftmost,
-			0 - dimStruct.topmost,
+			0 - dimStruct.leftmost + dimStruct.rightmostTextureWidth,
+			0 - dimStruct.topmost + dimStruct.rightmostTextureWidth,
 			tWidth,
 			tHeight
 			});
@@ -954,6 +949,9 @@ public:
 		SDL_RenderPresent(renderer);
 		/* Reset the render target back to the default (the window). */
 		SDL_SetRenderTarget(renderer, NULL);
+
+		/* Now we have the texture with the entire Avatar drawn, plus enough margin for rotation of the outer limbs.
+		* We need to crop out transparency by finding the limit of non-transparent pixels and rendering to yet another texture. */
 
 		return offscreenTexture;
 	}
