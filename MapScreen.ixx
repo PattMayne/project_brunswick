@@ -824,6 +824,19 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		0, NULL, SDL_FLIP_NONE
 	);
 
+	/*
+	* We can animate the player character here.
+	* Don't go overboard, but every now and then do a sequence to wiggle a limb.
+	*/
+
+	if (false) {
+		/* THIS IS JUST AN EXAMPLE
+		* But it works. It turns the anchor limb around in a constant circle.
+		*/
+		playerCharacter.getAnchorLimb().rotate(1);
+		playerCharacter.setTexture(playerCharacter.createAvatar());
+	}	
+
 	drawAcquiredLimbs(ui, characterRect.x, characterRect.y);
 }
 

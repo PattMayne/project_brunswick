@@ -65,21 +65,22 @@ struct AvatarDimensionsStruct {
 		rightmost = 0;
 		topmost = 0;
 		bottommost = 0;
-		rightmostTextureWidth = 0;
-		bottommostTextureHeight = 0;
 		avatarWidth = 0;
 		avatarHeight = 0;
 		greaterDimension = 0;
 	}
 
+	/* Extreme reach of textures. */
 	int leftmost;
 	int rightmost;
 	int topmost;
 	int bottommost;
-	int rightmostTextureWidth;
-	int bottommostTextureHeight;
+
+	/* Final dimensions calcualted from extreme reach of textures. */
 	int avatarWidth;
 	int avatarHeight;
+
+	/* Greater dimension allows us to make a square. */
 	int greaterDimension;
 };
 
@@ -806,155 +807,8 @@ public:
 	void setLimbDrawOrder() { setLimbDrawOrder(drawLimbListIDs); }
 	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
 
-
-	/* AnchorLimb must set its boundaries before calling this recursive function on its child limbs. */
-	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct) {
-		for (Joint& joint : parentLimb.getJoints()) {
-			int connectedLimbId = joint.getConnectedLimbId();
-
-			if (connectedLimbId >= 0) {
-				Limb& connectedLimb = getLimbById(connectedLimbId);
-				SDL_Rect drawRect = connectedLimb.getDrawRect();
-
-				int tWidth;
-				int tHeight;
-				SDL_QueryTexture(connectedLimb.getTexture(), NULL, NULL, &tWidth, &tHeight);
-
-				/* Now we actually check the dimensions. */
-
-				if (drawRect.x < dimStruct.leftmost) {
-					dimStruct.leftmost = drawRect.x;
-				}
-				else if ((drawRect.x + tWidth) > (dimStruct.rightmost + dimStruct.rightmostTextureWidth)) {
-					dimStruct.rightmost = drawRect.x;
-					dimStruct.rightmostTextureWidth = tWidth;
-				}
-
-				if (drawRect.y < dimStruct.topmost) {
-					dimStruct.topmost = drawRect.y;
-				}
-				else if ((drawRect.y + tHeight) > (dimStruct.bottommost + dimStruct.bottommostTextureHeight)) {
-					dimStruct.bottommost = drawRect.y;
-					dimStruct.bottommostTextureHeight = tHeight;
-				}
-
-				/* Now check this limb's child limbs. */
-				checkChildLimbsForAvatarBoundaries(connectedLimb, dimStruct);
-			}
-		}
-	}
-
-	/*
-	* This cycles through the equipped limbs and finds out how high and wide the drawn avatar will be.
-	* It saves the important information to dimStruct, which can then be used to render the avatar
-	* into a texture.
-	*/
-
-	SDL_Texture* createAvatar() {
-		UI& ui = UI::getInstance();
-		Limb& anchorLimb = getAnchorLimb();
-
-		int tWidth = 0;
-		int tHeight = 0;
-
-		SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &tWidth, &tHeight);
-
-		int left = 0;
-		int top = 0;
-		int right = tWidth;
-		int bottom = tHeight;
-
-		/* Set drawRects of all equipped limbs from starting point of 0
-		*  for calculating
-		*/
-		anchorLimb.setDrawRect({ 0, 0, tWidth, tHeight });
-		setChildLimbDrawRects(anchorLimb, ui);
-
-		/*
-		* NOW:
-		* --> Get the leftmost x value of all equipped drawRects.
-		* --> Get the rightmost x value of all equipepd drawRects, and add the texture width of that limb.
-		* --> Get the topmost y value of all equipped drawRects.
-		* --> Get the bottommost y value of all equipped drawRects, and add the texture height of that limb.
-		* We need a STRUCT to pass in which holds:
-		* --> leftmost, topmost, rightmost, bottommost, rightmostTextureWidth, bottommostTextureHeight
-		*
-		*/
-
-		/* For now the anchorLimb sets the size of the avatar. */
-		AvatarDimensionsStruct dimStruct = AvatarDimensionsStruct();
-		dimStruct.bottommostTextureHeight = tHeight;
-		dimStruct.rightmostTextureWidth = tWidth;
-
-		/* Recursively search attached limbs for the extreme dimensions of the avatar.
-		* This is IMPERFECT because it currently does NOT account for rotating the boundary textures... but maybe that's okay.
-		*/
-		checkChildLimbsForAvatarBoundaries(anchorLimb, dimStruct);
-
-		dimStruct.avatarWidth = (dimStruct.rightmost + dimStruct.rightmostTextureWidth) - dimStruct.leftmost;
-		dimStruct.avatarHeight = (dimStruct.bottommost + dimStruct.bottommostTextureHeight) - dimStruct.topmost;
-		dimStruct.greaterDimension = dimStruct.avatarHeight > dimStruct.avatarWidth ? dimStruct.avatarHeight : dimStruct.avatarWidth;
-		int offscreenTextureDimension = dimStruct.greaterDimension + (dimStruct.rightmostTextureWidth * 2);
-
-		/* Now build the actual avatar.
-		* We will draw (render) the limb textures to an off-screen texture,
-		* then return that texture as the avatar.
-		* Some work is done to ensure transparency (setting the blend mode, using the right pixel format, clearing with 0 alpha).
-		*/
-
-		SDL_Renderer* renderer = ui.getMainRenderer();
-
-		/* Create offscreen texture where we will draw the avatar (to then store as a texture). */
-		SDL_Texture* offscreenTexture = SDL_CreateTexture(
-			renderer,
-			SDL_PIXELFORMAT_RGBA8888,
-			SDL_TEXTUREACCESS_TARGET,
-			offscreenTextureDimension, offscreenTextureDimension);
-
-		if (offscreenTexture == NULL) {
-			cout << "TEXTURE ERROR\n";
-			SDL_Log("Failed to create offscreen texture: %s", SDL_GetError());
-			return NULL;
-		}
-
-		/* Set the blend mode of the offscreen texture (to allow transparency). */
-		SDL_SetTextureBlendMode(offscreenTexture, SDL_BLENDMODE_BLEND);
-
-		/* Set the render target to the off-screen texture, and clear with transparent color. */
-		SDL_SetRenderTarget(renderer, offscreenTexture);
-		/* Enable blending for the renderer. */
-		SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-		SDL_RenderClear(renderer);
-
-		/* Reset the drawRects (giving anchorLimb the correct offset, and all some margin for rotation) and draw limbs. */
-		anchorLimb.setDrawRect({
-			0 - dimStruct.leftmost + dimStruct.rightmostTextureWidth,
-			0 - dimStruct.topmost + dimStruct.rightmostTextureWidth,
-			tWidth,
-			tHeight
-			});
-
-		setRotationPointsSDL();
-		setChildLimbDrawRects(anchorLimb, ui);
-		buildDrawLimbList();
-
-		for (int index : getDrawLimbIndexes()) {
-			Limb& limbToDraw = getLimbs()[index];
-			/* Ensure limb texture supports blending. */
-			SDL_SetTextureBlendMode(limbToDraw.getTexture(), SDL_BLENDMODE_BLEND);
-			limbToDraw.draw(ui);
-		}
-
-		SDL_RenderPresent(renderer);
-		/* Reset the render target back to the default (the window). */
-		SDL_SetRenderTarget(renderer, NULL);
-
-		/* Now we have the texture with the entire Avatar drawn, plus enough margin for rotation of the outer limbs.
-		* We need to crop out transparency by finding the limit of non-transparent pixels and rendering to yet another texture. */
-
-		return offscreenTexture;
-	}
+	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct);
+	SDL_Texture* createAvatar();
 
 protected:
 	CharacterType characterType;
@@ -965,6 +819,7 @@ protected:
 	vector<int> drawLimbListIDs;
 	vector<int> drawLimbListIndexes;
 };
+
 
 
 /*
@@ -983,6 +838,173 @@ protected:
 * |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
 * |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
 */
+
+
+
+
+/* 
+* When drawing the avatar, we call this function to see how far the limbs' textures reach in each direction.
+* AnchorLimb must set its boundaries before calling this recursive function on its child limbs.
+* AnchorLimb x,y must be set to 0,0.
+*/
+void Character::checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct) {
+	/* Check the dimensions of this limb. */
+
+	SDL_Rect drawRect = parentLimb.getDrawRect();
+	int tWidth;
+	int tHeight;
+	SDL_QueryTexture(parentLimb.getTexture(), NULL, NULL, &tWidth, &tHeight);
+
+	/* Now we actually check the dimensions. */
+
+	if (parentLimb.getRotationAngle() == 0) {
+		/* The limb is NOT rotated. Check the normal dimensions. */
+
+		if (drawRect.x < dimStruct.leftmost) {
+			dimStruct.leftmost = drawRect.x;
+		}
+		else if ((drawRect.x + tWidth) > dimStruct.rightmost) {
+			dimStruct.rightmost = drawRect.x + tWidth;
+		}
+
+		if (drawRect.y < dimStruct.topmost) {
+			dimStruct.topmost = drawRect.y;
+		}
+		else if ((drawRect.y + tHeight) > dimStruct.bottommost) {
+			dimStruct.bottommost = drawRect.y + tHeight;
+		}
+
+	}
+	else {
+		/* Limb is rotated. We must rotate each corner and check to see if it extends the bounds. */
+		Point anchorPoint = parentLimb.getAnchorJoint().getPoint();
+		int rotationAngle = parentLimb.getRotationAngle();
+
+		Point topLeftPoint = Point(drawRect.x, drawRect.y);
+		Point topRightPoint = Point(drawRect.x + drawRect.w, drawRect.y);
+		Point bottomLeftPoint = Point(drawRect.x, drawRect.y + drawRect.h);
+		Point bottomRightPoint = Point(drawRect.x + drawRect.w, drawRect.y + drawRect.h);
+
+		/* Make a vector of the points so we can do a loop to check if they extend the boundaries. */
+		vector<Point> rotatedPoints = {
+			getRotatedPoint(anchorPoint, topLeftPoint, rotationAngle),
+			getRotatedPoint(anchorPoint, topRightPoint, rotationAngle),
+			getRotatedPoint(anchorPoint, bottomLeftPoint, rotationAngle),
+			getRotatedPoint(anchorPoint, bottomRightPoint, rotationAngle)
+		};
+
+		for (Point point : rotatedPoints) {
+			if (point.x < dimStruct.leftmost) {
+				dimStruct.leftmost = point.x;
+			}
+			else if (point.x > dimStruct.rightmost) {
+				dimStruct.rightmost = point.x;
+			}
+
+			if (point.y < dimStruct.topmost) {
+				dimStruct.topmost = point.y;
+			}
+			else if (point.y > dimStruct.bottommost) {
+				dimStruct.bottommost = point.y;
+			}
+		}
+	}
+
+	/* Now check each connected limb recursively. */
+	for (Joint& joint : parentLimb.getJoints()) {
+		int connectedLimbId = joint.getConnectedLimbId();
+		if (connectedLimbId >= 0) {
+			checkChildLimbsForAvatarBoundaries(getLimbById(connectedLimbId), dimStruct);
+		}
+	}
+}
+
+
+/*
+* This function draws the limbs to an offscreen texture as an avatar, which it returns.
+* First we cycle through the equipped limbs and find out how high and wide the drawn avatar will be.
+* We take into account the fact that rotating a texture will extend the boundaries.
+* We use that information to build a texture, then draw onto it and return it.
+*/
+SDL_Texture* Character::createAvatar() {
+	UI& ui = UI::getInstance();
+	Limb& anchorLimb = getAnchorLimb();
+
+	int tWidth, tHeight;
+	SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &tWidth, &tHeight);
+
+	/* Set drawRects of all equipped limbs from starting point of 0 for calculating. */
+	anchorLimb.setDrawRect({ 0, 0, tWidth, tHeight });
+	setChildLimbDrawRects(anchorLimb, ui);
+
+	/* AvatarDimensionsStruct will hold the information about the avatar dimensions as we
+	* recursively cycle through the limbs and read the coordinates of their textures. */
+
+	AvatarDimensionsStruct dimStruct = AvatarDimensionsStruct();
+	checkChildLimbsForAvatarBoundaries(anchorLimb, dimStruct);
+
+	/* The search is finished. Set the final dimensions based on the boundaries. */
+	dimStruct.avatarWidth = dimStruct.rightmost - dimStruct.leftmost;
+	dimStruct.avatarHeight = dimStruct.bottommost - dimStruct.topmost;
+	dimStruct.greaterDimension = dimStruct.avatarHeight > dimStruct.avatarWidth ? dimStruct.avatarHeight : dimStruct.avatarWidth;
+
+	/* Now build the actual avatar.
+	* We will draw (render) the limb textures to an off-screen texture,
+	* then return that texture as the avatar.
+	* Some work is done to ensure transparency (setting the blend mode, using the right pixel format, clearing with 0 alpha).
+	*/
+
+	SDL_Renderer* renderer = ui.getMainRenderer();
+
+	/* Create offscreen texture where we will draw the avatar. */
+	SDL_Texture* offscreenTexture = SDL_CreateTexture(
+		renderer,
+		SDL_PIXELFORMAT_RGBA8888,
+		SDL_TEXTUREACCESS_TARGET,
+		dimStruct.greaterDimension, dimStruct.greaterDimension);
+
+	if (offscreenTexture == NULL) {
+		cout << "TEXTURE ERROR\n";
+		SDL_Log("Failed to create offscreen texture: %s", SDL_GetError());
+		return NULL;
+	}
+
+	/* Set the blend mode of the offscreen texture (to allow transparency). */
+	SDL_SetTextureBlendMode(offscreenTexture, SDL_BLENDMODE_BLEND);
+
+	/* Set the render target to the off-screen texture, and clear with transparent color. */
+	SDL_SetRenderTarget(renderer, offscreenTexture);
+	/* Enable blending for the renderer. */
+	SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0); /* 0 alpha means transparent. */
+	SDL_RenderClear(renderer);
+
+	/* Reset the drawRects (giving anchorLimb the correct offset) and draw limbs for the avatar    . */
+	anchorLimb.setDrawRect({
+		0 - dimStruct.leftmost,
+		0 - dimStruct.topmost,
+		tWidth,
+		tHeight
+		});
+
+	/* Prepare points, rects, and draw order for drawing. */
+	setRotationPointsSDL();
+	setChildLimbDrawRects(anchorLimb, ui);
+	buildDrawLimbList();
+
+	for (int index : getDrawLimbIndexes()) {
+		Limb& limbToDraw = getLimbs()[index];
+		/* Ensure limb texture supports blending. */
+		SDL_SetTextureBlendMode(limbToDraw.getTexture(), SDL_BLENDMODE_BLEND);
+		limbToDraw.draw(ui);
+	}
+
+	SDL_RenderPresent(renderer);
+	/* Reset the render target back to the default (the window). */
+	SDL_SetRenderTarget(renderer, NULL);
+
+	return offscreenTexture;
+}
 
 void Character::clearSuit() {
 	for (Limb& limb : limbs) {
