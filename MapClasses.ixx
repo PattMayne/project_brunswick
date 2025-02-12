@@ -105,7 +105,7 @@ public:
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 	void setTexture(SDL_Texture* incomingTexture) {
 		if (texture) {
-			cout << "Already texture\n";
+			cout << "Destroying old texture\n";
 			SDL_DestroyTexture(texture);
 		}
 		texture = incomingTexture;

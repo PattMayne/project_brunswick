@@ -253,7 +253,8 @@ export class MapScreen {
 		MapForm mapForm;
 		void run();
 
-		bool checkLimbCollision();
+		bool checkLimbCollision(); /* Limb-on-player collision. */
+		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
 		vector<Limb> acquiredLimbs;
 
 	private:
@@ -555,7 +556,7 @@ export void MapScreen::run() {
 						}
 					}					
 				}
-				
+
 				/* Collisions with NPCs */
 
 				/* Collisions with LIMBs */
@@ -570,6 +571,11 @@ export void MapScreen::run() {
 				/* Deal with wrapping up the NPC animation. */
 				animate = false;
 				animationType = AnimationType::None;
+
+
+				/* Check LIMBs colliding with each other. IF they form an NPC on the player's block, the player fights the NPC. */
+
+				checkLimbOnLimbCollision();
 
 				/* 
 				* Check for collisions again.
@@ -1155,6 +1161,59 @@ void MapScreen::decrementCountdown() {
 		--animationCountdown; }
 	else {
 		animationCountdown = 0;}
+}
+
+/* Limb-on-Limb Collision Functions (NPC creation). */
+
+struct CollidedLimbsStruct {
+	CollidedLimbsStruct(Point point, int limbID) : point(point), roamingLimbIds({ limbID }) { }
+
+	Point point;
+	vector<int> roamingLimbIds;
+};
+
+/*
+* Compare each Limb's location with each other Limb's location to see if they're on the same block.
+* Any on the same block form a new NPC.
+*/
+bool MapScreen::checkLimbOnLimbCollision() {
+	vector<CollidedLimbsStruct> collidedLimbsStructs;
+	vector<int> alreadyCheckedIds;
+	bool collisionFound = false;
+
+	/* 
+	* PROCESS:
+	* Search roamingLimbs vector.
+	* Start at [0] and check each limb of HIGHER index for a match.
+	* If a match is found, create a CollidedLimbsStruct with both ids (and their Point), and add the HIGHER id to the alreadyCheckedIds vec to skip later.
+	*/
+
+	vector<Limb>& roamingLimbs = map.getRoamingLimbs();
+
+	for (int i = 0; i < roamingLimbs.size() - 1; ++i) {
+		Limb thisLimb = roamingLimbs[i];
+		Point thisPoint = thisLimb.getPosition();
+
+		for (int k = i + 1; k < roamingLimbs.size(); ++k) {
+			Limb checkedLimb = roamingLimbs[k];
+			Point checkedPoint = checkedLimb.getPosition();
+
+			if (checkedPoint.x == thisPoint.x && checkedPoint.y == thisPoint.y) {
+				cout << checkedLimb.getForm().slug << " collided with " << thisLimb.getForm().slug << "!\n";
+
+				alreadyCheckedIds.push_back(checkedLimb.getId());
+
+				/* Now create the collidedLimbsStruct... first check if one already exists for these limbs. */
+
+				// for collidedLimbsStructs ...
+				collisionFound = true;
+			}
+		}
+	}
+
+	cout << "\n\n";
+
+	return collisionFound;
 }
 
 
