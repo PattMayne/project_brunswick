@@ -220,6 +220,50 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
 */
 
 /*
+* Create NPC on map after Limb collision.
+* Returns id from DB.
+*/
+
+export int createNpcOnMap(string mapSlugString, string npcName) {
+    int npcID = -1;
+
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return npcID;
+    }
+
+    const char* newNpcSQL = "INSERT INTO character (name, is_player, map_slug) VALUES (?, ?, ?);";
+    sqlite3_stmt* newNpcStatement;
+    int returnCode = sqlite3_prepare_v2(db, newNpcSQL, -1, &newNpcStatement, nullptr);
+
+    /* Bind values. */
+    const char* name = npcName.c_str();
+    int isPlayerBoolInt = 0;
+    const char* mapSlug = mapSlugString.c_str();
+    sqlite3_bind_text(newNpcStatement, 1, name, -1, SQLITE_STATIC);
+    sqlite3_bind_int(newNpcStatement, 2, isPlayerBoolInt);
+    sqlite3_bind_text(newNpcStatement, 3, mapSlug, -1, SQLITE_STATIC);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(newNpcStatement);
+    if (returnCode != SQLITE_DONE) { cerr << "Insert Map NPC failed: " << sqlite3_errmsg(db) << endl; }
+    else {
+        /* Get the ID of the saved item. */
+        npcID = static_cast<int>(sqlite3_last_insert_rowid(db));
+    }
+
+    /* Close DB. */
+    sqlite3_finalize(newNpcStatement);
+    sqlite3_close(db);
+
+    return npcID;
+}
+
+/*
 * Update all attributes of a character's limbs and their joints.
 * To be used when SAVING limb setup in Character Creation Screen.
 */

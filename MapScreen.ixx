@@ -1166,10 +1166,10 @@ void MapScreen::decrementCountdown() {
 /* Limb-on-Limb Collision Functions (NPC creation). */
 
 struct CollidedLimbsStruct {
-	CollidedLimbsStruct(Point point, int limbID) : point(point), roamingLimbIds({ limbID }) { }
+	CollidedLimbsStruct(Point point, int limbID_1, int limbID_2) : point(point), limbIDs({ limbID_1, limbID_2 }) { }
 
 	Point point;
-	vector<int> roamingLimbIds;
+	vector<int> limbIDs;
 };
 
 /*
@@ -1178,40 +1178,95 @@ struct CollidedLimbsStruct {
 */
 bool MapScreen::checkLimbOnLimbCollision() {
 	vector<CollidedLimbsStruct> collidedLimbsStructs;
-	vector<int> alreadyCheckedIds;
+	vector<int> collidedIDs; /* Only add the COMPARED ids, not Base Limbs. To skip comparisons for already-collided limbs. */
 	bool collisionFound = false;
 
 	/* 
 	* PROCESS:
 	* Search roamingLimbs vector.
-	* Start at [0] and check each limb of HIGHER index for a match.
+	* Start at [0] (and skip last item) and check each limb of HIGHER index for a match (with a nested loop).
 	* If a match is found, create a CollidedLimbsStruct with both ids (and their Point), and add the HIGHER id to the alreadyCheckedIds vec to skip later.
 	*/
 
 	vector<Limb>& roamingLimbs = map.getRoamingLimbs();
 
 	for (int i = 0; i < roamingLimbs.size() - 1; ++i) {
-		Limb thisLimb = roamingLimbs[i];
-		Point thisPoint = thisLimb.getPosition();
+		Limb baseLimb = roamingLimbs[i];
+		Point basePoint = baseLimb.getPosition();
 
 		for (int k = i + 1; k < roamingLimbs.size(); ++k) {
-			Limb checkedLimb = roamingLimbs[k];
-			Point checkedPoint = checkedLimb.getPosition();
+			Limb comparedLimb = roamingLimbs[k];
 
-			if (checkedPoint.x == thisPoint.x && checkedPoint.y == thisPoint.y) {
-				cout << checkedLimb.getForm().slug << " collided with " << thisLimb.getForm().slug << "!\n";
+			/* Make sure we haven't already added this limb from a previous comparison. */
+			bool comparedLimbAlreadyChecked = false;
+			int comparedLimbId = comparedLimb.getId();
 
-				alreadyCheckedIds.push_back(checkedLimb.getId());
+			for (int checkedID : collidedIDs) {
+				if (checkedID == comparedLimbId) {
+					comparedLimbAlreadyChecked = true;
+					break; } }
 
-				/* Now create the collidedLimbsStruct... first check if one already exists for these limbs. */
+			if (comparedLimbAlreadyChecked) { continue; }
 
-				// for collidedLimbsStructs ...
+			/* This limb has not collided yet. Let's check for collisions. */
+			Point comparedPoint = comparedLimb.getPosition();
+			bool comparedLimbFoundMatch = false;
+
+			if (comparedPoint.x == basePoint.x && comparedPoint.y == basePoint.y) {
+				/* We found a match. Add it to the limbs to skip (for next time). */
+				collidedIDs.push_back(comparedLimbId);
+
+				if (!comparedLimbFoundMatch) {
+					/* FIRST match for this Point (tile). */
+					collidedLimbsStructs.emplace_back(
+						Point(comparedPoint.x, comparedPoint.y),
+						baseLimb.getId(),
+						comparedLimbId);
+				}
+				else {
+					/* 
+					* This baseLimb already found a match during the i loop, and now we add comparedLimb ID to that struct.
+					* Check the existing collidedLimbStructs for the existing Point record.
+					*/
+					for (int m = collidedLimbsStructs.size() - 1; m >= 0; --m) {
+						CollidedLimbsStruct collidedLimbsStruct = collidedLimbsStructs[m];
+						if (collidedLimbsStruct.point.x == comparedPoint.x && collidedLimbsStruct.point.y == comparedPoint.y) {
+							collidedLimbsStruct.limbIDs.push_back(comparedLimbId);
+							break;
+						}
+					}
+				}
+
+				comparedLimbFoundMatch = true;
 				collisionFound = true;
+
+				cout << comparedLimb.getForm().slug << " collided with " << baseLimb.getForm().slug << "!\n";
 			}
 		}
 	}
 
 	cout << "\n\n";
+
+	/* We have collected data on how many NPCs need to be made.
+	* Now we must make the NPCs, add the limbs to the NPCs, and remove the limbs from the roamingLimbs vector.
+	*/
+
+	for (CollidedLimbsStruct collidedLimbsStruct : collidedLimbsStructs) {
+		/* 
+		* First create the NPC as an object,
+		* then save to the DB to get the ID,
+		* then add the limbs to the object AND save their ownership to the NPC,
+		* then remove the limbs from the Roaming Limbs list (maybe OUTSIDE of this loop).
+		*/
+
+		MapCharacter npc = MapCharacter(CharacterType::Hostile);
+		string npcName = "Forest Creature"; /* TO DO: Create a system for giving them names based on their limbs or map. */
+		
+		// HERE we must add the LOCATION (move from MapCharacter to Character).
+		int npcID = createNpcOnMap(map.getSlug(), npcName);
+
+
+	}
 
 	return collisionFound;
 }
