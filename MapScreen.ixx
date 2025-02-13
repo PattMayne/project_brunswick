@@ -178,17 +178,10 @@ export class MapScreen {
 				map = loadMap(mapSlug);
 
 				for (MapCharacter& npc : map.getNPCs()) {
-					cout << "NPC has " << npc.getLimbs().size() << " limbs\n";
-
-					for (Limb limb : npc.getLimbs()) {
-						cout << "Limb has " << limb.getJoints().size() << " joints\n";
-					}
-
 					npc.buildDrawLimbList();
 					npc.setTexture(npc.createAvatar());
 				}
 
-				cout << "Got map with " << map.getNPCs().size() << " npcs\n";
 				map.setPlayerCharacter(loadPlayerMapCharacter());
 				if (map.getPlayerCharacter().getEquippedLimbs().size() > 0) {
 					map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
@@ -232,6 +225,7 @@ export class MapScreen {
 			createTitleTexture(ui);
 			limbAngle = 0;
 			npcHeight = 0;
+			homeBaseRange = 5;
 		}
 
 		/* Destructor */
@@ -361,6 +355,8 @@ export class MapScreen {
 		int limbAngle;
 		int npcHeight;
 
+		int homeBaseRange;
+
 		vector<AcquiredLimb> acquiredLimbStructs;
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
@@ -487,9 +483,6 @@ This is also controlled by the animate boolean, but differentiated by the Animat
 * These are controlled by spriteAnim ints, which go up and down.
 */
 export void MapScreen::run() {
-
-	cout << "RUNNING 00000\n";
-
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
@@ -713,6 +706,15 @@ export void MapScreen::run() {
 	gameState.setScreenStruct(screenToLoadStruct);
 }
 
+int getDiff(int a, int b) {
+	if (a > b) {
+		return a - b;
+	}
+	else {
+		return b - a;
+	}
+}
+
 /*
 * After every player turn, each NPC must move to an adjacent block.
 * 
@@ -725,42 +727,60 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 	int pointX = currentPosition.x;
 	int pointY = currentPosition.y;
 
+	int xDistanceFromHome = getDiff(pointX, npc.getHomePosition().x);
+	int yDistanceFromHome = getDiff(pointY, npc.getHomePosition().y);
+
 	/* Get list of available blocks */
 	vector<Point> availablePositions;
 	vector<vector<Block>>& rows = map.getRows();
+	Point homePosition = npc.getHomePosition();
 
 	/* Check up. */
 	if (pointY > 0) {
-		if (rows[pointY - 1][pointX].getIsFloor()) {
-			availablePositions.push_back(Point(pointX, pointY - 1));
+		int newY = pointY - 1;
+		bool isInRange = getDiff(newY, homePosition.y) <= homeBaseRange;
+
+		if (isInRange && rows[newY][pointX].getIsFloor()) {
+			availablePositions.push_back(Point(pointX, newY));
 		}
 	}
 
 	/* Check down. */
 	if (pointY < vBlocksTotal) {
-		if (rows[pointY + 1][pointX].getIsFloor()) {
-			availablePositions.push_back(Point(pointX, pointY + 1));
+		int newY = pointY + 1;
+		bool isInRange = getDiff(newY, homePosition.y) <= homeBaseRange;
+
+		if (isInRange && rows[newY][pointX].getIsFloor()) {
+			availablePositions.push_back(Point(pointX, newY));
 		}
 	}
 
 	/* Check left. */
 	if (pointX > 0) {
-		if (rows[pointY][pointX - 1].getIsFloor()) {
-			availablePositions.push_back(Point(pointX - 1, pointY));
+		int newX = pointX - 1;
+		bool isInRange = getDiff(newX, homePosition.x) <= homeBaseRange;
+
+		if (isInRange && rows[pointY][newX].getIsFloor()) {
+			availablePositions.push_back(Point(newX, pointY));
 		}
 	}
 
 	if (pointX < hBlocksTotal) {
-		if (rows[pointY][pointX + 1].getIsFloor()) {
-			availablePositions.push_back(Point(pointX + 1, pointY));
+		int newX = pointX + 1;
+		bool isInRange = getDiff(newX, homePosition.x) <= homeBaseRange;
+
+		if (isInRange && rows[pointY][newX].getIsFloor()) {
+			availablePositions.push_back(Point(newX, pointY));
 		}
 	}
 
 	if (availablePositions.size() > 0) {
-		cout << "Moving NPC\n";
 		Point& newPoint = availablePositions[rand() % availablePositions.size()];
 		npc.moveToPosition(newPoint);
 		moved = true;
+	}
+	else {
+		cout << "NPC has no place to go?\n";
 	}
 
 	return moved;
@@ -1421,11 +1441,7 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		npc.setTexture(npc.createAvatar());
 
 		map.addNPC(npc);
-
-		cout << "NPC has " << npc.getEquippedLimbs().size() << " equipped limbs of " << npc.getLimbs().size() << " total limbs\n";
 	}
-
-	cout << "Map now has " << map.getNPCs().size() << " NPCs\n";
 
 	return collisionFound;
 }

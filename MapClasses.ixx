@@ -139,7 +139,6 @@ public:
 		if (texture && texture !=NULL) {
 			cout << "Destroying old texture\n";
 			SDL_DestroyTexture(texture);
-			cout << "Destroyed old texture\n";
 		}
 		texture = incomingTexture;
 	}
