@@ -727,6 +727,17 @@ public:
 	Character(CharacterType characterType) : 
 		characterType(characterType), anchorLimbId(-1) {}
 
+	Character(CharacterType characterType, int x, int y) :
+		characterType(characterType), blockPosition(x, y), lastBlockPosition(x, y) {
+
+	}
+
+	/* constructor for when hostile NPC MapCharacter is created. */
+	Character(int id, string name, int anchorLimbId, Point position, vector<Limb> limbs) :
+		id(id), name(name), anchorLimbId(anchorLimbId), blockPosition(position),
+		lastBlockPosition(position), limbs(limbs), characterType(CharacterType::Hostile)
+	{ }
+
 	string getName() { return name; }
 	void setName(string newName) { name = newName; }
 	void setType(CharacterType type) { characterType = type; }
@@ -827,6 +838,8 @@ protected:
 	string name;
 	vector<int> drawLimbListIDs;
 	vector<int> drawLimbListIndexes;
+	Point blockPosition;
+	Point lastBlockPosition;
 };
 
 

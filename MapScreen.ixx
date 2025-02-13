@@ -176,10 +176,24 @@ export class MapScreen {
 			if (mapObjectExists(mapSlug)) {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
+
+				for (MapCharacter& npc : map.getNPCs()) {
+					cout << "NPC has " << npc.getLimbs().size() << " limbs\n";
+
+					for (Limb limb : npc.getLimbs()) {
+						cout << "Limb has " << limb.getJoints().size() << " joints\n";
+					}
+
+					npc.buildDrawLimbList();
+					npc.setTexture(npc.createAvatar());
+				}
+
+				cout << "Got map with " << map.getNPCs().size() << " npcs\n";
 				map.setPlayerCharacter(loadPlayerMapCharacter());
 				if (map.getPlayerCharacter().getEquippedLimbs().size() > 0) {
 					map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
 				}
+
 				updatePlayerMap(mapSlug);
 			}
 			else {
@@ -473,6 +487,9 @@ This is also controlled by the animate boolean, but differentiated by the Animat
 * These are controlled by spriteAnim ints, which go up and down.
 */
 export void MapScreen::run() {
+
+	cout << "RUNNING 00000\n";
+
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
@@ -1360,13 +1377,12 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		MapCharacter npc = MapCharacter(CharacterType::Hostile);
 		string npcName = "Forest Creature"; /* TO DO: Create a system for giving them names based on their limbs or map. */
 		
-		// HERE we must add the LOCATION (move from MapCharacter to Character).
-
 		npc.setBlockPosition(collidedLimbsStruct.point);
 		npc.updateLastBlock();
 
 		int npcID = createNpcOnMap(map.getSlug(), npcName, collidedLimbsStruct.point);
 		npc.setId(npcID);
+		npc.setHomePosition(collidedLimbsStruct.point);
 
 		for (int limbID : collidedLimbsStruct.limbIDs) {
 
@@ -1381,7 +1397,6 @@ bool MapScreen::checkLimbOnLimbCollision() {
 					roamingLimbs.erase(roamingLimbs.begin() + i);
 				}
 			}
-
 		}
 
 		/* NPC has all their limbs.

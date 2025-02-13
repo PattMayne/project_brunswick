@@ -81,14 +81,43 @@ export struct SubPath {
 */
 export class MapCharacter : public Character {
 public:
-	MapCharacter(CharacterType characterType = CharacterType::None) : Character(characterType) {}
+	MapCharacter(CharacterType characterType = CharacterType::None) : Character(characterType) {
+		texture = NULL;
+		/* Set default texture. */
+		UI& ui = UI::getInstance();
+		SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
+		SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
+		SDL_FreeSurface(characterSurface);
+		setTexture(characterTexture);
+	}
 
 	/* There will be no texture. The character will be drawn from their limbs. */
 	MapCharacter(CharacterType characterType, int x, int y) :
-		Character(characterType), blockPosition(x, y), lastBlockPosition(x, y) {
+		Character(characterType, x, y)
+	{
+		texture = NULL;
+		/* Set default texture. */
+		UI& ui = UI::getInstance();
+		SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
+		SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
+		SDL_FreeSurface(characterSurface);
+		setTexture(characterTexture);
 	}
 
-	~MapCharacter() {}
+	/* Hostile NPC when loaded from DB. */
+	MapCharacter(int id, string name, int anchorLimbId, Point position, vector<Limb> limbs) :
+		Character(id, name, anchorLimbId, position, limbs), homePosition(position)
+	{
+		texture = NULL;
+		/* Set default texture. */
+		UI& ui = UI::getInstance();
+		SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
+		SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
+		SDL_FreeSurface(characterSurface);
+		setTexture(characterTexture);
+	}
+
+	~MapCharacter() {} /* destroy texture. */
 
 	int getBlockX() { return blockPosition.x; }
 	int getBlockY() { return blockPosition.y; }
@@ -97,16 +126,20 @@ public:
 	int getLastY() { return lastBlockPosition.y; }
 	Point getPosition() { return blockPosition; }
 	Point getLastPosition() { return lastBlockPosition; }
+	Point getHomePosition() { return homePosition; }
 
+	void setHomePosition(Point position) { homePosition = position; }
 	void setBlockPosition(Point blockPosition) {
 		this->blockPosition = blockPosition;
 	}
 
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
+
 	void setTexture(SDL_Texture* incomingTexture) {
-		if (texture) {
+		if (texture && texture !=NULL) {
 			cout << "Destroying old texture\n";
 			SDL_DestroyTexture(texture);
+			cout << "Destroyed old texture\n";
 		}
 		texture = incomingTexture;
 	}
@@ -157,9 +190,8 @@ public:
 	}
 
 private:
-	Point blockPosition; /* This can be saved in the MAP table, so we always return. No need to save it in the Character table. */
-	Point lastBlockPosition;
 	SDL_Texture* texture;
+	Point homePosition;
 };
 
 
@@ -316,7 +348,7 @@ public:
 	/* constructors */
 	Map() {};
 	Map(MapForm mapForm);
-	Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition);
+	Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition, vector<MapCharacter> hostileNpcs);
 	vector<vector<Block>>& getRows() { return rows; }
 	vector<Landmark>& getLandmarks() { return landmarks; }
 	MapCharacter& getPlayerCharacter() { return playerCharacter; }
@@ -422,8 +454,8 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 * -----> Add Landmarks
 * -----> Add NPCs
 */
-Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition) :
-	mapForm(mapForm), roamingLimbs(roamingLimbs), rows(rows) {
+Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition, vector<MapCharacter> hostileNpcs) :
+	mapForm(mapForm), roamingLimbs(roamingLimbs), rows(rows), NPCs(hostileNpcs) {
 
 	/* populate characters and limbs after building the map(and its landmarks). */
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);

@@ -3,18 +3,7 @@
 
 TABLES TO CREATE:
 
-* LIMB
-* JOINT
-* LIMB_JOINT relational table
-* CHARACTER
-* MAP
-* MAP BLOCK
-* LANDMARK
-* SUIT
-
-START with LIMBS:
-
-
+* SUIT (native NPC) ... actually this will probably be a CharacterType instead. But we need to track whether it's been delivered or not.
 
 */
 
@@ -60,7 +49,8 @@ CREATE TABLE IF NOT EXISTS character (
     map_slug TEXT,
     battle_id INTEGER NOT NULL DEFAULT -1,
     position_x INTEGER DEFAULT 0,
-    position_y INTEGER DEFAULT 0
+    position_y INTEGER DEFAULT 0,
+    character_type INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_limb_id ON joint (limb_id);

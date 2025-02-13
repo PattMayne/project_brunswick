@@ -237,7 +237,7 @@ export int createNpcOnMap(string mapSlugString, string npcName, Point position) 
     }
 
     const char* newNpcSQL = "INSERT INTO character "
-        "(name, is_player, map_slug, position_x, position_y) VALUES (?, ?, ?, ?, ?);";
+        "(name, is_player, map_slug, position_x, position_y, character_type) VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* newNpcStatement;
     int returnCode = sqlite3_prepare_v2(db, newNpcSQL, -1, &newNpcStatement, nullptr);
 
@@ -245,11 +245,14 @@ export int createNpcOnMap(string mapSlugString, string npcName, Point position) 
     const char* name = npcName.c_str();
     int isPlayerBoolInt = 0;
     const char* mapSlug = mapSlugString.c_str();
+    int characterType = CharacterType::Hostile;
+
     sqlite3_bind_text(newNpcStatement, 1, name, -1, SQLITE_STATIC);
     sqlite3_bind_int(newNpcStatement, 2, isPlayerBoolInt);
     sqlite3_bind_text(newNpcStatement, 3, mapSlug, -1, SQLITE_STATIC);
     sqlite3_bind_int(newNpcStatement, 4, position.x);
     sqlite3_bind_int(newNpcStatement, 5, position.y);
+    sqlite3_bind_int(newNpcStatement, 6, characterType);
 
     /* Execute the statement. */
     returnCode = sqlite3_step(newNpcStatement);
@@ -279,7 +282,6 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
         cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
         return;
     }
-
 
     /* First update the Character. */
 
@@ -934,15 +936,17 @@ export int createPlayerCharacterOrGetID() {
 
     /* Player character does not exist. Create it. */
 
-    const char* newCharacterSQL = "INSERT INTO character (name, is_player) VALUES (?, ?);";
+    const char* newCharacterSQL = "INSERT INTO character (name, is_player, character_type) VALUES (?, ?, ?);";
     sqlite3_stmt* newCharStatement;
     returnCode = sqlite3_prepare_v2(db, newCharacterSQL, -1, &newCharStatement, nullptr);
 
     /* Bind values. */
     const char* name = "Player";
     int isPlayerBoolInt = 1;
+    int characterType = CharacterType::Player;
     sqlite3_bind_text(newCharStatement, 1, name, -1, SQLITE_STATIC);
     sqlite3_bind_int(newCharStatement, 2, isPlayerBoolInt);
+    sqlite3_bind_int(newCharStatement, 3, characterType);
 
     /* Execute the statement. */
     returnCode = sqlite3_step(newCharStatement);
@@ -1552,7 +1556,15 @@ export Map loadMap(string mapSlug) {
 
     sqlite3_finalize(queryLimbsStatement);
 
-    /* Get the LANDMARK objects. */
+    /* 
+    * 
+    * 
+    * 
+    * Get the LANDMARK objects.
+    * 
+    * 
+    * 
+    */
 
     /* Create statement template for querying Map objects with this slug. */
     const char* queryLandmarksSQL = "SELECT id, landmark_type, slug, position_x, position_y FROM landmark WHERE map_slug = ?;";
@@ -1602,12 +1614,187 @@ export Map loadMap(string mapSlug) {
 
     /* Finalize prepared statement. */
     sqlite3_finalize(queryLandmarksStatement);
+    
+    /* 
+    * 
+    * 
+    * 
+    * 
+    * Get the NPCs.
+    * 
+    * 
+    * 
+    * 
+    */
+
+    /* The NPCs vector which will be given to the Map object's constructor. */
+    vector<MapCharacter> npcs;
+
+    /* Create statement template for querying Character objects with this slug. */
+    const char* queryNpcsSQL = "SELECT * FROM character WHERE map_slug = ? AND character_type = ?;";
+    sqlite3_stmt* queryNPCsStatement;
+    returnCode = sqlite3_prepare_v2(db, queryNpcsSQL, -1, &queryNPCsStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare NPC retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return map;
+    }
+
+    /* Bind the slug anc character type values. */
+    sqlite3_bind_text(queryNPCsStatement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(queryNPCsStatement, 2, CharacterType::Hostile);
+
+    /* Execute and iterate through results. */
+    while ((returnCode = sqlite3_step(queryNPCsStatement)) == SQLITE_ROW) {
+        int npcId = sqlite3_column_int(queryNPCsStatement, 0);
+
+        string npcName = stringFromUnsignedChar(sqlite3_column_text(queryNPCsStatement, 1));
+        int anchorLimbId = sqlite3_column_int(queryNPCsStatement, 2);
+        Point npcPosition = Point(
+            sqlite3_column_int(queryNPCsStatement, 6),
+            sqlite3_column_int(queryNPCsStatement, 7)
+        );
+
+        /* 
+        * 
+        * 
+        * 
+        * Now get all the Limbs for this Character.
+        * 
+        * 
+        * 
+        */
+
+        /* Create statement template for querying Map objects with this slug. */
+        const char* queryNpcLimbsSQL = "SELECT * FROM limb WHERE character_id = ?;";
+        sqlite3_stmt* queryNpcLimbsStatement;
+        int npcLimbReturnCode = sqlite3_prepare_v2(db, queryNpcLimbsSQL, -1, &queryNpcLimbsStatement, nullptr);
+
+        if (npcLimbReturnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare limbs retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return map;
+        }
+
+        /* Bind the id value. */
+        sqlite3_bind_int(queryNpcLimbsStatement, 1, npcId);
+
+        vector<Limb> npcLimbs;
+
+        /* Execute and iterate through results. */
+        while ((npcLimbReturnCode = sqlite3_step(queryNpcLimbsStatement)) == SQLITE_ROW) {
+
+            int limbID = sqlite3_column_int(queryNpcLimbsStatement, 0);
+            LimbForm limbForm = getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryNpcLimbsStatement, 1)));
+            string mapSlug = stringFromUnsignedChar(sqlite3_column_text(queryNpcLimbsStatement, 3));
+            int hpMod = sqlite3_column_int(queryNpcLimbsStatement, 4);
+            int strengthMod = sqlite3_column_int(queryNpcLimbsStatement, 5);
+            int speedMod = sqlite3_column_int(queryNpcLimbsStatement, 6);
+            int intelligenceMod = sqlite3_column_int(queryNpcLimbsStatement, 7);
+            int posX = sqlite3_column_int(queryNpcLimbsStatement, 8);
+            int posY = sqlite3_column_int(queryNpcLimbsStatement, 9);
+            int rotationAngle = sqlite3_column_int(queryNpcLimbsStatement, 10);
+            bool isAnchor = sqlite3_column_int(queryNpcLimbsStatement, 11) == 1;
+            bool isFlipped = sqlite3_column_int(queryNpcLimbsStatement, 12) == 1;
+            string limbName = stringFromUnsignedChar(sqlite3_column_text(queryNpcLimbsStatement, 13));
+            int drawOrder = sqlite3_column_int(queryNpcLimbsStatement, 14);
+
+            Point limbPosition = Point(posX, posY);
+
+
+            /* Get the JOINTS for this Limb. */
+            /* Start by querying the count to see how big the vector should be. */
+            const char* queryCountJointsSQL = "SELECT COUNT(*) FROM joint WHERE limb_id = ?;";
+            sqlite3_stmt* queryCountJointsStatement;
+            npcLimbReturnCode = sqlite3_prepare_v2(db, queryCountJointsSQL, -1, &queryCountJointsStatement, nullptr);
+
+            if (npcLimbReturnCode != SQLITE_OK) {
+                std::cerr << "Failed to prepare JOINTS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+                sqlite3_close(db);
+                return map;
+            }
+
+            sqlite3_bind_int(queryCountJointsStatement, 1, limbID);
+
+            /* Execute count query. */
+            int jointCount = 0;
+            if (sqlite3_step(queryCountJointsStatement) == SQLITE_ROW) {
+                jointCount = sqlite3_column_int(queryCountJointsStatement, 0);
+            }
+            sqlite3_finalize(queryCountJointsStatement);
+
+            vector<Joint> joints(jointCount);
+
+
+            /* Now get the JOINTS themselves. */
+            const char* queryNpcJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
+            sqlite3_stmt* queryNpcJointsStatement;
+            npcLimbReturnCode = sqlite3_prepare_v2(db, queryNpcJointsSQL, -1, &queryNpcJointsStatement, nullptr);
+
+            if (npcLimbReturnCode != SQLITE_OK) {
+                std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+                sqlite3_close(db);
+                return map;
+            }
+
+            /* Bind the ID value. */
+            sqlite3_bind_int(queryNpcJointsStatement, 1, limbID);
+            int jointsReturnCode;
+            while ((jointsReturnCode = sqlite3_step(queryNpcJointsStatement)) == SQLITE_ROW) {
+                int jointID = sqlite3_column_int(queryNpcJointsStatement, 0);
+                int vectorIndex = sqlite3_column_int(queryNpcJointsStatement, 1);
+                Point pointForm = Point(
+                    sqlite3_column_int(queryNpcJointsStatement, 3),
+                    sqlite3_column_int(queryNpcJointsStatement, 4));
+                Point modifiedPoint = Point(
+                    sqlite3_column_int(queryNpcJointsStatement, 5),
+                    sqlite3_column_int(queryNpcJointsStatement, 6));
+                bool isAnchor = sqlite3_column_int(queryNpcJointsStatement, 7) == 1;
+                int connectedLimbID = sqlite3_column_int(queryNpcJointsStatement, 8);
+                int anchorJointIndex = sqlite3_column_int(queryNpcJointsStatement, 9);
+
+                Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
+                if (vectorIndex < jointCount) { joints[vectorIndex] = joint; }
+            }
+
+            Limb limb = Limb(sqlite3_column_int(queryNpcLimbsStatement, 0),
+                getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryNpcLimbsStatement, 1))),
+                limbPosition,
+                joints,
+                drawOrder
+            );
+
+            limb.setName(limbName);
+            limb.modifyHP(hpMod);
+            limb.modifyStrength(strengthMod);
+            limb.modifySpeed(speedMod);
+            limb.modifyIntelligence(intelligenceMod);
+            limb.rotate(rotationAngle);
+            limb.setFlipped(isFlipped);
+            limb.setAnchor(isAnchor);
+            limb.setMapSlug(mapSlug);
+            limb.setCharacterId(npcId);
+            limb.setId(limbID);
+
+            npcLimbs.push_back(limb);
+        }
+
+        npcs.emplace_back(npcId, npcName, anchorLimbId, npcPosition, npcLimbs);
+        sqlite3_finalize(queryNpcLimbsStatement);
+    }
+
+    
+    sqlite3_finalize(queryNPCsStatement);
+
+
 
     /* Close DB. */
     sqlite3_close(db);
 
     /* BUILD THE MAP. */
-    map = Map(mapForm, roamingLimbs, rows, characterPosition);
+    map = Map(mapForm, roamingLimbs, rows, characterPosition, npcs);
     map.setLandmarks(landmarks);
+
     return map;
 }
