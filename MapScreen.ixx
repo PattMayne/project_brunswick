@@ -271,6 +271,7 @@ export class MapScreen {
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 
 		bool moveLimb(Limb& roamingLimb);
+		bool moveNPC(MapCharacter& npc);
 		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY);
 		void animateMovingObject(SDL_Rect& rect, int blockPositionX, int blockPositionY, Point lastPosition);
 
@@ -623,14 +624,21 @@ export void MapScreen::run() {
 		if (startNpcAnimation) {
 			/* First move the NPCs and the Limbs */
 
-			// Move NPCs
-			// Move LIMBs
+			/*
+			* 
+			* MOVE NPCs
+			* 
+			*/
+
+			for (MapCharacter& npc : map.getNPCs()) {
+				moveNPC(npc);
+			}
+
+			// SAVE NPC LOCATIONS (one big transaction in the DB)
 
 			/*
 			* 
-			* 
 			*		MOVE LIMBS
-			* 
 			* 
 			*/
 
@@ -688,8 +696,62 @@ export void MapScreen::run() {
 	gameState.setScreenStruct(screenToLoadStruct);
 }
 
+/*
+* After every player turn, each NPC must move to an adjacent block.
+* 
+* TO DO: We must give NPCs a "home" position which they PROTECT and stay near.
+* For now we just make them move at random.
+*/
+bool MapScreen::moveNPC(MapCharacter& npc) {
+	bool moved = false;
+	Point currentPosition = npc.getPosition();
+	int pointX = currentPosition.x;
+	int pointY = currentPosition.y;
 
+	/* Get list of available blocks */
+	vector<Point> availablePositions;
+	vector<vector<Block>>& rows = map.getRows();
 
+	/* Check up. */
+	if (pointY > 0) {
+		if (rows[pointY - 1][pointX].getIsFloor()) {
+			availablePositions.push_back(Point(pointX, pointY - 1));
+		}
+	}
+
+	/* Check down. */
+	if (pointY < vBlocksTotal) {
+		if (rows[pointY + 1][pointX].getIsFloor()) {
+			availablePositions.push_back(Point(pointX, pointY + 1));
+		}
+	}
+
+	/* Check left. */
+	if (pointX > 0) {
+		if (rows[pointY][pointX - 1].getIsFloor()) {
+			availablePositions.push_back(Point(pointX - 1, pointY));
+		}
+	}
+
+	if (pointX < hBlocksTotal) {
+		if (rows[pointY][pointX + 1].getIsFloor()) {
+			availablePositions.push_back(Point(pointX + 1, pointY));
+		}
+	}
+
+	if (availablePositions.size() > 0) {
+		cout << "Moving NPC\n";
+		Point& newPoint = availablePositions[rand() % availablePositions.size()];
+		npc.moveToPosition(newPoint);
+		moved = true;
+	}
+
+	return moved;
+}
+
+/*
+* After every player turn, each Roaming Limb must move to an adjacent block.
+*/
 bool MapScreen::moveLimb(Limb& roamingLimb) {
 	bool moved = false;
 	Point currentPosition = roamingLimb.getPosition();

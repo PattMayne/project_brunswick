@@ -116,6 +116,12 @@ public:
 		lastBlockPosition.y = blockPosition.y;
 	}
 
+	/* This can be MAP position or DRAW position. */
+	void moveToPosition(Point newPosition) {
+		lastBlockPosition = blockPosition;
+		blockPosition = newPosition;
+	}
+
 	bool move(MapDirection direction, int distance = 1) {
 		bool moved = false;
 		/* This will become more complicated when we do animations. */
@@ -321,7 +327,7 @@ public:
 	string getName() { return mapForm.name; }
 	string getSlug() { return mapForm.slug; }
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
-	vector<MapCharacter> getNPCs() { return NPCs; }
+	vector<MapCharacter>& getNPCs() { return NPCs; }
 
 	void setLandmarks(vector<Landmark> landmarks) { this->landmarks = landmarks; }
 	void setPlayerCharacter(MapCharacter playerCharacter) { this->playerCharacter = playerCharacter; }

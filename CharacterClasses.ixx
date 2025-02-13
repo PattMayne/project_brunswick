@@ -763,6 +763,7 @@ public:
 		sort(limbs.begin(), limbs.end(), compareDrawOrder);
 	}
 
+
 	/* 
 	*  Ultimately builds the vector of the indexes of the limbs which are equipped,
 	* and therefore need to be drawn. Builds that vector according to their draw order.
