@@ -58,7 +58,9 @@ CREATE TABLE IF NOT EXISTS character (
     anchor_limb_id INTEGER DEFAULT -1,
     is_player INTEGER DEFAULT 0,
     map_slug TEXT,
-    battle_id INTEGER NOT NULL DEFAULT -1
+    battle_id INTEGER NOT NULL DEFAULT -1,
+    position_x INTEGER DEFAULT 0,
+    position_y INTEGER DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_limb_id ON joint (limb_id);

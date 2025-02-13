@@ -224,7 +224,7 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
 * Returns id from DB.
 */
 
-export int createNpcOnMap(string mapSlugString, string npcName) {
+export int createNpcOnMap(string mapSlugString, string npcName, Point position) {
     int npcID = -1;
 
     /* Open database. */
@@ -236,7 +236,8 @@ export int createNpcOnMap(string mapSlugString, string npcName) {
         return npcID;
     }
 
-    const char* newNpcSQL = "INSERT INTO character (name, is_player, map_slug) VALUES (?, ?, ?);";
+    const char* newNpcSQL = "INSERT INTO character "
+        "(name, is_player, map_slug, position_x, position_y) VALUES (?, ?, ?, ?, ?);";
     sqlite3_stmt* newNpcStatement;
     int returnCode = sqlite3_prepare_v2(db, newNpcSQL, -1, &newNpcStatement, nullptr);
 
@@ -247,6 +248,8 @@ export int createNpcOnMap(string mapSlugString, string npcName) {
     sqlite3_bind_text(newNpcStatement, 1, name, -1, SQLITE_STATIC);
     sqlite3_bind_int(newNpcStatement, 2, isPlayerBoolInt);
     sqlite3_bind_text(newNpcStatement, 3, mapSlug, -1, SQLITE_STATIC);
+    sqlite3_bind_int(newNpcStatement, 4, position.x);
+    sqlite3_bind_int(newNpcStatement, 5, position.y);
 
     /* Execute the statement. */
     returnCode = sqlite3_step(newNpcStatement);

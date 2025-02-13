@@ -1365,7 +1365,7 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		npc.setBlockPosition(collidedLimbsStruct.point);
 		npc.updateLastBlock();
 
-		int npcID = createNpcOnMap(map.getSlug(), npcName);
+		int npcID = createNpcOnMap(map.getSlug(), npcName, collidedLimbsStruct.point);
 		npc.setId(npcID);
 
 		for (int limbID : collidedLimbsStruct.limbIDs) {
