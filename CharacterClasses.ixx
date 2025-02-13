@@ -58,6 +58,7 @@ export struct SuitLimbPlacement {
 };
 
 export bool compareDrawOrder(Limb& limbA, Limb& limbB);
+export bool compareJointsNumber(Limb& limbA, Limb& limbB);
 
 struct AvatarDimensionsStruct {
 	AvatarDimensionsStruct() {
@@ -754,6 +755,13 @@ public:
 	vector<int>& getDrawLimbIDs() { return drawLimbListIDs; }
 	void getChildLimbsRecursively(Limb& parentLimb, vector<Limb>& childLimbs);
 
+	void sortLimbsByNumberOfJoints() {
+		sort(limbs.begin(), limbs.end(), compareJointsNumber);
+	}
+
+	void sortLimbsByDrawOrder() {
+		sort(limbs.begin(), limbs.end(), compareDrawOrder);
+	}
 
 	/* 
 	*  Ultimately builds the vector of the indexes of the limbs which are equipped,
@@ -764,7 +772,7 @@ public:
 	*/
 	void buildDrawLimbList() {
 		drawLimbListIDs = {};
-		sort(limbs.begin(), limbs.end(), compareDrawOrder);
+		sortLimbsByDrawOrder();
 		int drawOrder = 0;
 
 		for (Limb& limb : limbs) {
@@ -1405,4 +1413,9 @@ int normalizeAngle(int angle) {
 /* When sorting a vector of Limb objects by drawOrder, we use this function as the third parameter for comparison. */
 export bool compareDrawOrder(Limb& limbA, Limb& limbB) {
 	return limbA.getDrawOrder() < limbB.getDrawOrder();
+}
+
+/* When sorting a vector of Limb objects by number of joints, we use this function as the third parameter for comparison. */
+export bool compareJointsNumber(Limb& limbA, Limb& limbB) {
+	return limbA.getJoints().size() < limbB.getJoints().size();
 }

@@ -321,12 +321,16 @@ public:
 	string getName() { return mapForm.name; }
 	string getSlug() { return mapForm.slug; }
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
+	vector<MapCharacter> getNPCs() { return NPCs; }
 
 	void setLandmarks(vector<Landmark> landmarks) { this->landmarks = landmarks; }
 	void setPlayerCharacter(MapCharacter playerCharacter) { this->playerCharacter = playerCharacter; }
+	void addNPC(MapCharacter npc) { NPCs.push_back(npc); }
 
 	MapForm getForm() { return mapForm; }
 	void randomizePathOptions(Block& block);
+
+
 
 private:
 	MapForm mapForm;

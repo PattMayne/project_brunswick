@@ -266,6 +266,7 @@ export class MapScreen {
 		void drawCharacters(UI& ui);
 		void drawPlayerCharacter(UI& ui);
 		void drawRoamingLimbs(UI& ui);
+		void drawNpcs(UI& ui);
 		void drawAcquiredLimbs(UI& ui, int playerX, int playerY);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 
@@ -801,6 +802,7 @@ void MapScreen::drawCharacters(UI& ui) {
 	*					(figure that out later)
 	*/
 	drawRoamingLimbs(ui);
+	drawNpcs(ui);
 	drawPlayerCharacter(ui);
 }
 
@@ -963,7 +965,43 @@ void MapScreen::animateMovingObject(SDL_Rect& rect, int blockPositionX, int bloc
 	}
 }
 
-/* The limbs must move. */
+void MapScreen::drawNpcs(UI& ui) {
+	SDL_Rect npcRect = { 0, 0, blockWidth, blockWidth };
+
+	for (MapCharacter npc : map.getNPCs()) {
+		Point position = npc.getPosition();
+		int posX = position.x;
+		int posY = position.y;
+
+		/* skip NPCs that are too far outside of the frame. (still draw them if they might fly onto the frame.) */
+		if (posX < drawStartX - 5 || posX > drawStartX + xViewRes + 5 ||
+			posY < drawStartY - 5 || posY > drawStartY + yViewRes + 5
+			) { continue; }
+
+		npcRect.x = (posX - drawStartX) * blockWidth;
+		npcRect.y = ((posY - drawStartY) * blockWidth) + npcHeight;
+
+		/* Synchronize during animation. */
+		if (animate) {
+			if (animationType == AnimationType::Player) {
+				animateMapBlockDuringPlayerMove(npcRect, posX, posY);
+			}
+			else if (animationType == AnimationType::NPC) {
+				animateMovingObject(npcRect, posX, posY, npc.getLastPosition());
+			}
+		}
+
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			npc.getTexture(),
+			NULL, &npcRect,
+			0, NULL, SDL_FLIP_NONE
+		);
+
+	}
+}
+
+/* Make the limbs move after every Player turn. */
 void MapScreen::drawRoamingLimbs(UI& ui) {
 	SDL_Rect limbRect = { 0, 0, blockWidth, blockWidth };
 
@@ -972,7 +1010,7 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 		int posX = position.x;
 		int posY = position.y;
 
-		/* skip limbs that are too far outside of the frame. (still draw them if they might fly onto the frame. */
+		/* skip limbs that are too far outside of the frame. (still draw them if they might fly onto the frame). */
 		if (posX < drawStartX - 5 || posX > drawStartX + xViewRes + 5 ||
 			posY < drawStartY - 5 || posY > drawStartY + yViewRes + 5
 		) { continue; }
@@ -1245,8 +1283,6 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		}
 	}
 
-	cout << "\n\n";
-
 	/* We have collected data on how many NPCs need to be made.
 	* Now we must make the NPCs, add the limbs to the NPCs, and remove the limbs from the roamingLimbs vector.
 	*/
@@ -1263,14 +1299,59 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		string npcName = "Forest Creature"; /* TO DO: Create a system for giving them names based on their limbs or map. */
 		
 		// HERE we must add the LOCATION (move from MapCharacter to Character).
+
+		npc.setBlockPosition(collidedLimbsStruct.point);
+		npc.updateLastBlock();
+
 		int npcID = createNpcOnMap(map.getSlug(), npcName);
+		npc.setId(npcID);
 
+		for (int limbID : collidedLimbsStruct.limbIDs) {
 
+			for (int i = roamingLimbs.size() - 1; i >= 0; --i) {
+				Limb& limb = roamingLimbs[i];
+				if (limb.getId() == limbID) {
+					limb.setCharacterId(npcID);
+					npc.addLimb(limb);
+					updateLimbOwner(limbID, npcID);
+
+					/* Character has limb. Now remove limb from map. */
+					roamingLimbs.erase(roamingLimbs.begin() + i);
+				}
+			}
+
+		}
+
+		/* NPC has all their limbs.
+			* Now snap them together. DONE
+			* --- sort NPCs limbs by number of joints. DONE
+			* Then make a texture. DONE
+			* Then draw the texture on each frame.
+			* Then load the NPCs when map loads.
+			*/
+		npc.sortLimbsByNumberOfJoints();
+		vector<Limb>& npcLimbs = npc.getLimbs();
+		bool keepEquippingLimbs = true;
+
+		for (Limb& limb : npcLimbs) {
+			if (keepEquippingLimbs) {
+				keepEquippingLimbs = npc.equipLimb(limb.getId());
+				updateCharacterLimbs(npcID, npc.getAnchorLimbId(), npcLimbs);
+			} else { break; }
+		}
+
+		npc.buildDrawLimbList();
+		npc.setTexture(npc.createAvatar());
+
+		map.addNPC(npc);
+
+		cout << "NPC has " << npc.getEquippedLimbs().size() << " equipped limbs of " << npc.getLimbs().size() << " total limbs\n";
 	}
+
+	cout << "Map now has " << map.getNPCs().size() << " NPCs\n";
 
 	return collisionFound;
 }
-
 
 /* Limb Collision Animation Functions. */
 
