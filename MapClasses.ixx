@@ -141,6 +141,7 @@ public:
 	Point getHomePosition() { return homePosition; }
 	vector<AcquiredLimb>& getAcquiredLimbStructs() { return acquiredLimbStructs; }
 
+	void clearAcquiredLimbStructs() { acquiredLimbStructs = {}; }
 	void setHomePosition(Point position) { homePosition = position; }
 	void setBlockPosition(Point blockPosition) {
 		this->blockPosition = blockPosition;
@@ -150,7 +151,6 @@ public:
 
 	void setTexture(SDL_Texture* incomingTexture) {
 		if (texture && texture !=NULL) {
-			cout << "Destroying old texture\n";
 			SDL_DestroyTexture(texture);
 		}
 		texture = incomingTexture;
@@ -449,7 +449,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 
 	/* FOR NOW I just have ONE copy of each native limb */
 	for (LimbForm& limbForm : nativeLimbForms) {
-		int numberOfThisLimb = (rand() % 15) + 5;
+		int numberOfThisLimb = (rand() % 20) + 5;
 
 		for (int n = 0; n < numberOfThisLimb; ++n) {
 			Limb& newLimb = roamingLimbs.emplace_back(limbForm);
@@ -458,8 +458,6 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 			newLimb.setLastPosition(newPosition);
 		}
 	}
-
-	cout << "\n\nThere are " << roamingLimbs.size() << " LIMBS in Roaming Limbs\n\n";
 }
 
 /* Map class constructor to rebuild map from DB data.

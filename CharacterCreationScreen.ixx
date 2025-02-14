@@ -439,7 +439,7 @@ void CharacterCreationScreen::loadLimbAttempt(int limbToLoadID) {
 	if (!clickedLimb.isEquipped() &&
 		playerCharacter.getAnchorLimbId() > 0 &&
 		get<0>(playerCharacter.getLimbIdAndJointIndexForConnection(playerCharacter.getAnchorLimbId(), limbToLoadID)) < 0
-		) {
+	) {
 		showNewMessage(
 			Resources::getInstance().getMessageText("NO_FREE_CHAR_JOINTS"),
 			ConfirmationButtonType::OkCancel, false

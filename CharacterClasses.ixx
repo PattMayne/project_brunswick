@@ -1034,6 +1034,7 @@ void Character::clearSuit() {
 	}
 	anchorLimbId = -1;
 	drawLimbListIDs = {};
+	drawLimbListIndexes = {};
 }
 
 /*

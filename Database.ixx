@@ -56,24 +56,20 @@ export void createDB() {
 
     /* Open database (create if does not exist). */
     int dbFailed = sqlite3_open(dbPath(), &db);
-    cout << dbFailed << "\n";
     if (dbFailed == 0) {
-        cout << "Opened Database Successfully." << "\n";
 
         /* Get the schema file. */
         string schemaFilename = "data/schema.sql";
         ifstream schemaFile(schemaFilename);
 
         if (schemaFile.is_open()) {
-            cout << "Opened schema file.\n";
 
             /* Get the SQL string from the open file. */
             string sql((istreambuf_iterator<char>(schemaFile)), istreambuf_iterator<char>());
             char* errMsg = nullptr;
             int returnCode = sqlite3_exec(db, sql.c_str(), NULL, NULL, &errMsg);
 
-            if (returnCode == SQLITE_OK) {  cout << "Schema executed successfully." << endl; }
-            else {
+            if (returnCode != SQLITE_OK) {
                 cerr << "SQL error: " << errMsg << endl;
                 sqlite3_free(errMsg); }
         }
@@ -115,7 +111,6 @@ export bool updateLimbOwner(int limbID, int newCharacterID) {
 
     /* Open database. */
     int dbFailed = sqlite3_open(dbPath(), &db);
-    cout << dbFailed << "\n";
     if (dbFailed != 0) {
         cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
         return success;
@@ -136,8 +131,6 @@ export bool updateLimbOwner(int limbID, int newCharacterID) {
     /* Bind the values. */
     sqlite3_bind_int(statement, 1, newCharacterID);
     sqlite3_bind_int(statement, 2, limbID);
-
-    cout << "Updated Limb ID: " << limbID << "\n";
 
     /* Execute the statement. */
     returnCode = sqlite3_step(statement);
@@ -220,7 +213,6 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
 */
 
 export void updateNpcHomePosition(int characterId, Point newPosition) {
-    cout << "UPDATING NPC " << characterId << " POSITION\n";
     /* Open database. */
     sqlite3* db;
     char* errMsg = nullptr;
@@ -254,12 +246,10 @@ export void updateNpcHomePosition(int characterId, Point newPosition) {
 
     // Get the number of rows affected by the last operation
     int rowsAffected = sqlite3_changes(db);
-    std::cout << "Number of rows affected: " << rowsAffected << std::endl;
 
     /* Finalize statement. */
     sqlite3_finalize(updateCharacterstatement);
     sqlite3_close(db);
-    cout << "UPDATED NPC POSITION\n";
 }
 
 /*
@@ -839,8 +829,6 @@ export MapCharacter loadPlayerMapCharacter() {
         character.addLimb(limb);
     }
 
-    cout << "Player has " << character.getLimbs().size() << " limbs (in DATABASE module)\n";
-
     if (returnCode != SQLITE_DONE) {
         cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
         return character;
@@ -968,7 +956,6 @@ export int createPlayerCharacterOrGetID() {
             playerID = sqlite3_column_int(idStatement, 0);
             sqlite3_finalize(idStatement);
             sqlite3_close(db);
-            cout << "Player ID retrieved: " << playerID << "\n";
             return playerID;
         }
 
@@ -1079,7 +1066,6 @@ export bool createNewMap(Map& map) {
 
     /* Open database. */
     int dbFailed = sqlite3_open(dbPath(), &db);
-    cout << dbFailed << "\n";
     if (dbFailed != 0) {
         cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
         return success;
@@ -1185,8 +1171,6 @@ export bool createNewMap(Map& map) {
         sqlite3_close(db);
         return success;
     }
-
-    cout << map.getRoamingLimbs().size() << " roaming limbs.\n";
 
     /* 
     * Next do a transaction to save all the Roaming Limbs to the database.

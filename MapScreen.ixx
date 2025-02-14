@@ -332,6 +332,8 @@ export class MapScreen {
 
 		int homeBaseRange;
 
+		bool blockIsDrawable(Point position);
+
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
 		*/
@@ -444,6 +446,32 @@ void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 }
 
 
+//bool MapScreen::blockIsDrawable(Point position) {
+//	int posX = position.x;
+//	int posY = position.y;
+//
+//	return !(posX < drawStartX - 5 ||
+//		posX > drawStartX + xViewRes + 5 ||
+//		posY < drawStartY - 5 ||
+//		posY > drawStartY + yViewRes + 5);
+//}
+
+bool MapScreen::blockIsDrawable(Point position) {
+	int posX = position.x;
+	int posY = position.y;
+
+	return posX > drawStartX - 5 &&
+		posX < drawStartX + xViewRes + 5 &&
+		posY > drawStartY - 5 &&
+		posY < drawStartY + yViewRes + 5;
+
+	//return !(posX < drawStartX - 5 ||
+	//	posX > drawStartX + xViewRes + 5 ||
+	//	posY < drawStartY - 5 ||
+	//	posY > drawStartY + yViewRes + 5);
+}
+
+
 /* The main function of the module, containing the game loop.
 * Multiple kinds of animations happen during game loop.
 * MOVE animation is controlled by the animate boolean.
@@ -501,12 +529,14 @@ export void MapScreen::run() {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
 		frameStartTime = SDL_GetTicks();
 		bool startNpcAnimation = false;
+
+
 		
 		if (animate && animationCountdown < 1) {
 			/* Animation counter has run out but animate is still true (final frame of animation).
 			* We check collisions on the final frame.
 			*/
-			
+
 			bool landmarkCollided = false;
 			bool npcCollided = false;
 			bool limbCollided = false;
@@ -924,9 +954,10 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 /*
 * Call this within the drawPlayerCharacter function so we don't have to calculate the location again.
 * Also, the acquired limbs can be considered part of the player character.
+* 
 */
-void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int drawX, int drawY) {
-
+void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX, int charDrawY) {
+	
 	vector<AcquiredLimb>& acquiredLimbStructs = character.getAcquiredLimbStructs();
 
 	for (int i = acquiredLimbStructs.size() - 1; i >= 0; --i) {
@@ -964,8 +995,8 @@ void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int drawX, in
 		}
 
 		SDL_Rect limbRect = {
-			drawX + aLimbStruct.diffRect.x,
-			drawY + aLimbStruct.diffRect.y,
+			charDrawX + aLimbStruct.diffRect.x,
+			charDrawY + aLimbStruct.diffRect.y,
 			blockWidth + aLimbStruct.diffRect.w,
 			blockWidth + aLimbStruct.diffRect.h
 		};
@@ -1041,18 +1072,20 @@ void MapScreen::animateMovingObject(SDL_Rect& rect, int blockPositionX, int bloc
 	}
 }
 
+
 void MapScreen::drawNpcs(UI& ui) {
 	SDL_Rect npcRect = { 0, 0, blockWidth, blockWidth };
 
-	for (MapCharacter npc : map.getNPCs()) {
+	for (MapCharacter& npc : map.getNPCs()) {
 		Point position = npc.getPosition();
-		int posX = position.x;
-		int posY = position.y;
 
 		/* skip NPCs that are too far outside of the frame. (still draw them if they might fly onto the frame.) */
-		if (posX < drawStartX - 5 || posX > drawStartX + xViewRes + 5 ||
-			posY < drawStartY - 5 || posY > drawStartY + yViewRes + 5
-			) { continue; }
+		if (!blockIsDrawable(position)) {
+			npc.clearAcquiredLimbStructs();			
+			continue; }
+
+		int posX = position.x;
+		int posY = position.y;
 
 		npcRect.x = (posX - drawStartX) * blockWidth;
 		npcRect.y = ((posY - drawStartY) * blockWidth) + npcHeight;
@@ -1074,6 +1107,9 @@ void MapScreen::drawNpcs(UI& ui) {
 			0, NULL, SDL_FLIP_NONE
 		);
 
+		if (npc.getAcquiredLimbStructs().size() > 0) {
+			drawAcquiredLimbs(ui, npc, npcRect.x, npcRect.y);
+		}
 	}
 }
 
@@ -1286,14 +1322,27 @@ bool MapScreen::checkNpcOnLimbCollision() {
 		int npcID = npc.getId();
 		for (int i = roamingLimbs.size() - 1; i >= 0; --i) {
 			Limb& roamingLimb = roamingLimbs[i];
+			Point npcPosition = npc.getPosition();
 
-			if (npc.getPosition().equals(roamingLimb.getPosition())) {
+			if (npcPosition.equals(roamingLimb.getPosition())) {
 				collisionFound = true;
-				cout << "NPC collided with LIMB\n";
 
 				roamingLimb.setCharacterId(npcID);
 				npc.addLimb(roamingLimb);
 				updateLimbOwner(roamingLimb.getId(), npcID);
+
+				if (blockIsDrawable(npc.getPosition())) {
+					/* Make object for limb collision animation. */
+					SDL_Rect diffRect = { 0, 0, 0, 0 };
+					npc.getAcquiredLimbStructs().emplace_back(
+						roamingLimb.getTexture(),
+						limbCollisionCountdown,
+						roamingLimb.getRotationAngle(),
+						diffRect
+					);
+				}
+				
+
 				roamingLimbs.erase(roamingLimbs.begin() + i);
 
 				/* NPC has the limb. Now rebuild the NPC. */
@@ -1312,7 +1361,7 @@ bool MapScreen::checkNpcOnLimbCollision() {
 				npc.buildDrawLimbList();
 				updateCharacterLimbs(npc.getId(), npc.getAnchorLimbId(), npcLimbs);
 				npc.setTexture(npc.createAvatar());
-				npc.setHomePosition(npc.getPosition());
+				npc.setHomePosition(npcPosition);
 				updateNpcHomePosition(npcID, npc.getHomePosition());
 			}
 		}
@@ -1404,8 +1453,6 @@ bool MapScreen::checkLimbOnLimbCollision() {
 
 				comparedLimbFoundMatch = true;
 				collisionFound = true;
-
-				cout << comparedLimb.getForm().slug << " collided with " << baseLimb.getForm().slug << "!\n";
 			}
 		}
 	}
