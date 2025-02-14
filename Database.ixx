@@ -219,11 +219,53 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
 * 
 */
 
+export void updateNpcHomePosition(int characterId, Point newPosition) {
+    cout << "UPDATING NPC " << characterId << " POSITION\n";
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return;
+    }
+
+    /* First update the Character. */
+
+    const char* updateCharacterSQL = "UPDATE character SET position_x = ?, position_y = ? WHERE id = ?;";
+    sqlite3_stmt* updateCharacterstatement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateCharacterSQL, -1, &updateCharacterstatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare NPC UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return;
+    }
+
+    /* Bind the values. */
+    sqlite3_bind_int(updateCharacterstatement, 1, newPosition.x);
+    sqlite3_bind_int(updateCharacterstatement, 2, newPosition.y);
+    sqlite3_bind_int(updateCharacterstatement, 3, characterId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(updateCharacterstatement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update failed: " << sqlite3_errmsg(db) << endl; }
+
+    // Get the number of rows affected by the last operation
+    int rowsAffected = sqlite3_changes(db);
+    std::cout << "Number of rows affected: " << rowsAffected << std::endl;
+
+    /* Finalize statement. */
+    sqlite3_finalize(updateCharacterstatement);
+    sqlite3_close(db);
+    cout << "UPDATED NPC POSITION\n";
+}
+
 /*
 * Create NPC on map after Limb collision.
 * Returns id from DB.
 */
-
 export int createNpcOnMap(string mapSlugString, string npcName, Point position) {
     int npcID = -1;
 
@@ -268,6 +310,7 @@ export int createNpcOnMap(string mapSlugString, string npcName, Point position) 
 
     return npcID;
 }
+
 
 /*
 * Update all attributes of a character's limbs and their joints.
@@ -1724,8 +1767,8 @@ export Map loadMap(string mapSlug) {
             }
             sqlite3_finalize(queryCountJointsStatement);
 
+            /* Vector of the joints for the NPC (start with the correct size for index-based insertion). */
             vector<Joint> joints(jointCount);
-
 
             /* Now get the JOINTS themselves. */
             const char* queryNpcJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
@@ -1733,7 +1776,7 @@ export Map loadMap(string mapSlug) {
             npcLimbReturnCode = sqlite3_prepare_v2(db, queryNpcJointsSQL, -1, &queryNpcJointsStatement, nullptr);
 
             if (npcLimbReturnCode != SQLITE_OK) {
-                std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+                std::cerr << "Failed to prepare BLOCKS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
                 sqlite3_close(db);
                 return map;
             }
@@ -1783,11 +1826,8 @@ export Map loadMap(string mapSlug) {
         npcs.emplace_back(npcId, npcName, anchorLimbId, npcPosition, npcLimbs);
         sqlite3_finalize(queryNpcLimbsStatement);
     }
-
     
     sqlite3_finalize(queryNPCsStatement);
-
-
 
     /* Close DB. */
     sqlite3_close(db);

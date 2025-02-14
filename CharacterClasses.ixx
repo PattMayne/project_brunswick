@@ -1424,12 +1424,16 @@ int normalizeAngle(int angle) {
 	}
 }
 
-/* When sorting a vector of Limb objects by drawOrder, we use this function as the third parameter for comparison. */
+/* When sorting a vector of Limb objects by drawOrder, we use this function as the third parameter for comparison.
+* Ascending.
+*/
 export bool compareDrawOrder(Limb& limbA, Limb& limbB) {
 	return limbA.getDrawOrder() < limbB.getDrawOrder();
 }
 
-/* When sorting a vector of Limb objects by number of joints, we use this function as the third parameter for comparison. */
+/* When sorting a vector of Limb objects by number of joints, we use this function as the third parameter for comparison.
+* Descending: We want the MOST joints to be first.
+*/
 export bool compareJointsNumber(Limb& limbA, Limb& limbB) {
-	return limbA.getJoints().size() < limbB.getJoints().size();
+	return limbA.getJoints().size() > limbB.getJoints().size();
 }

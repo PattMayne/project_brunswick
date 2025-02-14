@@ -13,11 +13,7 @@
 * 
 * The MAP has a vector of LANDMARK objects.
 * We'll create an ENTRANCE and EXIT... but we need some way to access them explicitly
-* 
-* 
-* Buildings will turn their underlying Block objects into WALL objects... EXCEPT for the entrance.
-* So when a player is ON a building block, they "enter" the building (load the building map)
-* But this will only be possible on the entrance block, because it's the only FLOOR.
+* The other landmarks will be SHRINES (no buildings in this game... not enough time).
 * 
 * 
 * MAP vs MAP SCREEN
@@ -53,45 +49,16 @@
 * 
 * NEXT:
 * 
-* ----- LIMBS roaming around.
-* ---------- Get a list of LimbForms from the FormFactory
-* ---------- Turn them into a vector of Limb Objects
-* ---------- Make them MapLimb objects actually, with an x/y position
-* --------------- the Position attribute can be used for Position in the MAP, when NOT part of a character!
-* --------------- ...or maybe not... because we need to animate with lastPosition...
-* --------------- ...or maybe we just add lastPosition to the main class anyway, since it will be useful in battles when you lose a limb and have to travel to New Position?
-* ----- Introduce TURNS
-* ---------- After the player moves, then we check if they hit (A) NPCs (B) Limbs (C) Landmarks.
-* ---------- Each landmark has a vector of int pairs (Point struct... not actually a point)
-* -----	JSON for other landmarks.
-* -----	Paths between other landmarks.
-* ---------- Side-paths.
-* -----	NPCs roaming around, defined in the JSON
-* ----- SQLite.
-* ----- Move Character to its own module and make a Character Decorator here to add map-specific attributes.
-* 
-* 
-* TO DO: when we implement ZOOM functionality.
-* Animation increments are BETTER but not necessarily precise enough.
-* They're good for every screen width & xViewRes I've tried.
-* But there might be some combos where it goes to quick or too fast.
-* 
-* setViewResAndBlockWidth() function decides this. RETURN TO IT LATER and make it better.
-* 
-* TO DO: After drawing all the tiles on a map (the first time) we can add VARIATION tiles by drawing NEW PATHS
-* with wall_002 and wall_003.
+* ----- 
+*
 * Every map should have three walls and three floors, plus a path (floor) and a border (wall).
-* The BLOCK objects will SAVE (in the DB) which tile they own so we don't need to calculate it again.
-* 
-* TO DO: Wall tiles should be a little bigger, so the wall-thing (tree, or whatever) stick ABOVE the higher tile.
-* ALSO randomly paint them as FLIP (horizontal) or NO_FLIP (  use rand % 2 to get each FLIP or NO FLIP... save it somewhere... maybe the DB)
-* 
 * 
 * 
 *		COLLISION ANIMATIONS:
 * 
-*			--- There can be a GENERIC COLLISION ANIMATION.
-*			--- Whenever there is a collision with NPCs or Limbs, we can just mark the Point position and draw those animations
+*			--- When NPCs are created make them spin around and grow larger then normal size, similar to the Limb acquisition.
+*			--- When NPCs pick up a new Limb, do the normal Limb Acquisition animation (spin, grow/shrink).
+*			--- When player hits NPC the NPC should spin and grow so large they consume the whole screen before we load battle screen.
 * 
 * 
 * Destroy all textures for PANELS and LIMBS (on every screen).
@@ -139,16 +106,33 @@ struct AcquiredLimb {
 };
 
 
-/* Map Screen class: where we navigate worlds, dungeons, and buildings. */
+/* Map Screen class: where we navigate worlds, dungeons, and buildings.
+* (Actually only worlds. Dungeons and buildings happen in sequel).
+* 
+* We either create a new map (based on the map_slug) and save it to the database,
+* or we load it from the database. map_slug is the primary key in the DB table,
+* so there is only ONE of each map.
+* 
+* The run() function contains the game loop.
+* Movement is turn-based. Player moves up/down/left/right,
+* then the map (limbs, NPCs) also move.
+* 
+* If player collides with Limb, player collects Limb.
+* If player collides with NPC, go to Battle Screen.
+* If limbs collide they form a hostile NPC.
+* NPCs can pick up new limbs, which are either equipped or stored in inventory.
+* 
+* Movements are animated, during which time the game is paused and input is ignored.
+* Limb-acquisition and NPC-formation are also animated, but this does not pause the game.
+*/
 export class MapScreen {
 	public:
 		/* 
 		* constructor:
 		* 
-		* For now we are sending in the WIDTH.
-		* Later we'll send in the ID of the database object
-		* and/or the reference to a JSON file.
-		* mapWidth refers to the number of blocks to CREATE.
+		* Only needs the slug.
+		* We check the DB to see if this mapSlug already has a map (map_slug is primary key).
+		* If so, load that map. Otherwise, create a new one and save it to the DB.
 		*/
 		MapScreen(string mapSlug) {
 			UI& ui = UI::getInstance();
@@ -261,8 +245,9 @@ export class MapScreen {
 		MapForm mapForm;
 		void run();
 
-		bool checkLimbCollision(); /* Limb-on-player collision. */
+		bool checkPlayerLimbCollision(); /* Limb-on-player collision. */
 		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
+		bool checkNpcOnLimbCollision();
 		vector<Limb> acquiredLimbs;
 
 	private:
@@ -569,10 +554,9 @@ export void MapScreen::run() {
 					}					
 				}
 
-				/* Collisions with NPCs */
+				checkPlayerLimbCollision(); /* Player collects limb. */
 
-				/* Collisions with LIMBs */
-				 checkLimbCollision();
+				 /* Collisions with NPCs */
 
 				if (!landmarkCollided && !npcCollided) {
 					/* start the NPC animation. */
@@ -580,22 +564,20 @@ export void MapScreen::run() {
 				}
 			}
 			else if (animationType == AnimationType::NPC) {
-				/* Deal with wrapping up the NPC animation. */
+				/* Deal with wrapping up the NPC-moved animation. */
 				animate = false;
 				animationType = AnimationType::None;
 
-
-				/* Check LIMBs colliding with each other. IF they form an NPC on the player's block, the player fights the NPC. */
-
-				checkLimbOnLimbCollision();
-
-				/* 
+				/*
 				* Check for collisions again.
-				* This time check for collisions between Limbs, so they can become NPCs.
 				* But also check for Limbs or NPCs who moved onto the Player's block.
+				* The order matters.
 				*/
 
-				checkLimbCollision();
+				/* Check LIMBs colliding with each other. IF they form an NPC on the player's block, the player fights the NPC. */
+				checkNpcOnLimbCollision(); /* NPC collects new limb. It's the NPC's move, so they gather the limb instead of Player (if on same block). */
+				checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
+				checkPlayerLimbCollision(); /* Player collects new limb. */
 			}
 		}
 
@@ -913,7 +895,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	int blockY = playerCharacter.getBlockY();
 	
 	characterRect.x = (blockX - drawStartX) * blockWidth;
-	characterRect.y = ((blockY - drawStartY) * blockWidth) + npcHeight;
+	characterRect.y = ((blockY - drawStartY) * blockWidth) - npcHeight;
 
 	/* Check if we are animating AND close to an edge.
 	* If close to a vertical edge, and moving vertically, animate the character.
@@ -1300,8 +1282,59 @@ void MapScreen::decrementCountdown() {
 		animationCountdown = 0;}
 }
 
+
+bool MapScreen::checkNpcOnLimbCollision() {
+	bool collisionFound = false;
+	vector<Limb>& roamingLimbs = map.getRoamingLimbs();
+
+	for (MapCharacter& npc : map.getNPCs()) {
+		int npcID = npc.getId();
+		for (int i = roamingLimbs.size() - 1; i >= 0; --i) {
+			Limb& roamingLimb = roamingLimbs[i];
+
+			if (npc.getPosition().equals(roamingLimb.getPosition())) {
+				collisionFound = true;
+				cout << "NPC collided with LIMB\n";
+
+				roamingLimb.setCharacterId(npcID);
+				npc.addLimb(roamingLimb);
+				updateLimbOwner(roamingLimb.getId(), npcID);
+				roamingLimbs.erase(roamingLimbs.begin() + i);
+
+				/* NPC has the limb. Now rebuild the NPC. */
+				npc.clearSuit();
+				npc.sortLimbsByNumberOfJoints();
+				vector<Limb>& npcLimbs = npc.getLimbs();
+				bool keepEquippingLimbs = true;
+
+				for (Limb& limb : npcLimbs) {
+					if (keepEquippingLimbs) {
+						keepEquippingLimbs = npc.equipLimb(limb.getId());
+					}
+					else { break; }
+				}
+
+				npc.buildDrawLimbList();
+				updateCharacterLimbs(npc.getId(), npc.getAnchorLimbId(), npcLimbs);
+				npc.setTexture(npc.createAvatar());
+				npc.setHomePosition(npc.getPosition());
+				updateNpcHomePosition(npcID, npc.getHomePosition());
+			}
+		}
+	}
+
+
+	return collisionFound;
+}
+
+
 /* Limb-on-Limb Collision Functions (NPC creation). */
 
+/*
+* We always create a CollidedLimbsStruct with two limbs, because the check is always 1-on-1.
+* Once the CollidedLimbsStruct exists, and we keep checking against the rest of the limbs,
+* we can add more limbs to the limbIDs vector. So ultimately this object may contain multiple limbs.
+*/
 struct CollidedLimbsStruct {
 	CollidedLimbsStruct(Point point, int limbID_1, int limbID_2) : point(point), limbIDs({ limbID_1, limbID_2 }) { }
 
@@ -1433,11 +1466,11 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		for (Limb& limb : npcLimbs) {
 			if (keepEquippingLimbs) {
 				keepEquippingLimbs = npc.equipLimb(limb.getId());
-				updateCharacterLimbs(npcID, npc.getAnchorLimbId(), npcLimbs);
 			} else { break; }
 		}
 
 		npc.buildDrawLimbList();
+		updateCharacterLimbs(npcID, npc.getAnchorLimbId(), npcLimbs);
 		npc.setTexture(npc.createAvatar());
 
 		map.addNPC(npc);
@@ -1468,7 +1501,7 @@ bool MapScreen::checkLimbOnLimbCollision() {
 * --- and remove items after they reach zero.
 *
 */
-bool MapScreen::checkLimbCollision() {
+bool MapScreen::checkPlayerLimbCollision() {
 	bool collisionDetected = false;
 	Point playerPosition = map.getPlayerCharacter().getPosition();
 
