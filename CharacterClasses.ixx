@@ -1320,7 +1320,7 @@ tuple<int, int> Character::getLimbIdAndJointIndexForConnection(int limbIdToSearc
 */
 bool Character::equipLimb(int limbId) {
 	UI& ui = UI::getInstance();
-	Limb& limbToEquip = getLimbById(limbId);// THIS will get the limb WITH the ID later, not by index!
+	Limb& limbToEquip = getLimbById(limbId);
 	if (limbToEquip.isEquipped()) {
 		cout << "Limb is already equipped!\n";
 		return false;
@@ -1347,7 +1347,8 @@ bool Character::equipLimb(int limbId) {
 		return false;
 	}
 
-	Joint& jointToConnect = getLimbById(limbIdForConnection).getJoints()[jointIndexForConnection];
+	Limb& limbForConnection = getLimbById(limbIdForConnection);
+	Joint& jointForConnection = limbForConnection.getJoints()[jointIndexForConnection];
 
 	/* Now connect the actual limb (find a free joint on the limb we're trying to connect). */
 	for (int i = 0; i < limbToEquip.getJoints().size(); ++i) {
@@ -1355,7 +1356,14 @@ bool Character::equipLimb(int limbId) {
 
 		if (jointToEquip.isFree()) {
 			jointToEquip.setAnchor(true);
-			jointToConnect.connectLimb(limbId, i);
+			jointForConnection.connectLimb(limbId, i);
+			/* Don't let two identical limbs overlap completely (if: same limb, same angle, same joint). */
+			if (limbForConnection.getForm().slug == limbToEquip.getForm().slug &&
+				limbForConnection.getRotationAngle() == limbToEquip.getRotationAngle() &&
+				jointIndexForConnection == i)
+			{
+				limbToEquip.rotate(25);
+			}
 			setChildLimbDrawRects(getAnchorLimb(), ui);
 			return true;
 		}

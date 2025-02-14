@@ -1466,6 +1466,7 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		for (Limb& limb : npcLimbs) {
 			if (keepEquippingLimbs) {
 				keepEquippingLimbs = npc.equipLimb(limb.getId());
+				
 			} else { break; }
 		}
 
