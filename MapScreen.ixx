@@ -95,15 +95,6 @@ using namespace std;
 
 enum class AnimationType { Player, NPC, Collision, None }; /* This is about whose TURN it is. */
 
-struct AcquiredLimb {
-	SDL_Texture* texture;
-	int countdown;
-	int rotationAngle;
-	SDL_Rect diffRect;
-
-	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect diffRect) :
-		texture(texture), countdown(countdown), rotationAngle(rotationAngle), diffRect(diffRect) {}
-};
 
 
 /* Map Screen class: where we navigate worlds, dungeons, and buildings.
@@ -248,7 +239,6 @@ export class MapScreen {
 		bool checkPlayerLimbCollision(); /* Limb-on-player collision. */
 		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
 		bool checkNpcOnLimbCollision();
-		vector<Limb> acquiredLimbs;
 
 	private:
 		ScreenType screenType;
@@ -260,7 +250,7 @@ export class MapScreen {
 		void drawPlayerCharacter(UI& ui);
 		void drawRoamingLimbs(UI& ui);
 		void drawNpcs(UI& ui);
-		void drawAcquiredLimbs(UI& ui, int playerX, int playerY);
+		void drawAcquiredLimbs(UI& ui, MapCharacter& character, int drawX, int drawY);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 
 		bool moveLimb(Limb& roamingLimb);
@@ -342,7 +332,6 @@ export class MapScreen {
 
 		int homeBaseRange;
 
-		vector<AcquiredLimb> acquiredLimbStructs;
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
 		*/
@@ -507,13 +496,16 @@ export void MapScreen::run() {
 
 	vector<int> collidedLimbIDs; /* Contains the database IDs, not the vector indexes. */
 
+	/* SCREEN LOOP */
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
 		frameStartTime = SDL_GetTicks();
 		bool startNpcAnimation = false;
 		
 		if (animate && animationCountdown < 1) {
-			/* counter has run out but animate is still true. */
+			/* Animation counter has run out but animate is still true (final frame of animation).
+			* We check collisions on the final frame.
+			*/
 			
 			bool landmarkCollided = false;
 			bool npcCollided = false;
@@ -926,14 +918,17 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 		playerCharacter.setTexture(playerCharacter.createAvatar());
 	}	
 
-	drawAcquiredLimbs(ui, characterRect.x, characterRect.y);
+	drawAcquiredLimbs(ui, playerCharacter, characterRect.x, characterRect.y);
 }
 
 /*
 * Call this within the drawPlayerCharacter function so we don't have to calculate the location again.
 * Also, the acquired limbs can be considered part of the player character.
 */
-void MapScreen::drawAcquiredLimbs(UI& ui, int playerX, int playerY) {
+void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int drawX, int drawY) {
+
+	vector<AcquiredLimb>& acquiredLimbStructs = character.getAcquiredLimbStructs();
+
 	for (int i = acquiredLimbStructs.size() - 1; i >= 0; --i) {
 		AcquiredLimb& aLimbStruct = acquiredLimbStructs[i];
 
@@ -969,8 +964,8 @@ void MapScreen::drawAcquiredLimbs(UI& ui, int playerX, int playerY) {
 		}
 
 		SDL_Rect limbRect = {
-			playerX + aLimbStruct.diffRect.x,
-			playerY + aLimbStruct.diffRect.y,
+			drawX + aLimbStruct.diffRect.x,
+			drawY + aLimbStruct.diffRect.y,
 			blockWidth + aLimbStruct.diffRect.w,
 			blockWidth + aLimbStruct.diffRect.h
 		};
@@ -1522,7 +1517,7 @@ bool MapScreen::checkPlayerLimbCollision() {
 
 			/* Make object for limb collision animation. */
 			SDL_Rect diffRect = { 0, 0, 0, 0 };
-			acquiredLimbStructs.emplace_back(
+			playerCharacter.getAcquiredLimbStructs().emplace_back(
 				thisLimb.getTexture(),
 				limbCollisionCountdown,
 				thisLimb.getRotationAngle(),

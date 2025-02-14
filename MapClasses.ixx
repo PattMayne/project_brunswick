@@ -43,6 +43,18 @@ using namespace std;
 
 export enum MapDirection { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
 
+
+export struct AcquiredLimb {
+	SDL_Texture* texture;
+	int countdown;
+	int rotationAngle;
+	SDL_Rect diffRect;
+
+	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect diffRect) :
+		texture(texture), countdown(countdown), rotationAngle(rotationAngle), diffRect(diffRect) {
+	}
+};
+
 /* This is what a Landmark's checkCollision function will return. */
 export struct LandmarkCollisionInfo {
 	bool hasCollided;
@@ -127,6 +139,7 @@ public:
 	Point getPosition() { return blockPosition; }
 	Point getLastPosition() { return lastBlockPosition; }
 	Point getHomePosition() { return homePosition; }
+	vector<AcquiredLimb>& getAcquiredLimbStructs() { return acquiredLimbStructs; }
 
 	void setHomePosition(Point position) { homePosition = position; }
 	void setBlockPosition(Point blockPosition) {
@@ -191,6 +204,7 @@ public:
 private:
 	SDL_Texture* texture;
 	Point homePosition;
+	vector<AcquiredLimb> acquiredLimbStructs;
 };
 
 
@@ -462,7 +476,11 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 	UI& ui = UI::getInstance();
 
 	/* create Player Character */
-	/* get character texture */
+
+	/* get character texture NO LONGER NECESSARY...
+	* DELETE (since this is done in the constructor.... and must ALWAYS be done in constructor...
+	* texture must never be NULL
+	*/
 	SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
 	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 	SDL_FreeSurface(characterSurface);
