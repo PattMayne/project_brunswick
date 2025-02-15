@@ -236,6 +236,7 @@ export class MapScreen {
 		MapForm mapForm;
 		void run();
 
+		bool checkPlayerNpcCollision();
 		bool checkPlayerLimbCollision(); /* Limb-on-player collision. */
 		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
 		bool checkNpcOnLimbCollision();
@@ -565,6 +566,7 @@ export void MapScreen::run() {
 				checkPlayerLimbCollision(); /* Player collects limb. */
 
 				 /* Collisions with NPCs */
+				 checkPlayerNpcCollision();
 
 				if (!landmarkCollided && !npcCollided) {
 					/* start the NPC animation. */
@@ -586,6 +588,7 @@ export void MapScreen::run() {
 				checkNpcOnLimbCollision(); /* NPC collects new limb. It's the NPC's move, so they gather the limb instead of Player (if on same block). */
 				checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
 				checkPlayerLimbCollision(); /* Player collects new limb. */
+				checkPlayerNpcCollision();
 			}
 		}
 
@@ -1058,7 +1061,9 @@ void MapScreen::animateMovingObject(SDL_Rect& rect, int blockPositionX, int bloc
 	}
 }
 
-
+/*
+* Cycle through the map's list of hostile NPCs and draw them all.
+*/
 void MapScreen::drawNpcs(UI& ui) {
 	SDL_Rect npcRect = { 0, 0, blockWidth, blockWidth };
 
@@ -1076,7 +1081,7 @@ void MapScreen::drawNpcs(UI& ui) {
 		npcRect.x = (posX - drawStartX) * blockWidth;
 		npcRect.y = ((posY - drawStartY) * blockWidth) + npcHeight;
 
-		/* Synchronize during animation. */
+		/* Synchronize with map during movement animations. */
 		if (animate) {
 			if (animationType == AnimationType::Player) {
 				animateMapBlockDuringPlayerMove(npcRect, posX, posY);
@@ -1092,7 +1097,8 @@ void MapScreen::drawNpcs(UI& ui) {
 			ui.getMainRenderer(),
 			npc.getTexture(),
 			NULL, &npcRect,
-			angleToRotate, NULL, SDL_FLIP_NONE
+			angleToRotate,
+			NULL, SDL_FLIP_NONE
 		);
 
 		if (npc.getAcquiredLimbStructs().size() > 0) {
@@ -1579,6 +1585,19 @@ bool MapScreen::checkPlayerLimbCollision() {
 	return collisionDetected;
 }
 
+
+bool MapScreen::checkPlayerNpcCollision() {
+	bool isCollided = false;
+
+	for (MapCharacter& npc : map.getNPCs()) {
+		if (npc.getPosition().equals(map.getPlayerCharacter().getPosition())) {
+			cout << "Player collided with " << npc.getName() << "\n";
+			return true;
+		}
+	}
+
+	return false;
+}
 
 /*
 *  MAP SCREEN NAVIGATION FUNCTIONS
