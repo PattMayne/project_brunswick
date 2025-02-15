@@ -101,6 +101,7 @@ public:
 		SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 		SDL_FreeSurface(characterSurface);
 		setTexture(characterTexture);
+		newNpc = false;
 	}
 
 	/* There will be no texture. The character will be drawn from their limbs. */
@@ -114,6 +115,7 @@ public:
 		SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 		SDL_FreeSurface(characterSurface);
 		setTexture(characterTexture);
+		newNpc = false;
 	}
 
 	/* Hostile NPC when loaded from DB. */
@@ -127,6 +129,7 @@ public:
 		SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 		SDL_FreeSurface(characterSurface);
 		setTexture(characterTexture);
+		newNpc = false;
 	}
 
 	~MapCharacter() {} /* destroy texture. */
@@ -140,11 +143,33 @@ public:
 	Point getLastPosition() { return lastBlockPosition; }
 	Point getHomePosition() { return homePosition; }
 	vector<AcquiredLimb>& getAcquiredLimbStructs() { return acquiredLimbStructs; }
+	bool isNewNpc() { return newNpc; }
+	int getNewNpcCountup() { return newNpcCountup; }
 
 	void clearAcquiredLimbStructs() { acquiredLimbStructs = {}; }
 	void setHomePosition(Point position) { homePosition = position; }
 	void setBlockPosition(Point blockPosition) {
 		this->blockPosition = blockPosition;
+	}
+
+	/* We count UP so we can multiply the count to get a rotation.
+	* When an NPC is created we want to spin their avatar as an animation.
+	*/
+	void startNewNpcCountup() {
+		newNpcCountup = 0;
+		newNpc = true;
+	}
+
+	/* Get the countup and increment it in the same function so I can do both in a ternary statement. */
+	int tickNewNpcCountup() {
+		if (newNpcCountup >= 90) {
+			newNpc = false;
+		}
+		else {
+			++newNpcCountup;
+		}
+
+		return newNpcCountup;
 	}
 
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
@@ -205,6 +230,8 @@ private:
 	SDL_Texture* texture;
 	Point homePosition;
 	vector<AcquiredLimb> acquiredLimbStructs;
+	bool newNpc;
+	int newNpcCountup;
 };
 
 
@@ -449,7 +476,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 
 	/* FOR NOW I just have ONE copy of each native limb */
 	for (LimbForm& limbForm : nativeLimbForms) {
-		int numberOfThisLimb = (rand() % 20) + 5;
+		int numberOfThisLimb = (rand() % 55) + 5;
 
 		for (int n = 0; n < numberOfThisLimb; ++n) {
 			Limb& newLimb = roamingLimbs.emplace_back(limbForm);

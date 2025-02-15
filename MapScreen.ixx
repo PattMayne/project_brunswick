@@ -446,16 +446,7 @@ void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 }
 
 
-//bool MapScreen::blockIsDrawable(Point position) {
-//	int posX = position.x;
-//	int posY = position.y;
-//
-//	return !(posX < drawStartX - 5 ||
-//		posX > drawStartX + xViewRes + 5 ||
-//		posY < drawStartY - 5 ||
-//		posY > drawStartY + yViewRes + 5);
-//}
-
+/* Decide if the Point is within the portion of the map that's being drawn. */
 bool MapScreen::blockIsDrawable(Point position) {
 	int posX = position.x;
 	int posY = position.y;
@@ -464,11 +455,6 @@ bool MapScreen::blockIsDrawable(Point position) {
 		posX < drawStartX + xViewRes + 5 &&
 		posY > drawStartY - 5 &&
 		posY < drawStartY + yViewRes + 5;
-
-	//return !(posX < drawStartX - 5 ||
-	//	posX > drawStartX + xViewRes + 5 ||
-	//	posY < drawStartY - 5 ||
-	//	posY > drawStartY + yViewRes + 5);
 }
 
 
@@ -1100,11 +1086,13 @@ void MapScreen::drawNpcs(UI& ui) {
 			}
 		}
 
+		int angleToRotate = !npc.isNewNpc() ? 0 : npc.tickNewNpcCountup() * 4;
+
 		SDL_RenderCopyEx(
 			ui.getMainRenderer(),
 			npc.getTexture(),
 			NULL, &npcRect,
-			0, NULL, SDL_FLIP_NONE
+			angleToRotate, NULL, SDL_FLIP_NONE
 		);
 
 		if (npc.getAcquiredLimbStructs().size() > 0) {
@@ -1474,19 +1462,32 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		
 		npc.setBlockPosition(collidedLimbsStruct.point);
 		npc.updateLastBlock();
+		npc.setHomePosition(collidedLimbsStruct.point);
+		npc.startNewNpcCountup();
 
 		int npcID = createNpcOnMap(map.getSlug(), npcName, collidedLimbsStruct.point);
 		npc.setId(npcID);
-		npc.setHomePosition(collidedLimbsStruct.point);
+		bool npcIsDrawable = blockIsDrawable(npc.getPosition());
 
 		for (int limbID : collidedLimbsStruct.limbIDs) {
-
 			for (int i = roamingLimbs.size() - 1; i >= 0; --i) {
 				Limb& limb = roamingLimbs[i];
 				if (limb.getId() == limbID) {
 					limb.setCharacterId(npcID);
 					npc.addLimb(limb);
 					updateLimbOwner(limbID, npcID);
+
+					/* The acquired limbs should animate. */
+					if (npcIsDrawable) {
+						/* Make object for limb collision animation. */
+						SDL_Rect diffRect = { 0, 0, 0, 0 };
+						npc.getAcquiredLimbStructs().emplace_back(
+							limb.getTexture(),
+							limbCollisionCountdown,
+							limb.getRotationAngle(),
+							diffRect
+						);
+					}
 
 					/* Character has limb. Now remove limb from map. */
 					roamingLimbs.erase(roamingLimbs.begin() + i);
