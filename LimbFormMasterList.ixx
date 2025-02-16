@@ -177,7 +177,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			BodyPartType::Leg);
 		};
 
-	/* BEAR LIMBS */
+	/* SPIDER LIMBS */
 	/* HP / STRENGTH / SPEED / INTELLIGENCE */
 
 	limbForms["spider_body"] = []() {
@@ -241,6 +241,82 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			DominanceNode::Green, "data/maps/forest/spider_leg_6.png",
 			{ Point(13, 99) },
 			BodyPartType::Leg);
+		};
+
+	/* FAIRY LIMBS */
+	/* HP / STRENGTH / SPEED / INTELLIGENCE */
+
+	limbForms["fairy_head"] = []() {
+		return LimbForm(
+			"Fairy Head", "fairy_head",
+			5, 4, 7, 10,
+			DominanceNode::Green, "data/maps/forest/fairy_head.png",
+			{ Point(97, 102) },
+			BodyPartType::Head);
+		};
+
+	limbForms["fairy_body"] = []() {
+		return LimbForm(
+			"Fairy Body", "fairy_body",
+			6, 4, 7, 7,
+			DominanceNode::Green, "data/maps/forest/fairy_body.png",
+			{ Point(88, 12), Point(55, 23), Point(66, 39), Point(73, 133),
+				Point(100, 126), Point(101, 38), Point(112, 29) },
+			BodyPartType::Torso);
+		};
+
+	limbForms["fairy_wing_right"] = []() {
+		return LimbForm(
+			"Fairy Right Wing", "fairy_wing_right",
+			2, 2, 10, 7,
+			DominanceNode::Green, "data/maps/forest/fairy_wing_right.png",
+			{ Point(81, 133) },
+			BodyPartType::Other);
+		};
+
+	limbForms["fairy_wing_left"] = []() {
+		return LimbForm(
+			"Fairy Left Wing", "fairy_wing_left",
+			2, 2, 10, 7,
+			DominanceNode::Green, "data/maps/forest/fairy_wing_left.png",
+			{ Point(109, 128) },
+			BodyPartType::Other);
+		};
+
+	limbForms["fairy_leg_right"] = []() {
+		return LimbForm(
+			"Fairy Right Leg", "fairy_leg_right",
+			4, 3, 8, 6,
+			DominanceNode::Green, "data/maps/forest/fairy_leg_right.png",
+			{ Point(134, 23) },
+			BodyPartType::Leg);
+		};
+
+	limbForms["fairy_leg_left"] = []() {
+		return LimbForm(
+			"Fairy Left Leg", "fairy_leg_left",
+			4, 3, 8, 6,
+			DominanceNode::Green, "data/maps/forest/fairy_leg_left.png",
+			{ Point(25, 31) },
+			BodyPartType::Leg);
+		};
+
+	limbForms["fairy_arm_left"] = []() {
+		return LimbForm(
+			"Fairy Left Arm", "fairy_arm_left",
+			3, 3, 8, 7,
+			DominanceNode::Green, "data/maps/forest/fairy_arm_left.png",
+			{ Point(139, 125) },
+			BodyPartType::Arm);
+		};
+
+	limbForms["fairy_arm_right"] = []() {
+		return LimbForm(
+			"Fairy Right Arm", "fairy_arm_right",
+			3, 3, 8, 7,
+			DominanceNode::Green, "data/maps/forest/fairy_arm_right.png",
+			{ Point(44, 80) },
+			BodyPartType::Arm);
 		};
 }
 
