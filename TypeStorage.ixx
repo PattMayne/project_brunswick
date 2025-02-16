@@ -74,6 +74,10 @@ export struct AvatarAndDrawRect {
 	SDL_Rect drawRect;
 };
 
+export enum class BodyPartType {
+	Head, Torso, Arm, Leg, Other
+};
+
 
 /* PANEL BUTTON ENUMS
 * Each panel has a list of buttons.

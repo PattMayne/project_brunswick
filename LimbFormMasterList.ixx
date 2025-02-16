@@ -53,7 +53,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Deer Leg 4", "deer_leg_4",
 			9, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_4.png",
-			{ Point(144, 81) });
+			{ Point(144, 81) },
+			BodyPartType::Leg);
 		};
 
 	limbForms["deer_leg_3"] = []() {
@@ -61,7 +62,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Deer Leg 3", "deer_leg_3",
 			9, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_3.png",
-			{ Point(131, 71) });
+			{ Point(131, 71) },
+			BodyPartType::Leg);
 		};
 
 	limbForms["deer_leg_2"] = []() {
@@ -69,7 +71,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Deer Leg 2", "deer_leg_2",
 			9, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_2.png",
-			{ Point(78, 46) });
+			{ Point(78, 46) },
+			BodyPartType::Leg);
 		};
 
 	limbForms["deer_leg_1"] = []() {
@@ -77,7 +80,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Deer Leg 1", "deer_leg_1",
 			9, 6, 10, 3,
 			DominanceNode::Green, "data/maps/forest/deer_leg_1.png",
-			{ Point(52, 43) });
+			{ Point(52, 43) },
+			BodyPartType::Leg);
 		};
 
 	limbForms["deer_head"] = []() {
@@ -85,7 +89,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Deer Head", "deer_head",
 			8, 4, 3, 7,
 			DominanceNode::Green, "data/maps/forest/deer_head.png",
-			{ Point(93, 129), Point(117, 33), Point(90, 37) });
+			{ Point(93, 129), Point(117, 33), Point(90, 37) },
+			BodyPartType::Head);
 		};
 
 	limbForms["deer_body"] = []() {
@@ -93,7 +98,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Deer Body", "deer_body",
 			10, 7, 3, 3,
 			DominanceNode::Green, "data/maps/forest/deer_body.png",
-			{ Point(184, 86), Point(183, 130), Point(138, 138), Point(44, 112), Point(57, 114) });
+			{ Point(184, 86), Point(183, 130), Point(138, 138), Point(44, 112), Point(57, 114) },
+			BodyPartType::Torso);
 		};
 
 	limbForms["deer_antler_1"] = []() {
@@ -101,7 +107,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Deer Antler 1", "deer_antler_1",
 			9, 6, 6, 3,
 			DominanceNode::Green, "data/maps/forest/deer_antler_1.png",
-			{ Point(107, 78) });
+			{ Point(107, 78) },
+			BodyPartType::Other);
 		};
 
 	limbForms["deer_antler_2"] = []() {
@@ -109,7 +116,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Deer Antler 2", "deer_antler_2",
 			9, 6, 6, 3,
 			DominanceNode::Green, "data/maps/forest/deer_antler_2.png",
-			{ Point(99, 86) });
+			{ Point(99, 86) },
+			BodyPartType::Other);
 		};
 
 	/* BEAR LIMBS */
@@ -120,7 +128,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Bear Head", "bear_head",
 			8, 5, 3, 6,
 			DominanceNode::Green, "data/maps/forest/bear_head.png",
-			{ Point(101, 115) });
+			{ Point(101, 115) },
+			BodyPartType::Head);
 		};
 
 	limbForms["bear_body"] = []() {
@@ -128,7 +137,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Bear Body", "bear_body",
 			10, 7, 3, 3,
 			DominanceNode::Green, "data/maps/forest/bear_body.png",
-			{ Point(100, 7), Point(68, 35), Point(134, 27), Point(64, 164), Point(123, 159) });
+			{ Point(100, 7), Point(68, 35), Point(134, 27), Point(64, 164), Point(123, 159) },
+			BodyPartType::Torso);
 		};
 
 	limbForms["bear_arm_left"] = []() {
@@ -136,7 +146,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Bear Left Arm", "bear_arm_left",
 			9, 9, 3, 2,
 			DominanceNode::Green, "data/maps/forest/bear_arm_left.png",
-			{ Point(59, 85) });
+			{ Point(59, 85) },
+			BodyPartType::Arm);
 		};
 
 	limbForms["bear_arm_right"] = []() {
@@ -144,7 +155,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Bear Right Arm", "bear_arm_right",
 			9, 9, 3, 2,
 			DominanceNode::Green, "data/maps/forest/bear_arm_right.png",
-			{ Point(134, 59) });
+			{ Point(134, 59) },
+			BodyPartType::Arm);
 		};
 
 	limbForms["bear_leg_left"] = []() {
@@ -152,7 +164,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Bear Left Leg", "bear_leg_left",
 			9, 9, 4, 1,
 			DominanceNode::Green, "data/maps/forest/bear_leg_left.png",
-			{ Point(67, 104) });
+			{ Point(67, 104) },
+			BodyPartType::Leg);
 		};
 
 	limbForms["bear_leg_right"] = []() {
@@ -160,7 +173,74 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Bear Right Leg", "bear_leg_right",
 			9, 9, 4, 1,
 			DominanceNode::Green, "data/maps/forest/bear_leg_right.png",
-			{ Point(143, 105) });
+			{ Point(143, 105) },
+			BodyPartType::Leg);
+		};
+
+	/* BEAR LIMBS */
+	/* HP / STRENGTH / SPEED / INTELLIGENCE */
+
+	limbForms["spider_body"] = []() {
+		return LimbForm(
+			"Spider Body", "spider_body",
+			7, 8, 6, 4,
+			DominanceNode::Green, "data/maps/forest/spider_body.png",
+			{ Point(30, 101), Point(41, 139), Point(76, 183), Point(115, 182), Point(153, 155), Point(173, 106) },
+			BodyPartType::Torso);
+		};
+
+	limbForms["spider_leg_1"] = []() {
+		return LimbForm(
+			"Spider Leg 1", "spider_leg_1",
+			4, 6, 10, 4,
+			DominanceNode::Green, "data/maps/forest/spider_leg_1.png",
+			{ Point(161, 49) },
+			BodyPartType::Leg);
+		};
+
+	limbForms["spider_leg_2"] = []() {
+		return LimbForm(
+			"Spider Leg 2", "spider_leg_2",
+			4, 6, 10, 4,
+			DominanceNode::Green, "data/maps/forest/spider_leg_2.png",
+			{ Point(129, 101) },
+			BodyPartType::Leg);
+		};
+
+	limbForms["spider_leg_3"] = []() {
+		return LimbForm(
+			"Spider Leg 3", "spider_leg_3",
+			4, 6, 10, 4,
+			DominanceNode::Green, "data/maps/forest/spider_leg_3.png",
+			{ Point(147, 130) },
+			BodyPartType::Leg);
+		};
+
+	limbForms["spider_leg_4"] = []() {
+		return LimbForm(
+			"Spider Leg 4", "spider_leg_4",
+			4, 6, 10, 4,
+			DominanceNode::Green, "data/maps/forest/spider_leg_4.png",
+			{ Point(50, 63) },
+			BodyPartType::Leg);
+		};
+
+	limbForms["spider_leg_5"] = []() {
+		return LimbForm(
+			"Spider Leg 5", "spider_leg_5",
+			4, 6, 10, 4,
+			DominanceNode::Green, "data/maps/forest/spider_leg_5.png",
+			{ Point(93, 73) },
+			BodyPartType::Leg);
+		};
+
+	limbForms["spider_leg_6"] = []() {
+		return LimbForm(
+			"Spider Leg 6", "spider_leg_6",
+			4, 6, 10, 4,
+			DominanceNode::Green, "data/maps/forest/spider_leg_6.png",
+			{ Point(13, 99) },
+			BodyPartType::Leg);
 		};
 }
 

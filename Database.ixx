@@ -1178,7 +1178,7 @@ export bool createNewMap(Map& map) {
     */
 
     /* Create statements for adding new Limb and Joint objects to the database. */
-    const char* insertLimbSQL = "INSERT INTO limb (form_slug, map_slug, position_x, position_y) VALUES (?, ?, ?, ?);";
+    const char* insertLimbSQL = "INSERT INTO limb (form_slug, map_slug, position_x, position_y, name) VALUES (?, ?, ?, ?, ?);";
     sqlite3_stmt* limbStatement;
 
     /* Prepare the statements before starting the loop.
@@ -1211,11 +1211,14 @@ export bool createNewMap(Map& map) {
 
     for (Limb& limb : map.getRoamingLimbs()) {
         limbFormSlugString = limb.getForm().slug;
+        string limbNameString = limb.getForm().name;
+        const char* limbName = limbNameString.c_str();
 
         sqlite3_bind_text(limbStatement, 1, limbFormSlugString.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_text(limbStatement, 2, mapSlug, -1, SQLITE_STATIC);
         sqlite3_bind_int(limbStatement, 3, limb.getPosition().x);
         sqlite3_bind_int(limbStatement, 4, limb.getPosition().y);
+        sqlite3_bind_text(limbStatement, 5, limbName, -1, SQLITE_STATIC);
 
         if (sqlite3_step(limbStatement) == SQLITE_DONE) {
             /* Get the ID of the saved item. */

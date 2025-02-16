@@ -472,7 +472,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 
 	/* FOR NOW I have random number of copies of each native limb */
 	for (LimbForm& limbForm : nativeLimbForms) {
-		int numberOfThisLimb = (rand() % 10) + 5;
+		int numberOfThisLimb = 7;
 
 		for (int n = 0; n < numberOfThisLimb; ++n) {
 			Limb& newLimb = roamingLimbs.emplace_back(limbForm);

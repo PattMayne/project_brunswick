@@ -116,16 +116,19 @@ export struct LimbForm {
 	DominanceNode domNode;
 	vector<Point> jointPoints; /* Limb CLASS will have full Joint objects which hold references to other limbs. */
 	string texturePath;
+	BodyPartType type;
 
 	/* CONSTRUCTOR */
 	LimbForm(
 		string name, string slug,
 		int hp, int strength, int speed, int intelligence,
-		DominanceNode domNode, string texturePath, vector<Point> jointPoints)
+		DominanceNode domNode, string texturePath,
+		vector<Point> jointPoints, BodyPartType type)
 		:
 		name(name), slug(slug),
-		hp(hp), strength(strength), speed(speed), intelligence(intelligence),
-		domNode(domNode), texturePath(texturePath), jointPoints(jointPoints) {
+		hp(hp), strength(strength), speed(speed),
+		intelligence(intelligence), domNode(domNode),
+		texturePath(texturePath), jointPoints(jointPoints), type(type) {
 	}
 };
 
