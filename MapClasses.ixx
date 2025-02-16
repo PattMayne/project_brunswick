@@ -450,15 +450,11 @@ private:
 */
 
 
-/* Map class constructor for brand new map. */
+/* 
+* Map class constructor for brand new map.
+* For the first time loading the map, which then gets saved to the database.
+*/
 Map::Map(MapForm mapForm) : mapForm(mapForm) {
-	/*
-	* Currently we create a new map every time we load the Map Screen.
-	* It is built on a half-complete definition of Map structs.
-	* We still need Suits for Shrines, and other landmarks.
-	* Then we will need to save the built maps into the database, so we can load instead of building fresh next time.
-	*/
-
 	/*
 	* On the first draw, we must build the GRID based on the number of SUITS (therefore shrines) and landmarks.
 	* But we must scatter the LIMBS across the available FLOOR tiles, which are only known after creating the grid.
@@ -474,9 +470,9 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	/* populate characters and limbs after building the map(and its landmarks). */
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
 
-	/* FOR NOW I just have ONE copy of each native limb */
+	/* FOR NOW I have random number of copies of each native limb */
 	for (LimbForm& limbForm : nativeLimbForms) {
-		int numberOfThisLimb = (rand() % 20) + 5;
+		int numberOfThisLimb = (rand() % 10) + 5;
 
 		for (int n = 0; n < numberOfThisLimb; ++n) {
 			Limb& newLimb = roamingLimbs.emplace_back(limbForm);
@@ -485,6 +481,28 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 			newLimb.setLastPosition(newPosition);
 		}
 	}
+
+
+	/*
+	* 
+	* Time to incorporate SUITS.
+	* 
+	* 1. Fill out the rest of the nativeLimbForms.
+	* 
+	* 2. Map gets a vector of Characters, called "suits" or "nativeSuits".
+	* 3. Create one Shrine for every Suit.
+	* --> Maybe there is no vector of Suits, instead a Shrine object which contains a Suit.
+	* --> Shrine also holds a vector of structs (or unordered_maps) which connect limbId with true/false for "retrieved".
+	* 4. Floor draw pattern goes from entrance, through each shrine, to the exit.
+	* --> Sometimes it goes slightly off-course, for variation.
+	* --> Also draw other random paths, some with "isPath" paths, sometimes not.
+	* 5. Save Suit character to the database.
+	* --> Character needs a new column called isSuit.
+	* --> Limb needs a new column called isRetrieved.
+	* -----> Maybe these should be relational tables, to keep from bogging down these other tables with rarely-used columns.
+	* 
+	* 
+	*/
 }
 
 /* Map class constructor to rebuild map from DB data.

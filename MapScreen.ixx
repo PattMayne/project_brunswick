@@ -588,7 +588,7 @@ export void MapScreen::run() {
 				checkNpcOnLimbCollision(); /* NPC collects new limb. It's the NPC's move, so they gather the limb instead of Player (if on same block). */
 				checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
 				checkPlayerLimbCollision(); /* Player collects new limb. */
-				checkPlayerNpcCollision();
+				checkPlayerNpcCollision(); /* Go to battle screen. */
 			}
 		}
 
@@ -1592,6 +1592,13 @@ bool MapScreen::checkPlayerNpcCollision() {
 	for (MapCharacter& npc : map.getNPCs()) {
 		if (npc.getPosition().equals(map.getPlayerCharacter().getPosition())) {
 			cout << "Player collided with " << npc.getName() << "\n";
+
+			/*
+			* In Database create a Battle with player id and opponent id.
+			* Update player and opponent table with new battle id.
+			* Change the screen type in the GameState and end this loop.
+			*/
+
 			return true;
 		}
 	}
