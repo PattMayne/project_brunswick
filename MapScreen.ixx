@@ -635,6 +635,15 @@ export void MapScreen::run() {
 			*/
 
 			for (MapCharacter& npc : map.getNPCs()) {
+				Point npcPosition = npc.getPosition();
+				int posX = npcPosition.x;
+				int posY = npcPosition.y;
+
+				/* skip limbs that are too far outside of the frame. (still animate them if they're nearby). */
+				if (posX < drawStartX - 9 || posX > drawStartX + xViewRes + 9 ||
+					posY < drawStartY - 9 || posY > drawStartY + yViewRes + 9
+					) { continue; }
+
 				moveNPC(npc);
 			}
 
@@ -647,6 +656,15 @@ export void MapScreen::run() {
 			*/
 
 			for (Limb& limb : map.getRoamingLimbs()) {
+				Point limbPosition = limb.getPosition();
+				int posX = limbPosition.x;
+				int posY = limbPosition.y;
+
+				/* skip limbs that are too far outside of the frame. (still animate them if they're nearby). */
+				if (posX < drawStartX - 9 || posX > drawStartX + xViewRes + 9 ||
+					posY < drawStartY - 9 || posY > drawStartY + yViewRes + 9
+					) { continue; }
+
 				moveLimb(limb); }
 
 			/* Save the new locations. */
@@ -661,17 +679,15 @@ export void MapScreen::run() {
 
 		if (reverseSpriteAnimation) {
 			if (limbAngle > spriteAnimMax * -1) {
-				--limbAngle; }
-			else {
-				reverseSpriteAnimation = !reverseSpriteAnimation;
+				--limbAngle;
 			}
+			else { reverseSpriteAnimation = !reverseSpriteAnimation; }
 		}
 		else {
 			if (limbAngle < spriteAnimMax) {
 				++limbAngle;
 			}
-			else {
-				reverseSpriteAnimation = !reverseSpriteAnimation; }
+			else { reverseSpriteAnimation = !reverseSpriteAnimation; }
 		}
 
 
@@ -680,17 +696,13 @@ export void MapScreen::run() {
 				if (npcHeight > npcAnimMax * -1) {
 					--npcHeight;
 				}
-				else {
-					reverseNpcAnimation = !reverseNpcAnimation;
-				}
+				else { reverseNpcAnimation = !reverseNpcAnimation; }
 			}
 			else {
 				if (npcHeight < npcAnimMax) {
 					++npcHeight;
 				}
-				else {
-					reverseNpcAnimation = !reverseNpcAnimation;
-				}
+				else { reverseNpcAnimation = !reverseNpcAnimation; }
 			}
 		}
 		animateNpcThisFrame = !animateNpcThisFrame;
@@ -1142,7 +1154,9 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 	}
 }
 
-
+/* Draw one individual tile of the map.
+* Calculation of the target SDL_Rect is done in the function that calls this function.
+*/
 void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 	/* always draw floor. */
 	SDL_RenderCopyEx(
@@ -1175,6 +1189,9 @@ void MapScreen::drawBlock(UI& ui, Block& block, SDL_Rect targetRect) {
 
 }
 
+/* No need to check the location of each block,
+* since we can select for blocks within range based on their vector index.
+*/
 void MapScreen::drawMap(UI& ui) {
 	/*
 	* FOR EACH FRAME:
