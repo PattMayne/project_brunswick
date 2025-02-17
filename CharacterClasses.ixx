@@ -44,11 +44,12 @@ import UI;
 
 using namespace std;
 
-export enum CharacterType { Player, Hostile, Friendly, None }; /* NOT a CLASS because we want to use it as int. */
+export enum CharacterType { Player, Hostile, Friendly, Suit, None }; /* NOT a CLASS because we want to use it as int. */
 /* Red beats Green (fire consumes life), Green beats Blue (life consumes water), Blue beats Red (water extinguishes fire) */
 export enum class LimbState { Free, Owned, Equipped }; /* If it is OWNED or EQUIPPED, then there must be a character id. Every character should exist in the DB.*/
 
 class Limb;
+class Character;
 int normalizeAngle(int angle);
 
 /* Where the limb image will be drawn onto the character surface. */

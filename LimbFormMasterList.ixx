@@ -318,6 +318,66 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			{ Point(44, 80) },
 			BodyPartType::Arm);
 		};
+
+	/* OWL LIMBS */
+	/* HP / STRENGTH / SPEED / INTELLIGENCE */
+
+	limbForms["owl_body"] = []() {
+		return LimbForm(
+			"Owl Body", "owl_body",
+			6, 4, 7, 4,
+			DominanceNode::Green, "data/maps/forest/owl_body.png",
+			{ Point(90, 37), Point(117, 51), Point(66, 39) },
+			BodyPartType::Torso);
+		};
+
+	limbForms["owl_head"] = []() {
+		return LimbForm(
+			"Owl Head", "owl_head",
+			5, 6, 6, 8,
+			DominanceNode::Green, "data/maps/forest/owl_head.png",
+			{ Point(88, 82) },
+			BodyPartType::Head);
+		};
+
+	limbForms["owl_wing_left"] = []() {
+		return LimbForm(
+			"Owl Left Wing", "owl_wing_left",
+			4, 4, 8, 6,
+			DominanceNode::Green, "data/maps/forest/owl_wing_left.png",
+			{ Point(128, 104) },
+			BodyPartType::Other);
+		};
+
+	limbForms["owl_wing_right"] = []() {
+		return LimbForm(
+			"Owl Right Wing", "owl_wing_right",
+			4, 4, 8, 6,
+			DominanceNode::Green, "data/maps/forest/owl_wing_right.png",
+			{ Point(16, 102) },
+			BodyPartType::Other);
+		};
+
+	/* OTHER LIMBS */
+	/* HP / STRENGTH / SPEED / INTELLIGENCE */
+
+	limbForms["stick_1"] = []() {
+		return LimbForm(
+			"Stick 1", "stick_1",
+			9, 7, 5, 1,
+			DominanceNode::Green, "data/maps/forest/stick_1.png",
+			{ Point(143, 15), Point(29, 110), Point(100, 182) },
+			BodyPartType::Other);
+		};
+
+	limbForms["stick_2"] = []() {
+		return LimbForm(
+			"Stick 2", "stick_2",
+			9, 7, 5, 1,
+			DominanceNode::Green, "data/maps/forest/stick_2.png",
+			{ Point(15, 108), Point(185, 105) },
+			BodyPartType::Other);
+		};
 }
 
 

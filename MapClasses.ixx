@@ -423,10 +423,6 @@ private:
 	vector<Landmark> landmarks;
 	vector<LimbForm> nativeLimbForms;
 	vector<Limb> roamingLimbs;
-
-	/* Will need a list of NPCs */
-	/* Will need a list of Roaming Limbs */
-	/* Will need classes for both NPC and RoamingLimb (probably?) */
 };
 
 
@@ -472,7 +468,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 
 	/* FOR NOW I have random number of copies of each native limb */
 	for (LimbForm& limbForm : nativeLimbForms) {
-		int numberOfThisLimb = 7;
+		int numberOfThisLimb = 4;
 
 		for (int n = 0; n < numberOfThisLimb; ++n) {
 			Limb& newLimb = roamingLimbs.emplace_back(limbForm);
@@ -751,7 +747,7 @@ void Map::floorize(int x, int y, int radius) {
 	int downInc = 0;
 	int rightInc = 0;
 
-	/* clear ABOVE */
+	/* clear block ABOVE */
 	while (y - upInc > 0 && upInc < radius) {
 
 		/* directly above */
@@ -781,7 +777,7 @@ void Map::floorize(int x, int y, int radius) {
 	downInc = 0;
 	rightInc = 0;
 
-	/* Clear BELOW */
+	/* Clear block BELOW */
 	while (y + downInc < rows.size() - 2 && downInc < radius) {
 
 		/* directly below */
@@ -809,13 +805,13 @@ void Map::floorize(int x, int y, int radius) {
 	upInc = 0;
 	leftInc = 0;
 
-	/* Clear LEFT */
+	/* Clear blocks LEFT */
 	while (x - leftInc > 0 && leftInc < radius) {
 		rows[y][x - leftInc].setIsFloor(true);
 		++leftInc;
 	}
 
-	/* Clear RIGHT */
+	/* Clear blocks RIGHT */
 	while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
 		rows[y][x + rightInc].setIsFloor(true);
 		++rightInc;
