@@ -201,6 +201,7 @@ export class MapScreen {
 			limbAngle = 0;
 			npcHeight = 0;
 			homeBaseRange = 5;
+			waitSpin = false;
 		}
 
 		/* Destructor */
@@ -317,14 +318,13 @@ export class MapScreen {
 		void requestDown();
 		void requestLeft();
 		void requestRight();
+		void waitTurn();
 		void moveCharacter(MapDirection direction);
 
 		int drawStartX = 0;
 		int drawStartY = 0;
-
 		int lastDrawStartX = 0;
 		int lastDrawStartY = 0;
-
 		int maxDrawStartX = 0;
 		int maxDrawStartY = 0;
 
@@ -332,8 +332,8 @@ export class MapScreen {
 		int npcHeight;
 
 		int homeBaseRange;
-
 		bool blockIsDrawable(Point position);
+		bool waitSpin;
 
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
@@ -527,6 +527,7 @@ export void MapScreen::run() {
 			bool landmarkCollided = false;
 			bool npcCollided = false;
 			bool limbCollided = false;
+			waitSpin = false;
 			
 			if (animationType == AnimationType::Player) {
 				/*
@@ -917,11 +918,13 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	if (animate && animationType == AnimationType::Player) {
 		animateMovingObject(characterRect, blockX, blockY, playerCharacter.getLastPosition()); }
 
+	double playerRotation = !waitSpin ? 0 : animationCountdown * 20;
+
 	SDL_RenderCopyEx(
 		ui.getMainRenderer(),
 		playerCharacter.getTexture(),
 		NULL, &characterRect,
-		0, NULL, SDL_FLIP_NONE
+		playerRotation, NULL, SDL_FLIP_NONE
 	);
 
 	/*
@@ -1296,7 +1299,7 @@ void MapScreen::setDrawStartBlock() {
 
 void MapScreen::startAnimationCountdown(AnimationType iType) {
 	animate = true;
-	animationCountdown = animationIncrementFraction;
+	animationCountdown = waitSpin ? 18 : animationIncrementFraction;
 	animationType = iType;
 }
 
@@ -1683,6 +1686,14 @@ void MapScreen::requestRight() {
 	}
 }
 
+/* Player wants to let the limbs and NPCs move one turn. */
+void MapScreen::waitTurn() {
+	/* Set spin in motion. */
+	waitSpin = true;
+	map.getPlayerCharacter().updateLastBlock();
+	startAnimationCountdown(AnimationType::Player);
+}
+
 
 /* Process user input */
 void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState) {
@@ -1724,6 +1735,9 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 	case SDLK_RIGHT:
 	case SDLK_d:
 		requestRight();
+		break;
+	case SDLK_SPACE:
+		waitTurn();
 		break;
 	default:
 		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";

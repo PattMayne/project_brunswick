@@ -865,8 +865,6 @@ export MapCharacter loadPlayerMapCharacter() {
     /* Bind the slug value. */
     sqlite3_bind_text(statement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
 
-    cout << "Map slug: " << mapSlug << "\n";
-
     /* Execute binded statement. */
     if (sqlite3_step(statement) != SQLITE_ROW) {
         cerr << "Failed to retrieve MAP (2): " << sqlite3_errmsg(db) << endl;
