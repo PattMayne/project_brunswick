@@ -269,22 +269,20 @@ export int createNpcOnMap(string mapSlugString, string npcName, Point position) 
     }
 
     const char* newNpcSQL = "INSERT INTO character "
-        "(name, is_player, map_slug, position_x, position_y, character_type) VALUES (?, ?, ?, ?, ?, ?);";
+        "(name, map_slug, position_x, position_y, character_type) VALUES (?, ?, ?, ?, ?);";
     sqlite3_stmt* newNpcStatement;
     int returnCode = sqlite3_prepare_v2(db, newNpcSQL, -1, &newNpcStatement, nullptr);
 
     /* Bind values. */
     const char* name = npcName.c_str();
-    int isPlayerBoolInt = 0;
     const char* mapSlug = mapSlugString.c_str();
     int characterType = CharacterType::Hostile;
 
     sqlite3_bind_text(newNpcStatement, 1, name, -1, SQLITE_STATIC);
-    sqlite3_bind_int(newNpcStatement, 2, isPlayerBoolInt);
-    sqlite3_bind_text(newNpcStatement, 3, mapSlug, -1, SQLITE_STATIC);
-    sqlite3_bind_int(newNpcStatement, 4, position.x);
-    sqlite3_bind_int(newNpcStatement, 5, position.y);
-    sqlite3_bind_int(newNpcStatement, 6, characterType);
+    sqlite3_bind_text(newNpcStatement, 2, mapSlug, -1, SQLITE_STATIC);
+    sqlite3_bind_int(newNpcStatement, 3, position.x);
+    sqlite3_bind_int(newNpcStatement, 4, position.y);
+    sqlite3_bind_int(newNpcStatement, 5, characterType);
 
     /* Execute the statement. */
     returnCode = sqlite3_step(newNpcStatement);
@@ -487,7 +485,6 @@ export Character loadPlayerCharacter() {
     string mapSlug;
     int anchorLimbID; /* Get from the limbs. */
     int battleID; /* For later, when battles actually exist. */
-    bool isPlayer = true;
     Character character = Character(CharacterType::None);
 
     /* Open database. */
@@ -524,8 +521,8 @@ export Character loadPlayerCharacter() {
 
     name = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 1));
     anchorLimbID = sqlite3_column_int(characterStatement, 2);
-    mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 4));
-    battleID = sqlite3_column_int(characterStatement, 5);
+    mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 3));
+    battleID = sqlite3_column_int(characterStatement, 4);
 
     /* Finalize statement. */
     sqlite3_finalize(characterStatement);
@@ -670,7 +667,6 @@ export MapCharacter loadPlayerMapCharacter() {
     string mapSlug;
     int anchorLimbID; /* Get from the limbs. */
     int battleID; /* For later, when battles actually exist. */
-    bool isPlayer = true;
     MapCharacter character = MapCharacter(CharacterType::None);
 
     /* Open database. */
@@ -701,14 +697,14 @@ export MapCharacter loadPlayerMapCharacter() {
 
     /* Execute binded statement. */
     if (sqlite3_step(characterStatement) != SQLITE_ROW) {
-        cerr << "Failed to retrieve MAP: " << sqlite3_errmsg(db) << endl;
+        cerr << "Failed to retrieve MAP (1): " << sqlite3_errmsg(db) << endl;
         return character;
     }
 
     name = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 1));
     anchorLimbID = sqlite3_column_int(characterStatement, 2);
-    mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 4));
-    battleID = sqlite3_column_int(characterStatement, 5);
+    mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 3));
+    battleID = sqlite3_column_int(characterStatement, 4);
 
     /* Finalize statement. */
     sqlite3_finalize(characterStatement);
@@ -869,9 +865,11 @@ export MapCharacter loadPlayerMapCharacter() {
     /* Bind the slug value. */
     sqlite3_bind_text(statement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
 
+    cout << "Map slug: " << mapSlug << "\n";
+
     /* Execute binded statement. */
     if (sqlite3_step(statement) != SQLITE_ROW) {
-        cerr << "Failed to retrieve MAP: " << sqlite3_errmsg(db) << endl;
+        cerr << "Failed to retrieve MAP (2): " << sqlite3_errmsg(db) << endl;
         return character;
     }
 
@@ -919,7 +917,7 @@ export int createPlayerCharacterOrGetID() {
     }
 
     /* Create statement template for querying the count. */
-    const char* queryCountSQL = "SELECT COUNT(*) FROM character WHERE is_player = 1;";
+    const char* queryCountSQL = "SELECT COUNT(*) FROM character WHERE character_type = ?;";
     sqlite3_stmt* statement;
     int returnCode = sqlite3_prepare_v2(db, queryCountSQL, -1, &statement, nullptr);
 
@@ -928,6 +926,9 @@ export int createPlayerCharacterOrGetID() {
         sqlite3_close(db);
         return false;
     }
+
+    int characterType = CharacterType::Player;
+    sqlite3_bind_int(statement, 1, characterType);
 
     /* Execute statement. */
     if (sqlite3_step(statement) == SQLITE_ROW) {
@@ -941,7 +942,7 @@ export int createPlayerCharacterOrGetID() {
         /* Player character exists. Get the ID. */
 
         /* Create statement template for querying the id. */
-        const char* queryIDSQL = "SELECT id FROM character WHERE is_player = 1;";
+        const char* queryIDSQL = "SELECT id FROM character WHERE character_type = ?;";
         sqlite3_stmt* idStatement;
         returnCode = sqlite3_prepare_v2(db, queryIDSQL, -1, &idStatement, nullptr);
 
@@ -950,6 +951,9 @@ export int createPlayerCharacterOrGetID() {
             sqlite3_close(db);
             return false;
         }
+
+        /* Bind character type integer. */
+        sqlite3_bind_int(idStatement, 1, characterType);
 
         /* Execute statement. */
         if (sqlite3_step(idStatement) == SQLITE_ROW) {
@@ -966,17 +970,14 @@ export int createPlayerCharacterOrGetID() {
 
     /* Player character does not exist. Create it. */
 
-    const char* newCharacterSQL = "INSERT INTO character (name, is_player, character_type) VALUES (?, ?, ?);";
+    const char* newCharacterSQL = "INSERT INTO character (name, character_type) VALUES (?, ?);";
     sqlite3_stmt* newCharStatement;
     returnCode = sqlite3_prepare_v2(db, newCharacterSQL, -1, &newCharStatement, nullptr);
 
     /* Bind values. */
     const char* name = "Player";
-    int isPlayerBoolInt = 1;
-    int characterType = CharacterType::Player;
     sqlite3_bind_text(newCharStatement, 1, name, -1, SQLITE_STATIC);
-    sqlite3_bind_int(newCharStatement, 2, isPlayerBoolInt);
-    sqlite3_bind_int(newCharStatement, 3, characterType);
+    sqlite3_bind_int(newCharStatement, 2, characterType);
 
     /* Execute the statement. */
     returnCode = sqlite3_step(newCharStatement);
@@ -1682,8 +1683,8 @@ export Map loadMap(string mapSlug) {
         string npcName = stringFromUnsignedChar(sqlite3_column_text(queryNPCsStatement, 1));
         int anchorLimbId = sqlite3_column_int(queryNPCsStatement, 2);
         Point npcPosition = Point(
-            sqlite3_column_int(queryNPCsStatement, 6),
-            sqlite3_column_int(queryNPCsStatement, 7)
+            sqlite3_column_int(queryNPCsStatement, 5),
+            sqlite3_column_int(queryNPCsStatement, 6)
         );
 
         /* 

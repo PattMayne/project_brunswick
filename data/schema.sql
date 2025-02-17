@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS character (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     anchor_limb_id INTEGER DEFAULT -1,
-    is_player INTEGER DEFAULT 0,
     map_slug TEXT,
     battle_id INTEGER NOT NULL DEFAULT -1,
     position_x INTEGER DEFAULT 0,
