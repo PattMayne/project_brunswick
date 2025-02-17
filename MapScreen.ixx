@@ -640,8 +640,8 @@ export void MapScreen::run() {
 				int posY = npcPosition.y;
 
 				/* skip limbs that are too far outside of the frame. (still animate them if they're nearby). */
-				if (posX < drawStartX - 9 || posX > drawStartX + xViewRes + 9 ||
-					posY < drawStartY - 9 || posY > drawStartY + yViewRes + 9
+				if (posX < drawStartX - 19 || posX > drawStartX + xViewRes + 19 ||
+					posY < drawStartY - 19 || posY > drawStartY + yViewRes + 19
 					) { continue; }
 
 				moveNPC(npc);
@@ -661,8 +661,8 @@ export void MapScreen::run() {
 				int posY = limbPosition.y;
 
 				/* skip limbs that are too far outside of the frame. (still animate them if they're nearby). */
-				if (posX < drawStartX - 9 || posX > drawStartX + xViewRes + 9 ||
-					posY < drawStartY - 9 || posY > drawStartY + yViewRes + 9
+				if (posX < drawStartX - 19 || posX > drawStartX + xViewRes + 19 ||
+					posY < drawStartY - 19 || posY > drawStartY + yViewRes + 19
 					) { continue; }
 
 				moveLimb(limb); }
@@ -1444,7 +1444,10 @@ bool MapScreen::checkLimbOnLimbCollision() {
 				/* We found a match. Add it to the limbs to skip (for next time). */
 				collidedIDs.push_back(comparedLimbId);
 
-				if (!comparedLimbFoundMatch) {
+				bool comparedLimbsAreNotBothTorsos = comparedLimb.getBodyPartType() != BodyPartType::Torso ||
+					comparedLimb.getBodyPartType() != baseLimb.getBodyPartType();
+
+				if (!comparedLimbFoundMatch && comparedLimbsAreNotBothTorsos) {
 					/* FIRST match for this Point (tile). */
 					collidedLimbsStructs.emplace_back(
 						Point(comparedPoint.x, comparedPoint.y),

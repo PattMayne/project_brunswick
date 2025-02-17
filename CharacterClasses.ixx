@@ -402,6 +402,8 @@ export class Limb {
 		bool getIsAnchor() { return isAnchor; }
 		bool getIsFlipped() { return flipped; }
 
+		BodyPartType getBodyPartType() { return form.type; }
+
 		/* SET the modifiers. */
 
 		int modifyStrength(int mod) {
