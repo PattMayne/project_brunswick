@@ -172,15 +172,6 @@ public:
 		return newNpcCountup;
 	}
 
-	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
-
-	void setTexture(SDL_Texture* incomingTexture) {
-		if (texture && texture !=NULL) {
-			SDL_DestroyTexture(texture);
-		}
-		texture = incomingTexture;
-	}
-
 	void updateLastBlock() {
 		lastBlockPosition.x = blockPosition.x;
 		lastBlockPosition.y = blockPosition.y;
@@ -227,7 +218,6 @@ public:
 	}
 
 private:
-	SDL_Texture* texture;
 	Point homePosition;
 	vector<AcquiredLimb> acquiredLimbStructs;
 	bool newNpc;
@@ -248,13 +238,13 @@ public:
 		SDL_Texture* texture,
 		LandmarkType landmarkType,
 		int characterId,
-		string slug
+		SuitType suitType = SuitType::NoSuit
 	) :
 		texture(texture),
 		landmarkType(landmarkType),
 		characterId(characterId),
 		position(position),
-		slug(slug)
+		suitType(suitType)
 	{ }
 
 	/* destructor */
@@ -262,16 +252,17 @@ public:
 
 	int getDrawX() { return position.x; }
 	int getDrawY() { return position.y; }
+	int getCharacterId() { return characterId; }
+	int getId() { return id; }
 
 	Point getPosition() { return position; }
-	void setSlug(string slug) { this->slug = slug; }
-	string getSlug() { return slug; }
 	LandmarkType getType() { return landmarkType; }
 
-	int getId() { return id; }
 	void setId(int id) { this->id = id; }
+	void setCharacterId(int characterId) { this->characterId = characterId; }
 
 	SDL_Texture* getTexture() { return texture; }
+	SuitType getSuitType() { return suitType; }
 
 	LandmarkCollisionInfo checkCollision(Point pos) { return checkCollision(pos.x, pos.y); }
 	LandmarkCollisionInfo checkCollision(int x, int y) {
@@ -289,6 +280,7 @@ private:
 	SDL_Texture* texture;
 	LandmarkType landmarkType;
 	int characterId; /* This can be either the MAP id or the SUIT slug??? Needs re-thinking! */
+	SuitType suitType;
 };
 
 export Landmark getExitLandmark(Point position) {
@@ -296,8 +288,7 @@ export Landmark getExitLandmark(Point position) {
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	SDL_Texture* gateTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
 	SDL_FreeSurface(gateSurface);
-	string slug = "exit";
-	return Landmark(position, gateTexture, LandmarkType::Exit, -1, slug);
+	return Landmark(position, gateTexture, LandmarkType::Exit, -1);
 }
 
 export Landmark getEntranceLandmark(Point position) {
@@ -305,8 +296,7 @@ export Landmark getEntranceLandmark(Point position) {
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	SDL_Texture* gateTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
 	SDL_FreeSurface(gateSurface);
-	string slug = "entrance";
-	return Landmark(position, gateTexture, LandmarkType::Entrance, -1, slug);
+	return Landmark(position, gateTexture, LandmarkType::Entrance, -1);
 }
 
 export class Block {
@@ -452,6 +442,7 @@ private:
 * For the first time loading the map, which then gets saved to the database.
 */
 Map::Map(MapForm mapForm) : mapForm(mapForm) {
+	UI& ui = UI::getInstance();
 	/*
 	* On the first draw, we must build the GRID based on the number of SUITS (therefore shrines) and landmarks.
 	* But we must scatter the LIMBS across the available FLOOR tiles, which are only known after creating the grid.
@@ -460,6 +451,34 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	* After incorporating the database, we will need to differentiate between FIRST TIME (create map) vs. rebuilding
 	* from the DB.
 	*/
+
+
+	/* Create SHRINE landmarks. One for each Suit in the MapForm.
+	* They don't have IDs yet, but we will pass these into the database function
+	* to save the map and its members, and then we'll populate the IDs.
+	* The suit type acts as a placeholder for the character ID for now.
+	* The map building function will also add the Point location.
+	*/
+
+	/* Use the same shrine image, but we only have to delete it once. */
+	SDL_Surface* shrineSurface = IMG_Load("assets/shrine.png");
+	SDL_Texture* shrineTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), shrineSurface);
+	SDL_FreeSurface(shrineSurface);
+
+	for (Character& suit : mapForm.suits) {
+
+		/* create a landmark */
+
+		Point shrinePoint = Point(0, 0);
+
+		landmarks.emplace_back(
+			shrinePoint,
+			shrineTexture,
+			LandmarkType::Shrine,
+			suit.getId(),
+			suit.getSuitType()
+		);
+	}
 
 	/* Build the actual grid for the first time. Receive a list of floor coordinates. */
 	vector<Point> floorPositions = buildMap(mapForm);

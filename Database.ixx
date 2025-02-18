@@ -1282,6 +1282,12 @@ export bool createNewMap(Map& map) {
     * 
     */
 
+    /* Make an unordered map to map SuitTypes to character ID.
+    * Create the map when saving the Characters.
+    * Use them to populate the matching Shrine landmarks.
+    */
+    unordered_map<SuitType, int> suitMap;
+
     /* Create the SUIT sql text and the statement. */
     const char* insertSuitSQL = "INSERT INTO character (name, map_slug, character_type, suit_type) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* suitStatement;
@@ -1301,6 +1307,18 @@ export bool createNewMap(Map& map) {
     returnCode = sqlite3_prepare_v2(db, insertSuitLimbSQL, -1, &suitLimbStatement, nullptr);
     if (returnCode != SQLITE_OK) {
         cerr << "Failed to prepare SUIT LIMB insert statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+    /* Create statement for adding new JOINT object to the database. */
+    const char* insertSuitJointSQL = "INSERT INTO joint (vector_index, limb_id, point_form_x, point_form_y, "
+        "modified_point_x, modified_point_y) VALUES (?, ?, ?, ?, ?, ?);";
+    sqlite3_stmt* suitJointStatement;
+
+    /* Prepare the JOINT statement before starting the loop. */
+    returnCode = sqlite3_prepare_v2(db, insertSuitJointSQL, -1, &suitJointStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare JOINT insert statement: " << sqlite3_errmsg(db) << endl;
         return false;
     }
 
@@ -1326,6 +1344,7 @@ export bool createNewMap(Map& map) {
             /* Get the ID of the saved item. */
             int suitId = static_cast<int>(sqlite3_last_insert_rowid(db));
             suit.setId(suitId);
+            suitMap[suit.getSuitType()] = suitId;
         }
         else {
             cerr << "Insert failed for SUIT: " << sqlite3_errmsg(db) << endl;
@@ -1353,6 +1372,35 @@ export bool createNewMap(Map& map) {
                 /* Get the ID of the saved item. */
                 int limbId = static_cast<int>(sqlite3_last_insert_rowid(db));
                 limb.setId(limbId);
+
+                /* Loop through this limb's JOINT objects and save each of them to the DB.
+            * Use the statement created just beneath the LIMB statement.
+            */
+                bool jointError = false;
+                for (int i = 0; i < limb.getJoints().size(); ++i) {
+                    Joint& joint = limb.getJoints()[i];
+
+                    sqlite3_bind_int(suitJointStatement, 1, i); /* vector_index */
+                    sqlite3_bind_int(suitJointStatement, 2, limbId); /* limb ID */
+                    sqlite3_bind_int(suitJointStatement, 3, joint.getFormPoint().x); /* point form x */
+                    sqlite3_bind_int(suitJointStatement, 4, joint.getFormPoint().y); /* point form y */
+                    sqlite3_bind_int(suitJointStatement, 5, joint.getPoint().x); /* modified point x */
+                    sqlite3_bind_int(suitJointStatement, 6, joint.getPoint().y); /* modified point y */
+
+                    if (sqlite3_step(suitJointStatement) == SQLITE_DONE) {
+                        joint.setId(static_cast<int>(sqlite3_last_insert_rowid(db)));
+                    }
+                    else {
+                        cerr << "Insert failed for SUIT JOINT: " << sqlite3_errmsg(db) << endl;
+                        jointError = true;
+                        break;
+                    }
+
+                    /* Reset the JOINT statement for the next loop. */
+                    sqlite3_reset(suitJointStatement);
+                }
+
+                if (jointError) { /* TO DO: DELETE map and all blocks and all limbs. */ }
             }
             else {
                 cerr << "Insert failed for SUIT LIMB: " << sqlite3_errmsg(db) << endl;
@@ -1367,6 +1415,7 @@ export bool createNewMap(Map& map) {
     /* Finalize the statement, commit the transaction. */
     sqlite3_finalize(suitStatement);
     sqlite3_finalize(suitLimbStatement);
+    sqlite3_finalize(suitJointStatement);
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
 
     /*
@@ -1378,7 +1427,8 @@ export bool createNewMap(Map& map) {
     */
 
     /* Create statement for adding new Landmark object to the database. */
-    const char* insertLandmarkSQL = "INSERT INTO landmark (map_slug, landmark_type, slug, position_x, position_y) VALUES (?, ?, ?, ?, ?);";
+    const char* insertLandmarkSQL = "INSERT INTO landmark (map_slug, landmark_type, position_x, position_y, character_id, suit_type) "
+        "VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* landmarkStatement;
 
     /* Prepare the statement before starting the loop. */
@@ -1395,15 +1445,20 @@ export bool createNewMap(Map& map) {
 
     for (Landmark& landmark : map.getLandmarks()) {
 
+        if (suitMap.find(landmark.getSuitType()) != suitMap.end()) {
+            landmark.setCharacterId(suitMap[landmark.getSuitType()]);
+        }
+
         int landmarkType = landmark.getType();
-        string slug = landmark.getSlug();
+        int landmarkSuitType = landmark.getSuitType();
 
         /* Bind the data and execute the statement. */
         sqlite3_bind_text(landmarkStatement, 1, mapSlug, -1, SQLITE_STATIC);
         sqlite3_bind_int(landmarkStatement, 2, landmarkType);
-        sqlite3_bind_text(landmarkStatement, 3, slug.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_int(landmarkStatement, 4, landmark.getPosition().x);
-        sqlite3_bind_int(landmarkStatement, 5, landmark.getPosition().y);
+        sqlite3_bind_int(landmarkStatement, 3, landmark.getPosition().x);
+        sqlite3_bind_int(landmarkStatement, 4, landmark.getPosition().y);
+        sqlite3_bind_int(landmarkStatement, 5, landmark.getCharacterId());
+        sqlite3_bind_int(landmarkStatement, 6, landmarkSuitType);
 
         if (sqlite3_step(landmarkStatement) == SQLITE_DONE) {
             /* Get the ID of the saved item. */
@@ -1734,7 +1789,7 @@ export Map loadMap(string mapSlug) {
     */
 
     /* Create statement template for querying Map objects with this slug. */
-    const char* queryLandmarksSQL = "SELECT id, landmark_type, slug, position_x, position_y FROM landmark WHERE map_slug = ?;";
+    const char* queryLandmarksSQL = "SELECT id, landmark_type, position_x, position_y FROM landmark WHERE map_slug = ?;";
     sqlite3_stmt* queryLandmarksStatement;
     returnCode = sqlite3_prepare_v2(db, queryLandmarksSQL, -1, &queryLandmarksStatement, nullptr);
 
@@ -1752,12 +1807,11 @@ export Map loadMap(string mapSlug) {
     /* Execute and iterate through results. */
     while ((returnCode = sqlite3_step(queryLandmarksStatement)) == SQLITE_ROW) {
 
-        int landmarkID = sqlite3_column_int(queryLandmarksStatement, 0);
+        int landmarkId = sqlite3_column_int(queryLandmarksStatement, 0);
         int landmarkTypeInt = sqlite3_column_int(queryLandmarksStatement, 1);
         LandmarkType landmarkType = isValidLandmarkType(landmarkTypeInt) ? static_cast<LandmarkType>(landmarkTypeInt) : Entrance;
-        string landmarkSlug = stringFromUnsignedChar(sqlite3_column_text(queryLandmarksStatement, 2));
-        int positionX = sqlite3_column_int(queryLandmarksStatement, 3);
-        int positionY = sqlite3_column_int(queryLandmarksStatement, 4);
+        int positionX = sqlite3_column_int(queryLandmarksStatement, 2);
+        int positionY = sqlite3_column_int(queryLandmarksStatement, 3);
 
         Point position = Point(positionX, positionY);
 
@@ -1769,9 +1823,13 @@ export Map loadMap(string mapSlug) {
         */
 
         if (landmarkType == Entrance) {
-            landmarks.emplace_back(getEntranceLandmark(position));
+            Landmark entrance = getEntranceLandmark(position);
+            entrance.setId(landmarkId);
+            landmarks.push_back(entrance);
         } else if (landmarkType == Exit) {
-            landmarks.emplace_back(getExitLandmark(position)); }
+            Landmark exit = getExitLandmark(position);
+            exit.setId(landmarkId);
+            landmarks.emplace_back(exit); }
     }
 
     if (returnCode != SQLITE_DONE) {

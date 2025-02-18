@@ -80,10 +80,10 @@ CREATE TABLE IF NOT EXISTS landmark (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     map_slug TEXT NOT NULL,
     landmark_type INTEGER NOT NULL,
-    slug TEXT NOT NULL,
     position_x INTEGER NOT NULL,
     position_y INTEGER NOT NULL,
-    character_id INTEGER DEFAULT -1
+    character_id INTEGER DEFAULT -1,
+    suit_type INTEGER DEFAULT -1
 );
 
 CREATE INDEX IF NOT EXISTS idx_map_slug ON block (map_slug);

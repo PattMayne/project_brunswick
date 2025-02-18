@@ -24,7 +24,7 @@ export enum class FontContext {
 };
 
 export enum SuitType {
-	Mix,
+	NoSuit,
 	/* Forest suits. */
 	Deer, Bear, Spider, Fairy, Owl
 };
@@ -148,7 +148,7 @@ export struct Point {
 };
 
 
-export enum LandmarkType { Entrance, Exit, Building, Shrine };
+export enum LandmarkType { Entrance, Building, Shrine, Exit };
 
 export bool isValidLandmarkType(int value) {
-	return value >= Entrance && value <= Shrine; }
+	return value >= Entrance && value <= Exit; }

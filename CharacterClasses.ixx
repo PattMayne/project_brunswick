@@ -797,20 +797,20 @@ export class Character {
 public:
 	Character() : anchorLimbId(-1) {}
 	~Character() { }
-	Character(CharacterType characterType, SuitType suitType = SuitType::Mix) :
+	Character(CharacterType characterType, SuitType suitType = SuitType::NoSuit) :
 		characterType(characterType), anchorLimbId(-1), suitType(suitType) {}
 
 	/**/
-	Character(CharacterType characterType, vector<Limb> limbs, string name, SuitType suitType = SuitType::Mix) :
+	Character(CharacterType characterType, vector<Limb> limbs, string name, SuitType suitType = SuitType::NoSuit) :
 		characterType(characterType), limbs(limbs), name(name), anchorLimbId(-1), suitType(suitType) {}
 
-	Character(CharacterType characterType, int x, int y, SuitType suitType = SuitType::Mix) :
+	Character(CharacterType characterType, int x, int y, SuitType suitType = SuitType::NoSuit) :
 		characterType(characterType), blockPosition(x, y), lastBlockPosition(x, y), suitType(suitType) {
 
 	}
 
 	/* constructor for when hostile NPC MapCharacter is created. */
-	Character(int id, string name, int anchorLimbId, Point position, vector<Limb> limbs, SuitType suitType = SuitType::Mix) :
+	Character(int id, string name, int anchorLimbId, Point position, vector<Limb> limbs, SuitType suitType = SuitType::NoSuit) :
 		id(id), name(name), anchorLimbId(anchorLimbId), blockPosition(position),
 		lastBlockPosition(position), limbs(limbs), characterType(CharacterType::Hostile), suitType(suitType)
 	{ }
@@ -832,6 +832,15 @@ public:
 	SDL_Texture* createAvatar();
 	SuitType getSuitType() { return suitType; }
 	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
+	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
+
+	void setTexture(SDL_Texture* incomingTexture) {
+		if (texture && texture != NULL) {
+			SDL_DestroyTexture(texture);
+		}
+		texture = incomingTexture;
+	}
+
 
 	void setId(int id) { this->id = id; }
 	void addLimb(Limb& newLimb) { limbs.emplace_back(newLimb); }
@@ -870,6 +879,7 @@ protected:
 	Point blockPosition;
 	Point lastBlockPosition;
 	SuitType suitType;
+	SDL_Texture* texture;
 };
 
 
