@@ -1282,25 +1282,34 @@ export bool createNewMap(Map& map) {
     * 
     */
 
-    /* Create the sql text and the statement. */
+    /* Create the SUIT sql text and the statement. */
     const char* insertSuitSQL = "INSERT INTO character (name, map_slug, character_type, suit_type) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* suitStatement;
 
-    /* Prepare the statement before starting the loop. */
+    /* Prepare the SUIT statement before starting the loop. */
     returnCode = sqlite3_prepare_v2(db, insertSuitSQL, -1, &suitStatement, nullptr);
     if (returnCode != SQLITE_OK) {
         cerr << "Failed to prepare SUIT insert statement: " << sqlite3_errmsg(db) << endl;
         return false;
     }
 
+    /* Create the SUIT LIMB sql text and the statement. */
+    const char* insertSuitLimbSQL = "INSERT INTO limb (form_slug, character_id, name) VALUES (?, ?, ?);";
+    sqlite3_stmt* suitLimbStatement;
+
+    /* Prepare the SUIT LIMB statement before starting the loop. */
+    returnCode = sqlite3_prepare_v2(db, insertSuitLimbSQL, -1, &suitLimbStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare SUIT LIMB insert statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
 
     /* Begin the transaction. */
     sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
     bool suitError = false;
-
+    bool suitLimbError = false;
 
     for (Character& suit : map.getSuits()) {
-        cout << "Saving suit " << suit.getName() << "\n";
 
         string suitNameString = suit.getName();
         const char* suitName = suitNameString.c_str();
@@ -1325,10 +1334,39 @@ export bool createNewMap(Map& map) {
         }
 
         sqlite3_reset(suitStatement);
+
+        /* Now save each LIMB for each SUIT. */
+
+        for (Limb& limb : suit.getLimbs()) {
+            /* Bind the data and execute the statement. */
+            string formSlugString = limb.getForm().slug;
+            const char* formSlug = formSlugString.c_str();
+
+            string limbNameString = limb.getForm().name;
+            const char* limbName = limbNameString.c_str();
+
+            sqlite3_bind_text(suitLimbStatement, 1, formSlug, -1, SQLITE_STATIC);
+            sqlite3_bind_int(suitLimbStatement, 2, suit.getId());
+            sqlite3_bind_text(suitLimbStatement, 3, limbName, -1, SQLITE_STATIC);
+
+            if (sqlite3_step(suitLimbStatement) == SQLITE_DONE) {
+                /* Get the ID of the saved item. */
+                int limbId = static_cast<int>(sqlite3_last_insert_rowid(db));
+                limb.setId(limbId);
+            }
+            else {
+                cerr << "Insert failed for SUIT LIMB: " << sqlite3_errmsg(db) << endl;
+                suitLimbError = true;
+                break;
+            }
+
+            sqlite3_reset(suitLimbStatement);
+        }
     }
 
     /* Finalize the statement, commit the transaction. */
     sqlite3_finalize(suitStatement);
+    sqlite3_finalize(suitLimbStatement);
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
 
     /*
@@ -1435,6 +1473,51 @@ export bool mapObjectExists(string mapSlug) {
     sqlite3_close(db);
 
     return count > 0;
+}
+
+
+export bool unscrambleLimb(Limb& limb) {
+    int limbId = limb.getId();
+
+    if (limbId < 1) {
+        return false;
+    }
+
+    bool success = false;
+    sqlite3* db;
+
+    /* Open database. */
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return success;
+    }
+
+    /* Create the statement/ */
+    const char* updateSQL = "UPDATE limb SET is_unscrambled = 1 WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB UPDATE (unscramble) statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return success;
+    }
+
+    /* Bind the values. */
+    sqlite3_bind_int(statement, 1, limb.getId());
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update Limb (unscramble) failed: " << sqlite3_errmsg(db) << endl; }
+    else { success = true; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+
+    return success;
 }
 
 
