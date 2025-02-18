@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS character (
     battle_id INTEGER NOT NULL DEFAULT -1,
     position_x INTEGER DEFAULT 0,
     position_y INTEGER DEFAULT 0,
-    character_type INTEGER NOT NULL
+    character_type INTEGER NOT NULL,
+    suit_type INTEGER DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_limb_id ON joint (limb_id);

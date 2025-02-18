@@ -23,6 +23,12 @@ export enum class FontContext {
 	Title, Body, Button, Dialog
 };
 
+export enum SuitType {
+	Mix,
+	/* Forest suits. */
+	Deer, Bear, Spider, Fairy, Owl
+};
+
 /* values to flag for resolutions. Mostly for development purposes. Final release should always be fullscreen. */
 export enum class WindowResType {
 	Mobile, Tablet, Desktop, Fullscreen

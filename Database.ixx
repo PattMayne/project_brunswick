@@ -1205,7 +1205,10 @@ export bool createNewMap(Map& map) {
     sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
     bool limbError = false;
 
-    /* Loop through the Limbs and save each one. */
+    /* Loop through the Limbs and save each one.
+    * This is also where we initially set each Limb's id,
+    * which we can only get after saving them to the DB.
+    */
     string limbFormSlugString;
 
     for (Limb& limb : map.getRoamingLimbs()) {
@@ -1271,10 +1274,67 @@ export bool createNewMap(Map& map) {
     if (limbError) { /* TO DO: DELETE map and all blocks and all limbs. */ }
 
 
+
+    /*
+    * 
+    * Save the SUIT characters to the DB.
+    * 
+    * 
+    */
+
+    /* Create the sql text and the statement. */
+    const char* insertSuitSQL = "INSERT INTO character (name, map_slug, character_type, suit_type) VALUES (?, ?, ?, ?);";
+    sqlite3_stmt* suitStatement;
+
+    /* Prepare the statement before starting the loop. */
+    returnCode = sqlite3_prepare_v2(db, insertSuitSQL, -1, &suitStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare SUIT insert statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+
+    /* Begin the transaction. */
+    sqlite3_exec(db, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg);
+    bool suitError = false;
+
+
+    for (Character& suit : map.getSuits()) {
+        cout << "Saving suit " << suit.getName() << "\n";
+
+        string suitNameString = suit.getName();
+        const char* suitName = suitNameString.c_str();
+        int suitType = suit.getSuitType();
+        int characterType = suit.getType();
+
+        /* Bind the data and execute the statement. */
+        sqlite3_bind_text(suitStatement, 1, suitName, -1, SQLITE_STATIC);
+        sqlite3_bind_text(suitStatement, 2, mapSlug, -1, SQLITE_STATIC);
+        sqlite3_bind_int(suitStatement, 3, characterType);
+        sqlite3_bind_int(suitStatement, 4, suitType);
+
+        if (sqlite3_step(suitStatement) == SQLITE_DONE) {
+            /* Get the ID of the saved item. */
+            int suitId = static_cast<int>(sqlite3_last_insert_rowid(db));
+            suit.setId(suitId);
+        }
+        else {
+            cerr << "Insert failed for SUIT: " << sqlite3_errmsg(db) << endl;
+            suitError = true;
+            break;
+        }
+
+        sqlite3_reset(suitStatement);
+    }
+
+    /* Finalize the statement, commit the transaction. */
+    sqlite3_finalize(suitStatement);
+    sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
+
     /*
     * 
     * 
-    * Now do a loop to save each Landmark.
+    * Now do a loop to save each LANDMARK.
     * 
     * 
     */
@@ -1327,11 +1387,6 @@ export bool createNewMap(Map& map) {
 
     if (!landmarkError) { success = true; }
     else { /* DELETE map and all blocks and all limbs. */ }
-
-
-
-    /* STILL TO COME: Characters (NPCs). */
-
 
 
     /* Close the database. */

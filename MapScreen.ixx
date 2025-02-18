@@ -1503,6 +1503,7 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		npc.startNewNpcCountup();
 
 		int npcID = createNpcOnMap(map.getSlug(), npcName, collidedLimbsStruct.point);
+		npc.setName(npcName);
 		npc.setId(npcID);
 		bool npcIsDrawable = blockIsDrawable(npc.getPosition());
 

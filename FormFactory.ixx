@@ -263,11 +263,11 @@ MapForm forestMap() {
 		}
 	}
 
-	forestMap.suits.emplace_back(CharacterType::Suit, deerLimbs, "Deer");
-	forestMap.suits.emplace_back(CharacterType::Suit, bearLimbs, "Bear");
-	forestMap.suits.emplace_back(CharacterType::Suit, spiderLimbs, "Spider");
-	forestMap.suits.emplace_back(CharacterType::Suit, fairyLimbs, "Fairy");
-	forestMap.suits.emplace_back(CharacterType::Suit, owlLimbs, "Owl");
+	forestMap.suits.emplace_back(CharacterType::Suit, deerLimbs, "Deer", SuitType::Deer);
+	forestMap.suits.emplace_back(CharacterType::Suit, bearLimbs, "Bear", SuitType::Bear);
+	forestMap.suits.emplace_back(CharacterType::Suit, spiderLimbs, "Spider", SuitType::Spider);
+	forestMap.suits.emplace_back(CharacterType::Suit, fairyLimbs, "Fairy", SuitType::Fairy);
+	forestMap.suits.emplace_back(CharacterType::Suit, owlLimbs, "Owl", SuitType::Owl);
 
 	return forestMap;
 }

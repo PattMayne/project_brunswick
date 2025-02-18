@@ -797,21 +797,22 @@ export class Character {
 public:
 	Character() : anchorLimbId(-1) {}
 	~Character() { }
-	Character(CharacterType characterType) : 
-		characterType(characterType), anchorLimbId(-1) {}
+	Character(CharacterType characterType, SuitType suitType = SuitType::Mix) :
+		characterType(characterType), anchorLimbId(-1), suitType(suitType) {}
 
-	Character(CharacterType characterType, vector<Limb> limbs, string name) :
-		characterType(characterType), limbs(limbs), name(name), anchorLimbId(-1) {}
+	/**/
+	Character(CharacterType characterType, vector<Limb> limbs, string name, SuitType suitType = SuitType::Mix) :
+		characterType(characterType), limbs(limbs), name(name), anchorLimbId(-1), suitType(suitType) {}
 
-	Character(CharacterType characterType, int x, int y) :
-		characterType(characterType), blockPosition(x, y), lastBlockPosition(x, y) {
+	Character(CharacterType characterType, int x, int y, SuitType suitType = SuitType::Mix) :
+		characterType(characterType), blockPosition(x, y), lastBlockPosition(x, y), suitType(suitType) {
 
 	}
 
 	/* constructor for when hostile NPC MapCharacter is created. */
-	Character(int id, string name, int anchorLimbId, Point position, vector<Limb> limbs) :
+	Character(int id, string name, int anchorLimbId, Point position, vector<Limb> limbs, SuitType suitType = SuitType::Mix) :
 		id(id), name(name), anchorLimbId(anchorLimbId), blockPosition(position),
-		lastBlockPosition(position), limbs(limbs), characterType(CharacterType::Hostile)
+		lastBlockPosition(position), limbs(limbs), characterType(CharacterType::Hostile), suitType(suitType)
 	{ }
 
 	string getName() { return name; }
@@ -828,82 +829,35 @@ public:
 	int getAnchorLimbId() { return anchorLimbId; }
 	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude = -1);
+	SDL_Texture* createAvatar();
+	SuitType getSuitType() { return suitType; }
+	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
 
 	void setId(int id) { this->id = id; }
 	void addLimb(Limb& newLimb) { limbs.emplace_back(newLimb); }
-	void unEquipLimb(int limbId);
 	void setName(string newName) { name = newName; }
 	void setType(CharacterType type) { characterType = type; }
 	void setAnchorLimbId(int newId) { anchorLimbId = newId; }
+	void setLimbDrawOrder() { setLimbDrawOrder(drawLimbListIDs); }
+
 	void setChildLimbDrawRects(Limb& parentLimb, UI& ui);
 	void getChildLimbsRecursively(Limb& parentLimb, vector<Limb>& childLimbs);
+
+	void setLimbDrawOrder(vector<int> limbIdsInDrawOrder);
+	void unEquipLimb(int limbId);
 	void clearSuit();
 	void setRotationPointsSDL();
 	void setAnchorJointIDs();
+	void addToDrawLimbList(int limbId);
+	void buildDrawLimbList();
+	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct);
 
 	void sortLimbsByNumberOfJoints() {
-		sort(limbs.begin(), limbs.end(), compareJointsNumber);
-	}
+		sort(limbs.begin(), limbs.end(), compareJointsNumber); }
 
 	void sortLimbsByDrawOrder() {
-		sort(limbs.begin(), limbs.end(), compareDrawOrder);
-	}
+		sort(limbs.begin(), limbs.end(), compareDrawOrder); }
 
-
-	/* 
-	*  Ultimately builds the vector of the indexes of the limbs which are equipped,
-	* and therefore need to be drawn. Builds that vector according to their draw order.
-	* The order in which they are to be drawn.
-	* This allows any screen's draw function to get an easy list of indexes to
-	* quickly grab each limb to draw, during each frame.
-	*/
-	void buildDrawLimbList() {
-		drawLimbListIDs = {};
-		sortLimbsByDrawOrder();
-		int drawOrder = 0;
-
-		for (Limb& limb : limbs) {
-			if (limb.isEquipped()) {
-				addToDrawLimbList(limb.getId());
-				limb.setDrawOrder(drawOrder);
-				++drawOrder;
-			}
-			else if(limb.getDrawOrder() >= 0) {
-				limb.setDrawOrder(-1);
-			}
-		}
-		setLimbDrawOrder(drawLimbListIDs);
-	}
-
-	/* Takes an ID (from DB) of a limb, adds it to the list of IDs to draw,
-	* then sets the list of vectors to draw.
-	*/
-	void addToDrawLimbList(int limbId) {
-		drawLimbListIDs.push_back(limbId);
-		setLimbDrawOrder(drawLimbListIDs);
-	}
-
-	/* Takes the list of Database IDs, sets the list of vectors which we use to actually draw. */
-	void setLimbDrawOrder(vector<int> limbIdsInDrawOrder) {
-		drawLimbListIDs = limbIdsInDrawOrder;
-
-		drawLimbListIndexes = {};
-		drawLimbListIndexes.resize(drawLimbListIDs.size());
-
-		for (int i = 0; i < drawLimbListIDs.size(); ++i) {
-			for (int k = 0; k < limbs.size(); ++k) {
-				if (limbs[k].getId() == drawLimbListIDs[i]) {
-					drawLimbListIndexes[i] = k;
-				}
-			}
-		}
-	}
-
-	void setLimbDrawOrder() { setLimbDrawOrder(drawLimbListIDs); }
-	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
-
-	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct);
-	SDL_Texture* createAvatar();
 
 protected:
 	CharacterType characterType;
@@ -915,6 +869,7 @@ protected:
 	vector<int> drawLimbListIndexes;
 	Point blockPosition;
 	Point lastBlockPosition;
+	SuitType suitType;
 };
 
 
@@ -938,6 +893,60 @@ protected:
 
 
 
+
+
+
+/* Takes the list of Database IDs, sets the list of vectors which we use to actually draw. */
+void Character::setLimbDrawOrder(vector<int> limbIdsInDrawOrder) {
+	drawLimbListIDs = limbIdsInDrawOrder;
+
+	drawLimbListIndexes = {};
+	drawLimbListIndexes.resize(drawLimbListIDs.size());
+
+	for (int i = 0; i < drawLimbListIDs.size(); ++i) {
+		for (int k = 0; k < limbs.size(); ++k) {
+			if (limbs[k].getId() == drawLimbListIDs[i]) {
+				drawLimbListIndexes[i] = k;
+			}
+		}
+	}
+}
+
+
+
+/* Takes an ID (from DB) of a limb, adds it to the list of IDs to draw,
+* then sets the list of vectors to draw.
+*/
+void Character::addToDrawLimbList(int limbId) {
+	drawLimbListIDs.push_back(limbId);
+	setLimbDrawOrder(drawLimbListIDs);
+}
+
+
+/*
+*  Ultimately builds the vector of the indexes of the limbs which are equipped,
+* and therefore need to be drawn. Builds that vector according to their draw order.
+* The order in which they are to be drawn.
+* This allows any screen's draw function to get an easy list of indexes to
+* quickly grab each limb to draw, during each frame.
+*/
+void Character::buildDrawLimbList() {
+	drawLimbListIDs = {};
+	sortLimbsByDrawOrder();
+	int drawOrder = 0;
+
+	for (Limb& limb : limbs) {
+		if (limb.isEquipped()) {
+			addToDrawLimbList(limb.getId());
+			limb.setDrawOrder(drawOrder);
+			++drawOrder;
+		}
+		else if (limb.getDrawOrder() >= 0) {
+			limb.setDrawOrder(-1);
+		}
+	}
+	setLimbDrawOrder(drawLimbListIDs);
+}
 
 /* 
 * When drawing the avatar, we call this function to see how far the limbs' textures reach in each direction.
