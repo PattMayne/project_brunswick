@@ -183,6 +183,14 @@ export class MapScreen {
 				}
 			}
 
+			cout << "This map has " << map.getSuits().size() << " suits\n";
+
+			for (Character suit : map.getSuits()) {
+				cout << suit.getName() << " suit has " << suit.getLimbs().size() << " limbs\n";
+			}
+
+			
+
 			screenType = ScreenType::Map;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 

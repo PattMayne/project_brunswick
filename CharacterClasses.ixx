@@ -133,17 +133,6 @@ export struct LimbForm {
 	}
 };
 
-/* A suit is abstract. It is NOT a character. It holds information to build an abstract base character. */
-export struct SuitForm {
-	const string name;
-	const string slug;
-	const vector<SuitLimbPlacement> limbPlacements;
-	bool unscrambled;
-
-	SuitForm(string name, string slug, vector<SuitLimbPlacement> limbPlacements, bool unscrambled = false) :
-		name(name), slug(slug), limbPlacements(limbPlacements), unscrambled(unscrambled) { }
-};
-
 
 export struct LandmarkForm {
 	const string name;
@@ -166,8 +155,8 @@ export struct MapForm {
 	MapType mapType;
 	string name;
 	string slug;
-	vector<LimbForm> nativeLimbs; /* We will need some limbs to be "free" and NOT part of a Suit. So the suits will simply refer to the slugs of the limbs, not contain the limbs. */
-	vector<SuitForm> suits;
+	vector<LimbForm> nativeLimbs; /* This is ALL the map's limb FORMs, not just those belonging to a Suit. */
+	vector<Character> suits;
 	int blocksWidth;
 	int blocksHeight;
 	vector<SDL_Texture*> floorTextures;
@@ -334,9 +323,10 @@ export class Limb {
 			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
 			setAnchorJointId();
 			drawOrder = -1;
+			isUnscrambled = false;
 		}
 
-		/* Constructor to rebuild a ROAMING limb from DB.
+		/* Constructor to rebuild a limb from DB (primarily for roaming limbs).
 		*/
 		Limb(int id, LimbForm form, Point position, vector<Joint> joints, int drawOrder = -1) :
 			id(id), form(form), position(position), joints(joints), drawOrder(drawOrder)
@@ -361,9 +351,10 @@ export class Limb {
 			rotationAngle = 0;
 			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
 			setAnchorJointId();
+			isUnscrambled = false;
 		}
 
-		/*  */
+
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
 		Point getPosition() { return position; }
@@ -376,14 +367,6 @@ export class Limb {
 		int getCharacterId() { return characterId; }
 		string getMapSlug() { return mapSlug; }
 		int getId() { return id; }
-
-		void setDrawOrder(int newDrawOrder) { this->drawOrder = newDrawOrder; }
-		void setId(int id) { this->id = id; }
-		void setName(string newName) { name = newName; }
-		void setCharacterId(int id) { characterId = id; }
-		void setMapSlug(string newSlug) { mapSlug = newSlug; }
-		void setPosition(Point newPosition) { position = newPosition; }
-		void setLastPosition(Point newPosition) { lastPosition = newPosition; }
 
 		/* GET the FORM (default) values PLUS the modifiers (which can be negative) */
 		int getHP() { return form.hp + hpMod; }
@@ -403,285 +386,45 @@ export class Limb {
 		bool getIsFlipped() { return flipped; }
 
 		BodyPartType getBodyPartType() { return form.type; }
-
-		/* SET the modifiers. */
-
-		int modifyStrength(int mod) {
-			modifyAttribute(strengthMod, form.strength, mod);
-			return getStrength(); }
-
-		int modifySpeed(int mod) {
-			modifyAttribute(speedMod, form.speed, mod);
-			return getSpeed(); }
-
-		int modifyIntelligence(int mod) {
-			modifyAttribute(intelligenceMod, form.intelligence, mod);
-			return getIntelligence(); }
-
-		/* HP is different. It can go down to 0, but can still only be boosted by 1/2. */
-		int modifyHP(int mod) {
-			hpMod += mod;
-			/* Check if updated attributeMod goes beyond limit */
-			if (hpMod > form.hp / 2) {
-				hpMod = form.hp / 2; }
-			return getHP();
-		}
-
-		void modifyAttribute(int& attributeMod, int formAttribute, int modMod) {
-			attributeMod += modMod;
-			/* Check if updated attributeMod goes beyond limit */
-			if (attributeMod > formAttribute / 2) {
-				attributeMod = formAttribute / 2; }
-			else if ((attributeMod * -1) > formAttribute / 2) { /* check limit for detriment too */
-				attributeMod = formAttribute / (-2); }
-		}
-
-		/* This can be MAP position or DRAW position. */
-		void move(Point newPosition) {
-			lastPosition = position;
-			position = newPosition; }
+		
+		int modifyStrength(int mod);
+		int modifySpeed(int mod);
+		int modifyIntelligence(int mod);
+		int modifyHP(int mod);
 
 		vector<Joint>& getJoints() { return joints; }
+		bool isEquipped();
+		Joint& getAnchorJoint();
+		void setAnchorJointId();
+		int getAnchorJointId();
+		
+		int rotate(int angleIncrement);
+		bool getUnscrambled() { return isUnscrambled; }
+		bool hasFreeJoint();
+		vector<int> getFreeJointIndexes();
+		int getNextFreeJointIndex(int startingIndex);
 
-		bool isEquipped() {
-			if (getIsAnchor()) {
-				return true; }
-			for (Joint& joint : joints) {
-				if (!joint.isFree()) { return true; } }
-			return false;
-		}
+		bool shiftJointOfLimb(int limbId);
+		bool shiftAnchorLimb();
 
-		void setAnchor(bool isAnchor = true) {
-			this->isAnchor = isAnchor; }
+		void setDrawOrder(int newDrawOrder) { this->drawOrder = newDrawOrder; }
+		void setId(int id) { this->id = id; }
+		void setName(string newName) { name = newName; }
+		void setCharacterId(int id) { characterId = id; }
+		void setMapSlug(string newSlug) { mapSlug = newSlug; }
+		void setPosition(Point newPosition) { position = newPosition; }
+		void setLastPosition(Point newPosition) { lastPosition = newPosition; }
+		void modifyAttribute(int& attributeMod, int formAttribute, int modMod);
+		void setAnchor(bool isAnchor = true) { this->isAnchor = isAnchor; }
+		void move(Point newPosition);
+		void setRotationPointSDL();
+		void draw(UI& ui, bool drawJoints);
+		void setDrawRect(SDL_Rect drawRect);
+		void resetRotationAngle();
+		void unscramble() { isUnscrambled = true; }
+		void unEquip();
 
-		/* TO DO: This must also remove the limb id from the character's drawLimbList. */
-		void unEquip() {
-			for (Joint& joint : joints) {
-				joint.setAnchor(false);
-				joint.detachLimb();
-				joint.resetModifiedPoint();
-			}
-			isAnchor = false;
-			rotationAngle = 0;
-		}
-
-		Joint& getAnchorJoint() {
-			for (Joint& joint : joints) {
-				if (joint.getIsAnchor()) {
-					return joint; }
-			}
-			/* THIS IS NOT SAFE. */
-			return joints[0];
-		}
-
-		void setAnchorJointId() {
-			for (int i = 0; i < joints.size(); ++i) {
-				Joint& joint = joints[i];
-				if (joint.getIsAnchor()) {
-					anchorJointId = i;
-					return;
-				}
-			}
-			anchorJointId = -1;
-		}
-
-		int getAnchorJointId() {
-			return anchorJointId;
-		}
-
-		void setDrawRect(SDL_Rect drawRect) {
-			this->drawRect = drawRect; }
-
-		//void setRotationAngle(int rotationAngle) { this->rotationAngle = normalizeAngle(rotationAngle); }
-		void resetRotationAngle() {
-			rotationAngle = 0;
-			for (Joint& joint : joints) {
-				joint.resetModifiedPoint();
-			}
-		}
-		int rotate(int angleIncrement) {
-			rotationAngle = normalizeAngle(rotationAngle + angleIncrement);
-
-			/* If this LIMB has no ANCHOR JOINT then it's the anchor limb, so rotate on the center instead of on a joint. */
-			Point anchorPoint =
-				//getAnchorJointId() < 0 ? joint.getPoint() : /* THIS is to test the getRotatedPoint */
-				getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) :
-				getAnchorJoint().getFormPoint();
-
-			/* Now update all the joint points (except the anchor point). */
-			for (Joint& joint : joints) {
-				if (!joint.getIsAnchor()) {
-					joint.setModifiedPoint(getRotatedPoint(anchorPoint, joint.getFormPoint(), rotationAngle));
-				}
-			}
-
-			return rotationAngle;
-		}
-
-		bool hasFreeJoint() {
-			for (Joint& joint : joints) {
-				if (joint.isFree()) { return true; } }
-			return false;
-		}
-
-		int getNextFreeJointIndex(int startingIndex = 0) {
-			for (int i = startingIndex; i < joints.size(); ++i) {
-				if (joints[i].isFree()) {
-					return i;
-				}
-			}
-			return -1;
-		}
-
-		vector<int> getFreeJointIndexes() {
-			vector<int> indexes;
-			for (int i = 0; i < joints.size(); ++i) {
-				if (joints[i].isFree()) {
-					indexes.push_back(i);
-				}
-			}
-			return indexes;
-		}
-
-		/*
-		* When the player has loaded a limb which is the CHILD OF (connected to) this limb,
-		* we call this function on this limb and shift the location of the child (limbId).
-		*/
-		bool shiftJointOfLimb(int limbId) {
-			/* again, we're using the index but must replace with actual limbId. */
-
-			/* Make sure there is a free joint. (maybe useless?) */
-			if (!hasFreeJoint()) { return false; }
-
-			/* Get the current joint index. */
-
-			int oldJointIndex = -1;
-			int newJointIndex = -1;
-			int anchorJointIndex = -1;
-
-			for (int i = 0; i < joints.size(); i++) {
-				if (joints[i].getConnectedLimbId() == limbId) {
-					anchorJointIndex = joints[i].getChildLimbAnchorJointIndex();
-					oldJointIndex = i;
-					break; } }
-
-			if (oldJointIndex < 0) { return false; }
-
-			/* Find the next available joint index. Start ABOVE the current one. */
-
-			for (int i = oldJointIndex + 1; i < joints.size(); ++i) {
-				if (joints[i].isFree()) {
-					newJointIndex = i;
-					break; } }
-
-			/* If we didn't find a free joint above the old one, start at the beginning. */
-			if (newJointIndex < 0) {
-				for (int i = 0; i < oldJointIndex; ++i) {
-					if (joints[i].isFree()) {
-						newJointIndex = i;
-						break; } } }
-
-			if (newJointIndex >= 0 && oldJointIndex >= 0 && anchorJointIndex >= 0) {
-				/* make the switch. */
-				joints[oldJointIndex].detachLimb();
-				joints[newJointIndex].connectLimb(limbId, anchorJointIndex);
-				return true;
-			}
-
-			return false;
-		}
-
-		/*
-		* In the character creation screen, when the user wants to change which joint
-		* the limb uses to anchor itself to its parent limb, this function does that.
-		* Cycles through joints, and if one is available we do the switch.
-		* Returns boolean indicating whether a switch took place.
-		*/
-		bool shiftAnchorLimb() {
-			if (!isEquipped() || joints.size() == 1) { return false; }
-			int oldAnchorId = -1;
-			int newAnchorId = -1;
-
-			/* Get the old anchor id. */
-			for (int i = 0; i < joints.size(); ++i) {
-				if (joints[i].getIsAnchor()) {
-					oldAnchorId = i;
-					break;
-				}
-			}
-
-			if (oldAnchorId < 0) { return false; }
-
-			/* Cycle through joints ABOVE the oldAnchorId. */
-			if (oldAnchorId < joints.size() - 1) {
-				for (int i = oldAnchorId + 1; i < joints.size(); ++i) {
-					if (joints[i].isFree()) {
-						newAnchorId = i;
-						break;
-					}
-				}
-			}
-
-			/* If that didn't work, start from the beginning. */
-			if (newAnchorId < 0) {
-				for (int i = 0; i < oldAnchorId; ++i) {
-					if (joints[i].isFree()) {
-						newAnchorId = i;
-						break;
-					}
-				}
-			}
-
-			/* If we found both new and old anchor positions, do the switch. */
-			if (oldAnchorId >= 0 && newAnchorId >= 0) {
-				joints[newAnchorId].setAnchor(true);
-				joints[oldAnchorId].setAnchor(false);
-
-				/* Now that we did the switch, update the joint points based on the rotation angle on the NEW anchor joint. */
-				if (rotationAngle != 0) {
-					int totalAngle = rotationAngle;
-					resetRotationAngle();
-					rotate(totalAngle);
-				}
-
-				return true;
-			}
-
-			return false;
-		}
-
-		/* 
-		*  TO DO: Maybe we should replace ALL Point objects with SDL_Points to avoid using this function so often?
-		* Or just for the Joint Points.
-		*/
-		void setRotationPointSDL() {
-			setAnchorJointId();
-			if (getAnchorJointId() < 0) {
-				rotationPointSDL = SDL_Point(textureWidth/2, textureHeight/2); }
-			else {
-				Point anchorPoint = getJoints()[getAnchorJointId()].getPoint();
-				rotationPointSDL = SDL_Point(anchorPoint.x, anchorPoint.y); }
-		}
-
-		SDL_Point getRotationPointSDL() { return rotationPointSDL; }
-		void draw(UI& ui, bool drawJoints = false) {
-			/* rotationPoint should already be an SDL_Point in the Joint object.
-				* My Point object is redundant.
-				* WAIT... MAYBE NOT.
-				* There is no "rotation point", there are just joint points or else NULL.
-				* Further consideration is necessary.
-				* Maybe I do need a rotationPoint member which holds an SDL_Point pointer... GOOD IDEA.
-				*/
-
-			SDL_RenderCopyEx(
-				ui.getMainRenderer(),
-				getTexture(),
-				NULL, &getDrawRect(),
-				getRotationAngle(), &rotationPointSDL, SDL_FLIP_NONE
-			);
-
-			//if (drawJoints) { drawJoints(limb, ui); } /* For debugging. */
-		}
+		SDL_Point getRotationPointSDL() { return rotationPointSDL; }		
 
 
 	protected:
@@ -707,7 +450,331 @@ export class Limb {
 		SDL_Point rotationPointSDL;
 		int anchorJointId;
 		int drawOrder;
+
+		bool isUnscrambled = false; /* Only used by Suit type characters. */
 };
+
+/*
+* 
+*  _     _           _                         
+* | |   (_)_ __ ___ | |__                      
+* | |   | | '_ ` _ \| '_ \                     
+* | |___| | | | | | | |_) |                    
+* |_____|_|_| |_| |_|_.__/   _                 
+* |  ___|   _ _ __   ___| |_(_) ___  _ __  ___ 
+* | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
+* |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
+* |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
+* 
+* 
+*/
+
+
+
+/* SET the modifiers. */
+
+int Limb::modifyStrength(int mod) {
+	modifyAttribute(strengthMod, form.strength, mod);
+	return getStrength();
+}
+
+int Limb::modifySpeed(int mod) {
+	modifyAttribute(speedMod, form.speed, mod);
+	return getSpeed();
+}
+
+int Limb::modifyIntelligence(int mod) {
+	modifyAttribute(intelligenceMod, form.intelligence, mod);
+	return getIntelligence();
+}
+
+/* HP is different. It can go down to 0, but can still only be boosted by 1/2. */
+int Limb::modifyHP(int mod) {
+	hpMod += mod;
+	/* Check if updated attributeMod goes beyond limit */
+	if (hpMod > form.hp / 2) {
+		hpMod = form.hp / 2;
+	}
+	return getHP();
+}
+
+
+
+bool Limb::isEquipped() {
+	if (getIsAnchor()) {
+		return true;
+	}
+	for (Joint& joint : joints) {
+		if (!joint.isFree()) { return true; }
+	}
+	return false;
+}
+
+/* This can be MAP position or DRAW position. */
+void Limb::move(Point newPosition) {
+	lastPosition = position;
+	position = newPosition;
+}
+
+void Limb::modifyAttribute(int& attributeMod, int formAttribute, int modMod) {
+	attributeMod += modMod;
+	/* Check if updated attributeMod goes beyond limit */
+	if (attributeMod > formAttribute / 2) {
+		attributeMod = formAttribute / 2;
+	}
+	else if ((attributeMod * -1) > formAttribute / 2) { /* check limit for detriment too */
+		attributeMod = formAttribute / (-2);
+	}
+}
+
+
+/* TO DO: This must also remove the limb id from the character's drawLimbList. */
+void Limb::unEquip() {
+	for (Joint& joint : joints) {
+		joint.setAnchor(false);
+		joint.detachLimb();
+		joint.resetModifiedPoint();
+	}
+	isAnchor = false;
+	rotationAngle = 0;
+}
+
+Joint& Limb::getAnchorJoint() {
+	for (Joint& joint : joints) {
+		if (joint.getIsAnchor()) {
+			return joint;
+		}
+	}
+	/* THIS IS NOT SAFE. */
+	return joints[0];
+}
+
+void Limb::setAnchorJointId() {
+	for (int i = 0; i < joints.size(); ++i) {
+		Joint& joint = joints[i];
+		if (joint.getIsAnchor()) {
+			anchorJointId = i;
+			return;
+		}
+	}
+	anchorJointId = -1;
+}
+
+int Limb::getAnchorJointId() {
+	return anchorJointId;
+}
+
+void Limb::setDrawRect(SDL_Rect drawRect) {
+	this->drawRect = drawRect;
+}
+
+//void setRotationAngle(int rotationAngle) { this->rotationAngle = normalizeAngle(rotationAngle); }
+void Limb::resetRotationAngle() {
+	rotationAngle = 0;
+	for (Joint& joint : joints) {
+		joint.resetModifiedPoint();
+	}
+}
+
+
+
+int Limb::rotate(int angleIncrement) {
+	rotationAngle = normalizeAngle(rotationAngle + angleIncrement);
+
+	/* If this LIMB has no ANCHOR JOINT then it's the anchor limb, so rotate on the center instead of on a joint. */
+	Point anchorPoint =
+		//getAnchorJointId() < 0 ? joint.getPoint() : /* THIS is to test the getRotatedPoint */
+		getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) :
+		getAnchorJoint().getFormPoint();
+
+	/* Now update all the joint points (except the anchor point). */
+	for (Joint& joint : joints) {
+		if (!joint.getIsAnchor()) {
+			joint.setModifiedPoint(getRotatedPoint(anchorPoint, joint.getFormPoint(), rotationAngle));
+		}
+	}
+
+	return rotationAngle;
+}
+
+
+
+bool Limb::hasFreeJoint() {
+	for (Joint& joint : joints) {
+		if (joint.isFree()) { return true; }
+	}
+	return false;
+}
+
+int Limb::getNextFreeJointIndex(int startingIndex = 0) {
+	for (int i = startingIndex; i < joints.size(); ++i) {
+		if (joints[i].isFree()) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+vector<int> Limb::getFreeJointIndexes() {
+	vector<int> indexes;
+	for (int i = 0; i < joints.size(); ++i) {
+		if (joints[i].isFree()) {
+			indexes.push_back(i);
+		}
+	}
+	return indexes;
+}
+
+
+
+/*
+* In the character creation screen, when the user wants to change which joint
+* the limb uses to anchor itself to its parent limb, this function does that.
+* Cycles through joints, and if one is available we do the switch.
+* Returns boolean indicating whether a switch took place.
+*/
+bool Limb::shiftAnchorLimb() {
+	if (!isEquipped() || joints.size() == 1) { return false; }
+	int oldAnchorId = -1;
+	int newAnchorId = -1;
+
+	/* Get the old anchor id. */
+	for (int i = 0; i < joints.size(); ++i) {
+		if (joints[i].getIsAnchor()) {
+			oldAnchorId = i;
+			break;
+		}
+	}
+
+	if (oldAnchorId < 0) { return false; }
+
+	/* Cycle through joints ABOVE the oldAnchorId. */
+	if (oldAnchorId < joints.size() - 1) {
+		for (int i = oldAnchorId + 1; i < joints.size(); ++i) {
+			if (joints[i].isFree()) {
+				newAnchorId = i;
+				break;
+			}
+		}
+	}
+
+	/* If that didn't work, start from the beginning. */
+	if (newAnchorId < 0) {
+		for (int i = 0; i < oldAnchorId; ++i) {
+			if (joints[i].isFree()) {
+				newAnchorId = i;
+				break;
+			}
+		}
+	}
+
+	/* If we found both new and old anchor positions, do the switch. */
+	if (oldAnchorId >= 0 && newAnchorId >= 0) {
+		joints[newAnchorId].setAnchor(true);
+		joints[oldAnchorId].setAnchor(false);
+
+		/* Now that we did the switch, update the joint points based on the rotation angle on the NEW anchor joint. */
+		if (rotationAngle != 0) {
+			int totalAngle = rotationAngle;
+			resetRotationAngle();
+			rotate(totalAngle);
+		}
+
+		return true;
+	}
+
+	return false;
+}
+
+
+/*
+* When the player has loaded a limb which is the CHILD OF (connected to) this limb,
+* we call this function on this limb and shift the location of the child (limbId).
+*/
+bool Limb::shiftJointOfLimb(int limbId) {
+	/* again, we're using the index but must replace with actual limbId. */
+
+	/* Make sure there is a free joint. (maybe useless?) */
+	if (!hasFreeJoint()) { return false; }
+
+	/* Get the current joint index. */
+
+	int oldJointIndex = -1;
+	int newJointIndex = -1;
+	int anchorJointIndex = -1;
+
+	for (int i = 0; i < joints.size(); i++) {
+		if (joints[i].getConnectedLimbId() == limbId) {
+			anchorJointIndex = joints[i].getChildLimbAnchorJointIndex();
+			oldJointIndex = i;
+			break;
+		}
+	}
+
+	if (oldJointIndex < 0) { return false; }
+
+	/* Find the next available joint index. Start ABOVE the current one. */
+
+	for (int i = oldJointIndex + 1; i < joints.size(); ++i) {
+		if (joints[i].isFree()) {
+			newJointIndex = i;
+			break;
+		}
+	}
+
+	/* If we didn't find a free joint above the old one, start at the beginning. */
+	if (newJointIndex < 0) {
+		for (int i = 0; i < oldJointIndex; ++i) {
+			if (joints[i].isFree()) {
+				newJointIndex = i;
+				break;
+			}
+		}
+	}
+
+	if (newJointIndex >= 0 && oldJointIndex >= 0 && anchorJointIndex >= 0) {
+		/* make the switch. */
+		joints[oldJointIndex].detachLimb();
+		joints[newJointIndex].connectLimb(limbId, anchorJointIndex);
+		return true;
+	}
+
+	return false;
+}
+
+
+
+void Limb::setRotationPointSDL() {
+	setAnchorJointId();
+	if (getAnchorJointId() < 0) {
+		rotationPointSDL = SDL_Point(textureWidth / 2, textureHeight / 2);
+	}
+	else {
+		Point anchorPoint = getJoints()[getAnchorJointId()].getPoint();
+		rotationPointSDL = SDL_Point(anchorPoint.x, anchorPoint.y);
+	}
+}
+
+void Limb::draw(UI& ui, bool drawJoints = false) {
+	/* rotationPoint should already be an SDL_Point in the Joint object.
+		* My Point object is redundant.
+		* WAIT... MAYBE NOT.
+		* There is no "rotation point", there are just joint points or else NULL.
+		* Further consideration is necessary.
+		* Maybe I do need a rotationPoint member which holds an SDL_Point pointer... GOOD IDEA.
+		*/
+
+	SDL_RenderCopyEx(
+		ui.getMainRenderer(),
+		getTexture(),
+		NULL, &getDrawRect(),
+		getRotationAngle(), &rotationPointSDL, SDL_FLIP_NONE
+	);
+
+	//if (drawJoints) { drawJoints(limb, ui); } /* For debugging. */
+}
+
+
 
 
 /*
@@ -733,6 +800,9 @@ public:
 	Character(CharacterType characterType) : 
 		characterType(characterType), anchorLimbId(-1) {}
 
+	Character(CharacterType characterType, vector<Limb> limbs, string name) :
+		characterType(characterType), limbs(limbs), name(name), anchorLimbId(-1) {}
+
 	Character(CharacterType characterType, int x, int y) :
 		characterType(characterType), blockPosition(x, y), lastBlockPosition(x, y) {
 
@@ -745,32 +815,31 @@ public:
 	{ }
 
 	string getName() { return name; }
-	void setName(string newName) { name = newName; }
-	void setType(CharacterType type) { characterType = type; }
+	bool shiftChildLimb(int childLimbId);
+	vector<Limb> getEquippedLimbs();
+	vector<int>& getDrawLimbIDs() { return drawLimbListIDs; }
 	int getType() { return characterType; }
-	void setId(int id) { this->id = id; }
 	int getId() { return id; }
 	vector<Limb>& getLimbs() { return limbs; }
 	bool equipLimb(int limbId);
-	void clearSuit();
-	void setRotationPointsSDL();
-	void setAnchorJointIDs();
 	Limb& getLimbById(int id);
-	void addLimb(Limb& newLimb) { limbs.emplace_back(newLimb); }
-
-	void unEquipLimb(int limbId);
 	int getParentLimbId(int childLimbId);
 	vector<tuple<int, int, bool>> getEquippedJointsData(int limbToSkipId);
 	int getAnchorLimbId() { return anchorLimbId; }
 	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude = -1);
+
+	void setId(int id) { this->id = id; }
+	void addLimb(Limb& newLimb) { limbs.emplace_back(newLimb); }
+	void unEquipLimb(int limbId);
+	void setName(string newName) { name = newName; }
+	void setType(CharacterType type) { characterType = type; }
 	void setAnchorLimbId(int newId) { anchorLimbId = newId; }
 	void setChildLimbDrawRects(Limb& parentLimb, UI& ui);
-
-	bool shiftChildLimb(int childLimbId);
-	vector<Limb> getEquippedLimbs();
-	vector<int>& getDrawLimbIDs() { return drawLimbListIDs; }
 	void getChildLimbsRecursively(Limb& parentLimb, vector<Limb>& childLimbs);
+	void clearSuit();
+	void setRotationPointsSDL();
+	void setAnchorJointIDs();
 
 	void sortLimbsByNumberOfJoints() {
 		sort(limbs.begin(), limbs.end(), compareJointsNumber);

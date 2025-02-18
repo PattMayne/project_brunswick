@@ -247,12 +247,12 @@ public:
 		Point position,
 		SDL_Texture* texture,
 		LandmarkType landmarkType,
-		int subjectId,
+		int characterId,
 		string slug
 	) :
 		texture(texture),
 		landmarkType(landmarkType),
-		subjectId(subjectId),
+		characterId(characterId),
 		position(position),
 		slug(slug)
 	{ }
@@ -276,7 +276,7 @@ public:
 	LandmarkCollisionInfo checkCollision(Point pos) { return checkCollision(pos.x, pos.y); }
 	LandmarkCollisionInfo checkCollision(int x, int y) {
 		if (x == position.x && y == position.y) {
-			return { true, landmarkType, subjectId };
+			return { true, landmarkType, characterId };
 		}
 
 		return { false, landmarkType, -1 };	}
@@ -288,7 +288,7 @@ private:
 	Point position;
 	SDL_Texture* texture;
 	LandmarkType landmarkType;
-	int subjectId; /* This can be either the MAP id or the SUIT slug??? Needs re-thinking! */
+	int characterId; /* This can be either the MAP id or the SUIT slug??? Needs re-thinking! */
 };
 
 export Landmark getExitLandmark(Point position) {
@@ -400,6 +400,7 @@ public:
 	string getSlug() { return mapForm.slug; }
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
 	vector<MapCharacter>& getNPCs() { return NPCs; }
+	vector<Character> getSuits() { return mapForm.suits; }
 
 	void setLandmarks(vector<Landmark> landmarks) { this->landmarks = landmarks; }
 	void setPlayerCharacter(MapCharacter playerCharacter) { this->playerCharacter = playerCharacter; }

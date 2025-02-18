@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS limb (
     is_anchor INTEGER DEFAULT 0,
     is_flipped INTEGER DEFAULT 0,
     name TEXT DEFAULT 'Limb',
-    draw_order INTEGER DEFAULT -1
+    draw_order INTEGER DEFAULT -1,
+    is_unscrambled INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS joint (
@@ -80,7 +81,8 @@ CREATE TABLE IF NOT EXISTS landmark (
     landmark_type INTEGER NOT NULL,
     slug TEXT NOT NULL,
     position_x INTEGER NOT NULL,
-    position_y INTEGER NOT NULL
+    position_y INTEGER NOT NULL,
+    character_id INTEGER DEFAULT -1
 );
 
 CREATE INDEX IF NOT EXISTS idx_map_slug ON block (map_slug);

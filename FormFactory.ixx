@@ -190,6 +190,85 @@ MapForm forestMap() {
 
 	// SUITS will come later.
 
+	// Make the deer first.
+	// Get copies of the deer's limbs from nativeLimbs.
+
+	vector<Limb> deerLimbs;
+	vector<Limb> bearLimbs;
+	vector<Limb> spiderLimbs;
+	vector<Limb> fairyLimbs;
+	vector<Limb> owlLimbs;
+
+	for (LimbForm limbForm : forestMap.nativeLimbs) {
+
+		/* DEER LIMBS */
+
+		if (
+			limbForm.slug == "deer_leg_4" ||
+			limbForm.slug == "deer_leg_3" ||
+			limbForm.slug == "deer_leg_2" ||
+			limbForm.slug == "deer_leg_1" ||
+			limbForm.slug == "deer_head" ||
+			limbForm.slug == "deer_body" ||
+			limbForm.slug == "deer_antler_1" ||
+			limbForm.slug == "deer_antler_2"
+			)
+		{
+			deerLimbs.emplace_back(limbForm);
+		}
+		else if (
+			limbForm.slug == "bear_head" ||
+			limbForm.slug == "bear_body" ||
+			limbForm.slug == "bear_arm_left" ||
+			limbForm.slug == "bear_arm_right" ||
+			limbForm.slug == "bear_leg_left" ||
+			limbForm.slug == "bear_leg_right"
+			)
+		{
+			bearLimbs.emplace_back(limbForm);
+		}
+		else if (
+			limbForm.slug == "spider_body" ||
+			limbForm.slug == "spider_leg_1" ||
+			limbForm.slug == "spider_leg_2" ||
+			limbForm.slug == "spider_leg_3" ||
+			limbForm.slug == "spider_leg_4" ||
+			limbForm.slug == "spider_leg_5" ||
+			limbForm.slug == "spider_leg_6"
+			)
+		{
+			spiderLimbs.emplace_back(limbForm);
+		}
+		else if (
+			limbForm.slug == "fairy_head" ||
+			limbForm.slug == "fairy_body" ||
+			limbForm.slug == "fairy_wing_right" ||
+			limbForm.slug == "fairy_wing_left" ||
+			limbForm.slug == "fairy_leg_right" ||
+			limbForm.slug == "fairy_leg_left" ||
+			limbForm.slug == "fairy_arm_left" ||
+			limbForm.slug == "fairy_arm_right"
+			)
+		{
+			fairyLimbs.emplace_back(limbForm);
+		}
+		else if (
+			limbForm.slug == "owl_body" ||
+			limbForm.slug == "owl_head" ||
+			limbForm.slug == "owl_wing_left" ||
+			limbForm.slug == "owl_wing_right"
+			)
+		{
+			owlLimbs.emplace_back(limbForm);
+		}
+	}
+
+	forestMap.suits.emplace_back(CharacterType::Suit, deerLimbs, "Deer");
+	forestMap.suits.emplace_back(CharacterType::Suit, bearLimbs, "Bear");
+	forestMap.suits.emplace_back(CharacterType::Suit, spiderLimbs, "Spider");
+	forestMap.suits.emplace_back(CharacterType::Suit, fairyLimbs, "Fairy");
+	forestMap.suits.emplace_back(CharacterType::Suit, owlLimbs, "Owl");
+
 	return forestMap;
 }
 
