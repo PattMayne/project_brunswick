@@ -390,13 +390,13 @@ public:
 	string getSlug() { return mapForm.slug; }
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
 	vector<MapCharacter>& getNPCs() { return NPCs; }
-	vector<Character> getSuits() { return mapForm.suits; }
+	vector<Character>& getSuits() { return mapForm.suits; }
 
 	void setLandmarks(vector<Landmark> landmarks) { this->landmarks = landmarks; }
 	void setPlayerCharacter(MapCharacter playerCharacter) { this->playerCharacter = playerCharacter; }
 	void addNPC(MapCharacter npc) { NPCs.push_back(npc); }
 
-	MapForm getForm() { return mapForm; }
+	MapForm& getForm() { return mapForm; }
 	void randomizePathOptions(Block& block);
 
 
@@ -404,8 +404,8 @@ public:
 private:
 	MapForm mapForm;
 	vector<vector<Block>> rows;
-	void floorize(int x, int y, int radius);
-	vector<Point> buildMap(MapForm mapForm);
+	void floorize(int x, int y, int radius, vector<Point>& floorPositions);
+	vector<Point> buildMap();
 	vector<MapCharacter> NPCs;
 	MapCharacter playerCharacter;
 
@@ -481,7 +481,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	}
 
 	/* Build the actual grid for the first time. Receive a list of floor coordinates. */
-	vector<Point> floorPositions = buildMap(mapForm);
+	vector<Point> floorPositions = buildMap();
 
 	/* populate characters and limbs after building the map(and its landmarks). */
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
@@ -585,33 +585,21 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 * Build the actual grid of Block objects.
 * Returns a vector of Points which are the coordinates for all Floor objects.
 * The Floor Points are used to populate the map with Roaming Limbs.
+* 
+* This is used the first time a particular Map is loaded.
+* It's based on Landmarks.
+* We scatter Entrance, Exit, and Shrines.
+* We draw a path from Entrance, to each Shrine (one by one),
+* and finally to the Exit.
+* We also draw random paths to make it a maze.
 */
-vector<Point> Map::buildMap(MapForm mapForm) {
-	/*
-	* This WILL get the DB object and build the entire map as data.
-	* To draw the map will mean to review this data and draw the local blocks.
-	* For now just make a checkerboard grid of blocks.
-	*
-	* Might not be a member of the MapScreen object.
-	* Might instead be a member of the Map object.
-	*
-	*
-	*		DEVELOPMENT STAGES:
-	*	1. Build a map with ALL WALLS
-	*	2. Draw a PATH through those walls
-	*	3. Navigate around the map with arrows (no character)
-	*	4. Put a "character" (struct) in the map and navigate around like a maze
-	*	5. When you reach the other end you go back to the other screen
-	*	6. Save the generated screen to a database.
-	*	7. Read map paramaters from a JSON
-	*	8. Delete map entirely from database
-	*/
-
+vector<Point> Map::buildMap() {
 	UI& ui = UI::getInstance();
+	/* Create a vector of rows (of blocks) of the specified size. */
 	rows = vector<vector<Block>>(mapForm.blocksHeight);
 
-	/* replace with reading from DB */
 	for (int i = 0; i < rows.size(); ++i) {
+		/* Create a vector of blocks of the specified size. All are walls. */
 		vector<Block> blocks(mapForm.blocksWidth);
 
 		for (int k = 0; k < blocks.size(); ++k) {
@@ -689,7 +677,7 @@ vector<Point> Map::buildMap(MapForm mapForm) {
 			break;
 		}
 
-		floorize(pathX, pathY, subPath.radius);
+		floorize(pathX, pathY, subPath.radius, floorPositions);
 		floorPositions.push_back(Point(pathX, pathY));
 		--subPath.seed;
 
@@ -748,7 +736,7 @@ void Map::randomizePathOptions(Block& block) {
 * There's the opportunity here to draw an actual "path" block (different than a floor block... maybe non-diggable?).
 * But only certain paths are *actual* paths... many are just normal floor blocks.
 */
-void Map::floorize(int x, int y, int radius) {
+void Map::floorize(int x, int y, int radius, vector<Point>& floorPositions) {
 	/* Incoming coordinates are always a path */
 	Block& thisBlock = rows[y][x];
 	if (thisBlock.getIsPath()) { return; }
@@ -802,10 +790,12 @@ void Map::floorize(int x, int y, int radius) {
 
 		/* directly below */
 		rows[y + downInc][x].setIsFloor(true);
+		floorPositions.emplace_back(x, y + downInc);
 
 		/* down and to the left */
 		while (x - leftInc > 0 && leftInc < radius) {
 			rows[y + downInc][x - leftInc].setIsFloor(true);
+			floorPositions.emplace_back(x - leftInc, y + downInc);
 			++leftInc;
 		}
 
@@ -814,6 +804,7 @@ void Map::floorize(int x, int y, int radius) {
 		/* up and to the right */
 		while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
 			rows[y + downInc][x + rightInc].setIsFloor(true);
+			floorPositions.emplace_back(x + rightInc, y + downInc);
 			++rightInc;
 		}
 
@@ -828,12 +819,14 @@ void Map::floorize(int x, int y, int radius) {
 	/* Clear blocks LEFT */
 	while (x - leftInc > 0 && leftInc < radius) {
 		rows[y][x - leftInc].setIsFloor(true);
+		floorPositions.emplace_back(x - leftInc, y);
 		++leftInc;
 	}
 
 	/* Clear blocks RIGHT */
 	while (x + rightInc < rows[y - upInc].size() - 2 && rightInc < radius) {
 		rows[y][x + rightInc].setIsFloor(true);
+		floorPositions.emplace_back(x + rightInc, y);
 		++rightInc;
 	}
 }
