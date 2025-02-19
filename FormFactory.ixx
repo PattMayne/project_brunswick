@@ -53,6 +53,8 @@ import UI;
 
 using namespace std;
 
+void equipForestSuitLimbs(vector<Character>& forestSuits);
+
 /*
 
 This is the big, major push.
@@ -132,8 +134,8 @@ MapForm forestMap() {
 	forestMap.mapLevel = MapLevel::Forest;
 	forestMap.name = "Enchanted Forest";
 	forestMap.slug = "forest";
-	forestMap.blocksWidth = 100;
-	forestMap.blocksHeight = 100;
+	forestMap.blocksWidth = 77;
+	forestMap.blocksHeight = 77;
 	forestMap.mapType = MapType::World;
 
 	/* create the TEXTURES */
@@ -269,6 +271,9 @@ MapForm forestMap() {
 	forestMap.suits.emplace_back(CharacterType::Suit, fairyLimbs, "Fairy", SuitType::Fairy);
 	forestMap.suits.emplace_back(CharacterType::Suit, owlLimbs, "Owl", SuitType::Owl);
 
+
+
+
 	return forestMap;
 }
 
@@ -280,6 +285,115 @@ export MapForm getMapFormFromSlug(string slug) {
 	cout << "string check FAILED\n";
 	// Temporary DEFAULT map... deal with error (faulty slug) somehow instead...
 	return forestMap();
+}
+
+export void equipSuitLimbs(MapLevel mapLevel, vector<Character>& suits) {
+	if (mapLevel == MapLevel::Forest) {
+		equipForestSuitLimbs(suits);
+	}
+}
+
+export void equipForestSuitLimbs(vector<Character>& forestSuits) {
+
+	/* HERE we must EQUIP in the correct and explicit order. THEN set the DRAW order. */
+
+	/* Equip Deer limbs. */
+
+	Character& deer = forestSuits[0];
+
+	/* Equip BODY first. */
+	for (Limb& limb : deer.getLimbs()) {
+		if (limb.getBodyPartType() == BodyPartType::Torso) {
+			deer.equipLimb(limb.getId());
+		}
+	}
+
+	/* Equip HEAD second. */
+	for (Limb& limb : deer.getLimbs()) {
+		if (limb.getBodyPartType() == BodyPartType::Head) {
+			deer.equipLimb(limb.getId());
+		}
+	}
+
+	/* Equip Leg 4. */
+	for (Limb& limb : deer.getLimbs()) {
+		if (limb.getFormSlug() == "deer_leg_4") {
+			deer.equipLimb(limb.getId());
+		}
+	}
+
+	/* Equip Leg 3. */
+	for (Limb& limb : deer.getLimbs()) {
+		if (limb.getFormSlug() == "deer_leg_3") {
+			deer.equipLimb(limb.getId());
+		}
+	}
+
+	/* Equip Leg 1. */
+	for (Limb& limb : deer.getLimbs()) {
+		if (limb.getFormSlug() == "deer_leg_1") {
+			deer.equipLimb(limb.getId());
+		}
+	}
+
+	/* Equip Leg 2. */
+	for (Limb& limb : deer.getLimbs()) {
+		if (limb.getFormSlug() == "deer_leg_2") {
+			deer.equipLimb(limb.getId());
+		}
+	}
+
+	/* Equip deer_antler_1. */
+	for (Limb& limb : deer.getLimbs()) {
+		if (limb.getFormSlug() == "deer_antler_1") {
+			deer.equipLimb(limb.getId());
+		}
+	}
+
+	/* Equip deer_antler_2. */
+	for (Limb& limb : deer.getLimbs()) {
+		if (limb.getFormSlug() == "deer_antler_2") {
+			deer.equipLimb(limb.getId());
+		}
+	}
+
+
+
+
+
+	/* Equip Bear limbs. */
+
+	Character& bear = forestSuits[1];
+
+	for (Limb& limb : bear.getLimbs()) {
+		bear.equipLimb(limb.getId());
+	}
+
+	/* Equip Spider limbs. */
+
+	Character& spider = forestSuits[2];
+
+	for (Limb& limb : spider.getLimbs()) {
+		spider.equipLimb(limb.getId());
+	}
+
+	/* Equip Fairy limbs. */
+
+	Character& fairy = forestSuits[3];
+
+	for (Limb& limb : fairy.getLimbs()) {
+		fairy.equipLimb(limb.getId());
+	}
+
+	/* Equip Owl limbs. */
+
+	Character& owl = forestSuits[4];
+
+	for (Limb& limb : owl.getLimbs()) {
+		owl.equipLimb(limb.getId());
+	}
+
+
 }
 
 

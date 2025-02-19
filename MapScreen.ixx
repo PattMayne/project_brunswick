@@ -180,12 +180,13 @@ export class MapScreen {
 				* 
 				* Sort limbs by number of joints first.
 				*/
-
+				equipSuitLimbs(map.getMapLevel(), map.getSuits());
 				for (Character& suit : map.getSuits()) {
-					suit.sortLimbsByNumberOfJoints();
+					//suit.sortLimbsByNumberOfJoints();
 
 					for (Limb& limb : suit.getLimbs()) {
-						suit.equipLimb(limb.getId());
+						//suit.equipLimb(limb.getId());
+						// DO NOT equip. We will do that in FormFactory
 					}
 
 					suit.setAnchorJointIDs();
@@ -914,10 +915,10 @@ void MapScreen::drawLandmarks(UI& ui) {
 		targetRect.h = blockWidth;
 
 		if (
-			lX >= drawStartX &&
-			lX <= (drawStartX + xViewRes) &&
-			lY >= drawStartY &&
-			lY <= (drawStartY + yViewRes)
+			lX >= (drawStartX - 2) &&
+			lX <= (drawStartX + xViewRes + 2) &&
+			lY >= drawStartY - 2 &&
+			lY <= (drawStartY + yViewRes + 2)
 		) {
 			targetRect.x = (lX - drawStartX) * blockWidth;
 			targetRect.y = (lY - drawStartY) * blockWidth;
@@ -1131,12 +1132,14 @@ void MapScreen::animateMovingObject(SDL_Rect& rect, int blockPositionX, int bloc
 void MapScreen::drawSuits(UI& ui) {
 	SDL_Rect suitRect = { 0, 0, blockWidth, blockWidth };
 
+	int i = 0;
+
 	for (Character& suit : map.getSuits()) {
 		Point position = suit.getPosition();
 
 		/* skip suits that are too far outside of the frame. (still draw them if they might fly onto the frame.) */
 		if (!blockIsDrawable(position)) {
-			continue;
+			//continue;
 		}
 
 		int posX = position.x;
@@ -1144,6 +1147,11 @@ void MapScreen::drawSuits(UI& ui) {
 
 		suitRect.x = (posX - drawStartX) * blockWidth + npcHeight;
 		suitRect.y = ((posY - drawStartY) * blockWidth) - suitOffsetY;
+
+		// TESTING (delete)
+		suitRect.x = i * blockWidth + npcHeight;
+		suitRect.y = 0;
+		++i;
 
 		/* Synchronize with map during movement animations. */
 		if (animate) {

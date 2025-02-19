@@ -364,6 +364,7 @@ export class Limb {
 
 		string getName() { return name; }
 		string getTexturePath() { return form.texturePath; }
+		string getFormSlug() { return form.slug; }
 		int getCharacterId() { return characterId; }
 		string getMapSlug() { return mapSlug; }
 		int getId() { return id; }
@@ -395,7 +396,6 @@ export class Limb {
 		vector<Joint>& getJoints() { return joints; }
 		bool isEquipped();
 		Joint& getAnchorJoint();
-		void setAnchorJointId();
 		int getAnchorJointId();
 		
 		int rotate(int angleIncrement);
@@ -407,6 +407,7 @@ export class Limb {
 		bool shiftJointOfLimb(int limbId);
 		bool shiftAnchorLimb();
 
+		void setAnchorJointId();
 		void setDrawOrder(int newDrawOrder) { this->drawOrder = newDrawOrder; }
 		void setId(int id) { this->id = id; }
 		void setName(string newName) { name = newName; }
