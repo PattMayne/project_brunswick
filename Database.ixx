@@ -1789,7 +1789,8 @@ export Map loadMap(string mapSlug) {
     */
 
     /* Create statement template for querying Map objects with this slug. */
-    const char* queryLandmarksSQL = "SELECT id, landmark_type, position_x, position_y FROM landmark WHERE map_slug = ?;";
+    const char* queryLandmarksSQL = "SELECT id, landmark_type, position_x, position_y, "
+        "suit_type, character_id FROM landmark WHERE map_slug = ?;";
     sqlite3_stmt* queryLandmarksStatement;
     returnCode = sqlite3_prepare_v2(db, queryLandmarksSQL, -1, &queryLandmarksStatement, nullptr);
 
@@ -1813,6 +1814,10 @@ export Map loadMap(string mapSlug) {
         int positionX = sqlite3_column_int(queryLandmarksStatement, 2);
         int positionY = sqlite3_column_int(queryLandmarksStatement, 3);
 
+        int suitTypeInt = sqlite3_column_int(queryLandmarksStatement, 4);
+        SuitType suitType = isValidSuitType(suitTypeInt) ? static_cast<SuitType>(suitTypeInt) : NoSuit;
+        int suitCharacterId = sqlite3_column_int(queryLandmarksStatement, 5);
+
         Point position = Point(positionX, positionY);
 
         /*
@@ -1829,7 +1834,22 @@ export Map loadMap(string mapSlug) {
         } else if (landmarkType == Exit) {
             Landmark exit = getExitLandmark(position);
             exit.setId(landmarkId);
-            landmarks.emplace_back(exit); }
+            landmarks.emplace_back(exit);
+        }
+        else if (landmarkType == Shrine) {
+            UI& ui = UI::getInstance();
+            SDL_Surface* shrineSurface = IMG_Load("assets/shrine.png");
+            SDL_Texture* shrineTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), shrineSurface);
+            SDL_FreeSurface(shrineSurface);
+
+            landmarks.emplace_back(
+                position,
+                shrineTexture,
+                landmarkType,
+                suitCharacterId,
+                suitType
+            );
+        }
     }
 
     if (returnCode != SQLITE_DONE) {

@@ -24,9 +24,12 @@ export enum class FontContext {
 };
 
 export enum SuitType {
-	NoSuit,
 	/* Forest suits. */
-	Deer, Bear, Spider, Fairy, Owl
+	Deer, Bear, Spider, Fairy, Owl,
+
+	/* None/Total */
+
+	NoSuit
 };
 
 /* values to flag for resolutions. Mostly for development purposes. Final release should always be fullscreen. */
@@ -152,3 +155,7 @@ export enum LandmarkType { Entrance, Building, Shrine, Exit };
 
 export bool isValidLandmarkType(int value) {
 	return value >= Entrance && value <= Exit; }
+
+export bool isValidSuitType(int value) {
+	return value >= 0 && value <= NoSuit;
+}

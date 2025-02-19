@@ -462,12 +462,10 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	* The map building function will also add the Point location.
 	*/
 
-	/* Use the same shrine image, but we only have to delete it once. */
-	SDL_Surface* shrineSurface = IMG_Load("assets/shrine.png");
-	SDL_Texture* shrineTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), shrineSurface);
-	SDL_FreeSurface(shrineSurface);
-
 	for (Character& suit : mapForm.suits) {
+		SDL_Surface* shrineSurface = IMG_Load("assets/shrine.png");
+		SDL_Texture* shrineTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), shrineSurface);
+		SDL_FreeSurface(shrineSurface);
 
 		/* create a landmark */
 
@@ -637,7 +635,7 @@ vector<Point> Map::buildMap() {
 
 
 	/* Entrance & Exit landmarks. */
-	landmarks.emplace_back(getExitLandmark(Point(endBlockX, 0)));
+	landmarks.emplace_back(getExitLandmark(Point(endBlockX, 2)));
 	landmarks.emplace_back(getEntranceLandmark(Point(pathX, pathY)));
 
 	/*
@@ -664,7 +662,6 @@ vector<Point> Map::buildMap() {
 	/* Now give the shrines positions, and add those positions to pointsToReach. */
 	for (Landmark& landmark : landmarks) {
 		if (landmark.getType() == LandmarkType::Shrine) {
-			//cout << "Landmark position: " << landmark.getPosition().x << ", " << landmark.getPosition().y << "\n";
 			int randX = (rand() % (mapForm.blocksWidth - 10)) + 5;
 			int randY = (rand() % (mapForm.blocksHeight - 10)) + 5;
 			landmark.setPosition(Point(randX, randY));
@@ -686,11 +683,10 @@ vector<Point> Map::buildMap() {
 
 		/* refresh seed if needed. */
 		if (subPath.seed < 1) {
-			//cout << "Creating a new seed\n";
 
 			/*
-			* 3/4 times the direction should be toward the pointToReach.
-			* and 2/3 of those should be in the most distant direction.
+			* Most times the direction should be toward the pointToReach.
+			* and most of those should be in the most distant direction.
 			* 
 			* Find out which directions are TOWARD the pointToReach,
 			* and from them, which is MOST distant.
@@ -699,13 +695,14 @@ vector<Point> Map::buildMap() {
 			bool nextPointIsAbove = pathY > pointToReach.y;
 			bool nextPointIsLeft = pathX > pointToReach.x;
 
-			int verticalDistance = nextPointIsLeft ? pathX - pointToReach.x : pointToReach.x - pathX;
-			int horizontalDistance = nextPointIsAbove ? pathY - pointToReach.y : pointToReach.y - pathY;
+			int horizontalDistance = nextPointIsLeft ? pathX - pointToReach.x : pointToReach.x - pathX; 
+			int verticalDistance = nextPointIsAbove ? pathY - pointToReach.y : pointToReach.y - pathY;
 
 			vector<MapDirection> directionsLottery;
 
-			int mostNeededDirectionCount = 4;
-			int lessNeededDirectionCount = 2;
+			/* Still not sure if this works properly. */
+			int mostNeededDirectionCount = 50;
+			int lessNeededDirectionCount = 5;
 			int wrongDirectionsEach = 1;
 
 			MapDirection favoriteDirection = MapDirection::Up;
@@ -771,7 +768,6 @@ vector<Point> Map::buildMap() {
 
 			subPath.seed = (rand() % 12) + 1;
 			subPath.radius = rand() % 4;
-			//cout << "CREATED a new seed\n";
 		}
 
 		/* SubPaths get created at the top of the loop when the old one dies. Then blindly follow the one that exists. */
@@ -779,7 +775,7 @@ vector<Point> Map::buildMap() {
 		/* choose the next block to floorize */
 		switch (subPath.direction) {
 		case MapDirection::Up:
-			if (pathY > 0) { /* We ARE allowed to hit the ceiling (FOR NOW this ends the pathmaking) */
+			if (pathY > 1) { /* Do not hit the ceiling. */
 				--pathY;
 			}
 			else {
@@ -788,7 +784,7 @@ vector<Point> Map::buildMap() {
 			}
 			break;
 		case MapDirection::Down:
-			if (pathY < rows.size() - 2) { /* We are NOT allowed to hit the bottom again. */
+			if (pathY < rows.size() - 3) { /* Do not hit the bottom. */
 				++pathY;
 			}
 			else {
@@ -797,7 +793,7 @@ vector<Point> Map::buildMap() {
 			}
 			break;
 		case MapDirection::Left:
-			if (pathX > 3) { /* We are NOT allowed to hit the left wall. */
+			if (pathX > 3) { /* Do not hit the left wall. */
 				--pathX;
 			}
 			else {
@@ -806,7 +802,7 @@ vector<Point> Map::buildMap() {
 			}
 			break;
 		case MapDirection::Right:
-			if (pathX < rows[pathY].size() - 2) { /* We are NOT allowed to hit the right wall. */
+			if (pathX < rows[pathY].size() - 3) { /* Do not hit the right wall. */
 				++pathX;
 			}
 			else {
@@ -821,7 +817,6 @@ vector<Point> Map::buildMap() {
 		--subPath.seed;
 
 		if (pointToReach.x == pathX && pointToReach.y == pathY) {
-			cout << "Reached a point\n";
 			/* 
 			* We have reached the current (top) pointToReach.
 			* Delete the pointToReach.
@@ -831,10 +826,7 @@ vector<Point> Map::buildMap() {
 			subPath.seed = 0;
 		}
 	}
-
-	/* Create Exit landmark. */
-	// OLD PLACEHOLDER WAY: DELETE
-	//landmarks.emplace_back(getExitLandmark(Point(pathX, pathY)));
+		
 
 	/* Set wall and floor texture indexes. */
 	for (int i = 0; i < rows.size(); ++i) {
@@ -854,9 +846,90 @@ vector<Point> Map::buildMap() {
 		}
 	}
 
+	/* clear the area around each shrine. */
+
+	for (Landmark& landmark : landmarks) {
+		Point lPoint = landmark.getPosition();
+		rows[lPoint.y][lPoint.x].setIsPath(false);
+
+		if (landmark.getType() == LandmarkType::Shrine) {
+			
+			rows[lPoint.y][lPoint.x - 1].setIsFloor(true);
+			rows[lPoint.y][lPoint.x - 1].setIsPath(false);
+
+			rows[lPoint.y][lPoint.x + 1].setIsFloor(true);
+			rows[lPoint.y][lPoint.x + 1].setIsPath(false);
+
+			rows[lPoint.y - 1][lPoint.x - 1].setIsFloor(true);
+			rows[lPoint.y - 1][lPoint.x - 1].setIsPath(false);
+
+			rows[lPoint.y - 1][lPoint.x].setIsFloor(true);
+			rows[lPoint.y - 1][lPoint.x].setIsPath(false);
+
+			rows[lPoint.y - 1][lPoint.x + 1].setIsFloor(true);
+			rows[lPoint.y - 1][lPoint.x + 1].setIsPath(false);
+
+			rows[lPoint.y + 1][lPoint.x - 1].setIsFloor(true);
+			rows[lPoint.y + 1][lPoint.x - 1].setIsPath(false);
+
+			rows[lPoint.y + 1][lPoint.x].setIsFloor(true);
+			rows[lPoint.y + 1][lPoint.x].setIsPath(false);
+
+			rows[lPoint.y + 1][lPoint.x + 1].setIsFloor(true);
+			rows[lPoint.y + 1][lPoint.x + 1].setIsPath(false);
+
+			/* Surround the cleared area with a path. */
+			rows[lPoint.y][lPoint.x - 2].setIsFloor(true);
+			rows[lPoint.y][lPoint.x - 2].setIsPath(true);
+			rows[lPoint.y][lPoint.x + 2].setIsFloor(true);
+			rows[lPoint.y][lPoint.x + 2].setIsPath(true);
+
+			rows[lPoint.y - 1][lPoint.x - 2].setIsFloor(true);
+			rows[lPoint.y - 1][lPoint.x - 2].setIsPath(true);
+			rows[lPoint.y - 1][lPoint.x + 2].setIsFloor(true);
+			rows[lPoint.y - 1][lPoint.x + 2].setIsPath(true);
+
+			rows[lPoint.y + 1][lPoint.x - 2].setIsFloor(true);
+			rows[lPoint.y + 1][lPoint.x - 2].setIsPath(true);
+			rows[lPoint.y + 1][lPoint.x + 2].setIsFloor(true);
+			rows[lPoint.y + 1][lPoint.x + 2].setIsPath(true);
+
+			rows[lPoint.y - 2][lPoint.x - 2].setIsFloor(true);
+			rows[lPoint.y - 2][lPoint.x - 2].setIsPath(true);
+			rows[lPoint.y - 2][lPoint.x + 2].setIsFloor(true);
+			rows[lPoint.y - 2][lPoint.x + 2].setIsPath(true);
+
+			rows[lPoint.y + 2][lPoint.x - 2].setIsFloor(true);
+			rows[lPoint.y + 2][lPoint.x - 2].setIsPath(true);
+			rows[lPoint.y + 2][lPoint.x + 2].setIsFloor(true);
+			rows[lPoint.y + 2][lPoint.x + 2].setIsPath(true);
+
+			rows[lPoint.y + 2][lPoint.x - 1].setIsFloor(true);
+			rows[lPoint.y + 2][lPoint.x - 1].setIsPath(true);
+			rows[lPoint.y + 2][lPoint.x + 1].setIsFloor(true);
+			rows[lPoint.y + 2][lPoint.x + 1].setIsPath(true);
+
+			rows[lPoint.y - 2][lPoint.x - 1].setIsFloor(true);
+			rows[lPoint.y - 2][lPoint.x - 1].setIsPath(true);
+			rows[lPoint.y - 2][lPoint.x + 1].setIsFloor(true);
+			rows[lPoint.y - 2][lPoint.x + 1].setIsPath(true);
+
+			rows[lPoint.y + 2][lPoint.x].setIsFloor(true);
+			rows[lPoint.y + 2][lPoint.x].setIsPath(true);
+			rows[lPoint.y + 2][lPoint.x].setIsFloor(true);
+			rows[lPoint.y + 2][lPoint.x].setIsPath(true);
+
+			rows[lPoint.y - 2][lPoint.x].setIsFloor(true);
+			rows[lPoint.y - 2][lPoint.x].setIsPath(true);
+			rows[lPoint.y - 2][lPoint.x].setIsFloor(true);
+			rows[lPoint.y - 2][lPoint.x].setIsPath(true);
+		}
+
+	}
+
 	/* create Player Character */
 
-	/* get character texture */
+	/* get character texture (didn't we already do this?) */
 	SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
 	SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 	SDL_FreeSurface(characterSurface);
