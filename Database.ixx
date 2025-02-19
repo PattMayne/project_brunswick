@@ -213,6 +213,10 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
 */
 
 export void updateNpcHomePosition(int characterId, Point newPosition) {
+    /*
+    * TO DO: Do this in bulk with a vector and a transaction.
+    */
+
     /* Open database. */
     sqlite3* db;
     char* errMsg = nullptr;

@@ -135,13 +135,7 @@ public:
 
 	~MapCharacter() {} /* destroy texture. */
 
-	int getBlockX() { return blockPosition.x; }
-	int getBlockY() { return blockPosition.y; }
-
-	int getLastX() { return lastBlockPosition.x; }
-	int getLastY() { return lastBlockPosition.y; }
-	Point getPosition() { return blockPosition; }
-	Point getLastPosition() { return lastBlockPosition; }
+	
 	Point getHomePosition() { return homePosition; }
 	vector<AcquiredLimb>& getAcquiredLimbStructs() { return acquiredLimbStructs; }
 	bool isNewNpc() { return newNpc; }
@@ -149,9 +143,6 @@ public:
 
 	void clearAcquiredLimbStructs() { acquiredLimbStructs = {}; }
 	void setHomePosition(Point position) { homePosition = position; }
-	void setBlockPosition(Point blockPosition) {
-		this->blockPosition = blockPosition;
-	}
 
 	/* We count UP so we can multiply the count to get a rotation.
 	* When an NPC is created we want to spin their avatar as an animation.
@@ -171,17 +162,6 @@ public:
 		}
 
 		return newNpcCountup;
-	}
-
-	void updateLastBlock() {
-		lastBlockPosition.x = blockPosition.x;
-		lastBlockPosition.y = blockPosition.y;
-	}
-
-	/* This can be MAP position or DRAW position. */
-	void moveToPosition(Point newPosition) {
-		lastBlockPosition = blockPosition;
-		blockPosition = newPosition;
 	}
 
 	bool move(MapDirection direction, int distance = 1) {
@@ -400,7 +380,6 @@ public:
 
 	MapForm& getForm() { return mapForm; }
 	void randomizePathOptions(Block& block);
-
 
 
 private:

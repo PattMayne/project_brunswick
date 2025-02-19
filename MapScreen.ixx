@@ -163,12 +163,43 @@ export class MapScreen {
 				}
 
 				updatePlayerMap(mapSlug);
+
+				for (Character& suit : map.getSuits()) {
+					suit.buildDrawLimbList();
+					suit.setTexture(suit.createAvatar());
+				}
 			}
 			else {
 				/* Create new map. */
 				map = Map(mapForm);
 				createNewMap(map);
 				updatePlayerMap(mapSlug);
+
+				/* Now that the map is saved to the DB, the Suits have their limbs.
+				* So we can equip their limbs and then save them.
+				*/
+
+				for (Character& suit : map.getSuits()) {
+					for (Limb& limb : suit.getLimbs()) {
+						suit.equipLimb(limb.getId());
+					}
+
+					suit.setAnchorJointIDs();
+					suit.buildDrawLimbList();
+					updateCharacterLimbs(suit.getId(), suit.getAnchorLimbId(), suit.getLimbs());
+
+					/* Update the suit's location using the shrine location. */
+
+					for (Landmark& landmark : map.getLandmarks()) {
+						if (landmark.getType() == LandmarkType::Shrine && landmark.getCharacterId() == suit.getId()) {
+							suit.setBlockPosition(landmark.getPosition());
+							suit.updateLastBlock();
+							updateNpcHomePosition(suit.getId(), suit.getPosition());
+						}
+					}
+
+					suit.setTexture(suit.createAvatar());
+				}
 
 
 				if (map.getPlayerCharacter().getEquippedLimbs().size() > 0 ) {
@@ -182,14 +213,6 @@ export class MapScreen {
 					map.getPlayerCharacter().setTexture(characterTexture);
 				}
 			}
-
-			cout << "This map has " << map.getSuits().size() << " suits\n";
-
-			for (Character suit : map.getSuits()) {
-				cout << suit.getName() << " suit has " << suit.getLimbs().size() << " limbs\n";
-			}
-
-			
 
 			screenType = ScreenType::Map;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
@@ -260,6 +283,7 @@ export class MapScreen {
 		void drawPlayerCharacter(UI& ui);
 		void drawRoamingLimbs(UI& ui);
 		void drawNpcs(UI& ui);
+		void drawSuits(UI& ui);
 		void drawAcquiredLimbs(UI& ui, MapCharacter& character, int drawX, int drawY);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 
@@ -916,6 +940,7 @@ void MapScreen::drawCharacters(UI& ui) {
 	*/
 	drawRoamingLimbs(ui);
 	drawNpcs(ui);
+	drawSuits(ui); /* TRICKY... I want it to be above the shrine's base... so ABOVE anything on the higher block. */
 	drawPlayerCharacter(ui);
 }
 
@@ -1081,6 +1106,45 @@ void MapScreen::animateMovingObject(SDL_Rect& rect, int blockPositionX, int bloc
 		else if (blockPositionY < lastBlockY) {
 			/* we're moving up */
 			rect.y = ((lastBlockY - drawStartY) * blockWidth) - blockAnimationIncrement; }
+	}
+}
+
+/* Draw the Suits on the Shrines. */
+void MapScreen::drawSuits(UI& ui) {
+	SDL_Rect suitRect = { 0, 0, blockWidth, blockWidth };
+
+	for (Character& suit : map.getSuits()) {
+		Point position = suit.getPosition();
+
+		/* skip suits that are too far outside of the frame. (still draw them if they might fly onto the frame.) */
+		if (!blockIsDrawable(position)) {
+			continue;
+		}
+
+		int posX = position.x;
+		int posY = position.y;
+
+		suitRect.x = (posX - drawStartX) * blockWidth + npcHeight;
+		suitRect.y = ((posY - drawStartY) * blockWidth);
+
+		/* Synchronize with map during movement animations. */
+		if (animate) {
+			if (animationType == AnimationType::Player) {
+				animateMapBlockDuringPlayerMove(suitRect, posX, posY);
+			}
+			else if (animationType == AnimationType::NPC) {
+				animateMovingObject(suitRect, posX, posY, suit.getLastPosition());
+			}
+		}
+
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			suit.getTexture(),
+			NULL, &suitRect,
+			0,
+			NULL, SDL_FLIP_NONE
+		);
+
 	}
 }
 

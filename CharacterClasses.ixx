@@ -798,22 +798,31 @@ public:
 	Character() : anchorLimbId(-1) {}
 	~Character() { }
 	Character(CharacterType characterType, SuitType suitType = SuitType::NoSuit) :
-		characterType(characterType), anchorLimbId(-1), suitType(suitType) {}
+		characterType(characterType), anchorLimbId(-1), suitType(suitType) 
+	{
+		texture = NULL;
+	}
 
 	/**/
 	Character(CharacterType characterType, vector<Limb> limbs, string name, SuitType suitType = SuitType::NoSuit) :
-		characterType(characterType), limbs(limbs), name(name), anchorLimbId(-1), suitType(suitType) {}
+		characterType(characterType), limbs(limbs), name(name), anchorLimbId(-1), suitType(suitType)
+	{
+		texture = NULL;
+	}
 
 	Character(CharacterType characterType, int x, int y, SuitType suitType = SuitType::NoSuit) :
-		characterType(characterType), blockPosition(x, y), lastBlockPosition(x, y), suitType(suitType) {
-
+		characterType(characterType), blockPosition(x, y), lastBlockPosition(x, y), suitType(suitType)
+	{
+		texture = NULL;
 	}
 
 	/* constructor for when hostile NPC MapCharacter is created. */
 	Character(int id, string name, int anchorLimbId, Point position, vector<Limb> limbs, SuitType suitType = SuitType::NoSuit) :
 		id(id), name(name), anchorLimbId(anchorLimbId), blockPosition(position),
 		lastBlockPosition(position), limbs(limbs), characterType(CharacterType::Hostile), suitType(suitType)
-	{ }
+	{
+		texture = NULL;
+	}
 
 	string getName() { return name; }
 	bool shiftChildLimb(int childLimbId);
@@ -834,6 +843,15 @@ public:
 	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 
+	int getBlockX() { return blockPosition.x; }
+	int getBlockY() { return blockPosition.y; }
+
+	int getLastX() { return lastBlockPosition.x; }
+	int getLastY() { return lastBlockPosition.y; }
+
+	Point getPosition() { return blockPosition; }
+	Point getLastPosition() { return lastBlockPosition; }
+
 	void setTexture(SDL_Texture* incomingTexture) {
 		if (texture && texture != NULL) {
 			SDL_DestroyTexture(texture);
@@ -841,6 +859,21 @@ public:
 		texture = incomingTexture;
 	}
 
+
+	void updateLastBlock() {
+		lastBlockPosition.x = blockPosition.x;
+		lastBlockPosition.y = blockPosition.y;
+	}
+
+	/* This can be MAP position or DRAW position. */
+	void moveToPosition(Point newPosition) {
+		lastBlockPosition = blockPosition;
+		blockPosition = newPosition;
+	}
+
+	void setBlockPosition(Point blockPosition) {
+		this->blockPosition = blockPosition;
+	}
 
 	void setId(int id) { this->id = id; }
 	void addLimb(Limb& newLimb) { limbs.emplace_back(newLimb); }
@@ -1156,7 +1189,7 @@ Limb& Character::getLimbById(int id) {
 		}
 	}
 
-	cout << "ERROR! LIMB NOT FOUND! MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!";
+	cout << "ERROR! LIMB NOT FOUND! MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!\n";
 	/* UNSAFE! DO NOT KEEP THIS! */
 	return limbs[0];
 }
