@@ -883,6 +883,7 @@ vector<Point> Map::buildMap() {
 	for (Landmark& landmark : landmarks) {
 		Point lPoint = landmark.getPosition();
 		rows[lPoint.y][lPoint.x].setIsPath(false);
+		rows[lPoint.y][lPoint.x].setIsFloor(true);
 
 		if (landmark.getType() == LandmarkType::Shrine) {
 			

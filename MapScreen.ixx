@@ -95,7 +95,8 @@ using namespace std;
 
 enum class AnimationType { Player, NPC, Collision, None }; /* This is about whose TURN it is. */
 
-
+/* To draw all suits in top corner for review. */
+const int DRAW_TEST_SUITS_IN_CORNER = false;
 
 /* Map Screen class: where we navigate worlds, dungeons, and buildings.
 * (Actually only worlds. Dungeons and buildings happen in sequel).
@@ -1132,14 +1133,14 @@ void MapScreen::animateMovingObject(SDL_Rect& rect, int blockPositionX, int bloc
 void MapScreen::drawSuits(UI& ui) {
 	SDL_Rect suitRect = { 0, 0, blockWidth, blockWidth };
 
-	int i = 0;
+	int testDrawIterator = 0;
 
 	for (Character& suit : map.getSuits()) {
 		Point position = suit.getPosition();
 
 		/* skip suits that are too far outside of the frame. (still draw them if they might fly onto the frame.) */
-		if (!blockIsDrawable(position)) {
-			//continue;
+		if (!blockIsDrawable(position) && !DRAW_TEST_SUITS_IN_CORNER) {
+			continue;
 		}
 
 		int posX = position.x;
@@ -1148,10 +1149,13 @@ void MapScreen::drawSuits(UI& ui) {
 		suitRect.x = (posX - drawStartX) * blockWidth + npcHeight;
 		suitRect.y = ((posY - drawStartY) * blockWidth) - suitOffsetY;
 
-		// TESTING (delete)
-		suitRect.x = i * blockWidth + npcHeight;
-		suitRect.y = 0;
-		++i;
+		/* To draw all suits in top corner for review. */
+		if (DRAW_TEST_SUITS_IN_CORNER) {
+			suitRect.x = testDrawIterator * blockWidth + npcHeight;
+			suitRect.y = 0;
+			++testDrawIterator;
+		}
+		
 
 		/* Synchronize with map during movement animations. */
 		if (animate) {
