@@ -800,7 +800,7 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 		if (
 			isInRange &&
 			newBlock.getIsFloor() &&
-			((!newBlock.getIsLandmarkArea()) && (!inLandmarkNow))
+			(!newBlock.getIsLandmarkArea() || inLandmarkNow)
 		) {
 			availablePositions.push_back(Point(pointX, newY));
 		}
@@ -815,7 +815,7 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 		if (
 			isInRange &&
 			newBlock.getIsFloor() &&
-			((!newBlock.getIsLandmarkArea()) && (!inLandmarkNow))
+			(!newBlock.getIsLandmarkArea() || inLandmarkNow)
 		) {
 			availablePositions.push_back(Point(pointX, newY));
 		}
@@ -830,7 +830,7 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 		if (
 			isInRange &&
 			newBlock.getIsFloor() &&
-			((!newBlock.getIsLandmarkArea()) && (!inLandmarkNow))
+			(!newBlock.getIsLandmarkArea() || inLandmarkNow)
 		) {
 			availablePositions.push_back(Point(newX, pointY));
 		}
@@ -844,7 +844,7 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 		if (
 			isInRange &&
 			newBlock.getIsFloor() &&
-			((!newBlock.getIsLandmarkArea()) && (!inLandmarkNow))
+			(!newBlock.getIsLandmarkArea() || inLandmarkNow)
 		) {
 			availablePositions.push_back(Point(newX, pointY));
 		}
@@ -874,24 +874,31 @@ bool MapScreen::moveLimb(Limb& roamingLimb) {
 	/* Get list of available blocks */
 	vector<Point> availablePositions;
 	vector<vector<Block>>& rows = map.getRows();
+	bool inLandmarkNow = rows[pointY][pointX].getIsLandmarkArea();
+
+	/* Make sure the new block is a floor and is not a landmark area. */
 
 	/* Check up. */
 	if (pointY > 0) {
-		if (rows[pointY - 1][pointX].getIsFloor()) {
+		Block& newBlock = rows[pointY - 1][pointX];
+		if (newBlock.getIsFloor() && (!newBlock.getIsLandmarkArea() || inLandmarkNow)) {
 			availablePositions.push_back(Point(pointX, pointY - 1)); } }
 
 	/* Check down. */
 	if ( pointY < vBlocksTotal) {
-		if (rows[pointY + 1][pointX].getIsFloor()) {
+		Block& newBlock = rows[pointY + 1][pointX];
+		if (newBlock.getIsFloor() && (!newBlock.getIsLandmarkArea() || inLandmarkNow)) {
 			availablePositions.push_back(Point(pointX, pointY + 1)); } }
 
 	/* Check left. */
 	if (pointX > 0) {
-		if (rows[pointY][pointX - 1].getIsFloor()) {
+		Block& newBlock = rows[pointY][pointX - 1];
+		if (newBlock.getIsFloor() && (!newBlock.getIsLandmarkArea() || inLandmarkNow)) {
 			availablePositions.push_back(Point(pointX - 1, pointY)); } }
 
 	if (pointX < hBlocksTotal) {
-		if (rows[pointY][pointX + 1].getIsFloor()) {
+		Block& newBlock = rows[pointY][pointX + 1];
+		if (newBlock.getIsFloor() && (!newBlock.getIsLandmarkArea() || inLandmarkNow)) {
 			availablePositions.push_back(Point(pointX + 1, pointY)); } }
 
 	if (availablePositions.size() > 0) {
