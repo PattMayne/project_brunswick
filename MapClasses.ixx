@@ -60,6 +60,7 @@ export struct LandmarkCollisionInfo {
 	bool hasCollided;
 	int subject;
 	LandmarkType type;
+
 	/* constructor */
 	LandmarkCollisionInfo(bool iHasCollided, LandmarkType iType, int iSubject) :
 		hasCollided(iHasCollided), subject(iSubject), type(iType) {
@@ -72,9 +73,9 @@ export struct LandmarkCollisionInfo {
 * Create smaller sub-paths so we aren't moving around totally randomly.
 */
 export struct SubPath {
-	int seed;
+	int seed; /* The length of the subpath (seeding a new floor). */
 	MapDirection direction;
-	int radius;
+	int radius; /* The size of the area to be cleared around the path. */
 
 	SubPath(int iSeed, MapDirection iDirection, int iRadius) {
 		direction = iDirection;
@@ -260,6 +261,7 @@ public:
 
 	void setId(int id) { this->id = id; }
 	void setCharacterId(int characterId) { this->characterId = characterId; }
+	void setPosition(Point position) { this->position = position; }
 
 	SDL_Texture* getTexture() { return texture; }
 	SuitType getSuitType() { return suitType; }
@@ -615,27 +617,164 @@ vector<Point> Map::buildMap() {
 	int pathX = (rand() % (mapForm.blocksWidth - 10)) + 5;
 	int pathY = static_cast<int>(rows.size()) - 2;
 
+	int endBlockX = (rand() % (mapForm.blocksWidth - 10)) + 5;
+
 	int playerX = pathX;
 	int playerY = pathY;
 
 	Block& startingBlock = rows[pathY][pathX];
-	startingBlock.setIsFloor(true);
+	Block& endingBlock = rows[1][endBlockX];
 
-	/* make the path */
+	startingBlock.setIsFloor(true);
+	endingBlock.setIsFloor(true);
+
+	/* make the first subpath (to lead us up from the entrance). */
 
 	SubPath subPath = SubPath(
-		(rand() % 5) + 2,
+		(rand() % 5) + 2, /* seed (length) */
 		MapDirection::Up,
-		(rand() % 3) + 1);
+		(rand() % 3) + 1); /* radius. */
 
 
-	/* Entrance landmark */
+	/* Entrance & Exit landmarks. */
+	landmarks.emplace_back(getExitLandmark(Point(endBlockX, 0)));
 	landmarks.emplace_back(getEntranceLandmark(Point(pathX, pathY)));
+
+	/*
+	* Give the Shrines each a location.
+	* Fill out SubPaths designed to work their way to each shrine, and then the exit.
+	* How?
+	* Create a vector of points, with the landmarks's locations excluding the Entrance.
+	* Make sure the Exit is the first one.
+	* The while loop runs while there are still locations to reach.
+	* Keep drawing subPaths in the direction of the top (last) location.
+	* When we reach that location, delete it from the vector and restart the subPath.
+	*/
+
+	vector<Point> pointsToReach;
+
+	/* First add the exit as the final one to find. */
+	for (Landmark& landmark : landmarks) {
+		if (landmark.getType() == LandmarkType::Exit) {
+			pointsToReach.push_back(landmark.getPosition());
+			break;
+		}
+	}
+
+	/* Now give the shrines positions, and add those positions to pointsToReach. */
+	for (Landmark& landmark : landmarks) {
+		if (landmark.getType() == LandmarkType::Shrine) {
+			//cout << "Landmark position: " << landmark.getPosition().x << ", " << landmark.getPosition().y << "\n";
+			int randX = (rand() % (mapForm.blocksWidth - 10)) + 5;
+			int randY = (rand() % (mapForm.blocksHeight - 10)) + 5;
+			landmark.setPosition(Point(randX, randY));
+
+			pointsToReach.push_back(landmark.getPosition());
+		}
+	}
+
+	cout << "There are " << pointsToReach.size() << " Points to reach\n";
 
 	vector<Point> floorPositions;
 
-	/* while loop makes the path */
-	while (pathY > 0) {
+	/* while loop makes the path.
+	* Keep drawing subPaths toward each pointsToReach Point until we reach (and delete) them all.
+	*/
+	while (pointsToReach.size() > 0) {
+		Point currentPoint = pointsToReach[pointsToReach.size() - 1];
+		Point pointToReach = Point(currentPoint.x, currentPoint.y);
+
+		/* refresh seed if needed. */
+		if (subPath.seed < 1) {
+			//cout << "Creating a new seed\n";
+
+			/*
+			* 3/4 times the direction should be toward the pointToReach.
+			* and 2/3 of those should be in the most distant direction.
+			* 
+			* Find out which directions are TOWARD the pointToReach,
+			* and from them, which is MOST distant.
+			*/
+
+			bool nextPointIsAbove = pathY > pointToReach.y;
+			bool nextPointIsLeft = pathX > pointToReach.x;
+
+			int verticalDistance = nextPointIsLeft ? pathX - pointToReach.x : pointToReach.x - pathX;
+			int horizontalDistance = nextPointIsAbove ? pathY - pointToReach.y : pointToReach.y - pathY;
+
+			vector<MapDirection> directionsLottery;
+
+			int mostNeededDirectionCount = 4;
+			int lessNeededDirectionCount = 2;
+			int wrongDirectionsEach = 1;
+
+			MapDirection favoriteDirection = MapDirection::Up;
+			MapDirection secondFavoriteDirection = MapDirection::Right;
+			MapDirection wrongDirection1 = MapDirection::Down;
+			MapDirection wrongDirection2 = MapDirection::Left;
+
+			if (verticalDistance > horizontalDistance) {
+				/* Add extra vertical options. */
+				if (nextPointIsAbove) {
+					favoriteDirection = MapDirection::Up;
+					wrongDirection1 = MapDirection::Down;
+				}
+				else {
+					favoriteDirection = MapDirection::Down;
+					wrongDirection1 = MapDirection::Up;
+				}
+
+				if (nextPointIsLeft) {
+					secondFavoriteDirection = MapDirection::Left;
+					wrongDirection2 = MapDirection::Right;
+				}
+				else {
+					secondFavoriteDirection = MapDirection::Right;
+					wrongDirection2 = MapDirection::Left;
+				}
+			}
+			else {
+				/* Add extra horizontal options. */
+				if (nextPointIsLeft) {
+					favoriteDirection = MapDirection::Left;
+					wrongDirection1 = MapDirection::Right;
+				}
+				else {
+					favoriteDirection = MapDirection::Right;
+					wrongDirection1 = MapDirection::Left;
+				}
+
+				if (nextPointIsAbove) {
+					secondFavoriteDirection = MapDirection::Up;
+					wrongDirection2 = MapDirection::Down;
+				}
+				else {
+					secondFavoriteDirection = MapDirection::Down;
+					wrongDirection2 = MapDirection::Up;
+				}
+			}
+
+			for (int i = 0; i < mostNeededDirectionCount; ++i) {
+				directionsLottery.push_back(favoriteDirection); }
+
+			for (int i = 0; i < lessNeededDirectionCount; ++i) {
+				directionsLottery.push_back(secondFavoriteDirection); }
+
+			for (int i = 0; i < wrongDirectionsEach; ++i) {
+				directionsLottery.push_back(wrongDirection1); }
+
+			for (int i = 0; i < wrongDirectionsEach; ++i) {
+				directionsLottery.push_back(wrongDirection2); }
+			
+			int directionLotteryIndex = rand() % directionsLottery.size();
+			subPath.direction = directionsLottery[directionLotteryIndex];
+
+			subPath.seed = (rand() % 12) + 1;
+			subPath.radius = rand() % 4;
+			//cout << "CREATED a new seed\n";
+		}
+
+		/* SubPaths get created at the top of the loop when the old one dies. Then blindly follow the one that exists. */
 
 		/* choose the next block to floorize */
 		switch (subPath.direction) {
@@ -681,16 +820,21 @@ vector<Point> Map::buildMap() {
 		floorPositions.push_back(Point(pathX, pathY));
 		--subPath.seed;
 
-		if (subPath.seed < 1) {
-			/* refresh seed */
-			subPath.direction = static_cast<MapDirection>(rand() % MapDirection::Total);
-			subPath.seed = (rand() % 12) + 1;
-			subPath.radius = rand() % 4;
+		if (pointToReach.x == pathX && pointToReach.y == pathY) {
+			cout << "Reached a point\n";
+			/* 
+			* We have reached the current (top) pointToReach.
+			* Delete the pointToReach.
+			*/
+
+			pointsToReach.erase(pointsToReach.begin() + pointsToReach.size() - 1);
+			subPath.seed = 0;
 		}
 	}
 
 	/* Create Exit landmark. */
-	landmarks.emplace_back(getExitLandmark(Point(pathX, pathY)));
+	// OLD PLACEHOLDER WAY: DELETE
+	//landmarks.emplace_back(getExitLandmark(Point(pathX, pathY)));
 
 	/* Set wall and floor texture indexes. */
 	for (int i = 0; i < rows.size(); ++i) {
