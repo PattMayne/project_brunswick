@@ -387,6 +387,7 @@ private:
 	vector<vector<Block>> rows;
 	void floorize(int x, int y, int radius, vector<Point>& floorPositions);
 	vector<Point> buildMap();
+	void spaceOutLandmarks();
 	vector<MapCharacter> NPCs;
 	MapCharacter playerCharacter;
 
@@ -560,6 +561,57 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 	}
 }
 
+/* For each landmark, compare its position with each other landmark. */
+void Map::spaceOutLandmarks() {
+	int minimumBlocksDistance = 6;
+	bool landmarksAreSpacedOut = true;
+
+	for (int i = 0; i < landmarks.size() - 1; ++i) {
+		Landmark& thisLandmark = landmarks[i];
+
+		/* Skip entrance and exit. */
+		if (thisLandmark.getType() == LandmarkType::Exit || thisLandmark.getType() == LandmarkType::Entrance) {
+			continue;
+		}
+
+		Point thisPosition = thisLandmark.getPosition();
+
+		for (int k = i + 1; k < landmarks.size() - 1; ++k) {
+			Landmark& thatLandmark = landmarks[k];
+			Point thatPosition = thatLandmark.getPosition();
+
+			/* get the x and y distances. */
+			int xDistance = thisPosition.x - thatPosition.x;
+			int yDistance = thisPosition.y - thatPosition.y;
+
+			if (xDistance < 0) {
+				xDistance *= -1;
+			}
+
+			if (yDistance < 0) {
+				yDistance *= -1;
+			}
+			
+			if (xDistance < minimumBlocksDistance && yDistance < minimumBlocksDistance) {
+				landmarksAreSpacedOut = false;
+
+				/* Give thisPoint new coordinates. */
+
+				int randX = (rand() % (mapForm.blocksWidth - 10)) + 5;
+				int randY = (rand() % (mapForm.blocksHeight - 10)) + 5;
+				thisLandmark.setPosition(Point(randX, randY));
+
+				break;
+			}
+		}
+		
+		if (!landmarksAreSpacedOut) { break; }
+	}
+
+	/* Recursively run this function with updated coordinates. */
+	if (!landmarksAreSpacedOut) { spaceOutLandmarks(); }
+}
+
 /*
 * Build the actual grid of Block objects.
 * Returns a vector of Points which are the coordinates for all Floor objects.
@@ -610,7 +662,7 @@ vector<Point> Map::buildMap() {
 	SubPath subPath = SubPath(
 		(rand() % 5) + 2, /* seed (length) */
 		MapDirection::Up,
-		(rand() % 3) + 1); /* radius. */
+		(rand() % 3) + 2); /* radius. */
 
 
 	/* Entrance & Exit landmarks. */
@@ -649,8 +701,9 @@ vector<Point> Map::buildMap() {
 		}
 	}
 
-	cout << "There are " << pointsToReach.size() << " Points to reach\n";
-
+	/* Make sure the shrines are far enough apart with a recursive function. */
+	spaceOutLandmarks();
+	
 	vector<Point> floorPositions;
 
 	/* while loop makes the path.
