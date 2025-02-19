@@ -285,13 +285,14 @@ export class Block {
 public:
 	/* constructor */
 	Block(bool isFloor = true)
-		: isFloor(isFloor), floorTextureIndex(0), isPath(false), pathFlipOption(0), pathRotateAngle(0), wallTextureIndex(0), pathTextureIndex(0) {
+		: isFloor(isFloor), floorTextureIndex(0), isPath(false), pathFlipOption(0),
+		pathRotateAngle(0), wallTextureIndex(0), pathTextureIndex(0), isLandmarkArea(false){
 		loaded = false;
 	}
 
 	/* Rebuilding block from DB. */
-	Block(int id, bool isFloor, bool isPath, bool isLooted) :
-		id(id), isFloor(isFloor), isPath(isPath), isLooted(isLooted)
+	Block(int id, bool isFloor, bool isPath, bool isLandmarkArea) :
+		id(id), isFloor(isFloor), isPath(isPath), isLandmarkArea(isLandmarkArea)
 	{
 		floorTextureIndex = 0;
 		pathFlipOption = 0;
@@ -303,14 +304,13 @@ public:
 
 	/* getters */
 	bool getIsFloor() { return isFloor; }
-	bool getIsLooted() { return isLooted; }
 	bool getIsLoaded() { return loaded; }
 
 	int getFloorTextureIndex() { return floorTextureIndex; }
-	void setFloorTextureIndex(int index) { floorTextureIndex = index; }
 	int getWallTextureIndex() { return wallTextureIndex; }
 	bool getWallIsFlipped() { return wallIsFlipped; }
 	bool getIsPath() { return isPath; }
+	bool getIsLandmarkArea() { return isLandmarkArea; }
 	int getPathFlipOption() { return pathFlipOption; }
 	int getPathRotateAngle() { return pathRotateAngle; }
 	int getPathTextureIndex() { return pathTextureIndex; }
@@ -325,24 +325,14 @@ public:
 	void setWallIsFlipped(bool flipWall) { wallIsFlipped = flipWall; }
 	void setPathTextureIndex(int index) { pathTextureIndex = index; }
 	void setId(int id) { this->id = id; }
-
-	void loot() {
-		isLooted = true;
-		/*
-		* When we have LIMB objects (imported from a different module)
-		* this will return a vector of Limb objects.
-		*
-		* Also... maybe it won't return it... because you can destroy a wall from afar
-		* and the Limb objects will scatter nearby.
-		*
-		* Maybe we need an isPath boolean, to draw a different kind of floor.
-		*/
-	}
+	void setFloorTextureIndex(int index) { floorTextureIndex = index; }
+	void setIsLandmarkArea(bool isLandmarkArea) {this->isLandmarkArea = isLandmarkArea; }
+	
 
 private:
 	bool isFloor;
-	bool isLooted;
 	bool isPath;
+	bool isLandmarkArea;
 	int pathFlipOption;
 	int pathRotateAngle;
 	int floorTextureIndex;
@@ -850,8 +840,9 @@ vector<Point> Map::buildMap() {
 
 		if (pointToReach.x == pathX && pointToReach.y == pathY) {
 			/* 
-			* We have reached the current (top) pointToReach.
+			* Path has reached the current (top) pointToReach.
 			* Delete the pointToReach.
+			* Next iteration will seek the next (new top) pointToReach.
 			*/
 
 			pointsToReach.erase(pointsToReach.begin() + pointsToReach.size() - 1);
@@ -884,32 +875,41 @@ vector<Point> Map::buildMap() {
 		Point lPoint = landmark.getPosition();
 		rows[lPoint.y][lPoint.x].setIsPath(false);
 		rows[lPoint.y][lPoint.x].setIsFloor(true);
+		rows[lPoint.y][lPoint.x].setIsLandmarkArea(true);
 
 		if (landmark.getType() == LandmarkType::Shrine) {
 			
 			rows[lPoint.y][lPoint.x - 1].setIsFloor(true);
 			rows[lPoint.y][lPoint.x - 1].setIsPath(false);
+			rows[lPoint.y][lPoint.x - 1].setIsLandmarkArea(true);
 
 			rows[lPoint.y][lPoint.x + 1].setIsFloor(true);
 			rows[lPoint.y][lPoint.x + 1].setIsPath(false);
+			rows[lPoint.y][lPoint.x + 1].setIsLandmarkArea(true);
 
 			rows[lPoint.y - 1][lPoint.x - 1].setIsFloor(true);
 			rows[lPoint.y - 1][lPoint.x - 1].setIsPath(false);
+			rows[lPoint.y - 1][lPoint.x - 1].setIsLandmarkArea(true);
 
 			rows[lPoint.y - 1][lPoint.x].setIsFloor(true);
 			rows[lPoint.y - 1][lPoint.x].setIsPath(false);
+			rows[lPoint.y - 1][lPoint.x].setIsLandmarkArea(true);
 
 			rows[lPoint.y - 1][lPoint.x + 1].setIsFloor(true);
 			rows[lPoint.y - 1][lPoint.x + 1].setIsPath(false);
+			rows[lPoint.y - 1][lPoint.x + 1].setIsLandmarkArea(true);
 
 			rows[lPoint.y + 1][lPoint.x - 1].setIsFloor(true);
 			rows[lPoint.y + 1][lPoint.x - 1].setIsPath(false);
+			rows[lPoint.y + 1][lPoint.x - 1].setIsLandmarkArea(true);
 
 			rows[lPoint.y + 1][lPoint.x].setIsFloor(true);
 			rows[lPoint.y + 1][lPoint.x].setIsPath(false);
+			rows[lPoint.y + 1][lPoint.x].setIsLandmarkArea(true);
 
 			rows[lPoint.y + 1][lPoint.x + 1].setIsFloor(true);
 			rows[lPoint.y + 1][lPoint.x + 1].setIsPath(false);
+			rows[lPoint.y + 1][lPoint.x + 1].setIsLandmarkArea(true);
 
 			/* Surround the cleared area with a path. */
 			rows[lPoint.y][lPoint.x - 2].setIsFloor(true);

@@ -1112,7 +1112,9 @@ export bool createNewMap(Map& map) {
     */
 
     /* Create statement for adding new Block object to the database. */
-    const char* insertBlockSQL = "INSERT INTO block (map_slug, position_x, position_y, is_floor, is_path) VALUES (?, ?, ?, ?, ?);";
+    const char* insertBlockSQL = "INSERT INTO block "
+        "(map_slug, position_x, position_y, is_floor, is_path, is_landmark_area) "
+        "VALUES (?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* blockStatement;
 
     /* Prepare the statement before starting the loop. */
@@ -1129,6 +1131,7 @@ export bool createNewMap(Map& map) {
     bool blockError = false;
     int isFloor = 0;
     int isPath = 0;
+    int isLandmarkArea = 0;
 
     for (int y = 0; y < map.getRows().size(); ++y) {
         vector<Block>& row = map.getRows()[y];
@@ -1139,12 +1142,15 @@ export bool createNewMap(Map& map) {
 
             isFloor = block.getIsFloor() ? 1 : 0;
             isPath = block.getIsPath() ? 1 : 0;
+            isLandmarkArea = block.getIsLandmarkArea() ? 1 : 0;
+
             /* Bind the data and execute the statement. */
             sqlite3_bind_text(blockStatement, 1, mapSlug, -1, SQLITE_STATIC);
             sqlite3_bind_int(blockStatement, 2, x);
             sqlite3_bind_int(blockStatement, 3, y);
             sqlite3_bind_int(blockStatement, 4, isFloor);
             sqlite3_bind_int(blockStatement, 5, isPath);
+            sqlite3_bind_int(blockStatement, 6, isLandmarkArea);
 
             if (sqlite3_step(blockStatement) == SQLITE_DONE) {
                 /* Get the ID of the saved item. */
@@ -1661,10 +1667,10 @@ export Map loadMap(string mapSlug) {
         int id = sqlite3_column_int(blocksStatement, 0);
         bool isFloor = sqlite3_column_int(blocksStatement, 4) == 1;
         bool isPath = sqlite3_column_int(blocksStatement, 5) == 1;
-        bool isLooted = sqlite3_column_int(blocksStatement, 6) == 1;
+        bool isLandmarkArea = sqlite3_column_int(blocksStatement, 6) == 1;
 
         if (positionY < rows.size() && positionX < rows[positionY].size()) {
-            rows[positionY][positionX] = Block(id, isFloor, isPath, isLooted);
+            rows[positionY][positionX] = Block(id, isFloor, isPath, isLandmarkArea);
         }
         else {
             cout << "Saved position out of bounds of map." << endl;

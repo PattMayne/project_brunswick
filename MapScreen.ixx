@@ -781,13 +781,27 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 	vector<Point> availablePositions;
 	vector<vector<Block>>& rows = map.getRows();
 	Point homePosition = npc.getHomePosition();
+	Block& currentBlock = rows[pointY][pointX];
+	bool inLandmarkNow = currentBlock.getIsLandmarkArea();
+
+	/*
+	* Check that the new block (up, down, left, or right):
+	* - is a floor.
+	* - is within range of the NPC's home block.
+	* - is not a landmark.
+	*/
 
 	/* Check up. */
 	if (pointY > 0) {
 		int newY = pointY - 1;
 		bool isInRange = getDiff(newY, homePosition.y) <= homeBaseRange;
+		Block& newBlock = rows[newY][pointX];
 
-		if (isInRange && rows[newY][pointX].getIsFloor()) {
+		if (
+			isInRange &&
+			newBlock.getIsFloor() &&
+			((!newBlock.getIsLandmarkArea()) && (!inLandmarkNow))
+		) {
 			availablePositions.push_back(Point(pointX, newY));
 		}
 	}
@@ -796,8 +810,13 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 	if (pointY < vBlocksTotal) {
 		int newY = pointY + 1;
 		bool isInRange = getDiff(newY, homePosition.y) <= homeBaseRange;
+		Block& newBlock = rows[newY][pointX];
 
-		if (isInRange && rows[newY][pointX].getIsFloor()) {
+		if (
+			isInRange &&
+			newBlock.getIsFloor() &&
+			((!newBlock.getIsLandmarkArea()) && (!inLandmarkNow))
+		) {
 			availablePositions.push_back(Point(pointX, newY));
 		}
 	}
@@ -806,8 +825,13 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 	if (pointX > 0) {
 		int newX = pointX - 1;
 		bool isInRange = getDiff(newX, homePosition.x) <= homeBaseRange;
+		Block& newBlock = rows[pointY][newX];
 
-		if (isInRange && rows[pointY][newX].getIsFloor()) {
+		if (
+			isInRange &&
+			newBlock.getIsFloor() &&
+			((!newBlock.getIsLandmarkArea()) && (!inLandmarkNow))
+		) {
 			availablePositions.push_back(Point(newX, pointY));
 		}
 	}
@@ -815,8 +839,13 @@ bool MapScreen::moveNPC(MapCharacter& npc) {
 	if (pointX < hBlocksTotal) {
 		int newX = pointX + 1;
 		bool isInRange = getDiff(newX, homePosition.x) <= homeBaseRange;
+		Block& newBlock = rows[pointY][newX];
 
-		if (isInRange && rows[pointY][newX].getIsFloor()) {
+		if (
+			isInRange &&
+			newBlock.getIsFloor() &&
+			((!newBlock.getIsLandmarkArea()) && (!inLandmarkNow))
+		) {
 			availablePositions.push_back(Point(newX, pointY));
 		}
 	}

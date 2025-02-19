@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS block (
     position_y INTEGER NOT NULL,
     is_floor INTEGER DEFAULT 0,
     is_path INTEGER DEFAULT 0,
-    is_looted INTEGER DEFAULT 0
+    is_landmark_area INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS landmark (
