@@ -1304,7 +1304,7 @@ export bool createNewMap(Map& map) {
     }
 
     /* Create the SUIT LIMB sql text and the statement. */
-    const char* insertSuitLimbSQL = "INSERT INTO limb (form_slug, character_id, name) VALUES (?, ?, ?);";
+    const char* insertSuitLimbSQL = "INSERT INTO limb (form_slug, character_id, name, map_slug) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* suitLimbStatement;
 
     /* Prepare the SUIT LIMB statement before starting the loop. */
@@ -1371,6 +1371,9 @@ export bool createNewMap(Map& map) {
             sqlite3_bind_text(suitLimbStatement, 1, formSlug, -1, SQLITE_STATIC);
             sqlite3_bind_int(suitLimbStatement, 2, suit.getId());
             sqlite3_bind_text(suitLimbStatement, 3, limbName, -1, SQLITE_STATIC);
+            sqlite3_bind_text(suitLimbStatement, 4, mapSlug, -1, SQLITE_STATIC);
+
+            limb.setMapSlug(slugString);
 
             if (sqlite3_step(suitLimbStatement) == SQLITE_DONE) {
                 /* Get the ID of the saved item. */
@@ -2027,6 +2030,7 @@ export Map loadMap(string mapSlug) {
             limb.setId(limbID);
 
             npcLimbs.push_back(limb);
+            sqlite3_finalize(queryNpcJointsStatement);
         }
 
         npcs.emplace_back(npcId, npcName, anchorLimbId, npcPosition, npcLimbs);
@@ -2034,6 +2038,198 @@ export Map loadMap(string mapSlug) {
     }
     
     sqlite3_finalize(queryNPCsStatement);
+
+
+
+    /*
+    *
+    *
+    *
+    *
+    * Get the Suits, and their LIMBS, and their JOINTS.
+    *
+    *
+    *
+    *
+    */
+
+    /* The Suits vector which will replace the default Suits that come with the MapForm. */
+    vector<Character> suits;
+
+    /* Create statement template for querying Character objects with this slug. */
+    const char* querySuitsSQL = "SELECT * FROM character WHERE map_slug = ? AND character_type = ?;";
+    sqlite3_stmt* querySuitsStatement;
+    returnCode = sqlite3_prepare_v2(db, querySuitsSQL, -1, &querySuitsStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare Suit retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return map;
+    }
+
+    /* Bind the slug anc character type values. */
+    sqlite3_bind_text(querySuitsStatement, 1, mapSlug.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(querySuitsStatement, 2, CharacterType::Suit);
+
+    /* Execute and iterate through results. */
+    while ((returnCode = sqlite3_step(querySuitsStatement)) == SQLITE_ROW) {
+        int suitId = sqlite3_column_int(querySuitsStatement, 0);
+
+        string suitName = stringFromUnsignedChar(sqlite3_column_text(querySuitsStatement, 1));
+        int anchorLimbId = sqlite3_column_int(querySuitsStatement, 2);
+        Point suitPosition = Point(
+            sqlite3_column_int(querySuitsStatement, 5),
+            sqlite3_column_int(querySuitsStatement, 6)
+        );
+
+        /*
+        *
+        *
+        *
+        * Now get all the Limbs for this Suit.
+        *
+        *
+        *
+        */
+
+        /* Create statement template for querying Map objects with this slug. */
+        const char* querySuitLimbsSQL = "SELECT * FROM limb WHERE character_id = ?;";
+        sqlite3_stmt* querySuitLimbsStatement;
+        int suitLimbReturnCode = sqlite3_prepare_v2(db, querySuitLimbsSQL, -1, &querySuitLimbsStatement, nullptr);
+
+        if (suitLimbReturnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare limbs retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return map;
+        }
+
+        /* Bind the id value. */
+        sqlite3_bind_int(querySuitLimbsStatement, 1, suitId);
+
+        vector<Limb> suitLimbs;
+
+        /* Execute and iterate through results. */
+        while ((suitLimbReturnCode = sqlite3_step(querySuitLimbsStatement)) == SQLITE_ROW) {
+
+            int limbID = sqlite3_column_int(querySuitLimbsStatement, 0);
+            LimbForm limbForm = getLimbForm(stringFromUnsignedChar(sqlite3_column_text(querySuitLimbsStatement, 1)));
+            string mapSlug = stringFromUnsignedChar(sqlite3_column_text(querySuitLimbsStatement, 3));
+            int hpMod = sqlite3_column_int(querySuitLimbsStatement, 4);
+            int strengthMod = sqlite3_column_int(querySuitLimbsStatement, 5);
+            int speedMod = sqlite3_column_int(querySuitLimbsStatement, 6);
+            int intelligenceMod = sqlite3_column_int(querySuitLimbsStatement, 7);
+            int posX = sqlite3_column_int(querySuitLimbsStatement, 8);
+            int posY = sqlite3_column_int(querySuitLimbsStatement, 9);
+            int rotationAngle = sqlite3_column_int(querySuitLimbsStatement, 10);
+            bool isAnchor = sqlite3_column_int(querySuitLimbsStatement, 11) == 1;
+            bool isFlipped = sqlite3_column_int(querySuitLimbsStatement, 12) == 1;
+            string limbName = stringFromUnsignedChar(sqlite3_column_text(querySuitLimbsStatement, 13));
+            int drawOrder = sqlite3_column_int(querySuitLimbsStatement, 14);
+
+            Point limbPosition = Point(posX, posY);
+
+            /* Get the JOINTS for this Limb. */
+            /* Start by querying the count to see how big the vector should be. */
+            const char* queryCountJointsSQL = "SELECT COUNT(*) FROM joint WHERE limb_id = ?;";
+            sqlite3_stmt* queryCountJointsStatement;
+            suitLimbReturnCode = sqlite3_prepare_v2(db, queryCountJointsSQL, -1, &queryCountJointsStatement, nullptr);
+
+            if (suitLimbReturnCode != SQLITE_OK) {
+                std::cerr << "Failed to prepare JOINTS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+                sqlite3_close(db);
+                return map;
+            }
+
+            sqlite3_bind_int(queryCountJointsStatement, 1, limbID);
+
+            /* Execute count query. */
+            int jointCount = 0;
+            if (sqlite3_step(queryCountJointsStatement) == SQLITE_ROW) {
+                jointCount = sqlite3_column_int(queryCountJointsStatement, 0);
+            }
+            sqlite3_finalize(queryCountJointsStatement);
+
+            /* Vector of the joints for the NPC (start with the correct size for index-based insertion). */
+            vector<Joint> joints(jointCount);
+
+            /* Now get the JOINTS themselves. */
+            const char* querySuitJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
+            sqlite3_stmt* querySuitJointsStatement;
+            suitLimbReturnCode = sqlite3_prepare_v2(db, querySuitJointsSQL, -1, &querySuitJointsStatement, nullptr);
+
+            if (suitLimbReturnCode != SQLITE_OK) {
+                std::cerr << "Failed to prepare SUIT LIMB retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+                sqlite3_close(db);
+                return map;
+            }
+
+            /* Bind the ID value. */
+            sqlite3_bind_int(querySuitJointsStatement, 1, limbID);
+            int jointsReturnCode;
+            while ((jointsReturnCode = sqlite3_step(querySuitJointsStatement)) == SQLITE_ROW) {
+                int jointID = sqlite3_column_int(querySuitJointsStatement, 0);
+                int vectorIndex = sqlite3_column_int(querySuitJointsStatement, 1);
+                Point pointForm = Point(
+                    sqlite3_column_int(querySuitJointsStatement, 3),
+                    sqlite3_column_int(querySuitJointsStatement, 4));
+                Point modifiedPoint = Point(
+                    sqlite3_column_int(querySuitJointsStatement, 5),
+                    sqlite3_column_int(querySuitJointsStatement, 6));
+                bool isAnchor = sqlite3_column_int(querySuitJointsStatement, 7) == 1;
+                int connectedLimbID = sqlite3_column_int(querySuitJointsStatement, 8);
+                int anchorJointIndex = sqlite3_column_int(querySuitJointsStatement, 9);
+
+                Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
+                if (vectorIndex < jointCount) { joints[vectorIndex] = joint; }
+            }
+
+            Limb limb = Limb(sqlite3_column_int(querySuitLimbsStatement, 0),
+                getLimbForm(stringFromUnsignedChar(sqlite3_column_text(querySuitLimbsStatement, 1))),
+                limbPosition,
+                joints,
+                drawOrder
+            );
+
+            limb.setName(limbName);
+            limb.modifyHP(hpMod);
+            limb.modifyStrength(strengthMod);
+            limb.modifySpeed(speedMod);
+            limb.modifyIntelligence(intelligenceMod);
+            limb.rotate(rotationAngle);
+            limb.setFlipped(isFlipped);
+            limb.setAnchor(isAnchor);
+            limb.setMapSlug(mapSlug);
+            limb.setCharacterId(suitId);
+            limb.setId(limbID);
+
+            suitLimbs.push_back(limb);
+
+            sqlite3_finalize(querySuitJointsStatement);
+        }
+
+        suits.emplace_back(suitId, suitName, anchorLimbId, suitPosition, suitLimbs);
+        sqlite3_finalize(querySuitLimbsStatement);
+    }
+
+    sqlite3_finalize(querySuitsStatement);
+
+    /* Replace mapForm suits with these loaded suits.
+    * First destroy all formSuit textures, then replace the objects altogether.
+    */
+
+    for (Character& formSuit : mapForm.suits) {
+        if (formSuit.getTexture() != NULL) {
+            SDL_DestroyTexture(formSuit.getTexture());
+        }
+
+        for (Limb& formSuitLimb : formSuit.getLimbs()) {
+            if (formSuitLimb.getTexture() != NULL) {
+                SDL_DestroyTexture(formSuitLimb.getTexture());
+            }
+        }
+    }
+
+    mapForm.suits = suits;
 
     /* Close DB. */
     sqlite3_close(db);

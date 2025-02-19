@@ -177,9 +177,13 @@ export class MapScreen {
 
 				/* Now that the map is saved to the DB, the Suits have their limbs.
 				* So we can equip their limbs and then save them.
+				* 
+				* Sort limbs by number of joints first.
 				*/
 
 				for (Character& suit : map.getSuits()) {
+					suit.sortLimbsByNumberOfJoints();
+
 					for (Limb& limb : suit.getLimbs()) {
 						suit.equipLimb(limb.getId());
 					}
@@ -289,7 +293,7 @@ export class MapScreen {
 
 		bool moveLimb(Limb& roamingLimb);
 		bool moveNPC(MapCharacter& npc);
-		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY);
+		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY, bool isSuit);
 		void animateMovingObject(SDL_Rect& rect, int blockPositionX, int blockPositionY, Point lastPosition);
 
 		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
@@ -366,6 +370,7 @@ export class MapScreen {
 		int homeBaseRange;
 		bool blockIsDrawable(Point position);
 		bool waitSpin;
+		int suitOffsetY;
 
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
@@ -436,6 +441,8 @@ void MapScreen::setViewResAndBlockWidth(UI& ui) {
 	blockWidth = ui.getWindowWidth() / xViewRes;
 	yViewRes = (ui.getWindowHeight() / blockWidth) + 1;
 	++xViewRes; /* give xViewRes an extra block so there's never blank space on the side of the screen (when half blocks get cut off. */
+
+	suitOffsetY = blockWidth / 4;
 
 	/* make animationIncrementFraction work based on blockWidth (preferably something fully divisible) */
 	if (animationIncrementFraction > blockWidth) {
@@ -916,7 +923,7 @@ void MapScreen::drawLandmarks(UI& ui) {
 			targetRect.y = (lY - drawStartY) * blockWidth;
 
 			if (animate && animationType == AnimationType::Player) {
-				animateMapBlockDuringPlayerMove(targetRect, lX, lY); }
+				animateMapBlockDuringPlayerMove(targetRect, lX, lY, false); }
 
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
@@ -940,8 +947,8 @@ void MapScreen::drawCharacters(UI& ui) {
 	*/
 	drawRoamingLimbs(ui);
 	drawNpcs(ui);
-	drawSuits(ui); /* TRICKY... I want it to be above the shrine's base... so ABOVE anything on the higher block. */
 	drawPlayerCharacter(ui);
+	drawSuits(ui);
 }
 
 void MapScreen::drawPlayerCharacter(UI& ui) {
@@ -1055,13 +1062,24 @@ void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX
 * which is set during every frame of the animation.
 * This function accepts a reference to the rect where we will draw the block (or limb, or NPC, or landmark texture)
 * onto the screen, and the positions of the block, use those positions to tell the rect where it must draw the block (or &etc).
+* 
+* It also applies to NPCs, Limbs, Shrines, and Suits.
 */
-void MapScreen::animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY) {
+void MapScreen::animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY, bool isSuit) {
 	/* Shifting DOWN or UP. */
 	if (drawStartY > lastDrawStartY) {
-		rect.y = ((blockPositionY - lastDrawStartY) * blockWidth) - blockAnimationIncrement; }
+		rect.y = ((blockPositionY - lastDrawStartY) * blockWidth) - blockAnimationIncrement;
+		if (isSuit) {
+			rect.y -= suitOffsetY;
+		}
+	}
 	else if (drawStartY < lastDrawStartY) {
-		rect.y = ((blockPositionY - lastDrawStartY) * blockWidth) + blockAnimationIncrement; }
+		rect.y = ((blockPositionY - lastDrawStartY) * blockWidth) + blockAnimationIncrement;
+		if (isSuit) {
+			rect.y -= suitOffsetY;
+		}
+	}
+
 
 	/* Shifting RIGHT or LEFT. */
 	if (drawStartX > lastDrawStartX) {
@@ -1125,12 +1143,12 @@ void MapScreen::drawSuits(UI& ui) {
 		int posY = position.y;
 
 		suitRect.x = (posX - drawStartX) * blockWidth + npcHeight;
-		suitRect.y = ((posY - drawStartY) * blockWidth);
+		suitRect.y = ((posY - drawStartY) * blockWidth) - suitOffsetY;
 
 		/* Synchronize with map during movement animations. */
 		if (animate) {
 			if (animationType == AnimationType::Player) {
-				animateMapBlockDuringPlayerMove(suitRect, posX, posY);
+				animateMapBlockDuringPlayerMove(suitRect, posX, posY, true);
 			}
 			else if (animationType == AnimationType::NPC) {
 				animateMovingObject(suitRect, posX, posY, suit.getLastPosition());
@@ -1171,7 +1189,7 @@ void MapScreen::drawNpcs(UI& ui) {
 		/* Synchronize with map during movement animations. */
 		if (animate) {
 			if (animationType == AnimationType::Player) {
-				animateMapBlockDuringPlayerMove(npcRect, posX, posY);
+				animateMapBlockDuringPlayerMove(npcRect, posX, posY, false);
 			}
 			else if (animationType == AnimationType::NPC) {
 				animateMovingObject(npcRect, posX, posY, npc.getLastPosition());
@@ -1213,7 +1231,7 @@ void MapScreen::drawRoamingLimbs(UI& ui) {
 
 		if (animate) {
 			if (animationType == AnimationType::Player) {
-				animateMapBlockDuringPlayerMove(limbRect, posX, posY); }
+				animateMapBlockDuringPlayerMove(limbRect, posX, posY, false); }
 			else if (animationType == AnimationType::NPC) {
 				animateMovingObject(limbRect, posX, posY, limb.getLastPosition()); } }		
 
