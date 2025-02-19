@@ -299,12 +299,18 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 
 	/* Equip Deer limbs. */
 
-	Character& deer = forestSuits[0];
+	Character& deer = forestSuits[0]; /* It's probably this one, but we'll still search and get it by suit type. */
+	for (Character& suit : forestSuits) {
+		if (suit.getSuitType() == SuitType::Deer) {
+			deer = suit;
+		}
+	}
 
 	/* Equip BODY first. */
 	for (Limb& limb : deer.getLimbs()) {
 		if (limb.getBodyPartType() == BodyPartType::Torso) {
 			deer.equipLimb(limb.getId());
+			break;
 		}
 	}
 
@@ -312,6 +318,7 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	for (Limb& limb : deer.getLimbs()) {
 		if (limb.getBodyPartType() == BodyPartType::Head) {
 			deer.equipLimb(limb.getId());
+			break;
 		}
 	}
 
@@ -319,6 +326,7 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	for (Limb& limb : deer.getLimbs()) {
 		if (limb.getFormSlug() == "deer_leg_4") {
 			deer.equipLimb(limb.getId());
+			break;
 		}
 	}
 
@@ -326,6 +334,7 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	for (Limb& limb : deer.getLimbs()) {
 		if (limb.getFormSlug() == "deer_leg_3") {
 			deer.equipLimb(limb.getId());
+			break;
 		}
 	}
 
@@ -333,6 +342,7 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	for (Limb& limb : deer.getLimbs()) {
 		if (limb.getFormSlug() == "deer_leg_1") {
 			deer.equipLimb(limb.getId());
+			break;
 		}
 	}
 
@@ -340,6 +350,7 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	for (Limb& limb : deer.getLimbs()) {
 		if (limb.getFormSlug() == "deer_leg_2") {
 			deer.equipLimb(limb.getId());
+			break;
 		}
 	}
 
@@ -347,6 +358,7 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	for (Limb& limb : deer.getLimbs()) {
 		if (limb.getFormSlug() == "deer_antler_1") {
 			deer.equipLimb(limb.getId());
+			break;
 		}
 	}
 
@@ -354,43 +366,227 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	for (Limb& limb : deer.getLimbs()) {
 		if (limb.getFormSlug() == "deer_antler_2") {
 			deer.equipLimb(limb.getId());
+			break;
 		}
 	}
-
-
 
 
 
 	/* Equip Bear limbs. */
 
 	Character& bear = forestSuits[1];
+	for (Character& suit : forestSuits) {
+		if (suit.getSuitType() == SuitType::Bear) {
+			bear = suit;
+		}
+	}
 
 	for (Limb& limb : bear.getLimbs()) {
-		bear.equipLimb(limb.getId());
+		if (limb.getBodyPartType() == BodyPartType::Torso) {
+			bear.equipLimb(limb.getId());
+			break;
+		}
 	}
+
+	for (Limb& limb : bear.getLimbs()) {
+		if (limb.getBodyPartType() == BodyPartType::Head) {
+			bear.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : bear.getLimbs()) {
+		if (limb.getFormSlug() == "bear_arm_left") {
+			bear.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : bear.getLimbs()) {
+		if (limb.getFormSlug() == "bear_arm_right") {
+			bear.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : bear.getLimbs()) {
+		if (limb.getFormSlug() == "bear_leg_left") {
+			bear.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : bear.getLimbs()) {
+		if (limb.getFormSlug() == "bear_leg_right") {
+			bear.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+
+
 
 	/* Equip Spider limbs. */
 
 	Character& spider = forestSuits[2];
+	for (Character& suit : forestSuits) {
+		if (suit.getSuitType() == SuitType::Spider) {
+			spider = suit;
+		}
+	}
 
 	for (Limb& limb : spider.getLimbs()) {
-		spider.equipLimb(limb.getId());
+		if (limb.getFormSlug() == "spider_body") {
+			spider.equipLimb(limb.getId());
+			break;
+		}
 	}
+
+	for (Limb& limb : spider.getLimbs()) {
+		if (limb.getFormSlug() == "spider_leg_3") {
+			spider.equipLimb(limb.getId());
+			break;
+		}
+	}
+	for (Limb& limb : spider.getLimbs()) {
+		if (limb.getFormSlug() == "spider_leg_2") {
+			spider.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : spider.getLimbs()) {
+		if (limb.getFormSlug() == "spider_leg_1") {
+			spider.equipLimb(limb.getId());
+			//limb.rotate(-15);
+			break;
+		}
+	}
+
+	for (Limb& limb : spider.getLimbs()) {
+		if (limb.getFormSlug() == "spider_leg_4") {
+			spider.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : spider.getLimbs()) {
+		if (limb.getFormSlug() == "spider_leg_5") {
+			spider.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : spider.getLimbs()) {
+		if (limb.getFormSlug() == "spider_leg_6") {
+			spider.equipLimb(limb.getId());
+			break;
+		}
+	}
+	
 
 	/* Equip Fairy limbs. */
 
 	Character& fairy = forestSuits[3];
+	for (Character& suit : forestSuits) {
+		if (suit.getSuitType() == SuitType::Fairy) {
+			fairy = suit;
+		}
+	}
 
 	for (Limb& limb : fairy.getLimbs()) {
-		fairy.equipLimb(limb.getId());
+		if (limb.getFormSlug() == "fairy_body") {
+			fairy.equipLimb(limb.getId());
+			break;
+		}
 	}
+
+	for (Limb& limb : fairy.getLimbs()) {
+		if (limb.getFormSlug() == "fairy_head") {
+			fairy.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : fairy.getLimbs()) {
+		if (limb.getFormSlug() == "fairy_arm_left") {
+			fairy.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : fairy.getLimbs()) {
+		if (limb.getFormSlug() == "fairy_wing_left") {
+			fairy.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : fairy.getLimbs()) {
+		if (limb.getFormSlug() == "fairy_leg_left") {
+			fairy.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : fairy.getLimbs()) {
+		if (limb.getFormSlug() == "fairy_leg_right") {
+			fairy.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : fairy.getLimbs()) {
+		if (limb.getFormSlug() == "fairy_wing_right") {
+			fairy.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : fairy.getLimbs()) {
+		if (limb.getFormSlug() == "fairy_arm_right") {
+			fairy.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+
 
 	/* Equip Owl limbs. */
 
 	Character& owl = forestSuits[4];
+	for (Character& suit : forestSuits) {
+		if (suit.getSuitType() == SuitType::Owl) {
+			owl = suit;
+		}
+	}
 
 	for (Limb& limb : owl.getLimbs()) {
-		owl.equipLimb(limb.getId());
+		if (limb.getFormSlug() == "owl_body") {
+			owl.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : owl.getLimbs()) {
+		if (limb.getFormSlug() == "owl_head") {
+			owl.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : owl.getLimbs()) {
+		if (limb.getFormSlug() == "owl_wing_right") {
+			owl.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : owl.getLimbs()) {
+		if (limb.getFormSlug() == "owl_wing_left") {
+			owl.equipLimb(limb.getId());
+			break;
+		}
 	}
 
 

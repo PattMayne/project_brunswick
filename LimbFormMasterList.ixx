@@ -188,7 +188,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Spider Body", "spider_body",
 			7, 8, 6, 4,
 			DominanceNode::Green, "data/maps/forest/spider_body.png",
-			{ Point(30, 101), Point(41, 139), Point(76, 183), Point(115, 182), Point(153, 155), Point(173, 106) },
+			{ Point(28, 101), Point(37, 139), Point(58, 161), Point(115, 182), Point(153, 155), Point(173, 106) },
 			BodyPartType::Torso);
 		};
 
