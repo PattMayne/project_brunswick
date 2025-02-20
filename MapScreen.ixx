@@ -610,8 +610,9 @@ export void MapScreen::run() {
 				* The order matters.
 				*/
 
+				/* NPC collects new limb. It's the NPC's move, so they gather the limb instead of Player (if on same block). */
+				checkNpcOnLimbCollision(); 
 				/* Check LIMBs colliding with each other. IF they form an NPC on the player's block, the player fights the NPC. */
-				checkNpcOnLimbCollision(); /* NPC collects new limb. It's the NPC's move, so they gather the limb instead of Player (if on same block). */
 				checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
 				checkPlayerLimbCollision(); /* Player collects new limb. */
 				checkPlayerNpcCollision(); /* Go to battle screen. */
@@ -1467,10 +1468,12 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 
 						vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 
+						/* Cycle down from the top in case we get a match and need to remove limb from vector. */
 						for (int u = playerLimbs.size() - 1; u >= 0; --u) {
 							Limb& playerLimb = playerLimbs[u];
 							if (playerLimb.isEquipped()) { continue; }
 
+							bool isMatch = false;
 							vector<Limb>& suitLimbs = suit.getLimbs();
 
 							for (int s = 0; s < suitLimbs.size(); ++s) {
@@ -1478,15 +1481,24 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 
 								/* is it a match? */
 								if (suitLimb.getForm().slug == playerLimb.getForm().slug) {
-									cout << "MATCHING LIMB " << playerLimb.getForm().slug << "\n";
-
-									if (suitLimb.getUnscrambled()) {
-										// continue
-										cout << "Already unscrambled " << suitLimb.getName() << "\n";
+									if (!suitLimb.getUnscrambled()) {
+										unscrambleLimb(suitLimb);
+										suit.setTexture(suit.createAvatar());
+										isMatch = true; /* Flag to deal with the playerLimb. */
 									}
-
-									unscrambleLimb(suitLimb);
 								}
+
+							}
+
+							if (isMatch) {
+								/* 
+								* Erase this limb from player inventory.
+								* Destroy texture.
+								* Erase from DB.
+								*/
+								deleteLimb(playerLimb.getId());
+								SDL_DestroyTexture(playerLimb.getTexture());
+								playerLimbs.erase(playerLimbs.begin() + u);
 							}
 						}
 					}
@@ -1584,6 +1596,10 @@ struct CollidedLimbsStruct {
 * Any on the same block form a new NPC.
 */
 bool MapScreen::checkLimbOnLimbCollision() {
+	vector<Limb>& roamingLimbs = map.getRoamingLimbs();
+
+	if (roamingLimbs.size() < 2) { return false; }
+
 	vector<CollidedLimbsStruct> collidedLimbsStructs;
 	vector<int> collidedIDs; /* Only add the COMPARED ids, not Base Limbs. To skip comparisons for already-collided limbs. */
 	bool collisionFound = false;
@@ -1594,8 +1610,6 @@ bool MapScreen::checkLimbOnLimbCollision() {
 	* Start at [0] (and skip last item) and check each limb of HIGHER index for a match (with a nested loop).
 	* If a match is found, create a CollidedLimbsStruct with both ids (and their Point), and add the HIGHER id to the alreadyCheckedIds vec to skip later.
 	*/
-
-	vector<Limb>& roamingLimbs = map.getRoamingLimbs();
 
 	for (int i = 0; i < roamingLimbs.size() - 1; ++i) {
 		Limb baseLimb = roamingLimbs[i];

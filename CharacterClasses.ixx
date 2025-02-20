@@ -980,8 +980,6 @@ void Character::buildDrawLimbList() {
 	sortLimbsByDrawOrder();
 	int drawOrder = 0;
 
-	cout << "Drawing " << getName() << " whose suit type integer is " << getSuitType() << "\n";
-
 	for (Limb& limb : limbs) {
 		/* Skip unscrambled Suit limbs. */
 		if (suitType != SuitType::NoSuit && !limb.getUnscrambled()) { continue; }
