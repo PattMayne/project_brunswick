@@ -239,6 +239,11 @@ export class MapScreen {
 			npcHeight = 0;
 			homeBaseRange = 5;
 			waitSpin = false;
+
+			settingsPanel = ui.createSettingsPanel(ScreenType::Map);
+			gameMenuPanel = ui.createGameMenuPanel();
+			settingsPanel.setShow(false);
+			gameMenuPanel.setShow(true);
 		}
 
 		/* Destructor */
@@ -293,17 +298,17 @@ export class MapScreen {
 		void drawSuits(UI& ui);
 		void drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX, int charDrawY);
 		void drawLandmarkAcquiredLimbs(UI& ui, Landmark& landmark, int lDrawX, int lDrawY);
-		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
+		void draw(UI& ui);
 
 		bool moveLimb(Limb& roamingLimb);
 		bool moveNPC(MapCharacter& npc);
 		void animateMapBlockDuringPlayerMove(SDL_Rect& rect, int blockPositionX, int blockPositionY, bool isSuit);
 		void animateMovingObject(SDL_Rect& rect, int blockPositionX, int blockPositionY, Point lastPosition);
 
-		void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
-		void handleMousedown(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel);
+		void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
+		void handleMousedown(SDL_Event& e, bool& running);
 		void handleKeydown(SDL_Event& e);
-		void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel);
+		void checkMouseLocation(SDL_Event& e);
 
 		void buildMapDisplay();
 		void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
@@ -379,6 +384,10 @@ export class MapScreen {
 		/* still need looted wall texture, looted floor texture, character texture (this actually will be in character object).
 		* The NPCs (in a vactor) will each have their own textures, and x/y locations.
 		*/
+
+		/* panels */
+		Panel settingsPanel;
+		Panel gameMenuPanel;
 };
 
 
@@ -518,19 +527,6 @@ export void MapScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
-	/* panels */
-	Panel settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-	Panel gameMenuPanel = ui.createGameMenuPanel();
-	settingsPanel.setShow(false);
-	gameMenuPanel.setShow(true);
-
-	/*
-	* PANELS TO COME:
-	* * navigation panel
-	* * small horizontal panel with buttons to toggle settings panel and nav panel
-	* * mini-map
-	* * stats
-	*/
 
 	/* Timeout data */
 	const int TARGET_FPS = 120;
@@ -626,7 +622,7 @@ export void MapScreen::run() {
 				!animate && !startNpcAnimation && /* Drop any events during the animations. */
 				(e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_KEYDOWN) /* Actual events to respond to. */
 			) {
-				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
+				handleEvent(e, running, gameState);
 			}
 		}
 
@@ -641,8 +637,8 @@ export void MapScreen::run() {
 				showTitle = false; }
 		}
 
-		checkMouseLocation(e, settingsPanel, gameMenuPanel);
-		draw(ui, settingsPanel, gameMenuPanel);
+		checkMouseLocation(e);
+		draw(ui);
 
 		/* Delay so the app doesn't just crash */
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; /* Calculate how long the frame took to process. */
@@ -895,7 +891,7 @@ bool MapScreen::moveLimb(Limb& roamingLimb) {
 }
 
 /* The main DRAW function, which calls the more-specific Draw functions. */
-void MapScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
+void MapScreen::draw(UI& ui) {
 	unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
@@ -1982,7 +1978,7 @@ void MapScreen::waitTurn() {
 
 
 /* Process user input */
-void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState) {
+void MapScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) {
 		cout << "\nQUIT\n";
@@ -1994,7 +1990,7 @@ void MapScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, P
 			handleKeydown(e);
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN) {
-			handleMousedown(e, running, settingsPanel, gameMenuPanel);
+			handleMousedown(e, running);
 		}
 	}
 }
@@ -2035,7 +2031,7 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 
 
 /* User clicked the mouse. */
-void MapScreen::handleMousedown(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel) {
+void MapScreen::handleMousedown(SDL_Event& e, bool& running) {
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 
@@ -2093,7 +2089,7 @@ void MapScreen::handleMousedown(SDL_Event& e, bool& running, Panel& settingsPane
 	}
 }
 
-void MapScreen::checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel) {
+void MapScreen::checkMouseLocation(SDL_Event& e) {
 	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
