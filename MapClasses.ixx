@@ -378,6 +378,7 @@ private:
 	void floorize(int x, int y, int radius, vector<Point>& floorPositions);
 	vector<Point> buildMap();
 	void spaceOutLandmarks();
+	void removeRoamingLimbsFromLandmarks();
 	vector<MapCharacter> NPCs;
 	MapCharacter playerCharacter;
 
@@ -456,7 +457,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	/* populate characters and limbs after building the map(and its landmarks). */
 	nativeLimbForms = getMapLimbs(mapForm.mapLevel);
 
-	/* FOR NOW I have random number of copies of each native limb */
+	/* Populate the map with RoamingLimbs. */
 	for (LimbForm& limbForm : nativeLimbForms) {
 		int numberOfThisLimb = 4;
 
@@ -467,35 +468,9 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 			newLimb.setLastPosition(newPosition);
 		}
 	}
-
-
-	/*
-	* 
-	* Time to incorporate SUITS.
-	* 
-	* 1. Fill out the rest of the nativeLimbForms.
-	* 
-	* 2. Map gets a vector of Characters, called "suits" or "nativeSuits".
-	* 3. Create one Shrine for every Suit.
-	* --> Maybe there is no vector of Suits, instead a Shrine object which contains a Suit.
-	* --> Shrine also holds a vector of structs (or unordered_maps) which connect limbId with true/false for "retrieved".
-	* 4. Floor draw pattern goes from entrance, through each shrine, to the exit.
-	* --> Sometimes it goes slightly off-course, for variation.
-	* --> Also draw other random paths, some with "isPath" paths, sometimes not.
-	* 5. Save Suit character to the database.
-	* --> Character needs a new column called isSuit.
-	* --> Limb needs a new column called isRetrieved.
-	* -----> Maybe these should be relational tables, to keep from bogging down these other tables with rarely-used columns.
-	* 
-	* 
-	*/
 }
 
-/* Map class constructor to rebuild map from DB data.
-*		TO DO:
-* -----> Add Landmarks
-* -----> Add NPCs
-*/
+/* Map class constructor to rebuild map from DB data. */
 Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition, vector<MapCharacter> hostileNpcs) :
 	mapForm(mapForm), roamingLimbs(roamingLimbs), rows(rows), NPCs(hostileNpcs) {
 
@@ -549,6 +524,11 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 			}
 		}
 	}
+}
+
+/* For each NPC, if they're on a landmark, */
+void Map::removeRoamingLimbsFromLandmarks() {
+
 }
 
 /* For each landmark, compare its position with each other landmark. */
@@ -722,7 +702,6 @@ vector<Point> Map::buildMap() {
 
 			vector<MapDirection> directionsLottery;
 
-			/* Still not sure if this works properly. */
 			int mostNeededDirectionCount = 50;
 			int lessNeededDirectionCount = 5;
 			int wrongDirectionsEach = 1;
@@ -968,6 +947,19 @@ vector<Point> Map::buildMap() {
 	SDL_FreeSurface(characterSurface);
 	playerCharacter = MapCharacter(CharacterType::Player, playerX, playerY);
 	playerCharacter.setTexture(characterTexture);
+
+	vector<Point> removedPoints;
+
+	/* Remove landmark areas from Floor Positions. */
+	for (int i = floorPositions.size() - 1; i >= 0; --i) {
+		Point floorPosition = floorPositions[i];
+		Block& floorBlock = rows[floorPosition.y][floorPosition.x];
+
+		if (floorBlock.getIsLandmarkArea()) {
+			removedPoints.push_back(floorPosition);
+			floorPositions.erase(floorPositions.begin() + i);
+		}
+	}
 
 	return floorPositions;
 }
