@@ -48,10 +48,11 @@ export struct AcquiredLimb {
 	SDL_Texture* texture;
 	int countdown;
 	int rotationAngle;
+	int rotationAngleIncrement;
 	SDL_Rect diffRect;
 
-	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect diffRect) :
-		texture(texture), countdown(countdown), rotationAngle(rotationAngle), diffRect(diffRect) {
+	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect diffRect, int rotationIncrement) :
+		texture(texture), countdown(countdown), rotationAngle(rotationAngle), diffRect(diffRect), rotationAngleIncrement(rotationIncrement) {
 	}
 };
 
@@ -242,10 +243,12 @@ public:
 	void setId(int id) { this->id = id; }
 	void setCharacterId(int characterId) { this->characterId = characterId; }
 	void setPosition(Point position) { this->position = position; }
+	void clearAcquiredLimbStructs() { acquiredLimbStructs = {}; }
 
 	SDL_Texture* getTexture() { return texture; }
 	SuitType getSuitType() { return suitType; }
 
+	vector<AcquiredLimb>& getAcquiredLimbStructs() { return acquiredLimbStructs; }
 	LandmarkCollisionInfo checkCollision(Point pos) { return checkCollision(pos.x, pos.y); }
 	LandmarkCollisionInfo checkCollision(int x, int y) {
 		if (x == position.x && y == position.y) {
@@ -263,6 +266,7 @@ private:
 	LandmarkType landmarkType;
 	int characterId; /* This can be either the MAP id or the SUIT slug??? Needs re-thinking! */
 	SuitType suitType;
+	vector<AcquiredLimb> acquiredLimbStructs;
 };
 
 export Landmark getExitLandmark(Point position) {

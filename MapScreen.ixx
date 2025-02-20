@@ -291,7 +291,8 @@ export class MapScreen {
 		void drawRoamingLimbs(UI& ui);
 		void drawNpcs(UI& ui);
 		void drawSuits(UI& ui);
-		void drawAcquiredLimbs(UI& ui, MapCharacter& character, int drawX, int drawY);
+		void drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX, int charDrawY);
+		void drawLandmarkAcquiredLimbs(UI& ui, Landmark& landmark, int lDrawX, int lDrawY);
 		void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
 
 		bool moveLimb(Limb& roamingLimb);
@@ -951,6 +952,8 @@ void MapScreen::drawLandmarks(UI& ui) {
 				landmark.getTexture(),
 				NULL, &targetRect,
 				0, NULL, SDL_FLIP_NONE);
+
+			drawLandmarkAcquiredLimbs(ui, landmark, targetRect.x, targetRect.y);
 		}
 	}
 }
@@ -1042,7 +1045,7 @@ void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX
 		* The actual rect is based on the character's current location block, altered by those differentials.
 		*/
 
-		aLimbStruct.rotationAngle += 7;
+		aLimbStruct.rotationAngle += aLimbStruct.rotationAngleIncrement;
 
 		if (aLimbStruct.countdown > 25) {
 			/* Growing BIGGER slowly. */
@@ -1062,6 +1065,62 @@ void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX
 		SDL_Rect limbRect = {
 			charDrawX + aLimbStruct.diffRect.x,
 			charDrawY + aLimbStruct.diffRect.y,
+			blockWidth + aLimbStruct.diffRect.w,
+			blockWidth + aLimbStruct.diffRect.h
+		};
+
+		SDL_RenderCopyEx(
+			ui.getMainRenderer(),
+			aLimbStruct.texture,
+			NULL, &limbRect,
+			aLimbStruct.rotationAngle, NULL, SDL_FLIP_NONE
+		);
+
+		--aLimbStruct.countdown;
+	}
+}
+
+/* When a Landmark collects limbs from the player, animate them with this. */
+void MapScreen::drawLandmarkAcquiredLimbs(UI& ui, Landmark& landmark, int lDrawX, int lDrawY) {	
+	vector<AcquiredLimb>& acquiredLimbStructs = landmark.getAcquiredLimbStructs();
+
+	for (int i = acquiredLimbStructs.size() - 1; i >= 0; --i) {
+		AcquiredLimb& aLimbStruct = acquiredLimbStructs[i];
+
+		/* If the countdown is finished, or if the draw rect will be too small, remove this limb from the queue. */
+		if (aLimbStruct.countdown < 1 || aLimbStruct.diffRect.w < ((blockWidth - 3) * -1)) {
+			acquiredLimbStructs.erase(acquiredLimbStructs.begin() + i);
+			continue;
+		}
+
+		/*
+		* Increment the angle so it spins during the whole animation.
+		* Make the limb grow large quickly for the first part of the animation countdown.
+		* Then make the limb shrink more quickly.
+		* Size differentials are stored in the acquired limb struct.
+		* The actual rect is based on the character's current location block, altered by those differentials.
+		*/
+
+		aLimbStruct.rotationAngle += aLimbStruct.rotationAngleIncrement;
+
+		if (aLimbStruct.countdown > 25) {
+			/* Growing BIGGER slowly. */
+			aLimbStruct.diffRect.x -= 2;
+			aLimbStruct.diffRect.y -= 2;
+			aLimbStruct.diffRect.w += 4;
+			aLimbStruct.diffRect.h += 4;
+		}
+		else {
+			/* Growing SMALLER quickly. */
+			aLimbStruct.diffRect.x += 4;
+			aLimbStruct.diffRect.y += 4;
+			aLimbStruct.diffRect.w -= 8;
+			aLimbStruct.diffRect.h -= 8;
+		}
+
+		SDL_Rect limbRect = {
+			lDrawX + aLimbStruct.diffRect.x,
+			lDrawY + aLimbStruct.diffRect.y,
 			blockWidth + aLimbStruct.diffRect.w,
 			blockWidth + aLimbStruct.diffRect.h
 		};
@@ -1450,7 +1509,7 @@ void MapScreen::decrementCountdown() {
 
 bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharacter) {
 	bool landmarkCollided = false;
-	for (Landmark landmark : map.getLandmarks()) {
+	for (Landmark& landmark : map.getLandmarks()) {
 		LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
 
 		if (collisionInfo.hasCollided) {
@@ -1485,9 +1544,19 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										unscrambleLimb(suitLimb);
 										suit.setTexture(suit.createAvatar());
 										isMatch = true; /* Flag to deal with the playerLimb. */
+										int rotationAngleIncrement = (rand() % 2) == 0 ? 4 : -4;
+
+										/* create acquiredLimbStruct for the animation. */
+										SDL_Rect diffRect = { 0, 0, 0, 0 };
+										landmark.getAcquiredLimbStructs().emplace_back(
+											suitLimb.getTexture(),
+											limbCollisionCountdown,
+											0,
+											diffRect,
+											rotationAngleIncrement
+										);
 									}
 								}
-
 							}
 
 							if (isMatch) {
@@ -1543,7 +1612,8 @@ bool MapScreen::checkNpcOnLimbCollision() {
 						roamingLimb.getTexture(),
 						limbCollisionCountdown,
 						roamingLimb.getRotationAngle(),
-						diffRect
+						diffRect,
+						7
 					);
 				}
 				
@@ -1708,7 +1778,8 @@ bool MapScreen::checkLimbOnLimbCollision() {
 							limb.getTexture(),
 							limbCollisionCountdown,
 							limb.getRotationAngle(),
-							diffRect
+							diffRect,
+							7
 						);
 					}
 
@@ -1792,7 +1863,8 @@ bool MapScreen::checkPlayerLimbCollision() {
 				thisLimb.getTexture(),
 				limbCollisionCountdown,
 				thisLimb.getRotationAngle(),
-				diffRect
+				diffRect,
+				7
 			);
 
 			/* Remove from list at the end to avoid changing the item referenced by i. */
