@@ -407,6 +407,7 @@ export class Limb {
 		bool shiftJointOfLimb(int limbId);
 		bool shiftAnchorLimb();
 
+		void setUnscrambled(bool isUnscrambled) { this->isUnscrambled = isUnscrambled; }
 		void setAnchorJointId();
 		void setDrawOrder(int newDrawOrder) { this->drawOrder = newDrawOrder; }
 		void setId(int id) { this->id = id; }
@@ -979,7 +980,12 @@ void Character::buildDrawLimbList() {
 	sortLimbsByDrawOrder();
 	int drawOrder = 0;
 
+	cout << "Drawing " << getName() << " whose suit type integer is " << getSuitType() << "\n";
+
 	for (Limb& limb : limbs) {
+		/* Skip unscrambled Suit limbs. */
+		if (suitType != SuitType::NoSuit && !limb.getUnscrambled()) { continue; }
+
 		if (limb.isEquipped()) {
 			addToDrawLimbList(limb.getId());
 			limb.setDrawOrder(drawOrder);
@@ -1096,7 +1102,9 @@ SDL_Texture* Character::createAvatar() {
 	/* The search is finished. Set the final dimensions based on the boundaries. */
 	dimStruct.avatarWidth = dimStruct.rightmost - dimStruct.leftmost;
 	dimStruct.avatarHeight = dimStruct.bottommost - dimStruct.topmost;
-	dimStruct.greaterDimension = dimStruct.avatarHeight > dimStruct.avatarWidth ? dimStruct.avatarHeight : dimStruct.avatarWidth;
+
+	dimStruct.greaterDimension = dimStruct.avatarHeight > dimStruct.avatarWidth ?
+		dimStruct.avatarHeight : dimStruct.avatarWidth;
 
 	/* Now build the actual avatar.
 	* We will draw (render) the limb textures to an off-screen texture,

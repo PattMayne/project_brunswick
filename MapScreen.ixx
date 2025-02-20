@@ -278,6 +278,7 @@ export class MapScreen {
 		bool checkPlayerLimbCollision(); /* Limb-on-player collision. */
 		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
 		bool checkNpcOnLimbCollision();
+		bool checkLandmarkCollision(bool& running, MapCharacter& playerCharacter);
 
 	private:
 		ScreenType screenType;
@@ -586,25 +587,8 @@ export void MapScreen::run() {
 				/* collisions with LANDMARK: */
 
 				MapCharacter& playerCharacter = map.getPlayerCharacter();
-				
-				for (Landmark landmark : map.getLandmarks()) {
-					LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
-					
-					if (collisionInfo.hasCollided) {
-						cout << "HIT LANDMARK\n";
-						landmarkCollided = true;
 
-						if (collisionInfo.type == LandmarkType::Exit) {
-							cout << "EXITING\n";
-							running = false;
-						}
-						else if (collisionInfo.type == LandmarkType::Entrance) {
-							cout << "YOU CANNOT LEAVE THIS WAY\n";
-							/* TO DO: animate PUSHING the character OFF the entrance??? */
-						}
-					}					
-				}
-
+				landmarkCollided = checkLandmarkCollision(running, playerCharacter); /* Player landed on landmark. */
 				checkPlayerLimbCollision(); /* Player collects limb. */
 
 				 /* Collisions with NPCs */
@@ -1461,6 +1445,65 @@ void MapScreen::decrementCountdown() {
 		--animationCountdown; }
 	else {
 		animationCountdown = 0;}
+}
+
+bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharacter) {
+	bool landmarkCollided = false;
+	for (Landmark landmark : map.getLandmarks()) {
+		LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
+
+		if (collisionInfo.hasCollided) {
+			cout << "HIT LANDMARK\n";
+			landmarkCollided = true;
+
+			if (collisionInfo.type == LandmarkType::Shrine) {
+				cout << "Hit a SHRINE\n";
+
+				for (Character& suit : map.getSuits()) {
+					if (suit.getId() == landmark.getCharacterId()) {
+						cout << "Hit shrine for " << suit.getName() << "\n";
+
+						/* Check each of the Suit's limbs against the player's non-equipped limbs. */
+
+						vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+
+						for (int u = playerLimbs.size() - 1; u >= 0; --u) {
+							Limb& playerLimb = playerLimbs[u];
+							if (playerLimb.isEquipped()) { continue; }
+
+							vector<Limb>& suitLimbs = suit.getLimbs();
+
+							for (int s = 0; s < suitLimbs.size(); ++s) {
+								Limb& suitLimb = suitLimbs[s];
+
+								/* is it a match? */
+								if (suitLimb.getForm().slug == playerLimb.getForm().slug) {
+									cout << "MATCHING LIMB " << playerLimb.getForm().slug << "\n";
+
+									if (suitLimb.getUnscrambled()) {
+										// continue
+										cout << "Already unscrambled " << suitLimb.getName() << "\n";
+									}
+
+									unscrambleLimb(suitLimb);
+								}
+							}
+						}
+					}
+				}
+
+			} else if (collisionInfo.type == LandmarkType::Exit) {
+				cout << "EXITING\n";
+				running = false;
+			}
+			else if (collisionInfo.type == LandmarkType::Entrance) {
+				cout << "YOU CANNOT LEAVE THIS WAY\n";
+				/* TO DO: animate PUSHING the character OFF the entrance??? */
+			}
+		}
+	}
+
+	return landmarkCollided;
 }
 
 

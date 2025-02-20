@@ -10,7 +10,7 @@ export enum class ScreenType {
 	NoScreen, Menu, Map, Battle, CharacterCreation
 };
 
-// This will be stored in the Map module, with a value held in each
+
 export enum class MapType {
 	World, Building, Dungeon
 };
@@ -24,7 +24,7 @@ export enum class FontContext {
 };
 
 export enum SuitType {
-	NoSuit,
+	NoSuit, /* Everything EXCEPT an actual SUIT must have THIS SuitType (or else their limbs will not be drawn). */
 
 	/* Forest suits. */
 	Deer, Bear, Spider, Fairy, Owl,

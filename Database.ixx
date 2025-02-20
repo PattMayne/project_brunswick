@@ -1545,6 +1545,7 @@ export bool mapObjectExists(string mapSlug) {
 
 
 export bool unscrambleLimb(Limb& limb) {
+    limb.unscramble();
     int limbId = limb.getId();
 
     if (limbId < 1) {
@@ -2087,6 +2088,8 @@ export Map loadMap(string mapSlug) {
             sqlite3_column_int(querySuitsStatement, 5),
             sqlite3_column_int(querySuitsStatement, 6)
         );
+        int suitTypeInt = sqlite3_column_int(querySuitsStatement, 8);
+        SuitType suitType = static_cast<SuitType>(suitTypeInt);
 
         /*
         *
@@ -2131,6 +2134,7 @@ export Map loadMap(string mapSlug) {
             bool isFlipped = sqlite3_column_int(querySuitLimbsStatement, 12) == 1;
             string limbName = stringFromUnsignedChar(sqlite3_column_text(querySuitLimbsStatement, 13));
             int drawOrder = sqlite3_column_int(querySuitLimbsStatement, 14);
+            int isUnscrambled = sqlite3_column_int(querySuitLimbsStatement, 15) == 1;
 
             Point limbPosition = Point(posX, posY);
 
@@ -2207,13 +2211,14 @@ export Map loadMap(string mapSlug) {
             limb.setMapSlug(mapSlug);
             limb.setCharacterId(suitId);
             limb.setId(limbID);
+            limb.setUnscrambled(isUnscrambled);
 
             suitLimbs.push_back(limb);
 
             sqlite3_finalize(querySuitJointsStatement);
         }
 
-        suits.emplace_back(suitId, suitName, anchorLimbId, suitPosition, suitLimbs);
+        suits.emplace_back(suitId, suitName, anchorLimbId, suitPosition, suitLimbs, suitType);
         sqlite3_finalize(querySuitLimbsStatement);
     }
 
