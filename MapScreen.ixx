@@ -244,6 +244,9 @@ export class MapScreen {
 			gameMenuPanel = ui.createGameMenuPanel();
 			settingsPanel.setShow(false);
 			gameMenuPanel.setShow(true);
+
+			messagePanel = ui.createConfirmationPanel("LOADED", ConfirmationButtonType::OkCancel, false);
+			messagePanel.setShow(true);
 		}
 
 		/* Destructor */
@@ -388,6 +391,7 @@ export class MapScreen {
 		/* panels */
 		Panel settingsPanel;
 		Panel gameMenuPanel;
+		Panel messagePanel;
 };
 
 
@@ -910,6 +914,7 @@ void MapScreen::draw(UI& ui) {
 
 	gameMenuPanel.draw(ui);
 	settingsPanel.draw(ui);
+	messagePanel.draw(ui);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
@@ -2086,6 +2091,18 @@ void MapScreen::handleMousedown(SDL_Event& e, bool& running) {
 		default:
 			cout << "ERROR\n";
 		}
+	} else if (messagePanel.getShow() && messagePanel.isInPanel(mouseX, mouseY)) {
+		/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
+		ButtonClickStruct clickStruct = messagePanel.checkButtonClick(mouseX, mouseY);
+
+		switch (clickStruct.buttonOption) {
+		case ButtonOption::Agree:
+			messagePanel.setShow(false);
+			break;
+		case ButtonOption::Refuse:
+			messagePanel.setShow(false);
+			break;
+		}
 	}
 }
 
@@ -2096,4 +2113,5 @@ void MapScreen::checkMouseLocation(SDL_Event& e) {
 	/* send the x and y to the panel and its buttons to change the color */
 	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
 	if (gameMenuPanel.getShow()) { gameMenuPanel.checkMouseOver(mouseX, mouseY); }
+	if (messagePanel.getShow()) { messagePanel.checkMouseOver(mouseX, mouseY); }
 }
