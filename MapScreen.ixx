@@ -989,7 +989,7 @@ void MapScreen::drawCharacters(UI& ui) {
 	/* 
 	* Draw Player Character last
 	* --- ACTUALLY... if the NPC moves onto YOU then they should be drawn OVER the player.
-	*					(figure that out later)
+	*					(figure that out later).
 	*/
 	drawRoamingLimbs(ui);
 	drawNpcs(ui);

@@ -619,7 +619,7 @@ vector<Point> Map::buildMap() {
 	/* get a random x starting point, but the y will be map's height - 2 */
 
 	int pathX = (rand() % (mapForm.blocksWidth - 10)) + 5;
-	int pathY = static_cast<int>(rows.size()) - 2;
+	int pathY = static_cast<int>(rows.size()) - 6;
 
 	int endBlockX = (rand() % (mapForm.blocksWidth - 10)) + 5;
 
@@ -641,7 +641,7 @@ vector<Point> Map::buildMap() {
 
 
 	/* Entrance & Exit landmarks. */
-	landmarks.emplace_back(getExitLandmark(Point(endBlockX, 2)));
+	landmarks.emplace_back(getExitLandmark(Point(endBlockX, 4)));
 	landmarks.emplace_back(getEntranceLandmark(Point(pathX, pathY)));
 
 	/*
@@ -671,14 +671,21 @@ vector<Point> Map::buildMap() {
 			int randX = (rand() % (mapForm.blocksWidth - 10)) + 5;
 			int randY = (rand() % (mapForm.blocksHeight - 10)) + 5;
 			landmark.setPosition(Point(randX, randY));
-
-			pointsToReach.push_back(landmark.getPosition());
 		}
 	}
 
 	/* Make sure the shrines are far enough apart with a recursive function. */
 	spaceOutLandmarks();
-	
+
+	/* Now add the spaced out Shrine positions to the pointsToReach list. */
+	for (Landmark& landmark : landmarks) {
+		if (landmark.getType() == LandmarkType::Shrine) {
+			pointsToReach.push_back(landmark.getPosition());
+		}
+	}
+
+
+
 	vector<Point> floorPositions;
 
 	/* while loop makes the path.
@@ -861,86 +868,84 @@ vector<Point> Map::buildMap() {
 		rows[lPoint.y][lPoint.x].setIsFloor(true);
 		rows[lPoint.y][lPoint.x].setIsLandmarkArea(true);
 
-		if (landmark.getType() == LandmarkType::Shrine) {
-			
-			rows[lPoint.y][lPoint.x - 1].setIsFloor(true);
-			rows[lPoint.y][lPoint.x - 1].setIsPath(false);
-			rows[lPoint.y][lPoint.x - 1].setIsLandmarkArea(true);
+		rows[lPoint.y][lPoint.x - 1].setIsFloor(true);
+		rows[lPoint.y][lPoint.x - 1].setIsPath(false);
+		rows[lPoint.y][lPoint.x - 1].setIsLandmarkArea(true);
 
-			rows[lPoint.y][lPoint.x + 1].setIsFloor(true);
-			rows[lPoint.y][lPoint.x + 1].setIsPath(false);
-			rows[lPoint.y][lPoint.x + 1].setIsLandmarkArea(true);
+		rows[lPoint.y][lPoint.x + 1].setIsFloor(true);
+		rows[lPoint.y][lPoint.x + 1].setIsPath(false);
+		rows[lPoint.y][lPoint.x + 1].setIsLandmarkArea(true);
 
-			rows[lPoint.y - 1][lPoint.x - 1].setIsFloor(true);
-			rows[lPoint.y - 1][lPoint.x - 1].setIsPath(false);
-			rows[lPoint.y - 1][lPoint.x - 1].setIsLandmarkArea(true);
+		rows[lPoint.y - 1][lPoint.x - 1].setIsFloor(true);
+		rows[lPoint.y - 1][lPoint.x - 1].setIsPath(false);
+		rows[lPoint.y - 1][lPoint.x - 1].setIsLandmarkArea(true);
 
-			rows[lPoint.y - 1][lPoint.x].setIsFloor(true);
-			rows[lPoint.y - 1][lPoint.x].setIsPath(false);
-			rows[lPoint.y - 1][lPoint.x].setIsLandmarkArea(true);
+		rows[lPoint.y - 1][lPoint.x].setIsFloor(true);
+		rows[lPoint.y - 1][lPoint.x].setIsPath(false);
+		rows[lPoint.y - 1][lPoint.x].setIsLandmarkArea(true);
 
-			rows[lPoint.y - 1][lPoint.x + 1].setIsFloor(true);
-			rows[lPoint.y - 1][lPoint.x + 1].setIsPath(false);
-			rows[lPoint.y - 1][lPoint.x + 1].setIsLandmarkArea(true);
+		rows[lPoint.y - 1][lPoint.x + 1].setIsFloor(true);
+		rows[lPoint.y - 1][lPoint.x + 1].setIsPath(false);
+		rows[lPoint.y - 1][lPoint.x + 1].setIsLandmarkArea(true);
 
-			rows[lPoint.y + 1][lPoint.x - 1].setIsFloor(true);
-			rows[lPoint.y + 1][lPoint.x - 1].setIsPath(false);
-			rows[lPoint.y + 1][lPoint.x - 1].setIsLandmarkArea(true);
+		rows[lPoint.y + 1][lPoint.x - 1].setIsFloor(true);
+		rows[lPoint.y + 1][lPoint.x - 1].setIsPath(false);
+		rows[lPoint.y + 1][lPoint.x - 1].setIsLandmarkArea(true);
 
-			rows[lPoint.y + 1][lPoint.x].setIsFloor(true);
-			rows[lPoint.y + 1][lPoint.x].setIsPath(false);
-			rows[lPoint.y + 1][lPoint.x].setIsLandmarkArea(true);
+		rows[lPoint.y + 1][lPoint.x].setIsFloor(true);
+		rows[lPoint.y + 1][lPoint.x].setIsPath(false);
+		rows[lPoint.y + 1][lPoint.x].setIsLandmarkArea(true);
 
-			rows[lPoint.y + 1][lPoint.x + 1].setIsFloor(true);
-			rows[lPoint.y + 1][lPoint.x + 1].setIsPath(false);
-			rows[lPoint.y + 1][lPoint.x + 1].setIsLandmarkArea(true);
+		rows[lPoint.y + 1][lPoint.x + 1].setIsFloor(true);
+		rows[lPoint.y + 1][lPoint.x + 1].setIsPath(false);
+		rows[lPoint.y + 1][lPoint.x + 1].setIsLandmarkArea(true);
 
-			/* Surround the cleared area with a path. */
-			rows[lPoint.y][lPoint.x - 2].setIsFloor(true);
-			rows[lPoint.y][lPoint.x - 2].setIsPath(true);
-			rows[lPoint.y][lPoint.x + 2].setIsFloor(true);
-			rows[lPoint.y][lPoint.x + 2].setIsPath(true);
+		/* Surround the cleared area with a path. */
+		rows[lPoint.y][lPoint.x - 2].setIsFloor(true);
+		rows[lPoint.y][lPoint.x - 2].setIsPath(true);
+		rows[lPoint.y][lPoint.x + 2].setIsFloor(true);
+		rows[lPoint.y][lPoint.x + 2].setIsPath(true);
 
-			rows[lPoint.y - 1][lPoint.x - 2].setIsFloor(true);
-			rows[lPoint.y - 1][lPoint.x - 2].setIsPath(true);
-			rows[lPoint.y - 1][lPoint.x + 2].setIsFloor(true);
-			rows[lPoint.y - 1][lPoint.x + 2].setIsPath(true);
+		rows[lPoint.y - 1][lPoint.x - 2].setIsFloor(true);
+		rows[lPoint.y - 1][lPoint.x - 2].setIsPath(true);
+		rows[lPoint.y - 1][lPoint.x + 2].setIsFloor(true);
+		rows[lPoint.y - 1][lPoint.x + 2].setIsPath(true);
 
-			rows[lPoint.y + 1][lPoint.x - 2].setIsFloor(true);
-			rows[lPoint.y + 1][lPoint.x - 2].setIsPath(true);
-			rows[lPoint.y + 1][lPoint.x + 2].setIsFloor(true);
-			rows[lPoint.y + 1][lPoint.x + 2].setIsPath(true);
+		rows[lPoint.y + 1][lPoint.x - 2].setIsFloor(true);
+		rows[lPoint.y + 1][lPoint.x - 2].setIsPath(true);
+		rows[lPoint.y + 1][lPoint.x + 2].setIsFloor(true);
+		rows[lPoint.y + 1][lPoint.x + 2].setIsPath(true);
 
-			rows[lPoint.y - 2][lPoint.x - 2].setIsFloor(true);
-			rows[lPoint.y - 2][lPoint.x - 2].setIsPath(true);
-			rows[lPoint.y - 2][lPoint.x + 2].setIsFloor(true);
-			rows[lPoint.y - 2][lPoint.x + 2].setIsPath(true);
+		rows[lPoint.y - 2][lPoint.x - 2].setIsFloor(true);
+		rows[lPoint.y - 2][lPoint.x - 2].setIsPath(true);
+		rows[lPoint.y - 2][lPoint.x + 2].setIsFloor(true);
+		rows[lPoint.y - 2][lPoint.x + 2].setIsPath(true);
 
-			rows[lPoint.y + 2][lPoint.x - 2].setIsFloor(true);
-			rows[lPoint.y + 2][lPoint.x - 2].setIsPath(true);
-			rows[lPoint.y + 2][lPoint.x + 2].setIsFloor(true);
-			rows[lPoint.y + 2][lPoint.x + 2].setIsPath(true);
+		rows[lPoint.y + 2][lPoint.x - 2].setIsFloor(true);
+		rows[lPoint.y + 2][lPoint.x - 2].setIsPath(true);
+		rows[lPoint.y + 2][lPoint.x + 2].setIsFloor(true);
+		rows[lPoint.y + 2][lPoint.x + 2].setIsPath(true);
 
-			rows[lPoint.y + 2][lPoint.x - 1].setIsFloor(true);
-			rows[lPoint.y + 2][lPoint.x - 1].setIsPath(true);
-			rows[lPoint.y + 2][lPoint.x + 1].setIsFloor(true);
-			rows[lPoint.y + 2][lPoint.x + 1].setIsPath(true);
+		rows[lPoint.y + 2][lPoint.x - 1].setIsFloor(true);
+		rows[lPoint.y + 2][lPoint.x - 1].setIsPath(true);
+		rows[lPoint.y + 2][lPoint.x + 1].setIsFloor(true);
+		rows[lPoint.y + 2][lPoint.x + 1].setIsPath(true);
 
-			rows[lPoint.y - 2][lPoint.x - 1].setIsFloor(true);
-			rows[lPoint.y - 2][lPoint.x - 1].setIsPath(true);
-			rows[lPoint.y - 2][lPoint.x + 1].setIsFloor(true);
-			rows[lPoint.y - 2][lPoint.x + 1].setIsPath(true);
+		rows[lPoint.y - 2][lPoint.x - 1].setIsFloor(true);
+		rows[lPoint.y - 2][lPoint.x - 1].setIsPath(true);
+		rows[lPoint.y - 2][lPoint.x + 1].setIsFloor(true);
+		rows[lPoint.y - 2][lPoint.x + 1].setIsPath(true);
 
-			rows[lPoint.y + 2][lPoint.x].setIsFloor(true);
-			rows[lPoint.y + 2][lPoint.x].setIsPath(true);
-			rows[lPoint.y + 2][lPoint.x].setIsFloor(true);
-			rows[lPoint.y + 2][lPoint.x].setIsPath(true);
+		rows[lPoint.y + 2][lPoint.x].setIsFloor(true);
+		rows[lPoint.y + 2][lPoint.x].setIsPath(true);
+		rows[lPoint.y + 2][lPoint.x].setIsFloor(true);
+		rows[lPoint.y + 2][lPoint.x].setIsPath(true);
 
-			rows[lPoint.y - 2][lPoint.x].setIsFloor(true);
-			rows[lPoint.y - 2][lPoint.x].setIsPath(true);
-			rows[lPoint.y - 2][lPoint.x].setIsFloor(true);
-			rows[lPoint.y - 2][lPoint.x].setIsPath(true);
-		}
+		rows[lPoint.y - 2][lPoint.x].setIsFloor(true);
+		rows[lPoint.y - 2][lPoint.x].setIsPath(true);
+		rows[lPoint.y - 2][lPoint.x].setIsFloor(true);
+		rows[lPoint.y - 2][lPoint.x].setIsPath(true);
+
 
 	}
 
