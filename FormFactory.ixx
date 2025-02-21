@@ -134,8 +134,8 @@ MapForm forestMap() {
 	forestMap.mapLevel = MapLevel::Forest;
 	forestMap.name = "Enchanted Forest";
 	forestMap.slug = "forest";
-	forestMap.blocksWidth = 77;
-	forestMap.blocksHeight = 77;
+	forestMap.blocksWidth = 50;
+	forestMap.blocksHeight = 50;
 	forestMap.mapType = MapType::World;
 
 	/* create the TEXTURES */

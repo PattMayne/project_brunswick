@@ -1,3 +1,50 @@
+/**
+* 
+*  ____    _  _____ _____ _     _____
+* | __ )  / \|_   _|_   _| |   | ____|
+* |  _ \ / _ \ | |   | | | |   |  _|
+* | |_) / ___ \| |   | | | |___| |___
+* |____/_/___\_\_|_  |_|_|_____|_____|
+* / ___| / ___|  _ \| ____| ____| \ | |
+* \___ \| |   | |_) |  _| |  _| |  \| |
+*  ___) | |___|  _ <| |___| |___| |\  |
+* |____/ \____|_| \_\_____|_____|_| \_|
+* 
+* Battle Screen.
+* 
+* -- Move panels into BattleScreen object.
+* 
+* 
+* BATTLE SYSTEM:
+* 
+* - When attacking a limb, some of the damage inevitably spreads to the connected limbs instead.
+* ---- Higher "intelligence" means more accuracy.
+* - Type of attack depend on dominance cycle.
+* 
+* 
+* 
+* TO DO:
+* - Create Battle Class.
+* - Save battle object to DB (from MapScreen).
+* - Load battle oject from DB (based on battle_id saved to PLAYER character).
+* - Display both opponents (full drawn limbs, no avatar).
+* - Animate both opponents (constantly rotating one limbs or another... just one at a time?).
+* - HUD of player stats.
+* - HUD of opponent stats.
+* - Menu of UNEQUIPPED player limbs
+* ---- Include dominance cycle
+* - Select opponent Limb to attack via right-hand button.
+* --- selected limb flashes.
+* - Player limb to HEAL (by consuming LIMB from unequipped limbs).
+* - THROW unequipped Limb (only if we have arm or leg to throw or kick).
+* ---- THROW is more accurate but less power.
+* ---- KICK is less accurate but more power.
+* - PassingMessage panel shows effects of latest attack.
+* 
+*/
+
+
+
 module;
 export module BattleScreen;
 

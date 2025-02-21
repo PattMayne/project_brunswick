@@ -707,8 +707,8 @@ vector<Point> Map::buildMap() {
 
 			vector<MapDirection> directionsLottery;
 
-			int mostNeededDirectionCount = 50;
-			int lessNeededDirectionCount = 5;
+			int mostNeededDirectionCount = 42;
+			int lessNeededDirectionCount = 3;
 			int wrongDirectionsEach = 1;
 
 			MapDirection favoriteDirection = MapDirection::Up;

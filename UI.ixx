@@ -51,12 +51,29 @@ SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal);
 vector<SDL_Rect> createSurfaceOverlay(SDL_Rect bgRect);
 SDL_Surface* createTransparentSurface(int w, int h);
 
+/* Add dominance cycle? Other attributes (strength etc)? */
 export struct LimbButtonData {
 	LimbButtonData(string texturePath, string name, int id) :
 		texturePath(texturePath), name(name), id(id) { }
 	string texturePath;
 	string name;
 	int id;
+};
+
+/* UI cannot import actual characters or their limbs, so Character object creates this struct and sends IT it. */
+export struct CharStatsData {
+	CharStatsData(string name, SDL_Texture* texture, int hp,
+		int strength, int speed, int intelligence, Point trackedPoint = Point(0, 0)) :
+			name(name), texture(texture), hp(hp),
+			strength(strength), speed(speed), intelligence(intelligence), trackedPoint(trackedPoint) { }
+
+	SDL_Texture* texture;
+	string name;
+	int intelligence;
+	int strength;
+	int hp;
+	int speed;
+	Point trackedPoint;
 };
 
 /*
@@ -90,15 +107,6 @@ export class UI {
 			return instance;
 		}
 
-		bool isInitialized() { return initialized; }
-		SDL_Renderer* getMainRenderer() { return mainRenderer; }
-		SDL_Surface* getWindowSurface() { return mainWindowSurface; }
-		SDL_Window* getMainWindow() { return mainWindow; }
-		TTF_Font* getButtonFont() { return buttonFont; }
-		TTF_Font* getTitleFont() { return titleFont; }
-		TTF_Font* getBodyFont() { return bodyFont; }
-		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
-
 		/* MAIN MENU PANEL. */
 		Panel createMainMenuPanel();
 		void rebuildMainMenuPanel(Panel& mainMenuPanel);
@@ -114,7 +122,10 @@ export class UI {
 		Panel createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints); /* Does this need a limb id? */
 		Panel createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton);
 
-		/* NEXT: make rebuildPanel functions for Character Creation screen. */
+		/* TO DO: make rebuildPanel functions for Character Creation screen. */
+
+		
+		/* PANELS USED BY VARIOUS SCREENS. */
 
 		/* Confirmation Text Panel. */
 		Panel createConfirmationPanel(
@@ -124,19 +135,26 @@ export class UI {
 		);
 
 		Panel createPassingMessagePanel(string message, bool topPlacement = true);
+		Panel createHud(ScreenType screenType, CharStatsData statsData);
+
+
+		/* OTHER FUNCTIONS. */
 
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
 		void resizeWindow(WindowResType newResType);
 		void refreshFonts(Resources& resources);
-
-		/* Background with overlay */
-		SDL_Texture* createBackgroundTexture();
-
-		/* get title texture for any screen */
-		tuple<SDL_Texture*, SDL_Rect> createTitleTexture(string title);
-
+		tuple<SDL_Texture*, SDL_Rect> createTitleTexture(string title); /* get title texture for any screen */
+		SDL_Texture* createBackgroundTexture(); /* Background with overlay */
 		unordered_map<string, SDL_Color> getColorsByFunction() { return colorsByFunction; }
+		bool isInitialized() { return initialized; }
+		SDL_Renderer* getMainRenderer() { return mainRenderer; }
+		SDL_Surface* getWindowSurface() { return mainWindowSurface; }
+		SDL_Window* getMainWindow() { return mainWindow; }
+		TTF_Font* getButtonFont() { return buttonFont; }
+		TTF_Font* getTitleFont() { return titleFont; }
+		TTF_Font* getBodyFont() { return bodyFont; }
+		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
 
 
 	private:
@@ -312,12 +330,12 @@ export class Button {
 			rect(rect), hoverTexture(hoverTexture), normalTexture(normalTexture),
 			text(text), clickStruct(clickStruct), mouseOver(false) { }
 
-		// Might turn this private since we should only operate on it internally
 		SDL_Rect getRect() { return rect; }
 		string getText() { return text; } // turn this completely into char for the printing
 		SDL_Texture* getHoverTexture() { return hoverTexture; }
 		SDL_Texture* getNormalTexture() { return normalTexture; }
-		// check if mouse location has hit the panel
+
+		/* Check if click is inside button. */
 		bool isInButton(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
 		void setMouseOver(bool incomingMouseOver) { mouseOver = incomingMouseOver; }
 		bool isMouseOver() { return mouseOver; }
@@ -325,8 +343,6 @@ export class Button {
 
 
 	private:
-		// REMOVE textRect and textTexture
-		// Replace with hoverTexture and normalTexture
 		SDL_Rect rect;
 		SDL_Texture* hoverTexture = NULL;
 		SDL_Texture* normalTexture = NULL;
@@ -988,6 +1004,7 @@ void UI::prepareColors() {
 
 	colorsByFunction["BG_LIGHT"] = colorsByName["FRENCH_BLUE"];
 	colorsByFunction["BG_MED"] = colorsByName["YALE_BLUE"];
+	colorsByFunction["PANEL_BG"] = colorsByName["PAPAYA_WHIP"];
 }
 
 void UI::getAndStoreWindowSize() {
@@ -2115,7 +2132,7 @@ Panel UI::createConfirmationPanel(
 
 	/* Create the panel surface. */
 	SDL_Surface* panelSurface = createTransparentSurface(panelRectWidth, panelRectHeight);
-	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["BTN_HOVER_BG"]));
+	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
 
 	/* Blit the text onto the panel, make the texture, destroy the surfaces. */
 	SDL_BlitSurface(textSurface, NULL, panelSurface, &textRect);
@@ -2190,7 +2207,7 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement) {
 	* Figure out the dimensions of the panel.
 	*/
 
-	SDL_Surface* textSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, message.c_str(), colors["DARK_TEXT"], 300);
+	SDL_Surface* textSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, message.c_str(), colors["DARK_TEXT"], 340);
 	int textWidth = textSurface->w;
 	int textHeight = textSurface->h;
 
@@ -2219,7 +2236,7 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement) {
 
 	/* Create the panel surface. */
 	SDL_Surface* panelSurface = createTransparentSurface(panelRectWidth, panelRectHeight);
-	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["BTN_HOVER_BG"]));
+	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
 
 	/* Blit the text onto the panel, make the texture, destroy the surfaces. */
 	SDL_BlitSurface(textSurface, NULL, panelSurface, &textRect);
@@ -2231,4 +2248,52 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement) {
 	vector<Button> buttons;
 
 	return Panel(panelRect, buttons, panelTexture);
+}
+
+/* A collection of boxes upon a transparent panel.
+* Will show different things depending on the screen.
+*/
+Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
+	Panel hudPanel = Panel();
+	hudPanel.setRect({ 0,0,0,0 });
+	
+	/* FOR NOW we will assume that SCREEN TYPE IS MAP.
+	* 
+	* 1. gather the info
+	* 2. Character stats box (name, avatar, dominance cycle, attributes).
+	* -----> Use monospace font for attributes. NEW FONT.
+	* 3. Tracked limb box.
+	* 4. Unequipped Limbs toggle.
+	* 
+	*/
+
+	Resources& resources = Resources::getInstance();
+	unordered_map<string, SDL_Color> colors = getColorsByFunction();
+
+	/* Gather info for Stats Box (for any screen). */
+
+	string nameString = statsData.name;
+
+	/* NO AVATAR IN THE MENU. Instead make space, and the screen has to draw it each frame (?). */
+	SDL_Texture* avatar = statsData.texture;
+
+	string statsString = "ATTRIBUTES:\n\n";
+	statsString = statsString + "HP:           " + to_string(statsData.hp) + "\n";
+	statsString = statsString + "SPEED:        " + to_string(statsData.speed) + "\n";
+	statsString = statsString + "STRENGTH:     " + to_string(statsData.strength) + "\n";
+	statsString = statsString + "INTELLIGENCE: " + to_string(statsData.intelligence) + "\n";
+	
+	/* Make surfaces for name and stats.
+	* Name should be word-wrapped on spaces or 14 characters.
+	*/
+
+	SDL_Surface* nameSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, nameString.c_str(), colors["DARK_TEXT"], 340);
+	int nameWidth = nameSurface->w;
+	int nameHeight = nameSurface->h;
+
+	SDL_Surface* statsSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, statsString.c_str(), colors["DARK_TEXT"], 340);
+	int statsWidth = statsSurface->w;
+	int statsHeight = statsSurface->h;
+
+	return hudPanel;
 }

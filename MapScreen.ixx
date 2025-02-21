@@ -141,7 +141,7 @@ export class MapScreen {
 			* 3) If it does NOT exist, do PHASE 1 steps.
 			* 
 			* PHASE 3:
-			* 1) Load shrines for each native NPC.
+			* 1) Load shrines for each native Suit.
 			* 2) Path creation is built on connecting those shrines to the entrance and exit.
 			* 3) Hostile NPC-creation on limb collision.
 			* 4) Collision with hostile NPC goes to Battle screen.
@@ -245,8 +245,8 @@ export class MapScreen {
 			settingsPanel.setShow(false);
 			gameMenuPanel.setShow(true);
 
-			messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
-			messagePanel.setShow(false);
+			messagePanel = ui.createConfirmationPanel("LOADED", ConfirmationButtonType::OkCancel, false);
+			messagePanel.setShow(true);
 
 			passingMessagePanel = ui.createPassingMessagePanel("", true);
 			passingMessagePanel.setShow(false);
@@ -975,8 +975,7 @@ void MapScreen::drawLandmarks(UI& ui) {
 				landmark.getTexture(),
 				NULL, &targetRect,
 				0, NULL, SDL_FLIP_NONE);
-
-			drawLandmarkAcquiredLimbs(ui, landmark, targetRect.x, targetRect.y);
+			
 		}
 	}
 }
@@ -1247,8 +1246,11 @@ void MapScreen::drawSuits(UI& ui) {
 		int posX = position.x;
 		int posY = position.y;
 
-		suitRect.x = (posX - drawStartX) * blockWidth + npcHeight;
-		suitRect.y = ((posY - drawStartY) * blockWidth) - suitOffsetY;
+		int baseDrawX = (posX - drawStartX) * blockWidth;
+		int baseDrawY = ((posY - drawStartY) * blockWidth);
+
+		suitRect.x = baseDrawX + npcHeight;
+		suitRect.y = baseDrawY - suitOffsetY;
 
 		/* To draw all suits in top corner for review. */
 		if (DRAW_TEST_SUITS_IN_CORNER) {
@@ -1268,6 +1270,7 @@ void MapScreen::drawSuits(UI& ui) {
 			}
 		}
 
+
 		SDL_RenderCopyEx(
 			ui.getMainRenderer(),
 			suit.getTexture(),
@@ -1275,6 +1278,15 @@ void MapScreen::drawSuits(UI& ui) {
 			0,
 			NULL, SDL_FLIP_NONE
 		);
+
+		/* Get landmark and draw acquired limbs. */
+
+		for (Landmark& landmark : map.getLandmarks()) {
+			if (landmark.getPosition().equals(position)) {
+				/* draw acquired limbs on top (after) to hide the new avatar behind the ceremony. */
+				drawLandmarkAcquiredLimbs(ui, landmark, baseDrawX, baseDrawY);
+			}
+		}
 
 	}
 }
@@ -1515,7 +1527,7 @@ void MapScreen::createShrineMessage(Character& suit) {
 			}
 		}
 
-		string unscrambledCountMessage = "There are " + to_string(unscrambledCount) + " shrines remaining to unscramble!";
+		string unscrambledCountMessage =  + "There are " + to_string(unscrambledCount) + " shrines remaining to unscramble.";
 		if (unscrambledCount <= 0) {
 			string unscrambledCountMessage = "All Shrines Unscrambled!";
 		}

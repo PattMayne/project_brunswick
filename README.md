@@ -15,53 +15,52 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 ## TO DO:
 
 - [x] TO DO list
-- [x] BASIC STUFF:
-    - [x] FONTS:
-        - [x] Logo (decorative)
-        - [x] UI (sans serif)
-        - [x] Body (storytelling - serif / mono ?)
-        - [x] dialog (script / handwriting)
-    - [x] Background for main menu screen
-- [ ] Switch to SDL3
-- [x] Make main menu screen
-  - [x] UI module to process buttons and panels
-    - [x] Buttons light up on-hover
-    - [x] Panels can be resized based on screen size.
-    - [x] Buttons relative to panels.
-    - [x] No buttons without panels! Every button is in a panel.
-- [x] Make other screens as DUMMY screens
-  - [x] Map screen
-    - [x] outside/main (world / non-safe by default, until solved) screenx
-  - [x] Character Creation screen
-  - [x] Battle screen
-- [x] Build actual MAP screen
-  - [x] Represent STATIC maps
-    - [x] Decide b/w auto-generated maps vs pre-designed maps
-        - [x] Landmarks will be defined in JSON, scattered procedurally and saved to SQLite DB.
-    - [x] Map designer screen?
-        - [x] NO DESIGNER SCREEN
-    - [x] Save generated map to SQLite DB
-- [x] Build Character Creation Screen
-    - [x] Recursively connect limbs.
-    - [x] Draw all the limbs.
-    - [x] Rotate the limbs.
-    - [x] Move connected limb to next joint (more recursive searching).
-    - [x] Change anchor joint of connected limb.
-- [x] Represent some STATIC limbs
-- [ ] Incorporate LIMBS and AVATARS into MAP screen
-    - [x] LIMBS
-    - [ ] AVATARS
+- [ ] Build battle system
+    - [ ] Green attacks.
+    - [ ] Blue attacks.
+    - [ ] Red attacks.
+    - [ ] Steal.
 - [ ] Build Battle Screen
+    - [ ] Load both character objects.
+    - [ ] Draw both character objects.
+    - [ ] Animate limbs.
+    - [ ] 
+- [ ] Switch to SDL3
+- [ ] Terminology for game objects ("Suits" not sexy enough. Citizens v. monsters? Natives v. monsters? Map = world ? Scrambled v. unscrambled?)
+- [ ] Access Character Creation screen through Map screen button.
+- [ ] Access Map screen through Character Creation screen button.
+- [ ] Redraw Avatar on resize in Map.
+- [ ] Put DB access in dedicated function.
+- [ ] Multiple (3) save files (DBs), option stored in GameState singleton.
+- [ ] Finish main menu screen
+  - [ ] New vs Continue
+  - [ ] "ABOUT" opens an info box (passing message box... or turn Message buttons into prev/next options... or a new class for that)
+- [x] Build MAP screen
+- [ ] Finish MAP screen
+    - [ ] HUD
+        - [ ] Name of character
+        - [ ] Avatar of character
+        - [ ] Distance to chosen scrambled Limb
+            - [ ] Requires a new Point member in MapScreen object.
+    - [ ] Character Creation Screen button.
+    - [ ] Option to view non-equipped limbs.
+    - [ ] Option to throw limbs?
+    - [ ] Put string messages in resource file.
+    - [ ] High speed characters can move multiple spaces with mouse-click (or number followed by direction key).
+        - [ ] Passing OVER each other means collision.
+        - [ ] Works for Player, NPC, and Limb.
+        - [ ] Mouseover block can click if in-range?
+- [x] Build Character Creation Screen.
+- [ ] Finish Character Creation Screen.
+    - [ ] Show stats of character in panel (bottom right).
+    - [ ] Show stats of loaded limb in panel (top right).
+    - [ ] Map Screen button.
+- [x] Represent some STATIC limbs
+- [x] Incorporate LIMBS and AVATARS into MAP screen
 - [ ] When closing program close each font with TTF_CloseFont()
-- [x] incorporate SQLite database
-    - [x] must download the sqlite3.h header file (#include <sqlite3.h>)
-- [x] MOBILE proportions are wack. Must unwack. Maybe this will be about SCALING.
-    - [x] Button size and Font size are the main issue. Button size is based on font size. So **font size should adjust automatically based on screen size.**
-- [x] Make a Resources module to encapsulate string and int resources
-    - [x] Make a JSON file
-    - [x] Put all strings in JSON file
-    - [x] Make a singleton for accessing the JSON file
-        - [x] Singleton will read gamestate (or something) to know which variations to access (window size affects font size, etc)
+- [ ] Error checks for all Texture & Surface generation.
+- [x] incorporate SQLite database (#include <sqlite3.h>)
+- [x] Make a Resources module to encapsulate string and int resources (JSON)
 
 ### Long-Range Notes & Plans
 

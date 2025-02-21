@@ -845,6 +845,11 @@ public:
 	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 
+	int getHP();
+	int getIntelligence();
+	int getSpeed();
+	int getStrength();
+
 	int getBlockX() { return blockPosition.x; }
 	int getBlockY() { return blockPosition.y; }
 	int hasScrambledLimbs() {
@@ -946,7 +951,63 @@ protected:
 */
 
 
+/* This will always be full HP.
+* But it's also misleading, because cutting off a limb with many connections can scatter those limbs.
+*/
+int Character::getHP() {
+	int hp = 0;
 
+	for (Limb& limb : limbs) {
+		if (limb.isEquipped()) {
+			hp += limb.getHP();
+		}
+	}
+
+	return hp;
+}
+
+/* Intelligence is not balanced by anything. Raw number suffices. */
+int Character::getIntelligence() {
+	int intelligence = 0;
+
+	for (Limb& limb : limbs) {
+		if (limb.isEquipped()) {
+			intelligence += limb.getIntelligence();
+		}
+	}
+
+	return intelligence;
+}
+
+/* This is just raw speed total.
+* We might modify this to be balanced by number of joints.
+*/
+int Character::getSpeed() {
+	int speed = 0;
+
+	for (Limb& limb : limbs) {
+		if (limb.isEquipped()) {
+			speed += limb.getSpeed();
+		}
+	}
+
+	return speed;
+}
+
+/* This is just raw speed total.
+* We might modify this to be balanced by number of limbs or joints.
+*/
+int Character::getStrength() {
+	int strength = 0;
+
+	for (Limb& limb : limbs) {
+		if (limb.isEquipped()) {
+			strength += limb.getStrength();
+		}
+	}
+
+	return strength;
+}
 
 
 
