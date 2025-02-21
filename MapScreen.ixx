@@ -245,8 +245,11 @@ export class MapScreen {
 			settingsPanel.setShow(false);
 			gameMenuPanel.setShow(true);
 
-			messagePanel = ui.createConfirmationPanel("LOADED", ConfirmationButtonType::OkCancel, false);
-			messagePanel.setShow(true);
+			messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
+			messagePanel.setShow(false);
+
+			passingMessagePanel = ui.createPassingMessagePanel("", true);
+			passingMessagePanel.setShow(false);
 		}
 
 		/* Destructor */
@@ -274,19 +277,21 @@ export class MapScreen {
 
 		int getAnimationIncrementPercent() { return animationIncrementFraction; }
 		int getAnimationCountdown() { return animationCountdown; }
-		void startAnimationCountdown(AnimationType iType);
-		void decrementCountdown();
 
 		ScreenType getScreenType() { return screenType; }
 		MapType getMapType() { return mapForm.mapType; }
 		MapForm mapForm;
-		void run();
 
 		bool checkPlayerNpcCollision();
 		bool checkPlayerLimbCollision(); /* Limb-on-player collision. */
 		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
 		bool checkNpcOnLimbCollision();
 		bool checkLandmarkCollision(bool& running, MapCharacter& playerCharacter);
+
+		void run();
+		void startAnimationCountdown(AnimationType iType);
+		void decrementCountdown();
+		void createShrineMessage(Character& suit);
 
 	private:
 		ScreenType screenType;
@@ -392,6 +397,9 @@ export class MapScreen {
 		Panel settingsPanel;
 		Panel gameMenuPanel;
 		Panel messagePanel;
+		Panel passingMessagePanel;
+
+		int passingMessageCountdown = 0; /* optional */
 };
 
 
@@ -568,10 +576,14 @@ export void MapScreen::run() {
 			*/
 
 			bool landmarkCollided = false;
-			bool npcCollided = false;
-			bool limbCollided = false;
+			bool playerNpcCollision = false;
+			bool limbLimbCollision = false;
+			bool npcLimbCollition = false;
+			bool playerLimbCollision = false;
 			waitSpin = false;
+			MapCharacter& playerCharacter = map.getPlayerCharacter();
 			
+			/* check for collisions (animation is done, player is ON new block and/or NPCs have moved to new blocks. */
 			if (animationType == AnimationType::Player) {
 				/*
 				* Player animation has finished.
@@ -582,23 +594,16 @@ export void MapScreen::run() {
 				animationType = AnimationType::None;
 				lastDrawStartX = drawStartX;
 				lastDrawStartY = drawStartY;
-				
-				/* check for collisions (animation is done, player is ON new block and/or NPCs have moved ONTO new blocks */
 
 				/* collisions with LANDMARK: */
-
-				MapCharacter& playerCharacter = map.getPlayerCharacter();
-
 				landmarkCollided = checkLandmarkCollision(running, playerCharacter); /* Player landed on landmark. */
-				checkPlayerLimbCollision(); /* Player collects limb. */
+				playerLimbCollision = checkPlayerLimbCollision(); /* Player collects limb. */
 
 				 /* Collisions with NPCs */
-				 checkPlayerNpcCollision();
+				playerNpcCollision = checkPlayerNpcCollision();
 
-				if (!landmarkCollided && !npcCollided) {
-					/* start the NPC animation. */
-					startNpcAnimation = true;
-				}
+				 /* After every Player animation, we start the NPC animation (Turning the switch). */
+				startNpcAnimation = true;
 			}
 			else if (animationType == AnimationType::NPC) {
 				/* Deal with wrapping up the NPC-moved animation. */
@@ -612,11 +617,26 @@ export void MapScreen::run() {
 				*/
 
 				/* NPC collects new limb. It's the NPC's move, so they gather the limb instead of Player (if on same block). */
-				checkNpcOnLimbCollision(); 
+				npcLimbCollition = checkNpcOnLimbCollision();
 				/* Check LIMBs colliding with each other. IF they form an NPC on the player's block, the player fights the NPC. */
-				checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
-				checkPlayerLimbCollision(); /* Player collects new limb. */
-				checkPlayerNpcCollision(); /* Go to battle screen. */
+				limbLimbCollision = checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
+				playerLimbCollision = checkPlayerLimbCollision(); /* Player collects new limb. */
+				playerNpcCollision = checkPlayerNpcCollision(); /* Go to battle screen. */
+			}
+
+			if (playerLimbCollision) {
+				/* Create a message about collecting a limb. */
+				string message = "YOU COLLECTED:\n\n";
+				vector<AcquiredLimb>& acquiredLimbStructs = playerCharacter.getAcquiredLimbStructs();
+
+				for (AcquiredLimb& aLimb : acquiredLimbStructs) {
+					cout << "Acquired " << aLimb.name << "\n";
+					message = message + aLimb.name + "\n";
+				}
+
+				passingMessagePanel = getNewPassingMessagePanel(message, passingMessagePanel, true, ui);
+				passingMessagePanel.setShow(true);
+				passingMessageCountdown = 3;
 			}
 		}
 
@@ -737,6 +757,7 @@ export void MapScreen::run() {
 
 	/* set the next screen to load */
 	gameState.setScreenStruct(screenToLoadStruct);
+
 }
 
 int getDiff(int a, int b) {
@@ -915,6 +936,7 @@ void MapScreen::draw(UI& ui) {
 	gameMenuPanel.draw(ui);
 	settingsPanel.draw(ui);
 	messagePanel.draw(ui);
+	passingMessagePanel.draw(ui);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
@@ -1470,8 +1492,47 @@ void MapScreen::drawMap(UI& ui) {
 	}
 }
 
+/* Specifically create a passing message for while the user is on a shrine. */
+void MapScreen::createShrineMessage(Character& suit) {
+	UI& ui = UI::getInstance();
+	int stillScrambledCount = 0;
+	for (Limb& limb : suit.getLimbs()) {
+		if (!limb.getUnscrambled()) {
+			++stillScrambledCount;
+		}
+	}
+
+	string suitMessage = "Welcome to the " + suit.getName() + " shrine.\n\n";
+
+	if (stillScrambledCount < 1) {
+		suitMessage = "You have fully unscrambled " + suit.getName() + "!\n\n";
+
+		int unscrambledCount = 0;
+
+		for (Character& suit : map.getSuits()) {
+			if (suit.hasScrambledLimbs()) {
+				++unscrambledCount;
+			}
+		}
+
+		string unscrambledCountMessage = "There are " + to_string(unscrambledCount) + " shrines remaining to unscramble!";
+		if (unscrambledCount <= 0) {
+			string unscrambledCountMessage = "All Shrines Unscrambled!";
+		}
+
+		suitMessage = suitMessage + unscrambledCountMessage;
+	}
+	else {
+		string statsMessage = to_string(stillScrambledCount) + " limbs remaining to unscramble.";
+		suitMessage = suitMessage + statsMessage;
+	}
+
+	passingMessagePanel = getNewPassingMessagePanel(suitMessage, passingMessagePanel, true, ui);
+	passingMessagePanel.setShow(true);
+}
+
 /*
-* Sets the top left block for the camera.Cannot be less than 0,0.
+* Sets the top left block for the camera. Cannot be less than 0,0.
 * cannot be less than 0,0.
 * cannot be more than end-of-list minus resolution.
 */
@@ -1524,11 +1585,14 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 					if (suit.getId() == landmark.getCharacterId()) {
 						cout << "Hit shrine for " << suit.getName() << "\n";
 
-						/* Check each of the Suit's limbs against the player's non-equipped limbs. */
+						/* 
+						* Check each of the Suit's limbs against the player's non-equipped limbs.
+						* Cycle down from the top in case we get a match and need to remove limb from vector.
+						*/
 
 						vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+						bool unscrambledSomething = false;
 
-						/* Cycle down from the top in case we get a match and need to remove limb from vector. */
 						for (int u = playerLimbs.size() - 1; u >= 0; --u) {
 							Limb& playerLimb = playerLimbs[u];
 							if (playerLimb.isEquipped()) { continue; }
@@ -1542,6 +1606,8 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 								/* is it a match? */
 								if (suitLimb.getForm().slug == playerLimb.getForm().slug) {
 									if (!suitLimb.getUnscrambled()) {
+										/* We are FINALLY unscrambling this Suit's Limb. */
+										unscrambledSomething = true;
 										unscrambleLimb(suitLimb);
 										suit.setTexture(suit.createAvatar());
 										isMatch = true; /* Flag to deal with the playerLimb. */
@@ -1554,7 +1620,8 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 											limbCollisionCountdown,
 											0,
 											diffRect,
-											rotationAngleIncrement
+											rotationAngleIncrement,
+											suitLimb.getName()
 										);
 									}
 								}
@@ -1571,6 +1638,11 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 								playerLimbs.erase(playerLimbs.begin() + u);
 							}
 						}
+
+						/*  */
+
+						createShrineMessage(suit);
+						if (unscrambledSomething) { break; }
 					}
 				}
 
@@ -1614,7 +1686,8 @@ bool MapScreen::checkNpcOnLimbCollision() {
 						limbCollisionCountdown,
 						roamingLimb.getRotationAngle(),
 						diffRect,
-						7
+						7,
+						roamingLimb.getName()
 					);
 				}
 				
@@ -1780,7 +1853,8 @@ bool MapScreen::checkLimbOnLimbCollision() {
 							limbCollisionCountdown,
 							limb.getRotationAngle(),
 							diffRect,
-							7
+							7,
+							limb.getName()
 						);
 					}
 
@@ -1865,7 +1939,8 @@ bool MapScreen::checkPlayerLimbCollision() {
 				limbCollisionCountdown,
 				thisLimb.getRotationAngle(),
 				diffRect,
-				7
+				7,
+				thisLimb.getName()
 			);
 
 			/* Remove from list at the end to avoid changing the item referenced by i. */
@@ -1916,6 +1991,16 @@ void MapScreen::moveCharacter(MapDirection direction) {
 		/* Instead of immediately displaying the move, we start a move animation. */
 		startAnimationCountdown(AnimationType::Player);
 		updatePlayerMapLocation(map.getSlug(), map.getPlayerCharacter().getPosition());
+
+		if (passingMessagePanel.getShow()) {
+			if (passingMessageCountdown < 1) {
+				passingMessagePanel.setShow(false);
+			}
+			else {
+				--passingMessageCountdown;
+			}
+		}
+		
 	}
 }
 

@@ -50,10 +50,11 @@ export struct AcquiredLimb {
 	int rotationAngle;
 	int rotationAngleIncrement;
 	SDL_Rect diffRect;
+	string name;
 
-	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect diffRect, int rotationIncrement) :
-		texture(texture), countdown(countdown), rotationAngle(rotationAngle), diffRect(diffRect), rotationAngleIncrement(rotationIncrement) {
-	}
+	AcquiredLimb(SDL_Texture* texture, int countdown, int rotationAngle, SDL_Rect diffRect, int rotationIncrement, string name) :
+		texture(texture), countdown(countdown), rotationAngle(rotationAngle),
+		diffRect(diffRect), rotationAngleIncrement(rotationIncrement), name(name) { }
 };
 
 /* This is what a Landmark's checkCollision function will return. */

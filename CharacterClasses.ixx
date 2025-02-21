@@ -847,6 +847,15 @@ public:
 
 	int getBlockX() { return blockPosition.x; }
 	int getBlockY() { return blockPosition.y; }
+	int hasScrambledLimbs() {
+		int scrambledCount = 0;
+		for (Limb& limb : limbs) {
+			if (!limb.getUnscrambled()) {
+				++scrambledCount;
+			}
+		}
+		return scrambledCount != 0;
+	}
 
 	int getLastX() { return lastBlockPosition.x; }
 	int getLastY() { return lastBlockPosition.y; }

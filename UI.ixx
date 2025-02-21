@@ -123,6 +123,8 @@ export class UI {
 			bool includeRefuseButton = true
 		);
 
+		Panel createPassingMessagePanel(string message, bool topPlacement = true);
+
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
 		void resizeWindow(WindowResType newResType);
@@ -1983,6 +1985,11 @@ private:
 
 };
 
+
+/* 
+* Whenever there is a new message to display in the Confirmation Panel,
+* we must actually destroy that panel and create a new one.
+*/
 export Panel getNewConfirmationMessage(
 	Panel& oldConfirmationPanel,
 	string newMessage,
@@ -1995,10 +2002,14 @@ export Panel getNewConfirmationMessage(
 }
 
 /*
-* Special panel to contain warning or message along with agree or disagree buttons.
+* Special panel to contain warning or message along with agree and (optional) disagree buttons.
 * Must be resized every time there is a new message, to accomodate the text.
 */
-Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonType confirmationType, bool includeRefuseButton) {
+Panel UI::createConfirmationPanel(
+	string confirmationText,
+	ConfirmationButtonType confirmationType,
+	bool includeRefuseButton
+) {
 	if (confirmationText == "") {
 		/* NO text? Return an empty panel with no buttons or dimensions. */
 		Panel newPanel = Panel();
@@ -2019,8 +2030,14 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 	* THEN we can create the actual buttons and the panel.
 	*/
 
-	string agreeText = confirmationType == ConfirmationButtonType::OkCancel ? resources.getButtonText("OK") : resources.getButtonText("YES");
-	string refuseText = confirmationType == ConfirmationButtonType::OkCancel ? resources.getButtonText("CANCEL") : resources.getButtonText("NO");
+	string agreeText =
+		confirmationType == ConfirmationButtonType::OkCancel ?
+		resources.getButtonText("OK") :
+		resources.getButtonText("YES");
+	string refuseText =
+		confirmationType == ConfirmationButtonType::OkCancel ?
+		resources.getButtonText("CANCEL") :
+		resources.getButtonText("NO");
 
 	string longestButtonText = agreeText.size() > refuseText.size() ? agreeText : refuseText;
 	int agreeBtnTxtWidth, agreeBtnTxtHeight, refuseBtnTxtWidth, refuseBtnTxtHeight;
@@ -2131,6 +2148,87 @@ Panel UI::createConfirmationPanel(string confirmationText, ConfirmationButtonTyp
 			ButtonClickStruct(ButtonOption::Refuse, -1)
 		);
 	}
+
+	return Panel(panelRect, buttons, panelTexture);
+}
+
+
+
+/*
+* Whenever there is a new message to display in the Confirmation Panel,
+* we must actually destroy that panel and create a new one.
+*/
+export Panel getNewPassingMessagePanel(
+	string newMessage,
+	Panel& oldPassingMessagePanel,
+	bool topPlacement,
+	UI& ui = UI::getInstance()
+) {
+	oldPassingMessagePanel.destroyTextures();
+	return ui.createPassingMessagePanel(newMessage, topPlacement);
+}
+
+
+/* Similar to the Confirmation Panel.
+* But this one will have no buttons, just a message.
+* It "passes" either with time, or some other non-button trigger.
+* Also, it doesn't stop the game.
+*/
+Panel UI::createPassingMessagePanel(string message, bool topPlacement) {
+	if (message == "") {
+		/* NO text? Return an empty panel with no buttons or dimensions. */
+		Panel newPanel = Panel();
+		newPanel.setRect({ 0,0,0,0 });
+		return newPanel;
+	}
+
+	Resources& resources = Resources::getInstance();
+	unordered_map<string, SDL_Color> colors = getColors();
+	TTF_Font* bodyFont = getBodyFont();
+
+	/* 
+	* Figure out the dimensions of the panel.
+	*/
+
+	SDL_Surface* textSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, message.c_str(), colors["DARK_TEXT"], 300);
+	int textWidth = textSurface->w;
+	int textHeight = textSurface->h;
+
+	int panelRectWidth = textWidth + (PANEL_PADDING * 2);
+	int panelRectHeight = textHeight + (PANEL_PADDING * 2);
+
+	/* Cerate many SDL_Rects */
+
+	int panelHeight = topPlacement ? PANEL_PADDING : getWindowHeight() - (panelRectHeight + PANEL_PADDING);
+
+	SDL_Rect panelRect = {
+		(getWindowWidth() / 2) - (panelRectWidth / 2),
+		panelHeight,
+		panelRectWidth,
+		panelRectHeight
+	};
+
+	/* This rect is relative to the panel. */
+	SDL_Rect textRect = {
+		(panelRect.w / 2) - (textWidth / 2),
+		PANEL_PADDING,
+		textWidth,
+		textHeight
+	};
+
+
+	/* Create the panel surface. */
+	SDL_Surface* panelSurface = createTransparentSurface(panelRectWidth, panelRectHeight);
+	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["BTN_HOVER_BG"]));
+
+	/* Blit the text onto the panel, make the texture, destroy the surfaces. */
+	SDL_BlitSurface(textSurface, NULL, panelSurface, &textRect);
+	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
+	SDL_FreeSurface(textSurface);
+	SDL_FreeSurface(panelSurface);
+
+	/* Empty buttons vector because the constructor needs a vector. */
+	vector<Button> buttons;
 
 	return Panel(panelRect, buttons, panelTexture);
 }
