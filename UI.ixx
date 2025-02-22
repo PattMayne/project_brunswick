@@ -62,12 +62,15 @@ export struct LimbButtonData {
 
 /* UI cannot import actual characters or their limbs, so Character object creates this struct and sends IT it. */
 export struct CharStatsData {
-	CharStatsData(string name, SDL_Texture* texture, int hp,
-		int strength, int speed, int intelligence, Point trackedPoint = Point(0, 0)) :
-			name(name), texture(texture), hp(hp),
-			strength(strength), speed(speed), intelligence(intelligence), trackedPoint(trackedPoint) { }
+	CharStatsData(
+		string name, int hp,
+		int strength, int speed, int intelligence,
+		Point trackedPoint = Point(0, 0)
+	) :
+		name(name), hp(hp), strength(strength), speed(speed),
+		intelligence(intelligence), trackedPoint(trackedPoint) { }
 
-	SDL_Texture* texture;
+	
 	string name;
 	int intelligence;
 	int strength;
@@ -154,6 +157,7 @@ export class UI {
 		TTF_Font* getButtonFont() { return buttonFont; }
 		TTF_Font* getTitleFont() { return titleFont; }
 		TTF_Font* getBodyFont() { return bodyFont; }
+		TTF_Font* getMonoFont() { return monoFont; }
 		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
 
 
@@ -203,6 +207,7 @@ export class UI {
 		TTF_Font* buttonFont = NULL;
 		TTF_Font* bodyFont = NULL;
 		TTF_Font* dialogFont = NULL;
+		TTF_Font* monoFont = NULL;
 
 		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
@@ -1098,6 +1103,7 @@ bool UI::initializeFonts(Resources& resources) {
 	int bodyFontSize = resources.getFontSize(FontContext::Body, mainWindowSurface->w);
 	int buttonFontSize = resources.getFontSize(FontContext::Button, mainWindowSurface->w);
 	int dialogFontSize = resources.getFontSize(FontContext::Dialog, mainWindowSurface->w);
+	int monoFontSize = bodyFontSize;
 
 	/* Initialize TTF font library */
 	if (TTF_Init() == -1) {
@@ -1107,6 +1113,14 @@ bool UI::initializeFonts(Resources& resources) {
 	}
 
 	/* Load the fontss */
+
+	monoFont = TTF_OpenFont("assets/sono_reg.ttf", monoFontSize);
+
+	if (!monoFont) {
+		SDL_Log("Font (sono_reg) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (sono_reg) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
 
 	titleFont = TTF_OpenFont("assets/pr_viking.ttf", titleFontSize);
 
@@ -2286,43 +2300,33 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	* MAKE THE BOXES THAT GO INSIDE THE PANEL
 	* 
 	* 
+	* Future boxes:
+	* --> Tracking Point box.
+	* ----> Must include a string of text for name of limb.
 	*/
 
 	/* Gather info for Stats Box (for any screen). */
 
-	string nameString = statsData.name;
-
-	/* NO AVATAR IN THE MENU. Instead make space, and the screen has to draw it each frame (?). */
-	SDL_Texture* avatar = statsData.texture;
-
-	string attsString = "ATTRIBUTES:\n\n";
-	attsString = attsString + "HP:           " + to_string(statsData.hp) + "\n";
+	string attsString = "HP:           " + to_string(statsData.hp) + "\n";
 	attsString = attsString + "SPEED:        " + to_string(statsData.speed) + "\n";
 	attsString = attsString + "STRENGTH:     " + to_string(statsData.strength) + "\n";
 	attsString = attsString + "INTELLIGENCE: " + to_string(statsData.intelligence) + "\n";
 	
-	/* Make surfaces for name and stats.
+	/* Make surfaces for other boxes
 	* Name should be word-wrapped on spaces or 14 characters.
 	*/
 
-	SDL_Surface* nameSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, nameString.c_str(), colors["DARK_TEXT"], 340);
-	int nameWidth = nameSurface->w;
-	int nameHeight = nameSurface->h;
-
-	SDL_Surface* attributesSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, attsString.c_str(), colors["DARK_TEXT"], 340);
+	SDL_Surface* attributesSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, attsString.c_str(), colors["DARK_TEXT"], 0);
 	int attsWidth = attributesSurface->w;
 	int attsHeight = attributesSurface->h;
 
 	/* Get the dimensions for the entire panel. */
-	int statsPanelWidth = nameWidth > attsWidth ? nameWidth : attsWidth;
-	statsPanelWidth += (PANEL_PADDING * 2);
-	int statsPanelHeight = nameHeight + attsHeight + (PANEL_PADDING * 3);
+	int statsPanelWidth = attsWidth + (PANEL_PADDING * 2);
+	int statsPanelHeight = attsHeight + (PANEL_PADDING * 2);
 
 	/* Make the draw rects for the textures within the hud panel. */
-	int nameSurfaceDrawX = (statsPanelWidth - nameWidth) / 2;
-	SDL_Rect nameRect = { nameSurfaceDrawX, PANEL_PADDING, nameWidth, nameHeight };
 	int attsSurfaceDrawX = (statsPanelWidth - attsWidth) / 2;
-	int attsSurfaceDrawY = nameHeight + (PANEL_PADDING * 2);
+	int attsSurfaceDrawY = PANEL_PADDING;
 	SDL_Rect attsRect = { attsSurfaceDrawX, attsSurfaceDrawY, attsWidth, attsHeight };
 
 	/*
@@ -2340,7 +2344,6 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	*      BLITTING
 	*/
 
-	SDL_BlitSurface(nameSurface, NULL, panelSurface, &nameRect);
 	SDL_BlitSurface(attributesSurface, NULL, panelSurface, &attsRect);
 	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
 
@@ -2359,7 +2362,6 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	hudPanel.setTexture(panelTexture);
 
 	SDL_FreeSurface(attributesSurface);
-	SDL_FreeSurface(nameSurface);
 	SDL_FreeSurface(panelSurface);
 
 	return hudPanel;

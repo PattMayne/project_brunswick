@@ -930,7 +930,6 @@ protected:
 CharStatsData Character::getCharStatsData(Point trackedPoint) {
 	return CharStatsData(
 		getName(),
-		getTexture(),
 		getHP(),
 		getStrength(),
 		getSpeed(),

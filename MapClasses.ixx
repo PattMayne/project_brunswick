@@ -619,7 +619,7 @@ vector<Point> Map::buildMap() {
 	/* get a random x starting point, but the y will be map's height - 2 */
 
 	int pathX = (rand() % (mapForm.blocksWidth - 10)) + 5;
-	int pathY = static_cast<int>(rows.size()) - 6;
+	int pathY = static_cast<int>(rows.size()) - 5;
 
 	int endBlockX = (rand() % (mapForm.blocksWidth - 10)) + 5;
 
@@ -641,7 +641,7 @@ vector<Point> Map::buildMap() {
 
 
 	/* Entrance & Exit landmarks. */
-	landmarks.emplace_back(getExitLandmark(Point(endBlockX, 4)));
+	landmarks.emplace_back(getExitLandmark(Point(endBlockX, 3)));
 	landmarks.emplace_back(getEntranceLandmark(Point(pathX, pathY)));
 
 	/*
