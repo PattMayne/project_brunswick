@@ -95,14 +95,10 @@ export struct SubPath {
 */
 export class MapCharacter : public Character {
 public:
+	/* Null character with no avatar. */
 	MapCharacter(CharacterType characterType = CharacterType::None) : Character(characterType) {
 		texture = NULL;
 		/* Set default texture. */
-		UI& ui = UI::getInstance();
-		SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
-		SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
-		SDL_FreeSurface(characterSurface);
-		setTexture(characterTexture);
 		newNpc = false;
 	}
 

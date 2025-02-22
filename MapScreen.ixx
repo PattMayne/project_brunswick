@@ -1831,8 +1831,11 @@ bool MapScreen::checkLimbOnLimbCollision() {
 	/* We have collected data on how many NPCs need to be made.
 	* Now we must make the NPCs, add the limbs to the NPCs, and remove the limbs from the roamingLimbs vector.
 	*/
+	sqlite3* db = startTransaction();
 
-	for (CollidedLimbsStruct collidedLimbsStruct : collidedLimbsStructs) {
+//	for (CollidedLimbsStruct collidedLimbsStruct : collidedLimbsStructs) {
+	for (int k = 0; k < collidedLimbsStructs.size(); ++k) {
+		CollidedLimbsStruct collidedLimbsStruct = collidedLimbsStructs[k];
 		/* 
 		* First create the NPC as an object,
 		* then save to the DB to get the ID,
@@ -1848,7 +1851,8 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		npc.setHomePosition(collidedLimbsStruct.point);
 		npc.startNewNpcCountup();
 
-		int npcID = createNpcOnMap(map.getSlug(), npcName, collidedLimbsStruct.point);
+		int npcID = createNpcOnMap(map.getSlug(), npcName, collidedLimbsStruct.point, db);
+
 		npc.setName(npcName);
 		npc.setId(npcID);
 		bool npcIsDrawable = blockIsDrawable(npc.getPosition());
@@ -1859,7 +1863,7 @@ bool MapScreen::checkLimbOnLimbCollision() {
 				if (limb.getId() == limbID) {
 					limb.setCharacterId(npcID);
 					npc.addLimb(limb);
-					updateLimbOwner(limbID, npcID);
+					updateLimbOwnerInTransaction(limbID, npcID, db);
 
 					/* The acquired limbs should animate. */
 					if (npcIsDrawable) {
@@ -1900,11 +1904,13 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		}
 
 		npc.buildDrawLimbList();
-		updateCharacterLimbs(npcID, npc.getAnchorLimbId(), npcLimbs);
+		updateCharacterLimbsInTransaction(npcID, npc.getAnchorLimbId(), npcLimbs, db);
 		npc.setTexture(npc.createAvatar());
 
 		map.addNPC(npc);
 	}
+
+	commitTransactionAndCloseDatabase(db);
 
 	return collisionFound;
 }
