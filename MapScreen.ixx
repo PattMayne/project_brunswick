@@ -307,6 +307,7 @@ export class MapScreen {
 		void drawRoamingLimbs(UI& ui);
 		void drawNpcs(UI& ui);
 		void drawSuits(UI& ui);
+		void drawSuit(UI& ui, Character& suit);
 		void drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX, int charDrawY);
 		void drawLandmarkAcquiredLimbs(UI& ui, Landmark& landmark, int lDrawX, int lDrawY);
 		void draw(UI& ui);
@@ -981,6 +982,7 @@ void MapScreen::drawLandmarks(UI& ui) {
 				NULL, &targetRect,
 				0, NULL, SDL_FLIP_NONE);
 			
+			drawLandmarkAcquiredLimbs(ui, landmark, targetRect.x, targetRect.y);
 		}
 	}
 }
@@ -1159,6 +1161,7 @@ void MapScreen::drawLandmarkAcquiredLimbs(UI& ui, Landmark& landmark, int lDrawX
 			aLimbStruct.rotationAngle, NULL, SDL_FLIP_NONE
 		);
 
+
 		--aLimbStruct.countdown;
 	}
 }
@@ -1234,13 +1237,62 @@ void MapScreen::animateMovingObject(SDL_Rect& rect, int blockPositionX, int bloc
 	}
 }
 
-/* Draw the Suits on the Shrines. */
+void MapScreen::drawSuit(UI& ui, Character& suit) {
+	SDL_Rect suitRect = { 0, 0, blockWidth, blockWidth };
+
+	Point position = suit.getPosition();
+
+	/* skip suits that are too far outside of the frame. (still draw them if they might fly onto the frame.) */
+	if (!blockIsDrawable(position) && !DRAW_TEST_SUITS_IN_CORNER) {
+		return;
+	}
+
+	int posX = position.x;
+	int posY = position.y;
+
+	int baseDrawX = (posX - drawStartX) * blockWidth;
+	int baseDrawY = ((posY - drawStartY) * blockWidth);
+
+	suitRect.x = baseDrawX + npcHeight;
+	suitRect.y = baseDrawY - suitOffsetY;
+
+	/* Synchronize with map during movement animations. */
+	if (animate) {
+		if (animationType == AnimationType::Player) {
+			animateMapBlockDuringPlayerMove(suitRect, posX, posY, true);
+		}
+		else if (animationType == AnimationType::NPC) {
+			animateMovingObject(suitRect, posX, posY, suit.getLastPosition());
+		}
+	}
+
+
+	SDL_RenderCopyEx(
+		ui.getMainRenderer(),
+		suit.getTexture(),
+		NULL, &suitRect,
+		0,
+		NULL, SDL_FLIP_NONE
+	);
+}
+
+/* Draw the Suits on the Shrines.
+* No longer used.
+* 
+* CAN BE USED FOR TESTING... TO DRAW ALL SUITS IN TOP CORNER
+*/
 void MapScreen::drawSuits(UI& ui) {
 	SDL_Rect suitRect = { 0, 0, blockWidth, blockWidth };
 
 	int testDrawIterator = 0;
 
 	for (Character& suit : map.getSuits()) {
+
+		if (!DRAW_TEST_SUITS_IN_CORNER) {
+			drawSuit(ui, suit);
+			continue;
+		}
+
 		Point position = suit.getPosition();
 
 		/* skip suits that are too far outside of the frame. (still draw them if they might fly onto the frame.) */
@@ -1254,7 +1306,7 @@ void MapScreen::drawSuits(UI& ui) {
 		int baseDrawX = (posX - drawStartX) * blockWidth;
 		int baseDrawY = ((posY - drawStartY) * blockWidth);
 
-		suitRect.x = baseDrawX + npcHeight;
+		suitRect.x = baseDrawX +npcHeight;
 		suitRect.y = baseDrawY - suitOffsetY;
 
 		/* To draw all suits in top corner for review. */
@@ -1262,8 +1314,7 @@ void MapScreen::drawSuits(UI& ui) {
 			suitRect.x = testDrawIterator * blockWidth + npcHeight;
 			suitRect.y = 0;
 			++testDrawIterator;
-		}
-		
+		}		
 
 		/* Synchronize with map during movement animations. */
 		if (animate) {
@@ -1283,16 +1334,6 @@ void MapScreen::drawSuits(UI& ui) {
 			0,
 			NULL, SDL_FLIP_NONE
 		);
-
-		/* Get landmark and draw acquired limbs. */
-
-		for (Landmark& landmark : map.getLandmarks()) {
-			if (landmark.getPosition().equals(position)) {
-				/* draw acquired limbs on top (after) to hide the new avatar behind the ceremony. */
-				drawLandmarkAcquiredLimbs(ui, landmark, baseDrawX, baseDrawY);
-			}
-		}
-
 	}
 }
 

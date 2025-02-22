@@ -547,6 +547,9 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
 /*
 * Update all attributes of a character's limbs and their joints.
 * To be used when SAVING limb setup in Character Creation Screen.
+* 
+* This is NOT STAND-ALONE. It doesn't create or destroy/commit the DB or a Transaction.
+* This receives a DB and assumes this is happening within a transaction.
 */
 export void updateCharacterLimbsInTransaction(int characterId, int anchorLimbId, vector<Limb>& limbs, sqlite3* db) {
    
@@ -573,8 +576,6 @@ export void updateCharacterLimbsInTransaction(int characterId, int anchorLimbId,
 
     /* Finalize statement. */
     sqlite3_finalize(updateCharacterstatement);
-
-
 
     for (Limb& limb : limbs) {
         const char* updateLimbSQL = "UPDATE limb SET map_slug = ?, hp_mod = ?, strength_mod = ?, "
