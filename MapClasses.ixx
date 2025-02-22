@@ -11,7 +11,7 @@
 *  \____|_|\__,_|___/___/\___||___/
 * 
 * 
-* The MAP class, and the BLOCK class whose objects that compose the map.
+* MAP CLASSES.
 * 
 */
 
@@ -42,7 +42,6 @@ using namespace std;
 
 
 export enum MapDirection { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
-
 
 export struct AcquiredLimb {
 	SDL_Texture* texture;
@@ -551,7 +550,8 @@ void Map::spaceOutLandmarks() {
 
 		Point thisPosition = thisLandmark.getPosition();
 
-		for (int k = i + 1; k < landmarks.size() - 1; ++k) {
+		for (int k = 0; k < landmarks.size(); ++k) {
+			if (k == i) { continue; }
 			Landmark& thatLandmark = landmarks[k];
 			Point thatPosition = thatLandmark.getPosition();
 

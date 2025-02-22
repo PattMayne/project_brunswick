@@ -769,6 +769,14 @@ export class Panel {
 			if (bgTexture != NULL) { SDL_DestroyTexture(bgTexture); }
 		}
 
+		void setTexture(SDL_Texture* newTexture) {
+			if (bgTexture != NULL) {
+				SDL_DestroyTexture(bgTexture);
+			}
+
+			bgTexture = newTexture;
+		}
+
 		void setRect(SDL_Rect newRect) { rect = newRect; }
 		SDL_Rect getRect() { return rect; }
 
@@ -2260,7 +2268,7 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	/* FOR NOW we will assume that SCREEN TYPE IS MAP.
 	* 
 	* 1. gather the info
-	* 2. Character stats box (name, avatar, dominance cycle, attributes).
+	* 2. Character stats box (name, dominance cycle, attributes). NO AVATAR
 	* -----> Use monospace font for attributes. NEW FONT.
 	* 3. Tracked limb box.
 	* 4. Unequipped Limbs toggle.
@@ -2270,6 +2278,16 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	Resources& resources = Resources::getInstance();
 	unordered_map<string, SDL_Color> colors = getColorsByFunction();
 
+	
+
+	/*
+	* 
+	* 
+	* MAKE THE BOXES THAT GO INSIDE THE PANEL
+	* 
+	* 
+	*/
+
 	/* Gather info for Stats Box (for any screen). */
 
 	string nameString = statsData.name;
@@ -2277,11 +2295,11 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	/* NO AVATAR IN THE MENU. Instead make space, and the screen has to draw it each frame (?). */
 	SDL_Texture* avatar = statsData.texture;
 
-	string statsString = "ATTRIBUTES:\n\n";
-	statsString = statsString + "HP:           " + to_string(statsData.hp) + "\n";
-	statsString = statsString + "SPEED:        " + to_string(statsData.speed) + "\n";
-	statsString = statsString + "STRENGTH:     " + to_string(statsData.strength) + "\n";
-	statsString = statsString + "INTELLIGENCE: " + to_string(statsData.intelligence) + "\n";
+	string attsString = "ATTRIBUTES:\n\n";
+	attsString = attsString + "HP:           " + to_string(statsData.hp) + "\n";
+	attsString = attsString + "SPEED:        " + to_string(statsData.speed) + "\n";
+	attsString = attsString + "STRENGTH:     " + to_string(statsData.strength) + "\n";
+	attsString = attsString + "INTELLIGENCE: " + to_string(statsData.intelligence) + "\n";
 	
 	/* Make surfaces for name and stats.
 	* Name should be word-wrapped on spaces or 14 characters.
@@ -2291,9 +2309,58 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	int nameWidth = nameSurface->w;
 	int nameHeight = nameSurface->h;
 
-	SDL_Surface* statsSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, statsString.c_str(), colors["DARK_TEXT"], 340);
-	int statsWidth = statsSurface->w;
-	int statsHeight = statsSurface->h;
+	SDL_Surface* attributesSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, attsString.c_str(), colors["DARK_TEXT"], 340);
+	int attsWidth = attributesSurface->w;
+	int attsHeight = attributesSurface->h;
+
+	/* Get the dimensions for the entire panel. */
+	int statsPanelWidth = nameWidth > attsWidth ? nameWidth : attsWidth;
+	statsPanelWidth += (PANEL_PADDING * 2);
+	int statsPanelHeight = nameHeight + attsHeight + (PANEL_PADDING * 3);
+
+	/* Make the draw rects for the textures within the hud panel. */
+	int nameSurfaceDrawX = (statsPanelWidth - nameWidth) / 2;
+	SDL_Rect nameRect = { nameSurfaceDrawX, PANEL_PADDING, nameWidth, nameHeight };
+	int attsSurfaceDrawX = (statsPanelWidth - attsWidth) / 2;
+	int attsSurfaceDrawY = nameHeight + (PANEL_PADDING * 2);
+	SDL_Rect attsRect = { attsSurfaceDrawX, attsSurfaceDrawY, attsWidth, attsHeight };
+
+	/*
+	*
+	*
+	* MAKE THE HUD PANEL SURFACE AND BLIT THE SMALLER TEXTURES ONTO IT.
+	*
+	*
+	*/
+
+	SDL_Surface* panelSurface = createTransparentSurface(statsPanelWidth, statsPanelHeight);
+	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
+
+	/*
+	*      BLITTING
+	*/
+
+	SDL_BlitSurface(nameSurface, NULL, panelSurface, &nameRect);
+	SDL_BlitSurface(attributesSurface, NULL, panelSurface, &attsRect);
+	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
+
+	/*
+	*
+	*
+	* MAKE THE HUD PANEL TEXTURE AND RETURN IT.
+	*
+	*
+	*/
+
+	int hudDrawX = getWindowWidth() - (statsPanelWidth + PANEL_PADDING);
+	int hudDrawY = PANEL_PADDING;
+
+	hudPanel.setRect({ hudDrawX, hudDrawY, statsPanelWidth , statsPanelHeight });
+	hudPanel.setTexture(panelTexture);
+
+	SDL_FreeSurface(attributesSurface);
+	SDL_FreeSurface(nameSurface);
+	SDL_FreeSurface(panelSurface);
 
 	return hudPanel;
 }

@@ -852,15 +852,7 @@ public:
 
 	int getBlockX() { return blockPosition.x; }
 	int getBlockY() { return blockPosition.y; }
-	int hasScrambledLimbs() {
-		int scrambledCount = 0;
-		for (Limb& limb : limbs) {
-			if (!limb.getUnscrambled()) {
-				++scrambledCount;
-			}
-		}
-		return scrambledCount != 0;
-	}
+	bool hasScrambledLimbs();
 
 	int getLastX() { return lastBlockPosition.x; }
 	int getLastY() { return lastBlockPosition.y; }
@@ -868,28 +860,10 @@ public:
 	Point getPosition() { return blockPosition; }
 	Point getLastPosition() { return lastBlockPosition; }
 
-	void setTexture(SDL_Texture* incomingTexture) {
-		if (texture && texture != NULL) {
-			SDL_DestroyTexture(texture);
-		}
-		texture = incomingTexture;
-	}
-
-
-	void updateLastBlock() {
-		lastBlockPosition.x = blockPosition.x;
-		lastBlockPosition.y = blockPosition.y;
-	}
-
-	/* This can be MAP position or DRAW position. */
-	void moveToPosition(Point newPosition) {
-		lastBlockPosition = blockPosition;
-		blockPosition = newPosition;
-	}
-
-	void setBlockPosition(Point blockPosition) {
-		this->blockPosition = blockPosition;
-	}
+	void setTexture(SDL_Texture* incomingTexture);
+	void updateLastBlock();
+	void moveToPosition(Point newPosition);
+	void setBlockPosition(Point blockPosition) { this->blockPosition = blockPosition; }
 
 	void setId(int id) { this->id = id; }
 	void addLimb(Limb& newLimb) { limbs.emplace_back(newLimb); }
@@ -909,6 +883,8 @@ public:
 	void addToDrawLimbList(int limbId);
 	void buildDrawLimbList();
 	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct);
+
+	CharStatsData getCharStatsData(Point trackedPoint = Point(-1, -1));
 
 	void sortLimbsByNumberOfJoints() {
 		sort(limbs.begin(), limbs.end(), compareJointsNumber); }
@@ -949,6 +925,49 @@ protected:
 * |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
 * |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
 */
+
+
+CharStatsData Character::getCharStatsData(Point trackedPoint) {
+	return CharStatsData(
+		getName(),
+		getTexture(),
+		getHP(),
+		getStrength(),
+		getSpeed(),
+		getIntelligence(),
+		trackedPoint
+	);
+}
+
+
+void Character::setTexture(SDL_Texture* incomingTexture) {
+	if (texture && texture != NULL) {
+		SDL_DestroyTexture(texture);
+	}
+	texture = incomingTexture;
+}
+
+void Character::updateLastBlock() {
+	lastBlockPosition.x = blockPosition.x;
+	lastBlockPosition.y = blockPosition.y;
+}
+
+/* This can be MAP position or DRAW position. */
+void Character::moveToPosition(Point newPosition) {
+	lastBlockPosition = blockPosition;
+	blockPosition = newPosition;
+}
+
+
+bool Character::hasScrambledLimbs() {
+	int scrambledCount = 0;
+	for (Limb& limb : limbs) {
+		if (!limb.getUnscrambled()) {
+			++scrambledCount;
+		}
+	}
+	return scrambledCount != 0;
+}
 
 
 /* This will always be full HP.
@@ -1154,11 +1173,11 @@ SDL_Texture* Character::createAvatar() {
 	UI& ui = UI::getInstance();
 	Limb& anchorLimb = getAnchorLimb();
 
-	int tWidth, tHeight;
-	SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &tWidth, &tHeight);
+	int lWidth, lHeight;
+	SDL_QueryTexture(anchorLimb.getTexture(), NULL, NULL, &lWidth, &lHeight);
 
 	/* Set drawRects of all equipped limbs from starting point of 0 for calculating. */
-	anchorLimb.setDrawRect({ 0, 0, tWidth, tHeight });
+	anchorLimb.setDrawRect({ 0, 0, lWidth, lHeight });
 	setChildLimbDrawRects(anchorLimb, ui);
 
 	/* AvatarDimensionsStruct will hold the information about the avatar dimensions as we
@@ -1209,8 +1228,8 @@ SDL_Texture* Character::createAvatar() {
 	anchorLimb.setDrawRect({
 		0 - dimStruct.leftmost,
 		0 - dimStruct.topmost,
-		tWidth,
-		tHeight
+		lWidth,
+		lHeight
 		});
 
 	/* Prepare points, rects, and draw order for drawing. */

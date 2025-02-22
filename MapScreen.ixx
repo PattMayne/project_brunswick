@@ -245,11 +245,14 @@ export class MapScreen {
 			settingsPanel.setShow(false);
 			gameMenuPanel.setShow(true);
 
-			messagePanel = ui.createConfirmationPanel("LOADED", ConfirmationButtonType::OkCancel, false);
-			messagePanel.setShow(true);
+			messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
+			messagePanel.setShow(false);
 
 			passingMessagePanel = ui.createPassingMessagePanel("", true);
 			passingMessagePanel.setShow(false);
+
+			hudPanel = ui.createHud(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
+			hudPanel.setShow(true);
 		}
 
 		/* Destructor */
@@ -398,6 +401,7 @@ export class MapScreen {
 		Panel gameMenuPanel;
 		Panel messagePanel;
 		Panel passingMessagePanel;
+		Panel hudPanel;
 
 		int passingMessageCountdown = 0; /* optional */
 };
@@ -937,6 +941,7 @@ void MapScreen::draw(UI& ui) {
 	settingsPanel.draw(ui);
 	messagePanel.draw(ui);
 	passingMessagePanel.draw(ui);
+	hudPanel.draw(ui);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
