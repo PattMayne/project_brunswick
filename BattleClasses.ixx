@@ -60,15 +60,31 @@ public:
 	Character& getPlayerCharacter() { return playerCharacter; }
 	Character& getNpc() { return npc; }
 
+	Point getDrawStartNpc() { return drawStartNpc; }
+	Point getDrawStartPlayer() { return drawStartPlayer; }
+
+	void setDrawStartNpc(Point point) { drawStartNpc = point; }
+	void setDrawStartPlayer(Point point) { drawStartPlayer = point; }
+
+	void setDrawPoints() {
+		//npc.buildDrawLimbList();
+		//playerCharacter.buildDrawLimbList();
+
+		//playerCharacter.setTexture(playerCharacter.createAvatar());
+		//npc.setTexture(npc.createAvatar());
+	}
 
 private:
 	int id;
 	Character playerCharacter;
 	Character npc;
 	string mapSlug;
-	//MapLevel mapLevel;
+
 	BattleStatus battleStatus;
 	bool playerTurn;
+
+	Point drawStartPlayer;
+	Point drawStartNpc;
 };
 
 

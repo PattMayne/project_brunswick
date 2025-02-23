@@ -94,6 +94,41 @@ public:
 
 		showTitle = true;
 		titleCountdown = 140;
+
+		/* Make sure characters have avatars (for now... later will draw limbs). */
+		Character& playerCharacter = battle.getPlayerCharacter();
+		Character& npc = battle.getNpc();
+
+		npc.buildDrawLimbList();
+		playerCharacter.buildDrawLimbList();
+
+		playerCharacter.setTexture(playerCharacter.createAvatar());
+		npc.setTexture(npc.createAvatar());
+
+		/* Get the draw start points (WILL CHANGE after we implement button panels.) */
+		int playerAvatarWidth, playerAvatarHeight, npcAvatarWidth, npcAvatarHeight;
+		SDL_QueryTexture(playerCharacter.getTexture(), NULL, NULL, &playerAvatarWidth, &playerAvatarHeight);
+		SDL_QueryTexture(npc.getTexture(), NULL, NULL, &npcAvatarWidth, &npcAvatarHeight);
+
+		int windowHeight, windowWidth;
+		SDL_GetWindowSize(ui.getMainWindow(), &windowWidth, &windowHeight);
+
+		SDL_Rect playerAnchorLimbDrawRect = playerCharacter.getAnchorLimb().getDrawRect();
+		SDL_Rect npcAnchorLimbDrawRect = npc.getAnchorLimb().getDrawRect();
+
+		int playerX = ((windowWidth / 2) - playerAvatarWidth + playerAnchorLimbDrawRect.x) - 100 ;
+		int playerY = (windowHeight / 2) - (playerAvatarHeight / 2) + playerAnchorLimbDrawRect.y;
+
+		int npcX = (windowWidth / 2) + npcAnchorLimbDrawRect.x + 100;
+		int npcY = (windowHeight / 2) - (npcAvatarHeight / 2) + npcAnchorLimbDrawRect.y;
+
+		playerDrawStartPoint = Point( playerX, playerY );
+		npcDrawStartPoint = Point(npcX, npcY);
+
+		setLimbIdList();
+		rotationCountdown = 30;
+		resetRotationAmount();
+		limbToRotateId = 0;
 	}
 
 	ScreenType getScreenType() { return screenType; }
@@ -111,10 +146,12 @@ private:
 	SDL_Texture* titleTexture;
 	SDL_Rect titleRect;
 
-	void draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel);
+	void draw(UI& ui);
+	void drawPlayer(UI& ui);
+	void drawNpc(UI& ui);
 
-	void handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState);
-	void checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel);
+	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
+	void checkMouseLocation(SDL_Event& e);
 
 	void getBackgroundTexture(UI& ui);
 	void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
@@ -126,11 +163,63 @@ private:
 	bool showTitle;
 	int titleCountdown;
 
+	Point playerDrawStartPoint;
+	Point npcDrawStartPoint;
+
+	int rotationAmount;
+	int rotationCountdown;
+	int limbToRotateId;
+
+	void resetRotationAmount();
+	void setLimbIdList();
+	void restartRotation();
+
+	vector<int> limbIds;
+
 	/* panels */
 	Panel settingsPanel;
 	Panel gameMenuPanel;
 	Battle battle;
 };
+
+/* We need a prebuilt list of limb ids
+* so we can randomly select one to rotate.
+*/
+void BattleScreen::setLimbIdList() {
+	limbIds = {};
+
+	for (Limb& limb : battle.getPlayerCharacter().getLimbs()) {
+		limbIds.push_back(limb.getId());
+	}
+
+	for (Limb& limb : battle.getNpc().getLimbs()) {
+		limbIds.push_back(limb.getId());
+	}
+}
+
+void BattleScreen::resetRotationAmount() {
+	rotationAmount = 2;
+
+	if (rand() % 2 == 0) {
+		rotationAmount *= -1;
+	}
+
+}
+
+
+void BattleScreen::restartRotation() {
+	resetRotationAmount();
+
+	if ((rand() % 4) > 0) {
+		int index = rand() % limbIds.size();
+		limbToRotateId = limbIds[index];
+	}
+	else {
+		limbToRotateId = 0;
+	}
+
+	rotationCountdown = (rand() % 46) + 7;
+}
 
 void BattleScreen::getBackgroundTexture(UI& ui) {
 	int windowHeight, windowWidth;
@@ -144,8 +233,7 @@ export void BattleScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
-
-
+	
 	/* Timeout data */
 	const int TARGET_FPS = 60;
 	const int FRAME_DELAY = 600 / TARGET_FPS; // milliseconds per frame
@@ -170,7 +258,7 @@ export void BattleScreen::run() {
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
-				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
+				handleEvent(e, running, gameState);
 			}
 		}
 
@@ -188,8 +276,8 @@ export void BattleScreen::run() {
 			}
 		}
 
-		checkMouseLocation(e, settingsPanel, gameMenuPanel);
-		draw(ui, settingsPanel, gameMenuPanel);
+		checkMouseLocation(e);
+		draw(ui);
 
 		/* Delay so the app doesn't just crash */
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -197,6 +285,13 @@ export void BattleScreen::run() {
 		if (frameTimeElapsed < FRAME_DELAY) {
 			SDL_Delay(FRAME_DELAY - frameTimeElapsed);
 		}
+
+		if (rotationCountdown < 1) {
+			restartRotation();
+		}
+
+		--rotationCountdown;
+
 	}
 
 	/* set the next screen to load */
@@ -204,13 +299,87 @@ export void BattleScreen::run() {
 }
 
 
-void BattleScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
+void BattleScreen::drawNpc(UI& ui) {
+
+	Character& npc = battle.getNpc();
+
+	vector<Limb>& limbs = npc.getLimbs();
+
+	SDL_Rect limbRect = { 0, 0, 0, 0 };
+
+	for (int i = 0; i < limbs.size(); ++i) {
+		Limb& limb = limbs[i];
+		if (limb.isEquipped()) {
+
+			SDL_Point rotationPoint = limb.getRotationPointSDL();
+			limbRect = limb.getDrawRect();
+			limbRect.x += npcDrawStartPoint.x;
+			limbRect.y += npcDrawStartPoint.y;
+
+			SDL_RenderCopyEx(
+				ui.getMainRenderer(),
+				limb.getTexture(),
+				NULL,
+				&limbRect,
+				limb.getRotationAngle(),
+				&rotationPoint,
+				SDL_FLIP_NONE);
+
+			if (limbToRotateId == limb.getId()) {
+				limb.rotate(rotationAmount);
+				npc.setChildLimbDrawRects(limb, ui);
+			}
+		}
+	}
+}
+
+void BattleScreen::drawPlayer(UI& ui) {
+
+	Character& playerCharacter = battle.getPlayerCharacter();
+
+	vector<Limb>& limbs = playerCharacter.getLimbs();
+
+	SDL_Rect limbRect = { 0, 0, 0, 0 };
+
+	for (int i = 0; i < limbs.size(); ++i) {
+		Limb& limb = limbs[i];
+		if (limb.isEquipped()) {
+
+			SDL_Point rotationPoint = limb.getRotationPointSDL();
+			limbRect = limb.getDrawRect();
+			limbRect.x += playerDrawStartPoint.x;
+			limbRect.y += playerDrawStartPoint.y;
+
+			SDL_RenderCopyEx(
+				ui.getMainRenderer(),
+				limb.getTexture(),
+				NULL,
+				&limbRect,
+				limb.getRotationAngle(),
+				&rotationPoint,
+				SDL_FLIP_NONE);
+
+			if (limbToRotateId == limb.getId()) {
+				limb.rotate(rotationAmount);
+				playerCharacter.setChildLimbDrawRects(limb, ui);
+			}
+		}
+	}
+}
+
+
+void BattleScreen::draw(UI& ui) {
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 
 	/* draw BG for now */
 	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
+
+
+	/* Draw the characters. */
+	drawPlayer(ui);
+	drawNpc(ui);
 	
 	/* draw the title */
 	if (showTitle) {
@@ -254,7 +423,7 @@ void BattleScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
 
 
 /* Process user input */
-void BattleScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel, Panel& gameMenuPanel, GameState& gameState) {
+void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) {
 		cout << "\nQUIT\n";
@@ -327,7 +496,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, Panel& settingsPanel
 	}
 }
 
-void BattleScreen::checkMouseLocation(SDL_Event& e, Panel& settingsPanel, Panel& gameMenuPanel) {
+void BattleScreen::checkMouseLocation(SDL_Event& e) {
 	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
