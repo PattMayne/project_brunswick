@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS limb (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     form_slug TEXT NOT NULL,
     character_id INTEGER DEFAULT -1,
-    map_slug TEXT,
+    map_slug TEXT DEFAULT 'no_map',
     hp_mod INTEGER DEFAULT 0,
     strength_mod INTEGER DEFAULT 0,
     speed_mod INTEGER DEFAULT 0,
@@ -46,12 +46,21 @@ CREATE TABLE IF NOT EXISTS character (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     anchor_limb_id INTEGER DEFAULT -1,
-    map_slug TEXT,
+    map_slug TEXT DEFAULT 'no_map',
     battle_id INTEGER NOT NULL DEFAULT -1,
     position_x INTEGER DEFAULT 0,
     position_y INTEGER DEFAULT 0,
     character_type INTEGER NOT NULL,
     suit_type INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS battle (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    map_slug TEXT NOT NULL,
+    player_id INTEGER NOT NULL,
+    npc_id INTEGER NOT NULL,
+    battle_status INTEGER NOT NULL,
+    player_turn INTEGER DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_limb_id ON joint (limb_id);

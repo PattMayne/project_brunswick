@@ -30,6 +30,7 @@ import <string>;
 #include "SDL.h"
 #include "SDL_image.h"
 #include "SDL_ttf.h"
+#include <cstring>
 
 import CharacterClasses;
 import MapClasses;
@@ -37,16 +38,28 @@ import TypeStorage;
 import LimbFormMasterList;
 import FormFactory;
 import GameState;
+import BattleClasses;
 import UI;
 
 using namespace std;
 
 const char* dbPath() { return "data/databases/limbs_data.db"; }
 
+Character loadCharacterInTransaction(sqlite3* db, int characterID);
+int createPlayerCharacterOrGetID();
+
 export string stringFromUnsignedChar(const unsigned char* c_str) {
+    if (!c_str || c_str == nullptr || c_str == NULL) {
+        return "";
+    }
+
     std::string str;
     int i{ 0 };
-    while (c_str[i] != '\0') { str += c_str[i++]; }
+
+    while (c_str[i] != '\0') {
+        str += c_str[i++];
+    }
+
     return str;
 }
 
@@ -113,6 +126,142 @@ export void createDB() {
     /* Close database. */
     sqlite3_close(db);
 }
+
+/**
+*  ____        _   _   _            ____      _       _           _
+* | __ )  __ _| |_| |_| | ___      |  _ \ ___| | __ _| |_ ___  __| |
+* |  _ \ / _` | __| __| |/ _ \_____| |_) / _ \ |/ _` | __/ _ \/ _` |
+* | |_) | (_| | |_| |_| |  __/_____|  _ <  __/ | (_| | ||  __/ (_| |
+* |____/ \__,_|\__|\__|_|\___|     |_| \_\___|_|\__,_|\__\___|\__,_|
+* |  ___|   _ _ __   ___| |_(_) ___  _ __  ___
+* | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
+* |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
+* |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
+*/
+
+
+export int createNewBattle(string mapSlugString, int playerId, int npcId, bool playerTurn) {
+
+    BattleStatus battleStatus = BattleStatus::Active;
+    int battleId = -1;
+    const char* mapSlug = mapSlugString.c_str();
+    int playerTurnInt = playerTurn ? 1 : 0;
+
+    sqlite3* db = startTransaction();
+
+    const char* newBattleSql = "INSERT INTO battle "
+        "(map_slug, player_id, npc_id, battle_status, player_turn) VALUES (?, ?, ?, ?, ?);";
+    sqlite3_stmt* newBattleStatement;
+    int returnCode = sqlite3_prepare_v2(db, newBattleSql, -1, &newBattleStatement, nullptr);
+
+    /* Bind values. */
+
+    sqlite3_bind_text(newBattleStatement, 1, mapSlug, -1, SQLITE_STATIC);
+    sqlite3_bind_int(newBattleStatement, 2, playerId);
+    sqlite3_bind_int(newBattleStatement, 3, npcId);
+    sqlite3_bind_int(newBattleStatement, 4, battleStatus);
+    sqlite3_bind_int(newBattleStatement, 5, playerTurnInt);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(newBattleStatement);
+    if (returnCode != SQLITE_DONE) { cerr << "Insert Map NPC failed: " << sqlite3_errmsg(db) << endl; }
+    else {
+        /* Get the ID of the saved item. */
+        battleId = static_cast<int>(sqlite3_last_insert_rowid(db));
+    }
+
+    /* Close DB. */
+    sqlite3_finalize(newBattleStatement);
+
+    /* Now update both characters' battle_id. */
+
+    const char* updateSQL = "UPDATE character SET battle_id = ? WHERE id = ? OR id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare CHARACTER battle_id UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+    }
+
+    /* Bind the values. */
+    sqlite3_bind_int(statement, 1, battleId);
+    sqlite3_bind_int(statement, 2, playerId);
+    sqlite3_bind_int(statement, 3, npcId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update failed: " << sqlite3_errmsg(db) << endl; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+
+    commitTransactionAndCloseDatabase(db);
+
+    return battleId;
+}
+
+
+/* Load the Battle data into a Battle object.
+* Also load both opponents.
+*/
+export Battle loadBattle(int battleId) {
+    sqlite3* db = startTransaction();
+    Battle battle;
+
+    cout << "TRYING TO LOAD battle id: " << battleId << "\n";
+
+    const char* queryBattleSql = "SELECT * FROM battle WHERE id = ?;";
+    sqlite3_stmt* battleStatement;
+    int returnCode = sqlite3_prepare_v2(db, queryBattleSql, -1, &battleStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare Battle retrieval statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return battle;
+    }
+
+    /* Bind the id value. */
+    sqlite3_bind_int(battleStatement, 1, battleId);
+
+    /* Execute binded statement. */
+    if (sqlite3_step(battleStatement) != SQLITE_ROW) {
+        cerr << "Failed to retrieve BATTLE: " << sqlite3_errmsg(db) << endl;
+        return battle;
+    }
+
+
+    string mapSlug = stringFromUnsignedChar(sqlite3_column_text(battleStatement, 1));
+    int playerId = sqlite3_column_int(battleStatement, 2);
+    int npcId = sqlite3_column_int(battleStatement, 3);
+    int battleStatusInt = sqlite3_column_int(battleStatement, 4);
+    int playerTurnInt = sqlite3_column_int(battleStatement, 5);
+
+    BattleStatus battleStatus = static_cast<BattleStatus>(battleStatusInt);
+    bool playerTurn = playerTurnInt == 1;
+
+    /* Finalize statement. */
+    sqlite3_finalize(battleStatement);
+
+    int officialPlayerId = createPlayerCharacterOrGetID();
+    Character playerCharacter = loadCharacterInTransaction(db, officialPlayerId);
+    Character npc = loadCharacterInTransaction(db, npcId);
+
+    Battle playerBattle = Battle(
+        officialPlayerId,
+        playerCharacter,
+        npc,
+        mapSlug,
+        battleStatus,
+        playerTurn
+    );
+
+    commitTransactionAndCloseDatabase(db);
+
+    return playerBattle;
+}
+
 
 /**
 * 
@@ -202,7 +351,6 @@ export bool updateLimbOwnerInTransaction(int limbID, int newCharacterID, sqlite3
 
     /* Finalize statement and close database. */
     sqlite3_finalize(statement);
-    //sqlite3_close(db);
 
     return success;
 }
@@ -406,7 +554,6 @@ export int createNpcOnMap(string mapSlugString, string npcName, Point position, 
 
     /* Close DB. */
     sqlite3_finalize(newNpcStatement);
-    //sqlite3_close(db);
 
     return npcID;
 }
@@ -699,6 +846,185 @@ export bool updatePlayerMap(string newMapSlug) {
     return success;
 }
 
+
+export Character loadCharacterInTransaction(sqlite3* db, int characterID) {
+
+    string name;
+    string mapSlug;
+    int anchorLimbID; /* Get from the limbs. */
+    int battleID; /* For later, when battles actually exist. */
+    Character character = Character(CharacterType::None);
+
+
+    /* GET THE CHARACTER OBJECT. */
+
+    /* Create statement template for getting the character. */
+    const char* queryCharacterSQL = "SELECT * FROM character WHERE id = ?;";
+    sqlite3_stmt* characterStatement;
+    int returnCode = sqlite3_prepare_v2(db, queryCharacterSQL, -1, &characterStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare character retrieval statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return character;
+    }
+
+    /* Bind the id value. */
+    sqlite3_bind_int(characterStatement, 1, characterID);
+
+    /* Execute binded statement. */
+    if (sqlite3_step(characterStatement) != SQLITE_ROW) {
+        cerr << "Failed to retrieve MAP: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+
+    name = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 1));
+    anchorLimbID = sqlite3_column_int(characterStatement, 2);
+    mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 3));
+    battleID = sqlite3_column_int(characterStatement, 4);
+    Point position = Point(
+        sqlite3_column_int(characterStatement, 5),
+        sqlite3_column_int(characterStatement, 6)
+    );
+    CharacterType characterType = static_cast<CharacterType>(sqlite3_column_int(characterStatement, 7));
+
+    /* Finalize statement. */
+    sqlite3_finalize(characterStatement);
+
+
+    /* GET THE LIMBS. */
+
+    /* Create statement template for querying Map objects with this slug. */
+    const char* queryLimbsSQL = "SELECT * FROM limb WHERE character_id = ?;";
+    sqlite3_stmt* queryLimbsStatement;
+    returnCode = sqlite3_prepare_v2(db, queryLimbsSQL, -1, &queryLimbsStatement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare limbs retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return character;
+    }
+
+    /* Bind the slug value. */
+    sqlite3_bind_int(queryLimbsStatement, 1, characterID);
+
+    /* Execute and iterate through results. */
+    while ((returnCode = sqlite3_step(queryLimbsStatement)) == SQLITE_ROW) {
+
+        int limbID = sqlite3_column_int(queryLimbsStatement, 0);
+        LimbForm limbForm = getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1)));
+        string mapSlug = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 3));
+        int hpMod = sqlite3_column_int(queryLimbsStatement, 4);
+        int strengthMod = sqlite3_column_int(queryLimbsStatement, 5);
+        int speedMod = sqlite3_column_int(queryLimbsStatement, 6);
+        int intelligenceMod = sqlite3_column_int(queryLimbsStatement, 7);
+        int posX = sqlite3_column_int(queryLimbsStatement, 8);
+        int posY = sqlite3_column_int(queryLimbsStatement, 9);
+        int rotationAngle = sqlite3_column_int(queryLimbsStatement, 10);
+        bool isAnchor = sqlite3_column_int(queryLimbsStatement, 11) == 1;
+        bool isFlipped = sqlite3_column_int(queryLimbsStatement, 12) == 1;
+        string limbName = stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 13));
+        int drawOrder = sqlite3_column_int(queryLimbsStatement, 14);
+
+        Point position = Point(posX, posY);
+
+        /* Get the JOINTS for this Limb. */
+        /* Start by querying the count to see how big the vector should be. */
+        const char* queryCountJointsSQL = "SELECT COUNT(*) FROM joint WHERE limb_id = ?;";
+        sqlite3_stmt* queryCountJointsStatement;
+        returnCode = sqlite3_prepare_v2(db, queryCountJointsSQL, -1, &queryCountJointsStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare JOINTS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return character;
+        }
+
+        sqlite3_bind_int(queryCountJointsStatement, 1, limbID);
+
+        /* Execute count query. */
+        int jointCount = 0;
+        if (sqlite3_step(queryCountJointsStatement) == SQLITE_ROW) {
+            jointCount = sqlite3_column_int(queryCountJointsStatement, 0);
+        }
+        sqlite3_finalize(queryCountJointsStatement);
+
+        vector<Joint> joints(jointCount);
+
+
+        /* Now get the JOINTS themselves. */
+        const char* queryJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
+        sqlite3_stmt* queryJointsStatement;
+        returnCode = sqlite3_prepare_v2(db, queryJointsSQL, -1, &queryJointsStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare blocks retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_close(db);
+            return character;
+        }
+
+        /* Bind the ID value. */
+        sqlite3_bind_int(queryJointsStatement, 1, limbID);
+        int jointsReturnCode;
+
+        while ((jointsReturnCode = sqlite3_step(queryJointsStatement)) == SQLITE_ROW) {
+            int jointID = sqlite3_column_int(queryJointsStatement, 0);
+            int vectorIndex = sqlite3_column_int(queryJointsStatement, 1);
+            Point pointForm = Point(
+                sqlite3_column_int(queryJointsStatement, 3),
+                sqlite3_column_int(queryJointsStatement, 4));
+            Point modifiedPoint = Point(
+                sqlite3_column_int(queryJointsStatement, 5),
+                sqlite3_column_int(queryJointsStatement, 6));
+            bool isAnchor = sqlite3_column_int(queryJointsStatement, 7) == 1;
+            int connectedLimbID = sqlite3_column_int(queryJointsStatement, 8);
+            int anchorJointIndex = sqlite3_column_int(queryJointsStatement, 9);
+
+            Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
+            if (vectorIndex < jointCount) { joints[vectorIndex] = joint; }
+        }
+
+        Limb limb = Limb(sqlite3_column_int(queryLimbsStatement, 0),
+            getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
+            position,
+            joints,
+            drawOrder
+        );
+
+        limb.setName(limbName);
+        limb.modifyHP(hpMod);
+        limb.modifyStrength(strengthMod);
+        limb.modifySpeed(speedMod);
+        limb.modifyIntelligence(intelligenceMod);
+        limb.rotate(rotationAngle);
+        limb.setFlipped(isFlipped);
+        limb.setAnchor(isAnchor);
+        limb.setMapSlug(mapSlug);
+        limb.setCharacterId(characterID);
+        limb.setId(limbID);
+
+        character.addLimb(limb);
+    }
+
+    if (returnCode != SQLITE_DONE) {
+        cerr << "Execution failed: " << sqlite3_errmsg(db) << endl;
+        return character;
+    }
+
+    /* Finalize prepared statement. */
+    sqlite3_finalize(queryLimbsStatement);
+
+    character.setType(characterType);
+    character.setName(name);
+    character.setId(characterID);
+    character.setAnchorLimbId(anchorLimbID);
+    character.setBlockPosition(position);
+    character.updateLastBlock();
+
+    return character;
+}
+
+
 /* 
 * Same as loadPlayerMapCharacter but without map-related stuff.
 * Should extract most of this to make a struct that serves them both!
@@ -876,6 +1202,7 @@ export Character loadPlayerCharacter() {
 
     /* Finalize prepared statement. */
     sqlite3_finalize(queryLimbsStatement);
+    sqlite3_close(db);
 
     character.setType(CharacterType::Player);
     character.setName(name);
@@ -889,11 +1216,12 @@ export Character loadPlayerCharacter() {
 export MapCharacter loadPlayerMapCharacter() {
     GameState& gameState = GameState::getInstance();
     int characterID = gameState.getPlayerID();
+
     string name;
     string mapSlug;
     int anchorLimbID; /* Get from the limbs. */
     int battleID; /* For later, when battles actually exist. */
-    MapCharacter character = MapCharacter(CharacterType::None);
+    MapCharacter character = MapCharacter(CharacterType::Player);
 
     /* Open database. */
     sqlite3* db;
@@ -929,12 +1257,12 @@ export MapCharacter loadPlayerMapCharacter() {
 
     name = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 1));
     anchorLimbID = sqlite3_column_int(characterStatement, 2);
+    cout << "Map slug is the problem? Because it's empty?\n";
     mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 3));
     battleID = sqlite3_column_int(characterStatement, 4);
 
     /* Finalize statement. */
     sqlite3_finalize(characterStatement);
-
 
     /* GET THE LIMBS. */
 
@@ -942,7 +1270,6 @@ export MapCharacter loadPlayerMapCharacter() {
     const char* queryLimbsSQL = "SELECT * FROM limb WHERE character_id = ?;";
     sqlite3_stmt* queryLimbsStatement;
     returnCode = sqlite3_prepare_v2(db, queryLimbsSQL, -1, &queryLimbsStatement, nullptr);
-
     if (returnCode != SQLITE_OK) {
         std::cerr << "Failed to prepare limbs retrieval statement: " << sqlite3_errmsg(db) << std::endl;
         sqlite3_close(db);
@@ -995,7 +1322,6 @@ export MapCharacter loadPlayerMapCharacter() {
 
         vector<Joint> joints(jointCount);
 
-
         /* Now get the JOINTS themselves. */
         const char* queryJointsSQL = "SELECT * FROM joint WHERE limb_id = ?;";
         sqlite3_stmt* queryJointsStatement;
@@ -1027,7 +1353,6 @@ export MapCharacter loadPlayerMapCharacter() {
             Joint joint = Joint(pointForm, modifiedPoint, isAnchor, connectedLimbID, anchorJointIndex, jointID);
             if (vectorIndex < jointCount) { joints[vectorIndex] = joint; }
         }
-
 
         Limb limb = Limb(sqlite3_column_int(queryLimbsStatement, 0),
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
@@ -1063,8 +1388,6 @@ export MapCharacter loadPlayerMapCharacter() {
     character.setName(name);
     character.setId(characterID);
     character.setAnchorLimbId(anchorLimbID);
-
-
 
 
     /*
@@ -1114,6 +1437,7 @@ export MapCharacter loadPlayerMapCharacter() {
     SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
     SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
     SDL_FreeSurface(characterSurface);
+    cout << "About to set the texture\n";
     character.setTexture(characterTexture);
 
     return character;
@@ -1217,6 +1541,8 @@ export int createPlayerCharacterOrGetID() {
 
     return playerID;
 }
+
+
 
 
 /**

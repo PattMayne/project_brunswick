@@ -139,6 +139,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BattleClasses.ixx" />
     <ClCompile Include="BattleScreen.ixx" />
     <ClCompile Include="CharacterClasses.ixx" />
     <ClCompile Include="CharacterCreationScreen.ixx" />

@@ -63,6 +63,9 @@
     <ClCompile Include="MapClasses.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BattleClasses.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />

@@ -39,6 +39,12 @@ export enum class WindowResType {
 	Mobile, Tablet, Desktop, Fullscreen
 };
 
+
+export enum BattleStatus {
+	Active, PlayerVictory, PlayerDefeat
+};
+
+
 /* width and height data */
 export struct Resolution {
 	int w;

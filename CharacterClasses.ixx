@@ -840,7 +840,7 @@ public:
 	int getAnchorLimbId() { return anchorLimbId; }
 	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude = -1);
-	SDL_Texture* createAvatar();
+	SDL_Texture* createAvatar(bool resetRenderer = true);
 	SuitType getSuitType() { return suitType; }
 	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
@@ -1168,7 +1168,7 @@ void Character::checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimen
 * We take into account the fact that rotating a texture will extend the boundaries.
 * We use that information to build a texture, then draw onto it and return it.
 */
-SDL_Texture* Character::createAvatar() {
+SDL_Texture* Character::createAvatar(bool resetRenderer) {
 	UI& ui = UI::getInstance();
 	Limb& anchorLimb = getAnchorLimb();
 
@@ -1244,8 +1244,11 @@ SDL_Texture* Character::createAvatar() {
 	}
 
 	SDL_RenderPresent(renderer);
-	/* Reset the render target back to the default (the window). */
-	SDL_SetRenderTarget(renderer, NULL);
+
+	if (resetRenderer) {
+		/* Reset the render target back to the default (the window). */
+		SDL_SetRenderTarget(renderer, NULL);
+	}	
 
 	return offscreenTexture;
 }

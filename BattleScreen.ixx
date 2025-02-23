@@ -64,6 +64,9 @@ import TypeStorage;
 import GameState;
 import Resources;
 import UI;
+import CharacterClasses;
+import BattleClasses;
+import Database;
 
 using namespace std;
 
@@ -72,13 +75,25 @@ export class BattleScreen {
 public:
 	/* constructor */
 	BattleScreen() {
-		cout << "\nLoading Battle Screen\n\n";
-		screenType = ScreenType::Battle;
-		id = 0;
-		screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
+		GameState& gameState = GameState::getInstance();
 		UI& ui = UI::getInstance();
+
+		screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
+
+		id = gameState.getScreenStruct().id;
+		screenType = ScreenType::Battle;
+		battle = loadBattle(id);
+
 		getBackgroundTexture(ui);
 		createTitleTexture(ui);
+
+		settingsPanel = ui.createSettingsPanel(ScreenType::Map);
+		gameMenuPanel = ui.createGameMenuPanel();
+		settingsPanel.setShow(false);
+		gameMenuPanel.setShow(true);
+
+		showTitle = true;
+		titleCountdown = 140;
 	}
 
 	ScreenType getScreenType() { return screenType; }
@@ -103,8 +118,18 @@ private:
 
 	void getBackgroundTexture(UI& ui);
 	void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
-
 	void createTitleTexture(UI& ui);
+
+	void raiseTitleRect() { --titleRect.y; }
+	int getTitleBottomPosition() { return titleRect.y + titleRect.h; }
+
+	bool showTitle;
+	int titleCountdown;
+
+	/* panels */
+	Panel settingsPanel;
+	Panel gameMenuPanel;
+	Battle battle;
 };
 
 void BattleScreen::getBackgroundTexture(UI& ui) {
@@ -119,11 +144,7 @@ export void BattleScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
-	/* panels */
-	Panel settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-	Panel gameMenuPanel = ui.createGameMenuPanel();
-	settingsPanel.setShow(false);
-	gameMenuPanel.setShow(true);
+
 
 	/* Timeout data */
 	const int TARGET_FPS = 60;
@@ -135,6 +156,13 @@ export void BattleScreen::run() {
 	SDL_Event e;
 	bool running = true;
 
+	if (gameState.getScreenStruct().id < 1) {
+		/* Invalid battle id. Give a notice to the user on the way out? Or after getting back?
+		* Maybe GameState deserves a message string to display.
+		*/
+		running = false;
+	}
+
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
 		frameStartTime = SDL_GetTicks();
@@ -143,6 +171,20 @@ export void BattleScreen::run() {
 		while (SDL_PollEvent(&e) != 0) {
 			if (e.type == SDL_MOUSEBUTTONDOWN) {
 				handleEvent(e, running, settingsPanel, gameMenuPanel, gameState);
+			}
+		}
+
+		/* Deal with showing the title. */
+		if (showTitle) {
+			if (titleCountdown > 0) {
+				--titleCountdown;
+			}
+			else {
+				raiseTitleRect();
+			}
+
+			if (getTitleBottomPosition() < -1) {
+				showTitle = false;
 			}
 		}
 
@@ -163,7 +205,6 @@ export void BattleScreen::run() {
 
 
 void BattleScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
-	//unordered_map<string, SDL_Color> colorsByFunction = ui.getColorsByFunction();
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 0, 0, 0, 1);
 	SDL_RenderClear(ui.getMainRenderer());
@@ -172,7 +213,9 @@ void BattleScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
 	
 	/* draw the title */
-	SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
+	if (showTitle) {
+		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
+	}
 
 	settingsPanel.draw(ui);
 	gameMenuPanel.draw(ui);
@@ -182,8 +225,19 @@ void BattleScreen::draw(UI& ui, Panel& settingsPanel, Panel& gameMenuPanel) {
 
 /* Create the texture with the name of the game */
 void BattleScreen::createTitleTexture(UI& ui) {
+	string playerName = battle.getPlayerCharacter().getName();
+	string npcName = battle.getNpc().getName();
+
+	bool twoNamesExist = playerName != "" && npcName != "";
+
+	string titleString = "BATTLE!";
+
+	if (twoNamesExist) {
+		titleString = playerName + " vs " + npcName;
+	}
+
 	Resources& resources = Resources::getInstance();
-	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture("Battle!");
+	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture(titleString);
 	titleTexture = incomingTitleTexture;
 	titleRect = incomingTitleRect;
 }

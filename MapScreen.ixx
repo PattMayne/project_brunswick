@@ -175,6 +175,7 @@ export class MapScreen {
 				map = Map(mapForm);
 				createNewMap(map);
 				updatePlayerMap(mapSlug);
+				map.getPlayerCharacter().setId(createPlayerCharacterOrGetID());
 
 				/* Now that the map is saved to the DB, the Suits have their limbs.
 				* So we can equip their limbs and then save them.
@@ -183,13 +184,7 @@ export class MapScreen {
 				*/
 				equipSuitLimbs(map.getMapLevel(), map.getSuits());
 				for (Character& suit : map.getSuits()) {
-					//suit.sortLimbsByNumberOfJoints();
-
-					for (Limb& limb : suit.getLimbs()) {
-						//suit.equipLimb(limb.getId());
-						// DO NOT equip. We will do that in FormFactory
-					}
-
+					
 					suit.setAnchorJointIDs();
 					suit.buildDrawLimbList();
 					updateCharacterLimbs(suit.getId(), suit.getAnchorLimbId(), suit.getLimbs());
@@ -285,7 +280,7 @@ export class MapScreen {
 		MapType getMapType() { return mapForm.mapType; }
 		MapForm mapForm;
 
-		bool checkPlayerNpcCollision();
+		bool checkPlayerNpcCollision(bool playerTurn);
 		bool checkPlayerLimbCollision(); /* Limb-on-player collision. */
 		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
 		bool checkNpcOnLimbCollision();
@@ -605,10 +600,13 @@ export void MapScreen::run() {
 				playerLimbCollision = checkPlayerLimbCollision(); /* Player collects limb. */
 
 				 /* Collisions with NPCs */
-				playerNpcCollision = checkPlayerNpcCollision();
+				playerNpcCollision = checkPlayerNpcCollision(true);
 
-				 /* After every Player animation, we start the NPC animation (Turning the switch). */
-				startNpcAnimation = true;
+				if (!playerNpcCollision) {
+					/* After every Player animation, we start the NPC animation (Turning the switch) unless we hit an NPC. */
+					startNpcAnimation = true;
+				}
+				 
 			}
 			else if (animationType == AnimationType::NPC) {
 				/* Deal with wrapping up the NPC-moved animation. */
@@ -626,7 +624,7 @@ export void MapScreen::run() {
 				/* Check LIMBs colliding with each other. IF they form an NPC on the player's block, the player fights the NPC. */
 				limbLimbCollision = checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
 				playerLimbCollision = checkPlayerLimbCollision(); /* Player collects new limb. */
-				playerNpcCollision = checkPlayerNpcCollision(); /* Go to battle screen. */
+				playerNpcCollision = checkPlayerNpcCollision(false); /* Go to battle screen. */
 			}
 
 			if (playerLimbCollision) {
@@ -642,6 +640,10 @@ export void MapScreen::run() {
 				passingMessagePanel = getNewPassingMessagePanel(message, passingMessagePanel, true, ui);
 				passingMessagePanel.setShow(true);
 				passingMessageCountdown = 3;
+			}
+
+			if (playerNpcCollision) {
+				running = false;
 			}
 		}
 
@@ -1628,20 +1630,18 @@ void MapScreen::decrementCountdown() {
 }
 
 bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharacter) {
+	UI& ui = UI::getInstance();
 	bool landmarkCollided = false;
 	for (Landmark& landmark : map.getLandmarks()) {
 		LandmarkCollisionInfo collisionInfo = landmark.checkCollision(playerCharacter.getPosition());
 
 		if (collisionInfo.hasCollided) {
-			cout << "HIT LANDMARK\n";
 			landmarkCollided = true;
 
 			if (collisionInfo.type == LandmarkType::Shrine) {
-				cout << "Hit a SHRINE\n";
 
 				for (Character& suit : map.getSuits()) {
 					if (suit.getId() == landmark.getCharacterId()) {
-						cout << "Hit shrine for " << suit.getName() << "\n";
 
 						/* 
 						* Check each of the Suit's limbs against the player's non-equipped limbs.
@@ -1667,7 +1667,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										/* We are FINALLY unscrambling this Suit's Limb. */
 										unscrambledSomething = true;
 										unscrambleLimb(suitLimb);
-										suit.setTexture(suit.createAvatar());
+										suit.setTexture(suit.createAvatar(false));
 										isMatch = true; /* Flag to deal with the playerLimb. */
 										int rotationAngleIncrement = (rand() % 2) == 0 ? 4 : -4;
 
@@ -1697,24 +1697,39 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							}
 						}
 
-						/*  */
-
 						createShrineMessage(suit);
 						if (unscrambledSomething) { break; }
 					}
 				}
 
 			} else if (collisionInfo.type == LandmarkType::Exit) {
-				cout << "EXITING\n";
-				running = false;
+				bool totallyUnscrambled = false;
+
+				if (totallyUnscrambled) {
+					cout << "EXITING\n";
+					/* Restart MapScreen with new map_slug in GameState. */
+					running = false;
+				}
+				else {
+					string message = "You cannot exit until you unscramble all the citizens.";
+					passingMessagePanel = getNewPassingMessagePanel(message, passingMessagePanel, true, ui);
+					passingMessagePanel.setShow(true);
+					passingMessageCountdown = 0;
+				}
 			}
 			else if (collisionInfo.type == LandmarkType::Entrance) {
 				cout << "YOU CANNOT LEAVE THIS WAY\n";
-				/* TO DO: animate PUSHING the character OFF the entrance??? */
+				/* TO DO: animate PUSHING the character OFF the entrance???
+				*/
+				string message = "This is the entrance. You cannot go out this way.";
+				passingMessagePanel = getNewPassingMessagePanel(message, passingMessagePanel, true, ui);
+				passingMessagePanel.setShow(true);
+				passingMessageCountdown = 0;
 			}
 		}
 	}
 
+	SDL_SetRenderTarget(ui.getMainRenderer(), NULL);
 	return landmarkCollided;
 }
 
@@ -2015,18 +2030,40 @@ bool MapScreen::checkPlayerLimbCollision() {
 }
 
 
-bool MapScreen::checkPlayerNpcCollision() {
+bool MapScreen::checkPlayerNpcCollision(bool playerTurn) {
 	bool isCollided = false;
 
 	for (MapCharacter& npc : map.getNPCs()) {
 		if (npc.getPosition().equals(map.getPlayerCharacter().getPosition())) {
 			cout << "Player collided with " << npc.getName() << "\n";
 
+			cout << "Player id: " << map.getPlayerCharacter().getId() << "\n";
+
+			int battleId = createNewBattle(
+				map.getForm().slug,
+				map.getPlayerCharacter().getId(),
+				npc.getId(),
+				playerTurn
+			);
+
+			cout << "JUST CREATED battle id: " << battleId << "\n";
+
 			/*
 			* In Database create a Battle with player id and opponent id.
 			* Update player and opponent table with new battle id.
 			* Change the screen type in the GameState and end this loop.
+			* 
+			* gather data to go into the DB.
+			* get ID back.
+			* save ID to character (already done in "createNewBattle" ?
+			* open battle screen with this battle id.
 			*/
+
+			GameState& gameState = GameState::getInstance();
+
+			ScreenStruct screenStruct = ScreenStruct(ScreenType::Battle, battleId);
+			gameState.setScreenStruct(screenStruct);
+			screenToLoadStruct = screenStruct;
 
 			return true;
 		}
