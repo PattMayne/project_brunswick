@@ -352,6 +352,12 @@ export class Limb {
 			SDL_QueryTexture(texture, NULL, NULL, &textureWidth, &textureHeight);
 			setAnchorJointId();
 			isUnscrambled = false;
+
+			hpMod = 0;
+			strengthMod = 0;
+			speedMod = 0;
+			intelligenceMod = 0;
+
 		}
 
 

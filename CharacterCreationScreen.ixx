@@ -116,6 +116,9 @@ public:
 		playerCharacter.setAnchorJointIDs();
 		playerCharacter.setRotationPointsSDL();
 		loadedLimbIsAlreadyEquipped = false;
+
+		playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+		playerStatsPanel.setShow(true);
 	}
 
 	/* Destructor */
@@ -149,6 +152,7 @@ private:
 	Panel limbLoadedPanel;
 	Panel chooseLimbPanel;
 	Panel messagePanel;
+	Panel playerStatsPanel;
 
 	void drawCharacter(UI& ui);
 
@@ -366,6 +370,7 @@ void CharacterCreationScreen::draw(UI& ui) {
 	//gameMenuPanel.draw(ui);
 	messagePanel.draw(ui);
 	drawCharacter(ui);
+	playerStatsPanel.draw();
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
@@ -459,9 +464,17 @@ void CharacterCreationScreen::loadLimbAttempt(int limbToLoadID) {
 	/* Now actually equip the limb if it isn't already equipped. */
 	if (!clickedLimb.isEquipped()) {
 		limbEquipped = playerCharacter.equipLimb(limbToLoadID);
-		if (!limbEquipped) {
+		if (limbEquipped) {
+			playerStatsPanel.destroyTextures();
+			playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+			playerStatsPanel.setShow(true);
+
+		}
+		else {
 			loadedLimbId = -1;
 			clickedLimb.setDrawOrder(-1);
+
+			cerr << "LIMB NOT EQUIPPED\n";
 			return;
 		}
 	}
@@ -558,6 +571,9 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				case ButtonOption::ClearSuit:
 					cout << "CLEARING SUIT\n";
 					playerCharacter.clearSuit();
+					playerStatsPanel.destroyTextures();
+					playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+					playerStatsPanel.setShow(true);
 					changeCreationMode(CreationMode::Review);
 					break;
 				case ButtonOption::SaveSuit:
@@ -652,6 +668,10 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
 							playerCharacter.setAnchorLimbId(-1); }
 						playerCharacter.unEquipLimb(loadedLimbId);
+
+						playerStatsPanel.destroyTextures();
+						playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+						playerStatsPanel.setShow(true);
 					}
 
 					if (loadedLimbIsAlreadyEquipped) {
