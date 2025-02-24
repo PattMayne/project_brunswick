@@ -138,7 +138,7 @@ export class UI {
 		);
 
 		Panel createPassingMessagePanel(string message, bool topPlacement = true);
-		Panel createHud(ScreenType screenType, CharStatsData statsData);
+		Panel createHud(ScreenType screenType, CharStatsData statsData, bool topRight = true);
 
 
 		/* OTHER FUNCTIONS. */
@@ -2275,7 +2275,7 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement) {
 /* A collection of boxes upon a transparent panel.
 * Will show different things depending on the screen.
 */
-Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
+Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRight) {
 	Panel hudPanel = Panel();
 	hudPanel.setRect({ 0,0,0,0 });
 	
@@ -2306,8 +2306,8 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	*/
 
 	/* Gather info for Stats Box (for any screen). */
-
-	string attsString = "HP:           " + to_string(statsData.hp) + "\n";
+	string attsString = screenType == ScreenType::Battle ? statsData.name + "\n" : "";
+	attsString = attsString + "HP:           " + to_string(statsData.hp) + "\n";
 	attsString = attsString + "SPEED:        " + to_string(statsData.speed) + "\n";
 	attsString = attsString + "STRENGTH:     " + to_string(statsData.strength) + "\n";
 	attsString = attsString + "INTELLIGENCE: " + to_string(statsData.intelligence) + "\n";
@@ -2355,7 +2355,7 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData) {
 	*
 	*/
 
-	int hudDrawX = getWindowWidth() - (statsPanelWidth + PANEL_PADDING);
+	int hudDrawX = topRight ? getWindowWidth() - (statsPanelWidth + PANEL_PADDING) : PANEL_PADDING;
 	int hudDrawY = PANEL_PADDING;
 
 	hudPanel.setRect({ hudDrawX, hudDrawY, statsPanelWidth , statsPanelHeight });

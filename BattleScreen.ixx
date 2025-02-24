@@ -31,15 +31,16 @@
 * - Animate both opponents (constantly rotating one limbs or another... just one at a time?).
 * - HUD of player stats.
 * - HUD of opponent stats.
-* - Menu of UNEQUIPPED player limbs
+* - Menu of UNEQUIPPED player limbs (to throw)
 * ---- Include dominance cycle
-* - Select opponent Limb to attack via right-hand button.
+* - Select EQUIPPED opponent Limb to attack via right-hand button.
 * --- selected limb flashes.
 * - Player limb to HEAL (by consuming LIMB from unequipped limbs).
 * - THROW unequipped Limb (only if we have arm or leg to throw or kick).
 * ---- THROW is more accurate but less power.
 * ---- KICK is less accurate but more power.
 * - PassingMessage panel shows effects of latest attack.
+* - DROPPED limbs are returned to the map ON the opponent's square and scattered around.
 * 
 */
 
@@ -129,6 +130,20 @@ public:
 		rotationCountdown = 30;
 		resetRotationAmount();
 		limbToRotateId = 0;
+		skyBG = SkyAndCloudsBackground(true);
+
+		unrotatePlayer = false;
+		unrotateNpc = false;
+
+		bobbingMeter = 0;
+		bobbingMax = 20;
+		reverseBob = false;
+
+		playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
+		playerStatsPanel.setShow(true);
+
+		npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+		npcStatsPanel.setShow(true);
 	}
 
 	ScreenType getScreenType() { return screenType; }
@@ -179,7 +194,19 @@ private:
 	/* panels */
 	Panel settingsPanel;
 	Panel gameMenuPanel;
+	Panel playerStatsPanel;
+	Panel npcStatsPanel;
+
 	Battle battle;
+
+	SkyAndCloudsBackground skyBG;
+
+	bool unrotatePlayer;
+	bool unrotateNpc;
+
+	int bobbingMeter;
+	int bobbingMax;
+	bool reverseBob;
 };
 
 /* We need a prebuilt list of limb ids
@@ -203,11 +230,22 @@ void BattleScreen::resetRotationAmount() {
 	if (rand() % 2 == 0) {
 		rotationAmount *= -1;
 	}
-
 }
 
 
 void BattleScreen::restartRotation() {
+
+	/* Occaisionally reset the player and npc. */
+	int resetCoin = rand() % 40;
+
+	if (resetCoin == 0) {
+		unrotatePlayer = true;
+		return;
+	} else if (resetCoin == 1) {
+		unrotateNpc = true;
+		return;
+	}
+
 	resetRotationAmount();
 
 	if ((rand() % 4) > 0) {
@@ -292,6 +330,18 @@ export void BattleScreen::run() {
 
 		--rotationCountdown;
 
+		if(reverseBob) {
+			--bobbingMeter;
+			if (bobbingMeter < (bobbingMax * -1)) {
+				reverseBob = !reverseBob;
+			}			
+		}
+		else {
+			++bobbingMeter;
+			if (bobbingMeter > bobbingMax) {
+				reverseBob = !reverseBob;
+			}
+		}
 	}
 
 	/* set the next screen to load */
@@ -304,6 +354,7 @@ void BattleScreen::drawNpc(UI& ui) {
 	Character& npc = battle.getNpc();
 
 	vector<Limb>& limbs = npc.getLimbs();
+	bool limbsLeftToUnrotate = false;
 
 	SDL_Rect limbRect = { 0, 0, 0, 0 };
 
@@ -314,14 +365,16 @@ void BattleScreen::drawNpc(UI& ui) {
 			SDL_Point rotationPoint = limb.getRotationPointSDL();
 			limbRect = limb.getDrawRect();
 			limbRect.x += npcDrawStartPoint.x;
-			limbRect.y += npcDrawStartPoint.y;
+			limbRect.y += npcDrawStartPoint.y - bobbingMeter;
+
+			int limbRotationAngle = limb.getRotationAngle();
 
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
 				limb.getTexture(),
 				NULL,
 				&limbRect,
-				limb.getRotationAngle(),
+				limbRotationAngle,
 				&rotationPoint,
 				SDL_FLIP_NONE);
 
@@ -329,7 +382,38 @@ void BattleScreen::drawNpc(UI& ui) {
 				limb.rotate(rotationAmount);
 				npc.setChildLimbDrawRects(limb, ui);
 			}
+
+			/* Player rotation logic. */
+			if (!unrotateNpc) {
+				if (limbToRotateId == limb.getId()) {
+					limb.rotate(rotationAmount);
+					npc.setChildLimbDrawRects(limb, ui);
+				}
+			}
+			else {
+				if (limbRotationAngle > 2) {
+					if (limbRotationAngle < 180) {
+						limb.rotate(-2);
+						npc.setChildLimbDrawRects(limb, ui);
+						limbsLeftToUnrotate = true;
+					}
+					else {
+						limb.rotate(2);
+						npc.setChildLimbDrawRects(limb, ui);
+						limbsLeftToUnrotate = true;
+					}					
+				}
+				else  if (limbRotationAngle < -2) {
+					limb.rotate(2);
+					npc.setChildLimbDrawRects(limb, ui);
+					limbsLeftToUnrotate = true;
+				}
+			}
 		}
+	}
+
+	if (unrotateNpc && !limbsLeftToUnrotate) {
+		unrotateNpc = false;
 	}
 }
 
@@ -340,6 +424,7 @@ void BattleScreen::drawPlayer(UI& ui) {
 	vector<Limb>& limbs = playerCharacter.getLimbs();
 
 	SDL_Rect limbRect = { 0, 0, 0, 0 };
+	bool limbsLeftToUnrotate = false;
 
 	for (int i = 0; i < limbs.size(); ++i) {
 		Limb& limb = limbs[i];
@@ -348,22 +433,50 @@ void BattleScreen::drawPlayer(UI& ui) {
 			SDL_Point rotationPoint = limb.getRotationPointSDL();
 			limbRect = limb.getDrawRect();
 			limbRect.x += playerDrawStartPoint.x;
-			limbRect.y += playerDrawStartPoint.y;
+			limbRect.y += playerDrawStartPoint.y + bobbingMeter;
+
+			int limbRotationAngle = limb.getRotationAngle();
 
 			SDL_RenderCopyEx(
 				ui.getMainRenderer(),
 				limb.getTexture(),
 				NULL,
 				&limbRect,
-				limb.getRotationAngle(),
+				limbRotationAngle,
 				&rotationPoint,
 				SDL_FLIP_NONE);
 
-			if (limbToRotateId == limb.getId()) {
-				limb.rotate(rotationAmount);
-				playerCharacter.setChildLimbDrawRects(limb, ui);
+			/* Player rotation logic. */
+			if (!unrotatePlayer) {
+				if (limbToRotateId == limb.getId()) {
+					limb.rotate(rotationAmount);
+					playerCharacter.setChildLimbDrawRects(limb, ui);
+				}
+			}
+			else {
+				if (limbRotationAngle > 1) {
+					if (limbRotationAngle < 180) {
+						limb.rotate(-2);
+						playerCharacter.setChildLimbDrawRects(limb, ui);
+						limbsLeftToUnrotate = true;
+					}
+					else {
+						limb.rotate(2);
+						playerCharacter.setChildLimbDrawRects(limb, ui);
+						limbsLeftToUnrotate = true;
+					}
+				}
+				else  if (limbRotationAngle < -1) {
+					limb.rotate(2);
+					playerCharacter.setChildLimbDrawRects(limb, ui);
+					limbsLeftToUnrotate = true;
+				}
 			}
 		}
+	}
+
+	if (unrotatePlayer && !limbsLeftToUnrotate) {
+		unrotatePlayer = false;
 	}
 }
 
@@ -374,8 +487,8 @@ void BattleScreen::draw(UI& ui) {
 	SDL_RenderClear(ui.getMainRenderer());
 
 	/* draw BG for now */
-	SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
-
+	//SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
+	skyBG.draw();
 
 	/* Draw the characters. */
 	drawPlayer(ui);
@@ -388,6 +501,9 @@ void BattleScreen::draw(UI& ui) {
 
 	settingsPanel.draw(ui);
 	gameMenuPanel.draw(ui);
+	playerStatsPanel.draw(ui);
+	npcStatsPanel.draw(ui);
+
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
