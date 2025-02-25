@@ -242,7 +242,9 @@ void CharacterCreationScreen::createChooseLimbPanel(bool showEquippedLimbs = fal
 		}
 	}
 
-	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs);
+	string label = showEquippedLimbs ? "EQUIPPED LIMBS" : "NON-EQUIPPED LIMBS";
+
+	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs, label);
 }
 
 

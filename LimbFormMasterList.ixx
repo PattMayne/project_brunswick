@@ -283,7 +283,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			2, 2, 10, 7,
 			DominanceNode::Green, "data/maps/forest/fairy_wing_left.png",
 			{ Point(109, 128) },
-			BodyPartType::Other);
+			BodyPartType::Wing);
 		};
 
 	limbForms["fairy_leg_left"] = []() {
@@ -310,7 +310,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			2, 2, 10, 7,
 			DominanceNode::Green, "data/maps/forest/fairy_wing_right.png",
 			{ Point(81, 133) },
-			BodyPartType::Other);
+			BodyPartType::Wing);
 		};
 
 	limbForms["fairy_arm_right"] = []() {
@@ -349,7 +349,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			4, 4, 8, 6,
 			DominanceNode::Green, "data/maps/forest/owl_wing_left.png",
 			{ Point(128, 104) },
-			BodyPartType::Other);
+			BodyPartType::Wing);
 		};
 
 	limbForms["owl_wing_right"] = []() {
@@ -358,7 +358,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			4, 4, 8, 6,
 			DominanceNode::Green, "data/maps/forest/owl_wing_right.png",
 			{ Point(16, 102) },
-			BodyPartType::Other);
+			BodyPartType::Wing);
 		};
 
 	/* OTHER LIMBS */

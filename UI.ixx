@@ -115,6 +115,7 @@ export class UI {
 		void rebuildMainMenuPanel(Panel& mainMenuPanel);
 
 		Panel createSettingsPanel(ScreenType context = ScreenType::Menu);
+		Panel createBattlePanel(vector<AttackStruct> playerAttackStructs);
 		void rebuildSettingsPanel(Panel& settingsPanel, ScreenType context = ScreenType::Menu);
 
 		Panel createGameMenuPanel();
@@ -123,7 +124,7 @@ export class UI {
 		/* CHARACTER CREATION PANELS. */
 		Panel createReviewModePanel();
 		Panel createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints); /* Does this need a limb id? */
-		Panel createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton);
+		Panel createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, string label = "");
 
 		/* TO DO: make rebuildPanel functions for Character Creation screen. */
 
@@ -218,6 +219,11 @@ export class UI {
 		tuple<SDL_Rect, vector<Button>> createSettingsPanelComponents(ScreenType context = ScreenType::Menu);
 		vector<PreButtonStruct> getSettingsPreButtonStructs(ScreenType context = ScreenType::Menu);
 
+		/* Battle panel building functions */
+		tuple<SDL_Rect, vector<Button>> createBattlePanelComponents(vector<AttackStruct> playerAttackStructs);
+		vector<PreButtonStruct> getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs);
+
+		
 		/* main menu panel building functions */
 		tuple<SDL_Rect, vector<Button>> createMainMenuPanelComponents();
 		vector<PreButtonStruct> getMainMenuPreButtonStructs();
@@ -230,7 +236,8 @@ export class UI {
 
 		tuple<SDL_Rect, vector<Button>> createReviewModePanelComponents();
 		tuple<SDL_Rect, vector<Button>> createLimbLoadedModePanelComponents(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints);
-		tuple<SDL_Rect, vector<Button>> createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton);
+		tuple<SDL_Rect, vector<Button>> createChooseLimbModePanelComponents(
+			vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, int labelOffsetY = 0);
 
 		vector<PreButtonStruct> getReviewModePreButtonStructs();
 		vector<PreButtonStruct> getLimbLoadedModePreButtonStructs(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints);
@@ -339,6 +346,20 @@ export class Button {
 		string getText() { return text; } // turn this completely into char for the printing
 		SDL_Texture* getHoverTexture() { return hoverTexture; }
 		SDL_Texture* getNormalTexture() { return normalTexture; }
+
+		void setHoverTexture(SDL_Texture* newTexture) {
+			if (hoverTexture != NULL) {
+				SDL_DestroyTexture(hoverTexture);
+			}
+			hoverTexture = newTexture;
+		}
+
+		void setNormalTexture(SDL_Texture* newTexture) {
+			if (normalTexture != NULL) {
+				SDL_DestroyTexture(normalTexture);
+			}
+			normalTexture = newTexture;
+		}
 
 		/* Check if click is inside button. */
 		bool isInButton(int mouseX, int mouseY) { return isInRect(getRect(), mouseX, mouseY); }
@@ -766,12 +787,19 @@ export class Panel {
 		void destroyTextures() {
 			for (Button& button : buttons) {
 				if (button.getHoverTexture() != NULL) {
-					SDL_DestroyTexture(button.getHoverTexture()); }
+					SDL_DestroyTexture(button.getHoverTexture());
+					button.setHoverTexture(NULL);
+				}
 				if (button.getNormalTexture() != NULL) {
-					SDL_DestroyTexture(button.getNormalTexture()); }
+					SDL_DestroyTexture(button.getNormalTexture());
+					button.setNormalTexture(NULL);
+				}
 			}
 			buttons = {};
-			if (bgTexture != NULL) { SDL_DestroyTexture(bgTexture); }
+			if (bgTexture != NULL) {
+				SDL_DestroyTexture(bgTexture);
+				bgTexture = NULL;
+			}
 		}
 
 		void setTexture(SDL_Texture* newTexture) {
@@ -1323,6 +1351,57 @@ void UI::rebuildSettingsPanel(Panel& settingsPanel, ScreenType context) {
 
 
 
+/*
+*
+*
+* BATTLE TURN PANEL CREATION AND RE-BUILDING
+*
+*
+*/
+
+/* build and deliver basic info for settings panel buttons */
+vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs) {
+	Resources& resources = Resources::getInstance();
+	/* preButonStructs don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
+	vector<PreButtonStruct> preButtonStructs;
+	
+	for (AttackStruct aStruct : playerAttackStructs) {
+
+		preButtonStructs.push_back(buildPreButtonStruct(
+			aStruct.name,
+			ButtonOption::BattleMove,
+			aStruct.attackType
+		));
+	}
+	
+	preButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings));
+	preButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit));
+
+	return preButtonStructs;
+}
+
+
+/* create all the components for the Battle panel */
+tuple<SDL_Rect, vector<Button>> UI::createBattlePanelComponents(vector<AttackStruct> playerAttackStructs) {
+	vector<PreButtonStruct> preButtonStructs = getBattlePreButtonStructs(playerAttackStructs);
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	return { panelRect, buttons };
+}
+
+
+/*
+* List of battle move buttons for the Player in BattleScreen.
+*/
+Panel UI::createBattlePanel(vector<AttackStruct> playerAttackStructs) {
+	auto [panelRect, buttons] = createBattlePanelComponents(playerAttackStructs);
+	return Panel(panelRect, buttons);
+}
+
+
+
+
+
 /* 
 * 
 * 
@@ -1506,7 +1585,9 @@ export SDL_Surface* centerSurfaceInRect(SDL_Surface* surfaceToCenter, SDL_Rect r
 * -- make it responsive (columnsCount decreases with screen size).
 * -- Do pagination (still keep Back button for EVERY page... but also add NEXT and PREVIOUS).
 */
-tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton) {
+tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
+	vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, int labelOffsetY
+) {
 	SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
 	int columnsCount = 10;
 	int buttonWidth = (windowWidth - ((PANEL_PADDING * columnsCount) + PANEL_PADDING)) / columnsCount;
@@ -1524,6 +1605,7 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(vector<L
 		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));
 		int rectY = i < columnsCount ? PANEL_PADDING :
 			((i / columnsCount) * (PANEL_PADDING + buttonHeight)) + PANEL_PADDING;
+		rectY += labelOffsetY;
 
 		/* This rectangle defines the size and position of the button. */
 		SDL_Rect rect = {
@@ -1595,9 +1677,49 @@ Panel UI::createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characte
 	return Panel(panelRect, buttons);
 }
 
-Panel UI::createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton = true) {
-	auto [panelRect, buttons] = createChooseLimbModePanelComponents(limbBtnDataStructs, drawBackButton);
-	return Panel(panelRect, buttons);
+/* Entry point for any panel that hosts limb buttons. */
+Panel UI::createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, string label) {
+	Resources& resources = Resources::getInstance();
+	unordered_map<string, SDL_Color> colors = getColorsByFunction();
+
+	int labelHeight = 0;
+	int labelWidth = 0;
+	int btnOffsetY = 0;
+	SDL_Surface* labelSurface = NULL;
+	SDL_Texture* panelTexture = NULL;
+
+	/* Create the label first and use its dimensions to create the buttons' locations.
+	* But we can't finish creating the panel background until after we create the buttons.
+	*/
+	if (label != "") {
+		labelSurface = TTF_RenderUTF8_Blended(buttonFont, label.c_str(), colors["DARK_TEXT"]);
+		labelHeight = labelSurface->h;
+		labelWidth = labelSurface->w;
+		btnOffsetY = labelHeight + (PANEL_PADDING * 3);
+	}
+
+	auto [panelRect, buttons] = createChooseLimbModePanelComponents(limbBtnDataStructs, drawBackButton, btnOffsetY);
+
+	/* Now blit the label onto the actual panel bg. */
+	if (label != "") {
+		SDL_Surface* panelSurface = createTransparentSurface(panelRect.w, panelRect.h);
+
+		SDL_Rect labelRect = { (PANEL_PADDING * 2), (PANEL_PADDING * 2), labelWidth, labelHeight };
+		SDL_Rect labelRectBG = {
+			PANEL_PADDING,
+			PANEL_PADDING,
+			labelWidth + (PANEL_PADDING * 2),
+			labelHeight + (PANEL_PADDING * 2)
+		};
+
+		SDL_FillRect(panelSurface, &labelRectBG, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
+		SDL_BlitSurface(labelSurface, NULL, panelSurface, &labelRect);
+		SDL_FreeSurface(labelSurface);
+		panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
+		SDL_FreeSurface(panelSurface);
+	}
+
+	return Panel(panelRect, buttons, panelTexture);
 }
 
 

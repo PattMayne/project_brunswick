@@ -48,7 +48,17 @@
     "CANCEL": "CANCEL",
 
     "YES": "YES",
-    "NO":  "NO"
+    "NO": "NO",
+
+    "BODY_SLAM": "BODY SLAM",
+    "BRAIN_DRAIN": "BRAIN DRAIN",
+    "SWOOP": "SWOOP",
+    "ATTACK": "ATTACK",
+    "KICK": "KICK",
+    "PUNCH": "PUNCH",
+    "STEAL": "STEAL LIMB",
+    "HEAL": "HEAL LIMB",
+    "RUN":  "RUN AWAY"
   },
   "BUTTON_BORDER": {
     "SMALL": 10,

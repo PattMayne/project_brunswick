@@ -3,8 +3,12 @@ module;
 #include "SDL.h"
 #include "SDL_image.h"
 #include "SDL_ttf.h"
+#include <string>
+#include <vector>
 
 export module TypeStorage;
+
+using namespace std;
 
 export enum class ScreenType {
 	NoScreen, Menu, Map, Battle, CharacterCreation
@@ -92,7 +96,7 @@ export struct AvatarAndDrawRect {
 };
 
 export enum class BodyPartType {
-	Head, Torso, Arm, Leg, Other
+	Head, Torso, Arm, Leg, Wing, Other
 };
 
 
@@ -122,7 +126,9 @@ export enum class ButtonOption {
 	LoadLimb, /* Will be re-used dynamically by ALL limb buttons. */
 	NextPage, PreviousPage,
 	/* Loaded Limb (LimbLoaded mode) panel buttons. */
-	NextCharJoint, NextLimbJoint, RotateClockwise, RotateCounterClockwise, UnloadLimb, Equip
+	NextCharJoint, NextLimbJoint, RotateClockwise, RotateCounterClockwise, UnloadLimb, Equip,
+	/* Battle Screen buttons. */
+	BattleMove
 
 };
 
@@ -167,3 +173,56 @@ export bool isValidLandmarkType(int value) {
 export bool isValidSuitType(int value) {
 	return value >= 0 && value <= TotalSuit;
 }
+
+
+/*
+* For battles.
+*/
+
+
+export enum AttributeType {
+	HP, Intelligence, Speed, Strength
+};
+
+export enum AttackType {
+	NoAttack,
+	Attack, /* Generic "attack" */
+	Punch, DoublePunch, Kick, BodySlam, /* Just damage HP. */
+	Swoop, /* steal Speed and damage HP. */
+	BrainDrain, /* Steal intelligence and damage HP. */
+	Steal, Throw, Heal
+};
+
+export struct AttackStruct {
+	AttackStruct(string name, string slug, int intensity, int precision, DominanceNode dNode,
+		AttackType attackType, vector<AttributeType> attributeTypes)
+		:
+		slug(slug), name(name), precision(precision), intensity(intensity), dNode(dNode),
+		attackType(attackType), attributeTypes(attributeTypes) { }
+	AttackStruct() {
+		name = "none";
+		slug = "none";
+		precision = 0;
+		intensity = 0;
+		dNode = DominanceNode::Green;
+		attackType = AttackType::NoAttack;
+	}
+
+	/* Copy constructor. */
+	AttackStruct(const AttackStruct& other) {
+		name = other.name;
+		slug = other.slug;
+		intensity = other.intensity;
+		precision = other.precision;
+		dNode = other.dNode;
+		attackType = other.attackType;
+	}
+
+	string name;
+	string slug;
+	int intensity; /* of a possible 100 */
+	int precision; /* of a possible 100 */
+	DominanceNode dNode;
+	AttackType attackType;
+	vector<AttributeType> attributeTypes;
+};

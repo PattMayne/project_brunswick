@@ -71,6 +71,8 @@ import Database;
 
 using namespace std;
 
+
+
 /* Map Screen class: where we navigate worlds, dungeons, and buildings. */
 export class BattleScreen {
 public:
@@ -89,9 +91,7 @@ public:
 		createTitleTexture(ui);
 
 		settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-		gameMenuPanel = ui.createGameMenuPanel();
 		settingsPanel.setShow(false);
-		gameMenuPanel.setShow(true);
 
 		showTitle = true;
 		titleCountdown = 140;
@@ -144,7 +144,24 @@ public:
 
 		npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
 		npcStatsPanel.setShow(true);
+
+		playerAttackStructs = playerCharacter.getAttacks();
+		npcAttackStructs = npc.getAttacks();
+
+		playerTurnPanel = ui.createBattlePanel(playerAttackStructs);
+		playerTurnPanel.setShow(true);
+
+		createNpcLimbPanel();
+		createPlayerLimbPanels();
+
+		flashingLimbId = -1;
+		flashingLimbCountdown = 20;
+		drawFlashingLimb = true;
+		flashLimb = false;
 	}
+
+	void createPlayerLimbPanels();
+	void createNpcLimbPanel();
 
 	ScreenType getScreenType() { return screenType; }
 	void run();
@@ -167,9 +184,10 @@ private:
 
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
 	void checkMouseLocation(SDL_Event& e);
+	void handlePlayerMove(ButtonClickStruct clickStruct);
 
 	void getBackgroundTexture(UI& ui);
-	void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
+	void rebuildDisplay(Panel& settingsPanel);
 	void createTitleTexture(UI& ui);
 
 	void raiseTitleRect() { --titleRect.y; }
@@ -193,9 +211,12 @@ private:
 
 	/* panels */
 	Panel settingsPanel;
-	Panel gameMenuPanel;
 	Panel playerStatsPanel;
 	Panel npcStatsPanel;
+	Panel playerTurnPanel;
+	Panel equippedLimbsPanel;
+	Panel unequippedLimbsPanel;
+	Panel npcLimbsPanel;
 
 	Battle battle;
 
@@ -207,7 +228,77 @@ private:
 	int bobbingMeter;
 	int bobbingMax;
 	bool reverseBob;
+
+	vector<AttackStruct> playerAttackStructs;
+	vector<AttackStruct> npcAttackStructs;
+
+	int flashingLimbId;
+	int flashingLimbCountdown;
+	bool drawFlashingLimb; /* switches on and off WHILE flashLimb is true. */
+	bool flashLimb;
+
+	AttackStruct playerAttackLoaded;
+	AttackStruct npcAttackLoaded;
 };
+
+
+void BattleScreen::createNpcLimbPanel() {
+	UI& ui = UI::getInstance();
+
+	/* Destroy textures if they already exist. */
+	npcLimbsPanel.destroyTextures();
+
+	/* Build a vector of data structures so the UI can build the panel of Limb buttons. */
+	vector<LimbButtonData> limbBtnDataStructs;
+	vector<Limb>& limbs = battle.getNpc().getLimbs();
+
+	for (int i = 0; i < limbs.size(); ++i) {
+		Limb& thisLimb = limbs[i];
+		if (thisLimb.isEquipped()) {
+			limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
+		}
+	}
+
+	npcLimbsPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, true, "CHOOSE AN OPPONENT LIMB TO ATTACK:");
+	npcLimbsPanel.setShow(false);
+}
+
+void BattleScreen::createPlayerLimbPanels() {
+	UI& ui = UI::getInstance();
+
+	/* Destroy textures if they already exist. */
+	if (unequippedLimbsPanel.getButtons().size() > 0) {
+		unequippedLimbsPanel.destroyTextures();
+	}
+
+	if (equippedLimbsPanel.getButtons().size() > 0) {
+		equippedLimbsPanel.destroyTextures();
+	}
+
+	/* Build a vector of data structures so the UI can build the panel of Limb buttons. */
+	vector<LimbButtonData> equippedLimbBtnDataStructs;
+	vector<LimbButtonData> unequippedLimbBtnDataStructs;
+	vector<Limb>& limbs = battle.getPlayerCharacter().getLimbs();
+
+	for (int i = 0; i < limbs.size(); ++i) {
+		Limb& thisLimb = limbs[i];
+		if (thisLimb.isEquipped()) {
+			equippedLimbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
+		}
+		else {
+			unequippedLimbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
+		}
+	}
+
+	unequippedLimbsPanel = ui.createChooseLimbModePanel(unequippedLimbBtnDataStructs, true, "NON-EQUIPPED LIMBS");
+	equippedLimbsPanel = ui.createChooseLimbModePanel(equippedLimbBtnDataStructs, true, "EQUIPPED LIMBS");
+
+	equippedLimbsPanel.setShow(false);
+	unequippedLimbsPanel.setShow(false);
+}
+
+
+
 
 /* We need a prebuilt list of limb ids
 * so we can randomly select one to rotate.
@@ -300,6 +391,15 @@ export void BattleScreen::run() {
 			}
 		}
 
+		/* Deal with blinking loaded limb */
+		if (flashLimb) {
+			--flashingLimbCountdown;
+			if (flashingLimbCountdown < 1) {
+				drawFlashingLimb = !drawFlashingLimb;
+				flashingLimbCountdown = 20;
+			}
+		}
+
 		/* Deal with showing the title. */
 		if (showTitle) {
 			if (titleCountdown > 0) {
@@ -350,12 +450,9 @@ export void BattleScreen::run() {
 
 
 void BattleScreen::drawNpc(UI& ui) {
-
 	Character& npc = battle.getNpc();
-
 	vector<Limb>& limbs = npc.getLimbs();
 	bool limbsLeftToUnrotate = false;
-
 	SDL_Rect limbRect = { 0, 0, 0, 0 };
 
 	for (int i = 0; i < limbs.size(); ++i) {
@@ -418,9 +515,7 @@ void BattleScreen::drawNpc(UI& ui) {
 }
 
 void BattleScreen::drawPlayer(UI& ui) {
-
 	Character& playerCharacter = battle.getPlayerCharacter();
-
 	vector<Limb>& limbs = playerCharacter.getLimbs();
 
 	SDL_Rect limbRect = { 0, 0, 0, 0 };
@@ -500,9 +595,10 @@ void BattleScreen::draw(UI& ui) {
 	}
 
 	settingsPanel.draw(ui);
-	gameMenuPanel.draw(ui);
 	playerStatsPanel.draw(ui);
 	npcStatsPanel.draw(ui);
+	playerTurnPanel.draw(ui);
+	npcLimbsPanel.draw(ui);
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
@@ -529,10 +625,9 @@ void BattleScreen::createTitleTexture(UI& ui) {
 
 
 /* Screen has been resized. Rebuild! */
-void BattleScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
+void BattleScreen::rebuildDisplay(Panel& settingsPanel) {
 	UI& ui = UI::getInstance();
 	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
-	ui.rebuildGameMenuPanel(gameMenuPanel);
 	getBackgroundTexture(ui);
 	createTitleTexture(ui);
 }
@@ -563,24 +658,23 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 				switch (clickStruct.buttonOption) {
 				case ButtonOption::Mobile:
 					ui.resizeWindow(WindowResType::Mobile);
-					rebuildDisplay(settingsPanel, gameMenuPanel);
+					rebuildDisplay(settingsPanel);
 					break;
 				case ButtonOption::Tablet:
 					ui.resizeWindow(WindowResType::Tablet);
-					rebuildDisplay(settingsPanel, gameMenuPanel);
+					rebuildDisplay(settingsPanel);
 					break;
 				case ButtonOption::Desktop:
 					ui.resizeWindow(WindowResType::Desktop);
-					rebuildDisplay(settingsPanel, gameMenuPanel);
+					rebuildDisplay(settingsPanel);
 					break;
 				case ButtonOption::Fullscreen:
 					ui.resizeWindow(WindowResType::Fullscreen);
-					rebuildDisplay(settingsPanel, gameMenuPanel);
+					rebuildDisplay(settingsPanel);
 					break;
 				case ButtonOption::Back:
-					// switch to other panel
 					settingsPanel.setShow(false);
-					gameMenuPanel.setShow(true);
+					playerTurnPanel.setShow(true);
 					break;
 				case ButtonOption::Exit:
 					/* back to menu screen */
@@ -590,23 +684,107 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 					cout << "ERROR\n";
 				}
 			}
-			else if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICK MAP MENU \n\n";
-				ButtonClickStruct clickStruct = gameMenuPanel.checkButtonClick(mouseX, mouseY);
+			else if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
+
+				cout << "\n\nCLICKED BATTLE MENU \n\n";
+
+				ButtonClickStruct clickStruct = playerTurnPanel.checkButtonClick(mouseX, mouseY);
+
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
 				switch (clickStruct.buttonOption) {
-				case ButtonOption::MapOptions:
-					cout << "\nMAP OPTIONS\n";
+				case ButtonOption::BattleMove:
+					cout << "\nBATTLE MOVE!\n";
+
+					handlePlayerMove(clickStruct);
+
 					break;
 				case ButtonOption::Settings:
 					settingsPanel.setShow(true);
-					gameMenuPanel.setShow(false);
+					playerTurnPanel.setShow(false);
+					break;
+				case ButtonOption::Exit:
+					/* back to menu screen */
+					running = false;
 					break;
 				default:
 					cout << "ERROR\n";
 
 				}
+			}
+		}
+	}
+}
+
+void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
+	int clickID = clickStruct.itemID;
+
+	UI& ui = UI::getInstance();
+	cout << "\nBATTLE MOVE!\n";
+
+	/* Check which attack. */
+	for (AttackStruct aStruct : playerAttackStructs) {
+		if (aStruct.attackType == clickID) {
+			cout << "Attack Type: " << aStruct.name << "\n";
+
+			/* Now we know that ATTACK TYPE matches existing attack options,
+			* Go through those options and do the attack.
+			*/
+
+			if (aStruct.attackType == AttackType::Attack ||
+				aStruct.attackType == AttackType::Punch ||
+				aStruct.attackType == AttackType::DoublePunch ||
+				aStruct.attackType == AttackType::Kick ||
+				aStruct.attackType == AttackType::BodySlam
+			) {
+				/* REGULAR HP-DAMAGE ATTACKS */
+
+
+
+				/* Load attack
+				* Open opponent Limb List
+				* Select Opponent Limb
+				* Do Attack
+				* Animate Attack (flashing limb)
+				* Show message panel with effects of attack.
+				*/
+
+				playerAttackLoaded = aStruct;
+
+				// npcLimbsPanel
+
+				playerTurnPanel.setShow(false);
+				npcLimbsPanel.setShow(true);
+				playerStatsPanel.setShow(false);
+				npcStatsPanel.setShow(false);
+			}
+			else if (aStruct.attackType == AttackType::BrainDrain) {
+
+				/* This attack is general (all limbs), but is extra effective on Head body parts. */
+
+				cout << "BRAIN DRAIN!\n";
+
+			}
+			else if (aStruct.attackType == AttackType::Steal) {
+
+				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+
+				cout << "STEALIMG LIMB!\n";
+
+			}
+			else if (aStruct.attackType == AttackType::Throw) {
+
+				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+
+				cout << "THROW!\n";
+
+			}
+			else if (aStruct.attackType == AttackType::Heal) {
+
+				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+
+				cout << "HEAL!\n";
+
 			}
 		}
 	}
@@ -618,5 +796,6 @@ void BattleScreen::checkMouseLocation(SDL_Event& e) {
 	SDL_GetMouseState(&mouseX, &mouseY);
 	/* send the x and y to the panel and its buttons to change the color */
 	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
-	if (gameMenuPanel.getShow()) { gameMenuPanel.checkMouseOver(mouseX, mouseY); }
+	if (playerTurnPanel.getShow()) { playerTurnPanel.checkMouseOver(mouseX, mouseY); }
+	if (npcLimbsPanel.getShow()) { npcLimbsPanel.checkMouseOver(mouseX, mouseY); }
 }

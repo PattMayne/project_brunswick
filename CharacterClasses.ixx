@@ -850,6 +850,7 @@ public:
 	SuitType getSuitType() { return suitType; }
 	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
+	vector<AttackStruct> getAttacks();
 
 	int getHP();
 	int getIntelligence();
@@ -1167,6 +1168,236 @@ void Character::checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimen
 	}
 }
 
+/*
+* Based on what kind of Limbs the character has equipped, generate some Attacks.
+* These AttackStructs will be fed to the UI to make buttons.
+* But it also gives the opponent their randomly-selected options on Battle screen.
+*/
+vector<AttackStruct> Character::getAttacks() {
+	vector<AttackStruct> attackStructs = {};
+
+	/*
+	* All the Attacks should be stored in TypeStorage.
+	* 
+	* --> 2 heads : Brain Drain (absorb HP and intelligence)
+	* --> 1 Torso : Body Slam (attack spread out on ALL limbs)
+	* --> 1+ legs : Kick (strong attack, less precision)
+	* --> 1+ arms : Punch (less strong, more precise)
+	* --> 1+ arms : steal (more arms and more intelligence means more steal)
+	* --> 2+ wings : Dive-bomb (Swoop?)
+	*/
+
+	int headCount = 0;
+	int armCount = 0;
+	int legCount = 0;
+	int torsoCount = 0;
+	int wingCount = 0;
+	int otherCount = 0;
+
+	int totalIntelligence = 0;
+	int totalSpeed = 0;
+	int totalStrength = 0;
+	int totalHp = 0;
+
+	int numberOfEquippedLimbs = 0;
+
+	for (Limb& limb : limbs) {
+		if (!limb.isEquipped()) { continue; }
+		++numberOfEquippedLimbs;
+
+		/* Get the BodyPartType lists. */
+		BodyPartType bpType = limb.getBodyPartType();
+		if (bpType == BodyPartType::Arm) { ++armCount; }
+		else if (bpType == BodyPartType::Leg) { ++legCount; }
+		else if (bpType == BodyPartType::Wing) { ++wingCount; }
+		else if (bpType == BodyPartType::Head) { ++headCount; }
+		else if (bpType == BodyPartType::Torso) { ++torsoCount; }
+		else if (bpType == BodyPartType::Other) { ++otherCount; }
+
+		/* Tally the attributes. */
+		totalIntelligence += limb.getIntelligence();
+		totalSpeed += limb.getSpeed();
+		totalStrength += limb.getStrength();
+		totalHp += limb.getHP();
+	}
+
+	/* THESE ARE CURRENTLY HARD-CODED. But we will need to make them based on attributes. */
+
+	if (headCount > 1) {
+		/* Two heads means BRAIN DRAIN. */
+
+		AttributeType attTypeHP = AttributeType::HP;
+		AttributeType attTypeIntel = AttributeType::Intelligence;
+		vector<AttributeType> attributeTypes = { attTypeHP, attTypeIntel };
+
+		attackStructs.emplace_back(
+			"Brain Drain",
+			"BRAIN_DRAIN",
+			70,
+			40,
+			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			AttackType::BrainDrain,
+			attributeTypes
+		);
+	}
+
+	if (torsoCount > 0) {
+		/* Torso means BODY SLAM. More torsos means more slam. */
+
+		AttributeType attTypeHP = AttributeType::HP;
+		vector<AttributeType> attributeTypes = { attTypeHP };
+
+		int intensity = torsoCount == 1 ? 70 : torsoCount == 2 ? 80 : torsoCount == 3 ? 90 : 95;
+		int precision = 100 - intensity;
+
+		attackStructs.emplace_back(
+			"Body Slam",
+			"BODY_SLAM",
+			intensity,
+			precision,
+			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			AttackType::BodySlam,
+			attributeTypes
+		);
+	}
+
+	if (wingCount > 1) {
+		/* Wings mean SWOOP. More wings equals more swoop. */
+
+		AttributeType attTypeHP = AttributeType::HP;
+		vector<AttributeType> attributeTypes = { attTypeHP };
+
+		attackStructs.emplace_back(
+			"Swoop",
+			"SWOOP",
+			95,
+			5,
+			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			AttackType::Swoop,
+			attributeTypes
+		);
+	}
+
+	if (armCount > 0) {
+
+		AttributeType attTypeHP = AttributeType::HP;
+		vector<AttributeType> attributeTypes = { attTypeHP };
+
+		attackStructs.emplace_back(
+			"Steal",
+			"STEAL",
+			0,
+			100,
+			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			AttackType::Steal,
+			attributeTypes
+		);
+
+
+		if (armCount == 1) {
+			attTypeHP = AttributeType::HP;
+			attributeTypes = { attTypeHP };
+
+			attackStructs.emplace_back(
+				"Punch",
+				"PUNCH",
+				30,
+				70,
+				DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				AttackType::Punch,
+				attributeTypes
+			);
+		}
+		else {
+			attTypeHP = AttributeType::HP;
+			vector<AttributeType> attributeTypes2 = { attTypeHP };
+
+			attackStructs.emplace_back(
+				"Double Punch",
+				"DOUBLE_PUNCH",
+				50,
+				50,
+				DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				AttackType::DoublePunch,
+				attributeTypes2
+			);
+		}
+	}
+
+	if (legCount > 0) {
+		AttributeType attTypeHP = AttributeType::HP;
+		vector<AttributeType> attributeTypes = { attTypeHP };
+
+		attackStructs.emplace_back(
+			"Kick",
+			"KICK",
+			70,
+			30,
+			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			AttackType::Kick,
+			attributeTypes
+		);
+	}
+	
+	if (legCount < 1 && armCount < 1 && torsoCount < 1 && headCount < 1 && wingCount < 1) {
+		/* Generic random attack. (randomize more by selecting a random attribute to attack). */
+
+		AttributeType attTypeHP = AttributeType::HP;
+		vector<AttributeType> attributeTypes = { attTypeHP };
+
+		int intensity = (rand() % 80) + 10;
+		int precision = 100 - intensity;
+
+		attackStructs.emplace_back(
+			"Fast Attack",
+			"FAST_ATTACK",
+			intensity,
+			precision,
+			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			AttackType::Attack,
+			attributeTypes
+		);
+	}
+
+
+	if (numberOfEquippedLimbs < limbs.size()) {
+		/* There are non-equipped limbs, so we can add a Heal (and possibly Throw) move. */
+
+		AttributeType attTypeHP = AttributeType::HP;
+		vector<AttributeType> attributeTypes = { attTypeHP };
+
+		attackStructs.emplace_back(
+			"Heal",
+			"HEAL",
+			100,
+			100,
+			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			AttackType::Heal,
+			attributeTypes
+		);
+
+		if (armCount > 0) {
+			AttributeType attTypeHP = AttributeType::HP;
+			vector<AttributeType> attributeTypes = { attTypeHP };
+
+			int intensity = (rand() % 45) + 45;
+			int precision = 100 - intensity;
+
+			attackStructs.emplace_back(
+				"Throw",
+				"THROW",
+				intensity,
+				precision,
+				DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				AttackType::Throw,
+				attributeTypes
+			);
+		}
+	}
+
+
+	return attackStructs;
+}
 
 /*
 * This function draws the limbs to an offscreen texture as an avatar, which it returns.

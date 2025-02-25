@@ -66,13 +66,6 @@ public:
 	void setDrawStartNpc(Point point) { drawStartNpc = point; }
 	void setDrawStartPlayer(Point point) { drawStartPlayer = point; }
 
-	void setDrawPoints() {
-		//npc.buildDrawLimbList();
-		//playerCharacter.buildDrawLimbList();
-
-		//playerCharacter.setTexture(playerCharacter.createAvatar());
-		//npc.setTexture(npc.createAvatar());
-	}
 
 private:
 	int id;
