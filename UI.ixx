@@ -1359,7 +1359,7 @@ void UI::rebuildSettingsPanel(Panel& settingsPanel, ScreenType context) {
 *
 */
 
-/* build and deliver basic info for settings panel buttons */
+/* build and deliver basic info for Battle panel buttons */
 vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs) {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */

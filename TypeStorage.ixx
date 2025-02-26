@@ -218,6 +218,8 @@ export struct AttackStruct {
 		dNode = other.dNode;
 		attackType = other.attackType;
 		fired = other.fired;
+		targetLimbId = other.targetLimbId;
+		sourceLimbId = other.sourceLimbId;
 	}
 
 	string name;
@@ -230,4 +232,7 @@ export struct AttackStruct {
 	bool fired;
 
 	void fire() { fired = true; }
+
+	int targetLimbId;
+	int sourceLimbId;
 };

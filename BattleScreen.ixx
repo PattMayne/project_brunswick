@@ -161,7 +161,6 @@ public:
 
 		attackAdvance = 0;
 
-		setAnchorXs();
 		attackAdvanceHitTarget = false;
 	}
 
@@ -254,59 +253,10 @@ private:
 	int animationCountdown;
 
 	int attackAdvance;
-	int playerAnchorX;
-	int npcAnchorX;
 	bool attackAdvanceHitTarget;
 
-	void setAnchorXs();
 };
 
-void BattleScreen::setAnchorXs() {
-	/* Player */
-
-	playerAnchorX = 0;
-
-	Character& playerCharacter = battle.getPlayerCharacter();
-	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
-
-	int lowestCharX = 10000;
-	bool foundLowChar = false;
-
-	for (Limb& limb : playerLimbs) {
-		if (limb.getDrawRect().x < lowestCharX) {
-			lowestCharX = limb.getDrawRect().x;
-			foundLowChar = true;
-		}
-	}
-
-	if (foundLowChar) {
-		playerAnchorX = lowestCharX;
-	}
-
-	/* NPC */
-
-	npcAnchorX = 0;
-
-	Character& npc = battle.getPlayerCharacter();
-	vector<Limb>& npcLimbs = npc.getLimbs();
-
-	int lowestNpcX = 10000;
-	bool foundLowNpc = false;
-
-	for (Limb& limb : npcLimbs) {
-		if (limb.getDrawRect().x < lowestNpcX) {
-			lowestNpcX = limb.getDrawRect().x;
-			foundLowNpc = true;
-		}
-	}
-
-	if (foundLowNpc) {
-		npcAnchorX = lowestNpcX;
-	}
-
-	cout << "playerAnchorX: " << playerAnchorX << "\n";
-	cout << "npcAnchorX: " << npcAnchorX << "\n";
-}
 
 
 void BattleScreen::createNpcLimbPanel() {
@@ -374,11 +324,15 @@ void BattleScreen::setLimbIdList() {
 	limbIds = {};
 
 	for (Limb& limb : battle.getPlayerCharacter().getLimbs()) {
-		limbIds.push_back(limb.getId());
+		if (limb.isEquipped()) {
+			limbIds.push_back(limb.getId());
+		}
 	}
 
 	for (Limb& limb : battle.getNpc().getLimbs()) {
-		limbIds.push_back(limb.getId());
+		if (limb.isEquipped()) {
+			limbIds.push_back(limb.getId());
+		}
 	}
 }
 
@@ -597,17 +551,27 @@ void BattleScreen::setAttackAdvance() {
 
 		if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvance < npcDrawStartPoint.x) {
 			attackAdvance = attackAdvance + 20;
+			cout << "Up\n";
 		}
 		else if (!attackAdvanceHitTarget){
 			attackAdvanceHitTarget = true;
 			attackAdvance = attackAdvance - 20;
+			cout << "Down\n";
 		}
 		else if (attackAdvance > 0) {
 			attackAdvance = attackAdvance - 20;
+			cout << "Down\n";
 		}
 		else {
 			animateAttack = !animateAttack;
-			cout << "ATTACK ADVANCE FINISHED. Time to apply the results. Do the calculation NOW.  \n";
+			cout << "ATTACK ANIMATION FINISHED. \n";
+			cout << "DOING CALCULATION EARLY. \n";
+
+			/* NOW we must animate FLAHSHING LIMBs.
+			* But first we must STORE SOME INFORMATION.
+			*/
+
+			firePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
 		}
 	}
 
@@ -688,8 +652,15 @@ void BattleScreen::draw(UI& ui) {
 	skyBG.draw();
 
 	/* Draw the characters. */
-	drawPlayer(ui);
-	drawNpc(ui);
+	if (battle.isPlayerTurn()) {
+		drawNpc(ui);
+		drawPlayer(ui);
+	}
+	else {
+		drawPlayer(ui);
+		drawNpc(ui);
+	}
+	
 	
 	/* draw the title */
 	if (showTitle) {
@@ -752,6 +723,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 			SDL_GetMouseState(&mouseX, &mouseY);
 
 			if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
+				/* SETTINGS PANEL. */
 
 				/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
 				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
@@ -787,6 +759,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 				}
 			}
 			else if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
+				/* BATTLE MENU. */
 
 				cout << "\n\nCLICKED BATTLE MENU \n\n";
 
@@ -815,11 +788,36 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 				}
 			}
 			else if (npcLimbsPanel.getShow() && npcLimbsPanel.isInPanel(mouseX, mouseY)) {
+				/* NPC LIMBS PANEL. */
+
 				cout << "\n\nCLICK NPC LIMB MENU \n\n";
 				ButtonClickStruct clickStruct = npcLimbsPanel.checkButtonClick(mouseX, mouseY);
-				int limbToAttackID = clickStruct.itemID;
 
-				firePlayerDamageAttackStruct(-1, limbToAttackID);
+
+				/* It might be the "back" button. */
+
+				if (clickStruct.buttonOption == ButtonOption::Back) {
+					/* unload attack, reset panels. */
+					playerTurnPanel.setShow(true);
+					npcLimbsPanel.setShow(false);
+					playerStatsPanel.setShow(true);
+					npcStatsPanel.setShow(true);
+					playerAttackLoaded = AttackStruct();
+
+					return;
+				}
+				else {
+					/* Do the animation. 
+					* When it counts down we'll launch the calculations.
+					* After the NEXT animation we'll execute the results.
+					*/
+					playerAttackLoaded.targetLimbId = clickStruct.itemID;
+					animateAttack = true;
+					animationCountdown = 1000;
+				}
+
+
+				
 			}
 		}
 	}
@@ -841,13 +839,8 @@ void bringSumTo100(int& numA, int& numB) {
 */
 void BattleScreen::firePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId) {
 
-	/* Do the animation. */
 
-	animateAttack = true;
-	animationCountdown = 1000;
-
-
-	/* The rest of this should happen AFTER the animation.*/
+	/* This should happen AFTER the animation.*/
 
 	AttackType attackType = playerAttackLoaded.attackType;
 	Character& playerCharacter = battle.getPlayerCharacter();
@@ -981,6 +974,9 @@ bool BattleScreen::playerStealsLimbs(vector<int> limbIds) {
 	return false;
 }
 
+/*
+* This interprets the user's input and sets up the Battle Move Sequence.
+*/
 void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 	int clickID = clickStruct.itemID;
 
@@ -1019,8 +1015,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 
 				playerAttackLoaded = aStruct;
 
-				// npcLimbsPanel
-
+				/* Open the NPC Limb panel and user chooses targetId. */
 				playerTurnPanel.setShow(false);
 				npcLimbsPanel.setShow(true);
 				playerStatsPanel.setShow(false);
