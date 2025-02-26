@@ -154,6 +154,7 @@ export class MapScreen {
 				map = loadMap(mapSlug);
 
 				for (MapCharacter& npc : map.getNPCs()) {
+					cout << "About to set texture for npc id: " << npc.getId() << "\n";
 					npc.buildDrawLimbList();
 					npc.setTexture(npc.createAvatar());
 				}
@@ -169,6 +170,8 @@ export class MapScreen {
 					suit.buildDrawLimbList();
 					suit.setTexture(suit.createAvatar());
 				}
+
+				int tryo = 5;
 			}
 			else {
 				/* Create new map. */

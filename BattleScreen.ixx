@@ -73,6 +73,16 @@ using namespace std;
 
 
 
+bool intsContainInt(vector<int> ints, int myInt) {
+	for (int thisInt : ints) {
+		if (myInt == thisInt) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
 void bringSumTo100(int& numA, int& numB) {
 	if (numA + numB > 100) {
 		--numA;
@@ -525,17 +535,6 @@ export void BattleScreen::run() {
 
 	/* set the next screen to load */
 	gameState.setScreenStruct(screenToLoadStruct);
-}
-
-bool intsContainInt(vector<int> ints, int myInt) {
-	cout << "Checking for int\n";
-	cout << ints.size() << " ints\n";
-	for (int thisInt : ints) {
-		if (myInt == thisInt) {
-			return true;
-		}
-	}
-	return false;
 }
 
 void BattleScreen::drawNpc(UI& ui) {
@@ -1101,6 +1100,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	Character& npc = battle.getNpc();
 	int playerId = battle.getPlayerCharacter().getId();
 	int npcId = npc.getId();
+	UI& ui = UI::getInstance();
 
 	sqlite3* db = startTransaction();
 
@@ -1112,13 +1112,13 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		limbIdsToEquip.emplace_back(thisId);
 	}
 
+	/* Damage has already been done (to attributes). Now save those changes. */
 	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = npcLimbs[i];
 		bool erasedThisLimb = false;
 
 		/* For MODIFIED limbs (attacked, healed, whatever). */
 		for (int limbId : limbIdsToUpdate) {
-
 			if (limbId == limb.getId()) {
 				/* Damage already happened in the calculations function. Now we just save them. */
 				updateLimbBattleEffectsInTransaction(limb, db);
@@ -1128,11 +1128,14 @@ bool BattleScreen::applyPlayerAttackEffects() {
 
 		/* For STEALING limbs. */
 		for (int limbId : limbsIdsToSteal) {
-			cout << "Stealing limb id " << limbId << "\n";
-			limb.setCharacterId(playerId);
-
 			if (limbId == limb.getId()) {
-				updateLimbOwnerInTransaction(limbId, playerId, db);
+				cout << "Stealing limb id " << limbId << "\n";
+				npc.unEquipLimb(limbId);
+				limb.setCharacterId(playerId);
+				limb.unEquip();
+
+				updateLimbBattleEffectsInTransaction(limb, db);
+				//updateLimbOwnerInTransaction(limbId, playerId, db);
 				npcLimbs.erase(npcLimbs.begin() + i);
 
 				/* Erase limb id from limbIdsToEquip */
@@ -1165,16 +1168,26 @@ bool BattleScreen::applyPlayerAttackEffects() {
 
 		if (limbIdsToEquip.size() > 1) {
 			for (Limb& limb : npc.getLimbs()) {
+
 				for (int limbIdToEquip : limbIdsToEquip) {
 					if (limb.getId() == limbIdToEquip) {
-						npc.equipLimb(limbIdToEquip);
+						bool equipSuccess = npc.equipLimb(limbIdToEquip);
+
+						if (!equipSuccess) {
+							npc.unEquipLimb(limbIdToEquip);
+							limb.unEquip();
+						}
 					}
 				}
+
 				/* Update them all because some may have been cut out. */
+				npc.setTexture(npc.createAvatar());
 				updateLimbBattleEffectsInTransaction(limb, db);
 			}
 
+			npc.buildDrawLimbList();
 			updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
+			setLimbIdList();
 		}
 		else {
 			/* VICTORY CONDITIONS.
@@ -1185,8 +1198,9 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		* ---> Player gets previously-equipped limbs.
 		* ---> Non-equipped limbs move to the NPCs block.
 		*/
-			npc.clearSuit();
 			for (Limb& limb : npc.getLimbs()) {
+				npc.unEquipLimb(limb.getId());
+				limb.unEquip();
 
 				bool limbWasGonnaEquip = false;
 				for (int limbIdToEquip : limbIdsToEquip) {
@@ -1206,14 +1220,20 @@ bool BattleScreen::applyPlayerAttackEffects() {
 				updateLimbBattleEffectsInTransaction(limb, db);
 			}
 
+			npc.buildDrawLimbList();
 			/* Now destroy the NPC from the database. */
 			deleteCharacterInTrans(npc.getId(), db);
+			setLimbIdList();
+
+			/* Victory Condition gives you a popup message, and then go back to the map. */
 		}
 	}
 
 	commitTransactionAndCloseDatabase(db);
 
-	return false;
+	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+
+	return true;
 }
 
 
@@ -1224,27 +1244,20 @@ void BattleScreen::setAttackAdvance() {
 		return;
 	}
 
-	cout << "Animating attack!\n";
-
 	if (battle.isPlayerTurn()) {
 
 		if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvance < npcDrawStartPoint.x) {
 			attackAdvance = attackAdvance + 20;
-			cout << "Up\n";
 		}
 		else if (!attackAdvanceHitTarget) {
 			attackAdvanceHitTarget = true;
 			attackAdvance = attackAdvance - 20;
-			cout << "Down\n";
 		}
 		else if (attackAdvance > 0) {
 			attackAdvance = attackAdvance - 20;
-			cout << "Down\n";
 		}
 		else {
 			animateAttack = !animateAttack;
-			cout << "ATTACK ANIMATION FINISHED. \n";
-			cout << "DOING CALCULATION EARLY. \n";
 
 			/* NOW we must animate FLAHSHING LIMBs.
 			* But first we must STORE SOME INFORMATION.

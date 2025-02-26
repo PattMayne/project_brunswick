@@ -414,6 +414,41 @@ export bool updateCharacterAnchorIdInTrans(int characterId, int anchorLimbId, sq
     return success;
 }
 
+export bool updateJointInTrans(Joint& joint, sqlite3* db) {
+    bool success = false;
+
+    /* No need to change the map_slug because map only loads non-owned limbs. */
+    const char* updateSQL = "UPDATE joint SET modified_point_x = ?, modified_point_y = ?, is_anchor = ?, "
+        "connected_limb_id = ?, anchor_joint_index = ? WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return success;
+    }
+
+    int isAnchorInt = !joint.getIsAnchor() ? 0 : 1;
+
+    sqlite3_bind_int(statement, 1, joint.getPoint().x);
+    sqlite3_bind_int(statement, 2, joint.getPoint().y);
+    sqlite3_bind_int(statement, 3, isAnchorInt);
+    sqlite3_bind_int(statement, 4, joint.getConnectedLimbId());
+    sqlite3_bind_int(statement, 5, joint.getChildLimbAnchorJointIndex());
+    sqlite3_bind_int(statement, 6, joint.getId());
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update Joint failed: " << sqlite3_errmsg(db) << endl; }
+    else { success = true; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+
+    return success;
+}
 
 /* When a limb changes stats.
 * DO ON MASS
@@ -454,6 +489,10 @@ export bool updateLimbBattleEffectsInTransaction(Limb& limb, sqlite3* db) {
 
     /* Finalize statement and close database. */
     sqlite3_finalize(statement);
+
+    for (Joint& joint : limb.getJoints()) {
+        updateJointInTrans(joint, db);
+    }
 
     return success;
 }
