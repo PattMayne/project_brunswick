@@ -158,13 +158,21 @@ public:
 		flashingLimbCountdown = 20;
 		drawFlashingLimb = true;
 		flashLimb = false;
+
+		attackAdvance = 0;
+
+		setAnchorXs();
+		attackAdvanceHitTarget = false;
 	}
 
 	void createPlayerLimbPanels();
 	void createNpcLimbPanel();
+	void firePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId);
 
 	ScreenType getScreenType() { return screenType; }
 	void run();
+
+	bool playerStealsLimbs(vector<int> limbIds);
 
 private:
 	ScreenType screenType;
@@ -181,6 +189,7 @@ private:
 	void draw(UI& ui);
 	void drawPlayer(UI& ui);
 	void drawNpc(UI& ui);
+	void setAttackAdvance();
 
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
 	void checkMouseLocation(SDL_Event& e);
@@ -239,7 +248,65 @@ private:
 
 	AttackStruct playerAttackLoaded;
 	AttackStruct npcAttackLoaded;
+
+	bool animateAttack;
+	bool animateEffect;
+	int animationCountdown;
+
+	int attackAdvance;
+	int playerAnchorX;
+	int npcAnchorX;
+	bool attackAdvanceHitTarget;
+
+	void setAnchorXs();
 };
+
+void BattleScreen::setAnchorXs() {
+	/* Player */
+
+	playerAnchorX = 0;
+
+	Character& playerCharacter = battle.getPlayerCharacter();
+	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+
+	int lowestCharX = 10000;
+	bool foundLowChar = false;
+
+	for (Limb& limb : playerLimbs) {
+		if (limb.getDrawRect().x < lowestCharX) {
+			lowestCharX = limb.getDrawRect().x;
+			foundLowChar = true;
+		}
+	}
+
+	if (foundLowChar) {
+		playerAnchorX = lowestCharX;
+	}
+
+	/* NPC */
+
+	npcAnchorX = 0;
+
+	Character& npc = battle.getPlayerCharacter();
+	vector<Limb>& npcLimbs = npc.getLimbs();
+
+	int lowestNpcX = 10000;
+	bool foundLowNpc = false;
+
+	for (Limb& limb : npcLimbs) {
+		if (limb.getDrawRect().x < lowestNpcX) {
+			lowestNpcX = limb.getDrawRect().x;
+			foundLowNpc = true;
+		}
+	}
+
+	if (foundLowNpc) {
+		npcAnchorX = lowestNpcX;
+	}
+
+	cout << "playerAnchorX: " << playerAnchorX << "\n";
+	cout << "npcAnchorX: " << npcAnchorX << "\n";
+}
 
 
 void BattleScreen::createNpcLimbPanel() {
@@ -400,18 +467,22 @@ export void BattleScreen::run() {
 			}
 		}
 
+
+		/* Deal with animation. */
+		if (animationCountdown > 0) {
+			--animationCountdown;
+		}
+
+
 		/* Deal with showing the title. */
 		if (showTitle) {
 			if (titleCountdown > 0) {
-				--titleCountdown;
-			}
+				--titleCountdown; }
 			else {
-				raiseTitleRect();
-			}
+				raiseTitleRect(); }
 
 			if (getTitleBottomPosition() < -1) {
-				showTitle = false;
-			}
+				showTitle = false; }
 		}
 
 		checkMouseLocation(e);
@@ -514,9 +585,40 @@ void BattleScreen::drawNpc(UI& ui) {
 	}
 }
 
+void BattleScreen::setAttackAdvance() {
+	if (!animateAttack) {
+		attackAdvance = 0;
+		return;
+	}
+
+	cout << "Animating attack!\n";
+
+	if (battle.isPlayerTurn()) {
+
+		if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvance < npcDrawStartPoint.x) {
+			attackAdvance = attackAdvance + 20;
+		}
+		else if (!attackAdvanceHitTarget){
+			attackAdvanceHitTarget = true;
+			attackAdvance = attackAdvance - 20;
+		}
+		else if (attackAdvance > 0) {
+			attackAdvance = attackAdvance - 20;
+		}
+		else {
+			animateAttack = !animateAttack;
+			cout << "ATTACK ADVANCE FINISHED. Time to apply the results. Do the calculation NOW.  \n";
+		}
+	}
+
+
+}
+
 void BattleScreen::drawPlayer(UI& ui) {
 	Character& playerCharacter = battle.getPlayerCharacter();
 	vector<Limb>& limbs = playerCharacter.getLimbs();
+
+	setAttackAdvance();
 
 	SDL_Rect limbRect = { 0, 0, 0, 0 };
 	bool limbsLeftToUnrotate = false;
@@ -527,7 +629,7 @@ void BattleScreen::drawPlayer(UI& ui) {
 
 			SDL_Point rotationPoint = limb.getRotationPointSDL();
 			limbRect = limb.getDrawRect();
-			limbRect.x += playerDrawStartPoint.x;
+			limbRect.x += playerDrawStartPoint.x + attackAdvance;
 			limbRect.y += playerDrawStartPoint.y + bobbingMeter;
 
 			int limbRotationAngle = limb.getRotationAngle();
@@ -712,8 +814,171 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 
 				}
 			}
+			else if (npcLimbsPanel.getShow() && npcLimbsPanel.isInPanel(mouseX, mouseY)) {
+				cout << "\n\nCLICK NPC LIMB MENU \n\n";
+				ButtonClickStruct clickStruct = npcLimbsPanel.checkButtonClick(mouseX, mouseY);
+				int limbToAttackID = clickStruct.itemID;
+
+				firePlayerDamageAttackStruct(-1, limbToAttackID);
+			}
 		}
 	}
+}
+
+void bringSumTo100(int& numA, int& numB) {
+	if (numA + numB > 100) {
+		--numA;
+		bringSumTo100(numB, numA);
+	} else if (numA + numB < 100) {
+		++numA;
+		bringSumTo100(numB, numA);
+	}
+}
+
+/*
+* BASIC ATTACK LOGIC is contained in this function.
+* I may later move attack logic to dedicated functions, in a dedicated module.
+*/
+void BattleScreen::firePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId) {
+
+	/* Do the animation. */
+
+	animateAttack = true;
+	animationCountdown = 1000;
+
+
+	/* The rest of this should happen AFTER the animation.*/
+
+	AttackType attackType = playerAttackLoaded.attackType;
+	Character& playerCharacter = battle.getPlayerCharacter();
+	Character& npc = battle.getNpc();
+	vector<Limb>& npcLimbs = npc.getLimbs();
+	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+
+	npcLimbsPanel.setShow(false);
+
+	/*
+	* Calculate how much of which attributes to take from which limbs.
+	* When a limb dies, figure out what to do with limbs attached to it.
+	* What are the rules?
+	* -- 0 hp limbs are stolen.
+	* -- If it's the anchored limb, find another limb to be an anchored limb (prefer ones with their own child limbs).
+	* sourceLimb to fly spinning at targetLimb -- calculated to do full 360s and return upright as normal... wants to share x/y with oppo
+	* 
+	* 
+	* CREATE ANIMATION STRUCT.
+	* BattleAnimationStruct
+	* EffectAnimationStruct
+	*/
+	
+	/* Calculate the attack. */
+	int attack = playerLimbs.size();
+	for (Limb& limb : playerCharacter.getLimbs()) {
+		attack += limb.getStrength();
+	}
+	
+	attack = attack / 10; // add some RANDOMNESS.
+	int spreadAttack = 0;
+
+	/* Get the target limb and make a vector of ids for spread attack. */
+
+	vector<int> connectedLimbIds;
+	vector<int> limbsIdsToSteal;
+	vector<int> limbIdsToUpdate;
+	int totalDamage = 0;
+
+	int precision = playerAttackLoaded.precision;
+	int intensity = playerAttackLoaded.intensity;
+	bringSumTo100(precision, intensity);
+
+	if (precision < 90) {
+
+		spreadAttack = attack / (precision / 10);
+		attack = attack - spreadAttack;
+
+		/* attack must be higher. */
+		if (spreadAttack > attack) {
+			int tempNumber = spreadAttack;
+			spreadAttack = attack;
+			attack = tempNumber;
+		}
+
+		/* First get all touching limbs. */
+		for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+			Limb& limb = npcLimbs[i];
+
+			for (Joint& joint : limb.getJoints()) {
+				int connectedLimbId = joint.getConnectedLimbId();
+
+				if (connectedLimbId == targetLimbId) {
+					connectedLimbIds.push_back(limb.getId());
+				}
+				else if (limb.getId() == targetLimbId) {
+					if (connectedLimbId >= 0) {
+						connectedLimbIds.push_back(connectedLimbId);
+					}
+				}
+			}
+		}
+	}
+
+
+	/* Now get the actual target limb, while also attacking the other limbs. */
+	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+		Limb& limb = npcLimbs[i];
+		
+
+		/* Attack the target limb. */
+		if (limb.getId() == targetLimbId) {
+			limb.modifyHP(attack);
+			totalDamage += attack;
+
+			if (limb.getHP() < 1) {
+				limb.setCharacterId(playerCharacter.getId());
+				limbsIdsToSteal.push_back(limb.getId());
+				npcLimbs.erase(npcLimbs.begin() + i);
+			}
+		}
+		else {
+			if (precision < 90) {
+				/* Attack the spread limbs. */
+				for (int connectedLimbId : connectedLimbIds) {
+					if (limb.getId() == connectedLimbId) {
+						limb.modifyHP(spreadAttack);
+						totalDamage += spreadAttack;
+
+						if (limb.getHP() < 1) {
+							limb.setCharacterId(playerCharacter.getId());
+							limbsIdsToSteal.push_back(limb.getId());
+							npcLimbs.erase(npcLimbs.begin() + i);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	cout << "We did " << totalDamage << " total damage\n";
+
+
+	/* Attack is done. Update database and set up animations . */
+	playerStealsLimbs(limbsIdsToSteal);
+
+}
+
+bool BattleScreen::playerStealsLimbs(vector<int> limbIds) {
+
+	sqlite3* db = startTransaction();
+	int playerId = battle.getPlayerCharacter().getId();
+
+	for (int limbId : limbIds) {
+		cout << "Deleting limb id " << limbId << "\n";
+		updateLimbOwnerInTransaction(limbId, playerId, db);
+	}
+
+	commitTransactionAndCloseDatabase(db);
+
+	return false;
 }
 
 void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
@@ -739,6 +1004,9 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 			) {
 				/* REGULAR HP-DAMAGE ATTACKS */
 
+				/*
+				* If we do BODY SLAM then it should automatically choose anchoredLimb.
+				*/
 
 
 				/* Load attack
@@ -757,6 +1025,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 				npcLimbsPanel.setShow(true);
 				playerStatsPanel.setShow(false);
 				npcStatsPanel.setShow(false);
+
 			}
 			else if (aStruct.attackType == AttackType::BrainDrain) {
 

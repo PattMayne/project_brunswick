@@ -206,6 +206,7 @@ export struct AttackStruct {
 		intensity = 0;
 		dNode = DominanceNode::Green;
 		attackType = AttackType::NoAttack;
+		fired = false;
 	}
 
 	/* Copy constructor. */
@@ -216,6 +217,7 @@ export struct AttackStruct {
 		precision = other.precision;
 		dNode = other.dNode;
 		attackType = other.attackType;
+		fired = other.fired;
 	}
 
 	string name;
@@ -225,4 +227,7 @@ export struct AttackStruct {
 	DominanceNode dNode;
 	AttackType attackType;
 	vector<AttributeType> attributeTypes;
+	bool fired;
+
+	void fire() { fired = true; }
 };

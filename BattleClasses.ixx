@@ -62,9 +62,12 @@ public:
 
 	Point getDrawStartNpc() { return drawStartNpc; }
 	Point getDrawStartPlayer() { return drawStartPlayer; }
+	bool isPlayerTurn() { return playerTurn; }
 
 	void setDrawStartNpc(Point point) { drawStartNpc = point; }
 	void setDrawStartPlayer(Point point) { drawStartPlayer = point; }
+	void setPlayerTurn(bool playerTurn) { this->playerTurn = playerTurn; }
+
 
 
 private:
