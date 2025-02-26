@@ -1174,6 +1174,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 				updateLimbBattleEffectsInTransaction(limb, db);
 			}
 
+			updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
 		}
 		else {
 			/* VICTORY CONDITIONS.
@@ -1206,9 +1207,8 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			}
 
 			/* Now destroy the NPC from the database. */
+			deleteCharacterInTrans(npc.getId(), db);
 		}
-
-		updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
 	}
 
 	commitTransactionAndCloseDatabase(db);

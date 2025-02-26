@@ -355,6 +355,35 @@ export bool updateLimbOwnerInTransaction(int limbID, int newCharacterID, sqlite3
     return success;
 }
 
+export bool deleteCharacterInTrans(int characterId, sqlite3* db) {
+    bool success = false;
+
+    /* No need to change the map_slug because map only loads non-owned limbs. */
+    const char* updateSQL = "DELETE FROM character WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare CHARACTER DELETE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return success;
+    }
+
+    /* Bind the value. */
+    sqlite3_bind_int(statement, 1, characterId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "DELETE CHARACTER failed: " << sqlite3_errmsg(db) << endl; }
+    else { success = true; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+
+    return success;
+}
+
 /* When the character equips a new limb as anchorLimbId. */
 export bool updateCharacterAnchorIdInTrans(int characterId, int anchorLimbId, sqlite3* db) {
     bool success = false;
