@@ -427,8 +427,13 @@ export void BattleScreen::run() {
 			--animationCountdown;
 		}
 		else {
-			if (battle.isPlayerTurn()) {
-				if (animateEffect) {
+			/* End of ANY animation. */
+
+			if (animateEffect) {
+				/* End of animateEffect animations (for either character). */
+
+				if (battle.isPlayerTurn()) {
+					/* End of Player's animateEffect animation. */
 					animateEffect = !animateEffect;
 					flashLimb = false;
 
@@ -437,8 +442,29 @@ export void BattleScreen::run() {
 					/* NOW actually change the limbs, clear the queue, and make it the  */
 
 					applyPlayerAttackEffects();
+
+					playerAttackLoaded = AttackStruct();
+					limbsIdsToSteal = {};
+					limbIdsToUpdate = {};
+
+					/* RESETTING PLAYER TURN.
+					* We will switch to NPC turn LATER.
+					* After it's a smooth  cycle.
+					*/
+
+					playerTurnPanel.setShow(true);
+					npcLimbsPanel.setShow(false);
+					playerStatsPanel.setShow(true);
+					npcStatsPanel.setShow(true);
+
+					battle.setPlayerTurn(true);
 				}
+
+
+				
 			}
+
+			
 			
 		}
 
@@ -567,52 +593,6 @@ void BattleScreen::drawNpc(UI& ui) {
 	}
 }
 
-void BattleScreen::setAttackAdvance() {
-	if (!animateAttack) {
-		attackAdvance = 0;
-		return;
-	}
-
-	cout << "Animating attack!\n";
-
-	if (battle.isPlayerTurn()) {
-
-		if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvance < npcDrawStartPoint.x) {
-			attackAdvance = attackAdvance + 20;
-			cout << "Up\n";
-		}
-		else if (!attackAdvanceHitTarget){
-			attackAdvanceHitTarget = true;
-			attackAdvance = attackAdvance - 20;
-			cout << "Down\n";
-		}
-		else if (attackAdvance > 0) {
-			attackAdvance = attackAdvance - 20;
-			cout << "Down\n";
-		}
-		else {
-			animateAttack = !animateAttack;
-			cout << "ATTACK ANIMATION FINISHED. \n";
-			cout << "DOING CALCULATION EARLY. \n";
-
-			/* NOW we must animate FLAHSHING LIMBs.
-			* But first we must STORE SOME INFORMATION.
-			*/
-
-			calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
-
-			animateEffect = true;
-			animationCountdown = 100;
-			flashingLimbCountdown = 10;
-			flashLimb = true;
-
-
-			/* We deal with end of effectAnimation in the run() function. */
-		}
-	}
-
-
-}
 
 void BattleScreen::drawPlayer(UI& ui) {
 	Character& playerCharacter = battle.getPlayerCharacter();
@@ -857,6 +837,135 @@ void bringSumTo100(int& numA, int& numB) {
 	}
 }
 
+
+void BattleScreen::checkMouseLocation(SDL_Event& e) {
+	/* check for mouse over(for button hover) */
+	int mouseX, mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+	/* send the x and y to the panel and its buttons to change the color */
+	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
+	if (playerTurnPanel.getShow()) { playerTurnPanel.checkMouseOver(mouseX, mouseY); }
+	if (npcLimbsPanel.getShow()) { npcLimbsPanel.checkMouseOver(mouseX, mouseY); }
+}
+
+
+/*
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* BATTLE MOVE FUNCTIONS
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+*/
+
+
+
+
+/*
+* This interprets the user's input and sets up the Battle Move Sequence.
+*/
+void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
+	int clickID = clickStruct.itemID;
+
+	UI& ui = UI::getInstance();
+	cout << "\nBATTLE MOVE!\n";
+
+	/* Check which attack. */
+	for (AttackStruct aStruct : playerAttackStructs) {
+		if (aStruct.attackType == clickID) {
+			cout << "Attack Type: " << aStruct.name << "\n";
+
+			/* Now we know that ATTACK TYPE matches existing attack options,
+			* Go through those options and do the attack.
+			*/
+
+			if (aStruct.attackType == AttackType::Attack ||
+				aStruct.attackType == AttackType::Punch ||
+				aStruct.attackType == AttackType::DoublePunch ||
+				aStruct.attackType == AttackType::Kick ||
+				aStruct.attackType == AttackType::BodySlam
+				) {
+				/* REGULAR HP-DAMAGE ATTACKS */
+
+				/*
+				* If we do BODY SLAM then it should automatically choose anchoredLimb.
+				*/
+
+
+				/* Load attack
+				* Open opponent Limb List
+				* Select Opponent Limb
+				* Do Attack
+				* Animate Attack (flashing limb)
+				* Show message panel with effects of attack.
+				*/
+
+				playerAttackLoaded = aStruct;
+
+				/* Open the NPC Limb panel and user chooses targetId. */
+				playerTurnPanel.setShow(false);
+				npcLimbsPanel.setShow(true);
+				playerStatsPanel.setShow(false);
+				npcStatsPanel.setShow(false);
+
+			}
+			else if (aStruct.attackType == AttackType::BrainDrain) {
+
+				/* This attack is general (all limbs), but is extra effective on Head body parts. */
+
+				cout << "BRAIN DRAIN!\n";
+
+			}
+			else if (aStruct.attackType == AttackType::Steal) {
+
+				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+
+				cout << "STEALIMG LIMB!\n";
+
+			}
+			else if (aStruct.attackType == AttackType::Throw) {
+
+				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+
+				cout << "THROW!\n";
+
+			}
+			else if (aStruct.attackType == AttackType::Heal) {
+
+				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+
+				cout << "HEAL!\n";
+
+			}
+		}
+	}
+}
+
+
+
 /*
 * BASIC ATTACK LOGIC is contained in this function.
 * I may later move attack logic to dedicated functions, in a dedicated module.
@@ -883,19 +992,19 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	* -- 0 hp limbs are stolen.
 	* -- If it's the anchored limb, find another limb to be an anchored limb (prefer ones with their own child limbs).
 	* sourceLimb to fly spinning at targetLimb -- calculated to do full 360s and return upright as normal... wants to share x/y with oppo
-	* 
-	* 
+	*
+	*
 	* CREATE ANIMATION STRUCT.
 	* BattleAnimationStruct
 	* EffectAnimationStruct
 	*/
-	
+
 	/* Calculate the attack. */
 	int attack = playerLimbs.size();
 	for (Limb& limb : playerCharacter.getLimbs()) {
 		attack += limb.getStrength();
 	}
-	
+
 	attack = attack / 10; // add some RANDOMNESS.
 	int spreadAttack = 0;
 
@@ -943,7 +1052,7 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	/* Now get the actual target limb, while also attacking the other limbs. */
 	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = npcLimbs[i];
-		
+
 
 		/* Attack the target limb. */
 		if (limb.getId() == targetLimbId) {
@@ -1025,13 +1134,13 @@ bool BattleScreen::applyPlayerAttackEffects() {
 
 		if (erasedThisLimb) { break; }
 	}
-	
+
 	if (erasedLimb) {
 		/* REBUILD CHARACTER.
 		* We need a function to REBUILD CHARACTER after losing a limb.
 		* But we can only rebuild with limbs that are ALREADY equipped.
 		* Don't make the player fight through the entire catalog of limbs.
-		* 
+		*
 		* ALSO check for VICTORY CONDITIONS.
 		*/
 	}
@@ -1041,92 +1150,50 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	return false;
 }
 
-/*
-* This interprets the user's input and sets up the Battle Move Sequence.
-*/
-void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
-	int clickID = clickStruct.itemID;
 
-	UI& ui = UI::getInstance();
-	cout << "\nBATTLE MOVE!\n";
 
-	/* Check which attack. */
-	for (AttackStruct aStruct : playerAttackStructs) {
-		if (aStruct.attackType == clickID) {
-			cout << "Attack Type: " << aStruct.name << "\n";
+void BattleScreen::setAttackAdvance() {
+	if (!animateAttack) {
+		attackAdvance = 0;
+		return;
+	}
 
-			/* Now we know that ATTACK TYPE matches existing attack options,
-			* Go through those options and do the attack.
+	cout << "Animating attack!\n";
+
+	if (battle.isPlayerTurn()) {
+
+		if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvance < npcDrawStartPoint.x) {
+			attackAdvance = attackAdvance + 20;
+			cout << "Up\n";
+		}
+		else if (!attackAdvanceHitTarget) {
+			attackAdvanceHitTarget = true;
+			attackAdvance = attackAdvance - 20;
+			cout << "Down\n";
+		}
+		else if (attackAdvance > 0) {
+			attackAdvance = attackAdvance - 20;
+			cout << "Down\n";
+		}
+		else {
+			animateAttack = !animateAttack;
+			cout << "ATTACK ANIMATION FINISHED. \n";
+			cout << "DOING CALCULATION EARLY. \n";
+
+			/* NOW we must animate FLAHSHING LIMBs.
+			* But first we must STORE SOME INFORMATION.
 			*/
 
-			if (aStruct.attackType == AttackType::Attack ||
-				aStruct.attackType == AttackType::Punch ||
-				aStruct.attackType == AttackType::DoublePunch ||
-				aStruct.attackType == AttackType::Kick ||
-				aStruct.attackType == AttackType::BodySlam
-			) {
-				/* REGULAR HP-DAMAGE ATTACKS */
+			calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
 
-				/*
-				* If we do BODY SLAM then it should automatically choose anchoredLimb.
-				*/
+			animateEffect = true;
+			animationCountdown = 100;
+			flashingLimbCountdown = 10;
+			flashLimb = true;
 
-
-				/* Load attack
-				* Open opponent Limb List
-				* Select Opponent Limb
-				* Do Attack
-				* Animate Attack (flashing limb)
-				* Show message panel with effects of attack.
-				*/
-
-				playerAttackLoaded = aStruct;
-
-				/* Open the NPC Limb panel and user chooses targetId. */
-				playerTurnPanel.setShow(false);
-				npcLimbsPanel.setShow(true);
-				playerStatsPanel.setShow(false);
-				npcStatsPanel.setShow(false);
-
-			}
-			else if (aStruct.attackType == AttackType::BrainDrain) {
-
-				/* This attack is general (all limbs), but is extra effective on Head body parts. */
-
-				cout << "BRAIN DRAIN!\n";
-
-			}
-			else if (aStruct.attackType == AttackType::Steal) {
-
-				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
-
-				cout << "STEALIMG LIMB!\n";
-
-			}
-			else if (aStruct.attackType == AttackType::Throw) {
-
-				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
-
-				cout << "THROW!\n";
-
-			}
-			else if (aStruct.attackType == AttackType::Heal) {
-
-				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
-
-				cout << "HEAL!\n";
-
-			}
+			/* We deal with end of Effect Animation in the run() function. */
 		}
 	}
-}
 
-void BattleScreen::checkMouseLocation(SDL_Event& e) {
-	/* check for mouse over(for button hover) */
-	int mouseX, mouseY;
-	SDL_GetMouseState(&mouseX, &mouseY);
-	/* send the x and y to the panel and its buttons to change the color */
-	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
-	if (playerTurnPanel.getShow()) { playerTurnPanel.checkMouseOver(mouseX, mouseY); }
-	if (npcLimbsPanel.getShow()) { npcLimbsPanel.checkMouseOver(mouseX, mouseY); }
+
 }

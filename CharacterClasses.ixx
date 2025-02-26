@@ -1339,7 +1339,7 @@ vector<AttackStruct> Character::getAttacks() {
 		);
 	}
 	
-	if (legCount < 1 && armCount < 1 && torsoCount < 1 && headCount < 1 && wingCount < 1) {
+	if (legCount < 1 && armCount < 1 && torsoCount < 1) {
 		/* Generic random attack. (randomize more by selecting a random attribute to attack). */
 
 		AttributeType attTypeHP = AttributeType::HP;
