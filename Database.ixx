@@ -355,8 +355,51 @@ export bool updateLimbOwnerInTransaction(int limbID, int newCharacterID, sqlite3
     return success;
 }
 
-/* When a limb changes owner.
-* SHOULD DO ON MASS
+/* When a limb changes stats.
+* DO ON MASS
+*/
+export bool updateLimbBattleEffectsInTransaction(Limb& limb, sqlite3* db) {
+    bool success = false;
+
+    /* No need to change the map_slug because map only loads non-owned limbs. */
+    const char* updateSQL = "UPDATE limb SET character_id = ?, hp_mod = ?, strength_mod = ?, "
+        "speed_mod = ?, intelligence_mod = ?, is_anchor = ?, draw_order = ?, rotation_angle = ? WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return success;
+    }
+
+    int isAnchorInt = !limb.getIsAnchor() ? 0 : 1;
+
+    /* Bind the values. */
+    sqlite3_bind_int(statement, 1, limb.getCharacterId());
+    sqlite3_bind_int(statement, 2, limb.getHpMod());
+    sqlite3_bind_int(statement, 3, limb.getStrengthMod());
+    sqlite3_bind_int(statement, 4, limb.getSpeedMod());
+    sqlite3_bind_int(statement, 5, limb.getIntelligenceMod());
+    sqlite3_bind_int(statement, 6, isAnchorInt);
+    sqlite3_bind_int(statement, 7, limb.getDrawOrder());
+    sqlite3_bind_int(statement, 8, limb.getRotationAngle());
+    sqlite3_bind_int(statement, 9, limb.getId());
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update Limb failed: " << sqlite3_errmsg(db) << endl; }
+    else { success = true; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+
+    return success;
+}
+
+
+/* When a SINGLE limb changes owner.
 */
 export bool updateLimbOwner(int limbID, int newCharacterID) {
     bool success = false;

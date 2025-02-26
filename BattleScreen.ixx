@@ -154,8 +154,7 @@ public:
 		createNpcLimbPanel();
 		createPlayerLimbPanels();
 
-		flashingLimbId = -1;
-		flashingLimbCountdown = 20;
+		flashingLimbCountdown = 10;
 		drawFlashingLimb = true;
 		flashLimb = false;
 
@@ -166,12 +165,12 @@ public:
 
 	void createPlayerLimbPanels();
 	void createNpcLimbPanel();
-	void firePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId);
+	void calculatePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId);
 
 	ScreenType getScreenType() { return screenType; }
 	void run();
 
-	bool playerStealsLimbs(vector<int> limbIds);
+	bool applyPlayerAttackEffects();
 
 private:
 	ScreenType screenType;
@@ -240,7 +239,6 @@ private:
 	vector<AttackStruct> playerAttackStructs;
 	vector<AttackStruct> npcAttackStructs;
 
-	int flashingLimbId;
 	int flashingLimbCountdown;
 	bool drawFlashingLimb; /* switches on and off WHILE flashLimb is true. */
 	bool flashLimb;
@@ -255,6 +253,8 @@ private:
 	int attackAdvance;
 	bool attackAdvanceHitTarget;
 
+	vector<int> limbsIdsToSteal;
+	vector<int> limbIdsToUpdate;
 };
 
 
@@ -417,7 +417,7 @@ export void BattleScreen::run() {
 			--flashingLimbCountdown;
 			if (flashingLimbCountdown < 1) {
 				drawFlashingLimb = !drawFlashingLimb;
-				flashingLimbCountdown = 20;
+				flashingLimbCountdown = 10;
 			}
 		}
 
@@ -425,6 +425,21 @@ export void BattleScreen::run() {
 		/* Deal with animation. */
 		if (animationCountdown > 0) {
 			--animationCountdown;
+		}
+		else {
+			if (battle.isPlayerTurn()) {
+				if (animateEffect) {
+					animateEffect = !animateEffect;
+					flashLimb = false;
+
+					cout << "FINISHED the EFFECT animation\n";
+
+					/* NOW actually change the limbs, clear the queue, and make it the  */
+
+					applyPlayerAttackEffects();
+				}
+			}
+			
 		}
 
 
@@ -473,6 +488,16 @@ export void BattleScreen::run() {
 	gameState.setScreenStruct(screenToLoadStruct);
 }
 
+bool intsContainInt(vector<int> ints, int myInt) {
+	cout << "Checking for int\n";
+	cout << ints.size() << " ints\n";
+	for (int thisInt : ints) {
+		if (myInt == thisInt) {
+			return true;
+		}
+	}
+	return false;
+}
 
 void BattleScreen::drawNpc(UI& ui) {
 	Character& npc = battle.getNpc();
@@ -483,6 +508,7 @@ void BattleScreen::drawNpc(UI& ui) {
 	for (int i = 0; i < limbs.size(); ++i) {
 		Limb& limb = limbs[i];
 		if (limb.isEquipped()) {
+			bool drawLimb = !animateEffect || drawFlashingLimb || !intsContainInt(limbIdsToUpdate, limb.getId());
 
 			SDL_Point rotationPoint = limb.getRotationPointSDL();
 			limbRect = limb.getDrawRect();
@@ -491,14 +517,16 @@ void BattleScreen::drawNpc(UI& ui) {
 
 			int limbRotationAngle = limb.getRotationAngle();
 
-			SDL_RenderCopyEx(
-				ui.getMainRenderer(),
-				limb.getTexture(),
-				NULL,
-				&limbRect,
-				limbRotationAngle,
-				&rotationPoint,
-				SDL_FLIP_NONE);
+			if (drawLimb) {
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					limb.getTexture(),
+					NULL,
+					&limbRect,
+					limbRotationAngle,
+					&rotationPoint,
+					SDL_FLIP_NONE);
+			}			
 
 			if (limbToRotateId == limb.getId()) {
 				limb.rotate(rotationAmount);
@@ -571,7 +599,15 @@ void BattleScreen::setAttackAdvance() {
 			* But first we must STORE SOME INFORMATION.
 			*/
 
-			firePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
+			calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
+
+			animateEffect = true;
+			animationCountdown = 100;
+			flashingLimbCountdown = 10;
+			flashLimb = true;
+
+
+			/* We deal with end of effectAnimation in the run() function. */
 		}
 	}
 
@@ -679,18 +715,7 @@ void BattleScreen::draw(UI& ui) {
 
 /* Create the texture with the name of the game */
 void BattleScreen::createTitleTexture(UI& ui) {
-	string playerName = battle.getPlayerCharacter().getName();
-	string npcName = battle.getNpc().getName();
-
-	bool twoNamesExist = playerName != "" && npcName != "";
-
 	string titleString = "BATTLE!";
-
-	if (twoNamesExist) {
-		titleString = playerName + " vs " + npcName;
-	}
-
-	Resources& resources = Resources::getInstance();
 	auto [incomingTitleTexture, incomingTitleRect] = ui.createTitleTexture(titleString);
 	titleTexture = incomingTitleTexture;
 	titleRect = incomingTitleRect;
@@ -795,7 +820,6 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 
 
 				/* It might be the "back" button. */
-
 				if (clickStruct.buttonOption == ButtonOption::Back) {
 					/* unload attack, reset panels. */
 					playerTurnPanel.setShow(true);
@@ -836,8 +860,10 @@ void bringSumTo100(int& numA, int& numB) {
 /*
 * BASIC ATTACK LOGIC is contained in this function.
 * I may later move attack logic to dedicated functions, in a dedicated module.
+* This is separate from the animations.
+* Attack animation happens, then this function happens (and stores data), then effect animation happens (based on stored data).
 */
-void BattleScreen::firePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId) {
+void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId) {
 
 
 	/* This should happen AFTER the animation.*/
@@ -876,8 +902,6 @@ void BattleScreen::firePlayerDamageAttackStruct(int sourceLimbId, int targetLimb
 	/* Get the target limb and make a vector of ids for spread attack. */
 
 	vector<int> connectedLimbIds;
-	vector<int> limbsIdsToSteal;
-	vector<int> limbIdsToUpdate;
 	int totalDamage = 0;
 
 	int precision = playerAttackLoaded.precision;
@@ -923,13 +947,13 @@ void BattleScreen::firePlayerDamageAttackStruct(int sourceLimbId, int targetLimb
 
 		/* Attack the target limb. */
 		if (limb.getId() == targetLimbId) {
-			limb.modifyHP(attack);
-			totalDamage += attack;
+			limb.modifyHP(-attack);
+			totalDamage -= attack;
+			limbIdsToUpdate.push_back(limb.getId());
 
 			if (limb.getHP() < 1) {
 				limb.setCharacterId(playerCharacter.getId());
 				limbsIdsToSteal.push_back(limb.getId());
-				npcLimbs.erase(npcLimbs.begin() + i);
 			}
 		}
 		else {
@@ -937,13 +961,13 @@ void BattleScreen::firePlayerDamageAttackStruct(int sourceLimbId, int targetLimb
 				/* Attack the spread limbs. */
 				for (int connectedLimbId : connectedLimbIds) {
 					if (limb.getId() == connectedLimbId) {
-						limb.modifyHP(spreadAttack);
-						totalDamage += spreadAttack;
+						limb.modifyHP(-spreadAttack);
+						totalDamage -= spreadAttack;
+						limbIdsToUpdate.push_back(limb.getId());
 
 						if (limb.getHP() < 1) {
 							limb.setCharacterId(playerCharacter.getId());
 							limbsIdsToSteal.push_back(limb.getId());
-							npcLimbs.erase(npcLimbs.begin() + i);
 						}
 					}
 				}
@@ -954,19 +978,62 @@ void BattleScreen::firePlayerDamageAttackStruct(int sourceLimbId, int targetLimb
 	cout << "We did " << totalDamage << " total damage\n";
 
 
-	/* Attack is done. Update database and set up animations . */
-	playerStealsLimbs(limbsIdsToSteal);
+	/* Attack is calculated and saved to BattleScreen variables, to be used after Effect animation. */
 
 }
 
-bool BattleScreen::playerStealsLimbs(vector<int> limbIds) {
+bool BattleScreen::applyPlayerAttackEffects() {
+	Character& npc = battle.getNpc();
+	int playerId = battle.getPlayerCharacter().getId();
+	int npcId = npc.getId();
 
 	sqlite3* db = startTransaction();
-	int playerId = battle.getPlayerCharacter().getId();
 
-	for (int limbId : limbIds) {
-		cout << "Deleting limb id " << limbId << "\n";
-		updateLimbOwnerInTransaction(limbId, playerId, db);
+	vector<Limb>& npcLimbs = npc.getLimbs();
+	bool erasedLimb = false;
+
+	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+		Limb& limb = npcLimbs[i];
+		bool erasedThisLimb = false;
+
+		/* For MODIFIED limbs (attacked, healed, whatever). */
+		for (int limbId : limbIdsToUpdate) {
+
+			if (limbId == limb.getId()) {
+				cout << "Modifting limb id " << limbId << "\n";
+				updateLimbBattleEffectsInTransaction(limb, db);
+			}
+		}
+
+
+		/* For STEALING limbs. */
+		for (int limbId : limbsIdsToSteal) {
+			cout << "Stealing limb id " << limbId << "\n";
+			limb.setCharacterId(playerId);
+
+			if (limbId == limb.getId()) {
+				updateLimbOwnerInTransaction(limbId, playerId, db);
+				npcLimbs.erase(npcLimbs.begin() + i);
+
+				/*  */
+
+				erasedLimb = true;
+				erasedThisLimb = true;
+				break;
+			}
+		}
+
+		if (erasedThisLimb) { break; }
+	}
+	
+	if (erasedLimb) {
+		/* REBUILD CHARACTER.
+		* We need a function to REBUILD CHARACTER after losing a limb.
+		* But we can only rebuild with limbs that are ALREADY equipped.
+		* Don't make the player fight through the entire catalog of limbs.
+		* 
+		* ALSO check for VICTORY CONDITIONS.
+		*/
 	}
 
 	commitTransactionAndCloseDatabase(db);
