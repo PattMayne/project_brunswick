@@ -73,6 +73,19 @@ using namespace std;
 
 
 
+void bringSumTo100(int& numA, int& numB) {
+	if (numA + numB > 100) {
+		--numA;
+		bringSumTo100(numB, numA);
+	}
+	else if (numA + numB < 100) {
+		++numA;
+		bringSumTo100(numB, numA);
+	}
+}
+
+
+
 /* Map Screen class: where we navigate worlds, dungeons, and buildings. */
 export class BattleScreen {
 public:
@@ -818,22 +831,10 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 					playerAttackLoaded.targetLimbId = clickStruct.itemID;
 					animateAttack = true;
 					animationCountdown = 1000;
+					attackAdvanceHitTarget = false;
 				}
-
-
-				
 			}
 		}
-	}
-}
-
-void bringSumTo100(int& numA, int& numB) {
-	if (numA + numB > 100) {
-		--numA;
-		bringSumTo100(numB, numA);
-	} else if (numA + numB < 100) {
-		++numA;
-		bringSumTo100(numB, numA);
 	}
 }
 
@@ -971,6 +972,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 * I may later move attack logic to dedicated functions, in a dedicated module.
 * This is separate from the animations.
 * Attack animation happens, then this function happens (and stores data), then effect animation happens (based on stored data).
+* These calculations provide info for the next animation, but we don't execute on the calculations until after the last animation.
 */
 void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId) {
 
@@ -1091,6 +1093,10 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 
 }
 
+/*
+* Apply the effects that we just calculated and animated.
+* If npc loses any limbs, rebuild character with already-equipped limbs ONLY.
+*/
 bool BattleScreen::applyPlayerAttackEffects() {
 	Character& npc = battle.getNpc();
 	int playerId = battle.getPlayerCharacter().getId();
@@ -1101,6 +1107,11 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	bool erasedLimb = false;
 
+	vector<int> limbIdsToEquip;
+	for (int thisId : npc.getDrawLimbIDs()) {
+		limbIdsToEquip.emplace_back(thisId);
+	}
+
 	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = npcLimbs[i];
 		bool erasedThisLimb = false;
@@ -1109,7 +1120,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		for (int limbId : limbIdsToUpdate) {
 
 			if (limbId == limb.getId()) {
-				cout << "Modifting limb id " << limbId << "\n";
+				/* Damage already happened in the calculations function. Now we just save them. */
 				updateLimbBattleEffectsInTransaction(limb, db);
 			}
 		}
@@ -1124,8 +1135,15 @@ bool BattleScreen::applyPlayerAttackEffects() {
 				updateLimbOwnerInTransaction(limbId, playerId, db);
 				npcLimbs.erase(npcLimbs.begin() + i);
 
-				/*  */
+				/* Erase limb id from limbIdsToEquip */
 
+				for (int k = limbIdsToEquip.size() - 1; k >= 0; --k) {
+					if (limbIdsToEquip[k] == limbId) {
+						limbIdsToEquip.erase(limbIdsToEquip.begin() + k);
+					}
+				}
+
+				/*  */
 				erasedLimb = true;
 				erasedThisLimb = true;
 				break;
@@ -1143,6 +1161,54 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		*
 		* ALSO check for VICTORY CONDITIONS.
 		*/
+		npc.clearSuit();
+
+		if (limbIdsToEquip.size() > 1) {
+			for (Limb& limb : npc.getLimbs()) {
+				for (int limbIdToEquip : limbIdsToEquip) {
+					if (limb.getId() == limbIdToEquip) {
+						npc.equipLimb(limbIdToEquip);
+					}
+				}
+				/* Update them all because some may have been cut out. */
+				updateLimbBattleEffectsInTransaction(limb, db);
+			}
+
+		}
+		else {
+			/* VICTORY CONDITIONS.
+		* Player won the battle.
+		*
+		* Destroy NPC.
+		* Spread limbs
+		* ---> Player gets previously-equipped limbs.
+		* ---> Non-equipped limbs move to the NPCs block.
+		*/
+			npc.clearSuit();
+			for (Limb& limb : npc.getLimbs()) {
+
+				bool limbWasGonnaEquip = false;
+				for (int limbIdToEquip : limbIdsToEquip) {
+					if (limb.getId() == limbIdToEquip) {
+						limbWasGonnaEquip = true;
+					}
+				}
+
+				if (!limbWasGonnaEquip) {
+					limb.setCharacterId(-1);
+					limb.setPosition(npc.getPosition());
+				}
+				else {
+					limb.setCharacterId(playerId);
+				}
+
+				updateLimbBattleEffectsInTransaction(limb, db);
+			}
+
+			/* Now destroy the NPC from the database. */
+		}
+
+		updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
 	}
 
 	commitTransactionAndCloseDatabase(db);
@@ -1190,6 +1256,7 @@ void BattleScreen::setAttackAdvance() {
 			animationCountdown = 100;
 			flashingLimbCountdown = 10;
 			flashLimb = true;
+			attackAdvance = 0;
 
 			/* We deal with end of Effect Animation in the run() function. */
 		}

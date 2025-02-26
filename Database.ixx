@@ -355,6 +355,37 @@ export bool updateLimbOwnerInTransaction(int limbID, int newCharacterID, sqlite3
     return success;
 }
 
+/* When the character equips a new limb as anchorLimbId. */
+export bool updateCharacterAnchorIdInTrans(int characterId, int anchorLimbId, sqlite3* db) {
+    bool success = false;
+
+    const char* updateSQL = "UPDATE character SET anchor_limb_id = ? WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare CHARACTER UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return success;
+    }
+
+    /* Bind the values. */
+    sqlite3_bind_int(statement, 1, anchorLimbId);
+    sqlite3_bind_int(statement, 2, characterId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update Character failed: " << sqlite3_errmsg(db) << endl; }
+    else { success = true; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+
+    return success;
+}
+
+
 /* When a limb changes stats.
 * DO ON MASS
 */
