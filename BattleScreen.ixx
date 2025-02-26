@@ -220,6 +220,8 @@ private:
 	void rebuildDisplay(Panel& settingsPanel);
 	void createTitleTexture(UI& ui);
 
+	void refreshNpcLimbsPanel();
+
 	void raiseTitleRect() { --titleRect.y; }
 	int getTitleBottomPosition() { return titleRect.y + titleRect.h; }
 
@@ -302,6 +304,7 @@ void BattleScreen::createNpcLimbPanel() {
 	npcLimbsPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, true, "CHOOSE AN OPPONENT LIMB TO ATTACK:");
 	npcLimbsPanel.setShow(false);
 }
+
 
 void BattleScreen::createPlayerLimbPanels() {
 	UI& ui = UI::getInstance();
@@ -1146,7 +1149,6 @@ bool BattleScreen::applyPlayerAttackEffects() {
 					}
 				}
 
-				/*  */
 				erasedLimb = true;
 				erasedThisLimb = true;
 				break;
@@ -1165,6 +1167,10 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		* ALSO check for VICTORY CONDITIONS.
 		*/
 		npc.clearSuit();
+		for (Limb& limb : npc.getLimbs()) {
+			npc.unEquipLimb(limb.getId());
+			limb.unEquip();
+		}
 
 		if (limbIdsToEquip.size() > 1) {
 			for (Limb& limb : npc.getLimbs()) {
@@ -1230,7 +1236,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	}
 
 	commitTransactionAndCloseDatabase(db);
-
+	createNpcLimbPanel();
 	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
 
 	return true;
