@@ -1399,7 +1399,6 @@ export MapCharacter loadPlayerMapCharacter() {
 
     name = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 1));
     anchorLimbID = sqlite3_column_int(characterStatement, 2);
-    cout << "Map slug is the problem? Because it's empty?\n";
     mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 3));
     battleID = sqlite3_column_int(characterStatement, 4);
 

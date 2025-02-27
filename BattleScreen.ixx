@@ -456,7 +456,7 @@ export void BattleScreen::run() {
 			/* End of ANY animation. */
 
 			if (animateEffect) {
-				/* End of animateEffect animations (for either character). */
+				/* LAST FRAME. End of animateEffect animations (for either character). */
 
 				if (battle.isPlayerTurn()) {
 					/* End of Player's animateEffect animation. */
@@ -486,12 +486,8 @@ export void BattleScreen::run() {
 					battle.setPlayerTurn(true);
 				}
 
-
-				
 			}
 
-			
-			
 		}
 
 
@@ -1065,8 +1061,8 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 			limbIdsToUpdate.push_back(limb.getId());
 
 			if (limb.getHP() < 1) {
-				limb.setCharacterId(playerCharacter.getId());
-				limbsIdsToSteal.push_back(limb.getId());
+				//limb.setCharacterId(playerCharacter.getId());
+				//limbsIdsToSteal.push_back(limb.getId());
 			}
 		}
 		else {
@@ -1079,8 +1075,8 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 						limbIdsToUpdate.push_back(limb.getId());
 
 						if (limb.getHP() < 1) {
-							limb.setCharacterId(playerCharacter.getId());
-							limbsIdsToSteal.push_back(limb.getId());
+							//limb.setCharacterId(playerCharacter.getId());
+							//limbsIdsToSteal.push_back(limb.getId());
 						}
 					}
 				}
@@ -1128,33 +1124,27 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			}
 		}
 
+		if (limb.getHP() < 1) {
+			cout << "Stealing a limb without the vector\n";
+			npc.unEquipLimb(limb.getId());
+			limb.setCharacterId(playerId);
+			limb.unEquip();
 
-		/* For STEALING limbs. */
-		for (int limbId : limbsIdsToSteal) {
-			if (limbId == limb.getId()) {
-				cout << "Stealing limb id " << limbId << "\n";
-				npc.unEquipLimb(limbId);
-				limb.setCharacterId(playerId);
-				limb.unEquip();
+			erasedLimb = true;
+			erasedThisLimb = true;
 
-				updateLimbBattleEffectsInTransaction(limb, db);
-				npc.getLimbs().erase(npc.getLimbs().begin() + i);
-
-				/* Erase limb id from limbIdsToEquip */
-
-				for (int k = limbIdsToEquip.size() - 1; k >= 0; --k) {
-					if (limbIdsToEquip[k] == limbId) {
-						limbIdsToEquip.erase(limbIdsToEquip.begin() + k);
-					}
+			int limbId = limb.getId();
+			for (int k = limbIdsToEquip.size() - 1; k >= 0; --k) {
+				if (limbIdsToEquip[k] == limbId) {
+					limbIdsToEquip.erase(limbIdsToEquip.begin() + k);
 				}
-
-				erasedLimb = true;
-				erasedThisLimb = true;
-				break;
 			}
+
+			updateLimbBattleEffectsInTransaction(limb, db);
+			npc.getLimbs().erase(npc.getLimbs().begin() + i);
+			continue;
 		}
 
-		if (erasedThisLimb) { break; }
 	}
 
 	bool npcDefeated = false;
