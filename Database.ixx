@@ -776,8 +776,7 @@ export void updateCharacterLimbs(int characterId, int anchorLimbId, vector<Limb>
         sqlite3_bind_int(updateLimbStatement, 2, limb.getHpMod());
         sqlite3_bind_int(updateLimbStatement, 3, limb.getStrengthMod());
         sqlite3_bind_int(updateLimbStatement, 4, limb.getSpeedMod());
-        //sqlite3_bind_int(updateLimbStatement, 5, limb.getIntelligenceMod());
-        sqlite3_bind_int(updateLimbStatement, 5, 22222);
+        sqlite3_bind_int(updateLimbStatement, 5, limb.getIntelligenceMod());
         sqlite3_bind_int(updateLimbStatement, 6, limb.getPosition().x);
         sqlite3_bind_int(updateLimbStatement, 7, limb.getPosition().y);
         sqlite3_bind_int(updateLimbStatement, 8, limb.getRotationAngle());

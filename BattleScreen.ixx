@@ -1116,8 +1116,8 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	}
 
 	/* Damage has already been done (to attributes). Now save those changes. */
-	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
-		Limb& limb = npcLimbs[i];
+	for (int i = npc.getLimbs().size() - 1; i >= 0; --i) {
+		Limb& limb = npc.getLimbs()[i];
 		bool erasedThisLimb = false;
 
 		/* For MODIFIED limbs (attacked, healed, whatever). */
@@ -1138,8 +1138,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 				limb.unEquip();
 
 				updateLimbBattleEffectsInTransaction(limb, db);
-				//updateLimbOwnerInTransaction(limbId, playerId, db);
-				npcLimbs.erase(npcLimbs.begin() + i);
+				npc.getLimbs().erase(npc.getLimbs().begin() + i);
 
 				/* Erase limb id from limbIdsToEquip */
 
@@ -1158,7 +1157,11 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		if (erasedThisLimb) { break; }
 	}
 
+	bool npcDefeated = false;
+
 	if (erasedLimb) {
+		cout << "\nLIMB ERASED\n";
+
 		/* REBUILD CHARACTER.
 		* We need a function to REBUILD CHARACTER after losing a limb.
 		* But we can only rebuild with limbs that are ALREADY equipped.
@@ -1172,17 +1175,12 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			limb.unEquip();
 		}
 
-		if (limbIdsToEquip.size() > 1) {
+		if (limbIdsToEquip.size() > 0) {
 			for (Limb& limb : npc.getLimbs()) {
 
 				for (int limbIdToEquip : limbIdsToEquip) {
 					if (limb.getId() == limbIdToEquip) {
 						bool equipSuccess = npc.equipLimb(limbIdToEquip);
-
-						if (!equipSuccess) {
-							npc.unEquipLimb(limbIdToEquip);
-							limb.unEquip();
-						}
 					}
 				}
 
@@ -1196,43 +1194,66 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			setLimbIdList();
 		}
 		else {
-			/* VICTORY CONDITIONS.
-		* Player won the battle.
-		*
-		* Destroy NPC.
-		* Spread limbs
-		* ---> Player gets previously-equipped limbs.
-		* ---> Non-equipped limbs move to the NPCs block.
-		*/
-			for (Limb& limb : npc.getLimbs()) {
-				npc.unEquipLimb(limb.getId());
-				limb.unEquip();
+			npcDefeated = true;
+		}
+	}
 
-				bool limbWasGonnaEquip = false;
-				for (int limbIdToEquip : limbIdsToEquip) {
-					if (limb.getId() == limbIdToEquip) {
-						limbWasGonnaEquip = true;
-					}
-				}
+	/* After all this, make sure that the npc has equipped limbs. */
+	int numberOfEquippedLimbs = 0;
+	for (Limb& limb : npc.getLimbs()) {
+		if (limb.isEquipped()) {
+			npcDefeated = false;
+			++numberOfEquippedLimbs;
+		}
+	}
 
-				if (!limbWasGonnaEquip) {
-					limb.setCharacterId(-1);
-					limb.setPosition(npc.getPosition());
-				}
-				else {
-					limb.setCharacterId(playerId);
-				}
+	cout << numberOfEquippedLimbs << " equippedLIMBS\n";
 
-				updateLimbBattleEffectsInTransaction(limb, db);
+	if (numberOfEquippedLimbs < 1) {
+		npcDefeated = true;
+	}
+
+	if (npcDefeated) {
+		cout << "\n NPC DEFEATED\n\n";
+		/* VICTORY CONDITIONS.
+	* Player won the battle.
+	*
+	* Destroy NPC.
+	* Spread limbs
+	* ---> Player gets previously-equipped limbs.
+	* ---> Non-equipped limbs move to the NPCs block.
+	*/
+		for (Limb& limb : npc.getLimbs()) {
+			npc.unEquipLimb(limb.getId());
+			limb.unEquip();
+
+			bool limbWasGonnaEquip = false;
+			for (int limbIdToEquip : limbIdsToEquip) {
+				if (limb.getId() == limbIdToEquip) {
+					limbWasGonnaEquip = true;
+				}
 			}
 
-			npc.buildDrawLimbList();
-			/* Now destroy the NPC from the database. */
-			deleteCharacterInTrans(npc.getId(), db);
-			setLimbIdList();
+			if (!limbWasGonnaEquip) {
+				limb.setCharacterId(-1);
+				limb.setPosition(npc.getPosition());
+			}
+			else {
+				limb.setCharacterId(playerId);
+			}
 
-			/* Victory Condition gives you a popup message, and then go back to the map. */
+			updateLimbBattleEffectsInTransaction(limb, db);
 		}
+
+		npc.buildDrawLimbList();
+		/* Now destroy the NPC from the database. */
+		deleteCharacterInTrans(npc.getId(), db);
+		setLimbIdList();
+
+		/* Victory Condition gives you a popup message, and then go back to the map. */
+	}
+	else {
+		cout << "NPC NOT DEFEATED YET!!! \n";
 	}
 
 	commitTransactionAndCloseDatabase(db);
