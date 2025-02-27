@@ -154,7 +154,6 @@ export class MapScreen {
 				map = loadMap(mapSlug);
 
 				for (MapCharacter& npc : map.getNPCs()) {
-					cout << "About to set texture for npc id: " << npc.getId() << "\n";
 					npc.buildDrawLimbList();
 					npc.setTexture(npc.createAvatar());
 				}
@@ -171,7 +170,6 @@ export class MapScreen {
 					suit.setTexture(suit.createAvatar());
 				}
 
-				int tryo = 5;
 			}
 			else {
 				/* Create new map. */
@@ -1832,11 +1830,11 @@ bool MapScreen::checkLimbOnLimbCollision() {
 	*/
 
 	for (int i = 0; i < roamingLimbs.size() - 1; ++i) {
-		Limb baseLimb = roamingLimbs[i];
+		Limb& baseLimb = roamingLimbs[i];
 		Point basePoint = baseLimb.getPosition();
 
 		for (int k = i + 1; k < roamingLimbs.size(); ++k) {
-			Limb comparedLimb = roamingLimbs[k];
+			Limb& comparedLimb = roamingLimbs[k];
 
 			/* Make sure we haven't already added this limb from a previous comparison. */
 			bool comparedLimbAlreadyChecked = false;
@@ -1892,7 +1890,6 @@ bool MapScreen::checkLimbOnLimbCollision() {
 	*/
 	sqlite3* db = startTransaction();
 
-//	for (CollidedLimbsStruct collidedLimbsStruct : collidedLimbsStructs) {
 	for (int k = 0; k < collidedLimbsStructs.size(); ++k) {
 		CollidedLimbsStruct collidedLimbsStruct = collidedLimbsStructs[k];
 		/* 
@@ -1922,7 +1919,7 @@ bool MapScreen::checkLimbOnLimbCollision() {
 				if (limb.getId() == limbID) {
 					limb.setCharacterId(npcID);
 					npc.addLimb(limb);
-					updateLimbOwnerInTransaction(limbID, npcID, db);
+					//updateLimbOwnerInTransaction(limbID, npcID, db);
 
 					/* The acquired limbs should animate. */
 					if (npcIsDrawable) {

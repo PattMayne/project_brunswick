@@ -1578,7 +1578,7 @@ export MapCharacter loadPlayerMapCharacter() {
     SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
     SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
     SDL_FreeSurface(characterSurface);
-    cout << "About to set the texture\n";
+
     character.setTexture(characterTexture);
 
     return character;

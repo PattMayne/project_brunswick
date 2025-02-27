@@ -466,6 +466,7 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 			Point newPosition = floorPositions[rand() % floorPositions.size()];
 			newLimb.setPosition(newPosition);
 			newLimb.setLastPosition(newPosition);
+			newLimb.setMapSlug(mapForm.slug);
 		}
 	}
 }
