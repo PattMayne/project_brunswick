@@ -244,7 +244,7 @@ export class MapScreen {
 			messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
 			messagePanel.setShow(false);
 
-			passingMessagePanel = ui.createPassingMessagePanel("", true);
+			passingMessagePanel = ui.createPassingMessagePanel("", true, false);
 			passingMessagePanel.setShow(false);
 
 			hudPanel = ui.createHud(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
@@ -638,7 +638,7 @@ export void MapScreen::run() {
 					message = message + aLimb.name + "\n";
 				}
 
-				passingMessagePanel = getNewPassingMessagePanel(message, passingMessagePanel, true, ui);
+				passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, false);
 				passingMessagePanel.setShow(true);
 				passingMessageCountdown = 3;
 			}
@@ -1588,7 +1588,7 @@ void MapScreen::createShrineMessage(Character& suit) {
 		suitMessage = suitMessage + statsMessage;
 	}
 
-	passingMessagePanel = getNewPassingMessagePanel(suitMessage, passingMessagePanel, true, ui);
+	passingMessagePanel = ui.getNewPassingMessagePanel(suitMessage, passingMessagePanel, true, false);
 	passingMessagePanel.setShow(true);
 }
 
@@ -1713,7 +1713,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 				}
 				else {
 					string message = "You cannot exit until you unscramble all the citizens.";
-					passingMessagePanel = getNewPassingMessagePanel(message, passingMessagePanel, true, ui);
+					passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, false);
 					passingMessagePanel.setShow(true);
 					passingMessageCountdown = 0;
 				}
@@ -1723,7 +1723,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 				/* TO DO: animate PUSHING the character OFF the entrance???
 				*/
 				string message = "This is the entrance. You cannot go out this way.";
-				passingMessagePanel = getNewPassingMessagePanel(message, passingMessagePanel, true, ui);
+				passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, false);
 				passingMessagePanel.setShow(true);
 				passingMessageCountdown = 0;
 			}

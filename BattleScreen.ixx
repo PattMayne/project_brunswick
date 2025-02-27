@@ -174,6 +174,12 @@ public:
 		playerTurnPanel = ui.createBattlePanel(playerAttackStructs);
 		playerTurnPanel.setShow(true);
 
+		confirmationPanel = ui.createConfirmationPanel("Ready for Battle!", ConfirmationButtonType::OkCancel, false);
+		confirmationPanel.setShow(true);
+
+		passingMessagePanel = ui.createPassingMessagePanel("", true, true);
+		passingMessagePanel.setShow(false);
+
 		createNpcLimbPanel();
 		createPlayerLimbPanels();
 
@@ -182,6 +188,7 @@ public:
 		flashLimb = false;
 
 		attackAdvance = 0;
+		passingMessageCountdown = 0;
 
 		attackAdvanceHitTarget = false;
 	}
@@ -249,6 +256,10 @@ private:
 	Panel equippedLimbsPanel;
 	Panel unequippedLimbsPanel;
 	Panel npcLimbsPanel;
+	Panel passingMessagePanel;
+	Panel confirmationPanel;
+
+	int passingMessageCountdown;
 
 	Battle battle;
 
@@ -447,6 +458,17 @@ export void BattleScreen::run() {
 			}
 		}
 
+		/* Deal with the Passing Message Panel. */
+		if (passingMessagePanel.getShow()) {
+			if (passingMessageCountdown > 0) {
+				--passingMessageCountdown;
+			}
+			else {
+				/* If we JUST hit zero: */
+				passingMessagePanel.setShow(false);
+			}
+		}
+		
 
 		/* Deal with animation. */
 		if (animationCountdown > 0) {
@@ -701,6 +723,9 @@ void BattleScreen::draw(UI& ui) {
 	npcStatsPanel.draw(ui);
 	playerTurnPanel.draw(ui);
 	npcLimbsPanel.draw(ui);
+	confirmationPanel.draw(ui);
+	passingMessagePanel.draw(ui);
+
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
@@ -735,103 +760,129 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 	else {
 		// user clicked
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
-			cout << "user clicked mouse\n";
-			// These events might change the value of screenToLoad
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
 
-			if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
-				/* SETTINGS PANEL. */
+			/* Check if confirmation panel is shown first (should deactivate other panels. */
 
-				/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
-				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
-				UI& ui = UI::getInstance();
-				/* see what button might have been clicked : */
-				switch (clickStruct.buttonOption) {
-				case ButtonOption::Mobile:
-					ui.resizeWindow(WindowResType::Mobile);
-					rebuildDisplay(settingsPanel);
-					break;
-				case ButtonOption::Tablet:
-					ui.resizeWindow(WindowResType::Tablet);
-					rebuildDisplay(settingsPanel);
-					break;
-				case ButtonOption::Desktop:
-					ui.resizeWindow(WindowResType::Desktop);
-					rebuildDisplay(settingsPanel);
-					break;
-				case ButtonOption::Fullscreen:
-					ui.resizeWindow(WindowResType::Fullscreen);
-					rebuildDisplay(settingsPanel);
-					break;
-				case ButtonOption::Back:
-					settingsPanel.setShow(false);
-					playerTurnPanel.setShow(true);
-					break;
-				case ButtonOption::Exit:
-					/* back to menu screen */
-					running = false;
-					break;
-				default:
-					cout << "ERROR\n";
-				}
+			if (confirmationPanel.getShow()) {
+
+				if (confirmationPanel.isInPanel(mouseX, mouseY)) {
+					/* YES/NO CONFIRMATION PANEL. */
+					ButtonClickStruct clickStruct = confirmationPanel.checkButtonClick(mouseX, mouseY);
+					cout << "\n\nCLICK CONFIRMATION PANEL \n\n";
+
+					if (clickStruct.buttonOption == ButtonOption::Agree) {
+						cout << "OK!\n";
+						confirmationPanel.setShow(false);
+					}
+				}				
+
 			}
-			else if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
-				/* BATTLE MENU. */
+			else {
+				cout << "user clicked mouse\n";
+				// These events might change the value of screenToLoad
+				
 
-				cout << "\n\nCLICKED BATTLE MENU \n\n";
+				if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
+					/* SETTINGS PANEL. */
 
-				ButtonClickStruct clickStruct = playerTurnPanel.checkButtonClick(mouseX, mouseY);
-
-				UI& ui = UI::getInstance();
-				/* see what button might have been clicked : */
-				switch (clickStruct.buttonOption) {
-				case ButtonOption::BattleMove:
-					cout << "\nBATTLE MOVE!\n";
-
-					handlePlayerMove(clickStruct);
-
-					break;
-				case ButtonOption::Settings:
-					settingsPanel.setShow(true);
-					playerTurnPanel.setShow(false);
-					break;
-				case ButtonOption::Exit:
-					/* back to menu screen */
-					running = false;
-					break;
-				default:
-					cout << "ERROR\n";
-
+					/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
+					ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
+					UI& ui = UI::getInstance();
+					/* see what button might have been clicked : */
+					switch (clickStruct.buttonOption) {
+					case ButtonOption::Mobile:
+						ui.resizeWindow(WindowResType::Mobile);
+						rebuildDisplay(settingsPanel);
+						break;
+					case ButtonOption::Tablet:
+						ui.resizeWindow(WindowResType::Tablet);
+						rebuildDisplay(settingsPanel);
+						break;
+					case ButtonOption::Desktop:
+						ui.resizeWindow(WindowResType::Desktop);
+						rebuildDisplay(settingsPanel);
+						break;
+					case ButtonOption::Fullscreen:
+						ui.resizeWindow(WindowResType::Fullscreen);
+						rebuildDisplay(settingsPanel);
+						break;
+					case ButtonOption::Back:
+						settingsPanel.setShow(false);
+						playerTurnPanel.setShow(true);
+						break;
+					case ButtonOption::Exit:
+						/* back to menu screen */
+						running = false;
+						break;
+					default:
+						cout << "ERROR\n";
+					}
 				}
-			}
-			else if (npcLimbsPanel.getShow() && npcLimbsPanel.isInPanel(mouseX, mouseY)) {
-				/* NPC LIMBS PANEL. */
+				else if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
+					/* BATTLE MENU. */
 
-				cout << "\n\nCLICK NPC LIMB MENU \n\n";
-				ButtonClickStruct clickStruct = npcLimbsPanel.checkButtonClick(mouseX, mouseY);
+					cout << "\n\nCLICKED BATTLE MENU \n\n";
 
+					ButtonClickStruct clickStruct = playerTurnPanel.checkButtonClick(mouseX, mouseY);
 
-				/* It might be the "back" button. */
-				if (clickStruct.buttonOption == ButtonOption::Back) {
-					/* unload attack, reset panels. */
-					playerTurnPanel.setShow(true);
-					npcLimbsPanel.setShow(false);
-					playerStatsPanel.setShow(true);
-					npcStatsPanel.setShow(true);
-					playerAttackLoaded = AttackStruct();
+					UI& ui = UI::getInstance();
+					/* see what button might have been clicked : */
+					switch (clickStruct.buttonOption) {
+					case ButtonOption::BattleMove:
+						cout << "\nBATTLE MOVE!\n";
 
-					return;
+						handlePlayerMove(clickStruct);
+
+						break;
+					case ButtonOption::Settings:
+						settingsPanel.setShow(true);
+						playerTurnPanel.setShow(false);
+						break;
+					case ButtonOption::Exit:
+						/* back to menu screen */
+						running = false;
+						break;
+					default:
+						cout << "ERROR\n";
+
+					}
 				}
-				else {
-					/* Do the animation. 
-					* When it counts down we'll launch the calculations.
-					* After the NEXT animation we'll execute the results.
-					*/
-					playerAttackLoaded.targetLimbId = clickStruct.itemID;
-					animateAttack = true;
-					animationCountdown = 1000;
-					attackAdvanceHitTarget = false;
+				else if (npcLimbsPanel.getShow() && npcLimbsPanel.isInPanel(mouseX, mouseY)) {
+					/* NPC LIMBS PANEL. */
+
+					cout << "\n\nCLICK NPC LIMB MENU \n\n";
+					ButtonClickStruct clickStruct = npcLimbsPanel.checkButtonClick(mouseX, mouseY);
+
+
+					/* It might be the "back" button (but usually won't be so deal with that first). */
+					if (clickStruct.buttonOption != ButtonOption::Back) {
+						/* Do the animation.
+						* When it counts down we'll launch the calculations.
+						* After the NEXT animation we'll execute the results.
+						*/
+						UI& ui = UI::getInstance();
+						playerAttackLoaded.targetLimbId = clickStruct.itemID;
+						animateAttack = true;
+						animationCountdown = 1000;
+						attackAdvanceHitTarget = false;
+
+						string attackMessage = "Player uses " + playerAttackLoaded.name + "!";
+						passingMessageCountdown = 250;
+						passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
+						passingMessagePanel.setShow(true);
+					}
+					else {
+						/* unload attack, reset panels. */
+						playerTurnPanel.setShow(true);
+						npcLimbsPanel.setShow(false);
+						playerStatsPanel.setShow(true);
+						npcStatsPanel.setShow(true);
+						playerAttackLoaded = AttackStruct();
+
+						return;
+					}
 				}
 			}
 		}
@@ -843,10 +894,16 @@ void BattleScreen::checkMouseLocation(SDL_Event& e) {
 	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
-	/* send the x and y to the panel and its buttons to change the color */
-	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
-	if (playerTurnPanel.getShow()) { playerTurnPanel.checkMouseOver(mouseX, mouseY); }
-	if (npcLimbsPanel.getShow()) { npcLimbsPanel.checkMouseOver(mouseX, mouseY); }
+
+	/* send the x and y to the panel and its buttons to change the color */	
+	if (confirmationPanel.getShow()) {
+		confirmationPanel.checkMouseOver(mouseX, mouseY);
+	}
+	else {
+		if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
+		if (playerTurnPanel.getShow()) { playerTurnPanel.checkMouseOver(mouseX, mouseY); }
+		if (npcLimbsPanel.getShow()) { npcLimbsPanel.checkMouseOver(mouseX, mouseY); }
+	}
 }
 
 
@@ -1086,7 +1143,14 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 		}
 	}
 
-	cout << "We did " << totalDamage << " total damage\n";
+	int damageDisplayNumber = totalDamage * -1;
+	UI& ui = UI::getInstance();
+	cout << "Player does " << damageDisplayNumber << " total damage\n";
+
+	string attackMessage = "Player does " + to_string(damageDisplayNumber) + " damage!";
+	passingMessageCountdown = 250;
+	passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
+	passingMessagePanel.setShow(true);
 
 
 	/* Attack is calculated and saved to BattleScreen variables, to be used after Effect animation. */
@@ -1201,7 +1265,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 
 	cout << numberOfEquippedLimbs << " equippedLIMBS\n";
 
-	if (numberOfEquippedLimbs < 1) {
+	if (numberOfEquippedLimbs < 1 or npc.getAnchorLimbId() < 1) {
 		npcDefeated = true;
 	}
 
@@ -1298,3 +1362,28 @@ void BattleScreen::setAttackAdvance() {
 
 
 }
+
+
+
+/*
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+*		NPC BATTLE MOVE FUNCTIONS
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+* 
+*/

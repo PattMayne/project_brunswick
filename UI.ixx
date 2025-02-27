@@ -138,7 +138,8 @@ export class UI {
 			bool includeRefuseButton = true
 		);
 
-		Panel createPassingMessagePanel(string message, bool topPlacement = true);
+		Panel createPassingMessagePanel(string message, bool topPlacement, bool isBold);
+		Panel getNewPassingMessagePanel(string newMessage, Panel& oldPassingMessagePanel, bool topPlacement, bool isBold);
 		Panel createHud(ScreenType screenType, CharStatsData statsData, bool topRight = true);
 
 
@@ -2319,14 +2320,14 @@ Panel UI::createConfirmationPanel(
 * Whenever there is a new message to display in the Confirmation Panel,
 * we must actually destroy that panel and create a new one.
 */
-export Panel getNewPassingMessagePanel(
+export Panel UI::getNewPassingMessagePanel(
 	string newMessage,
 	Panel& oldPassingMessagePanel,
 	bool topPlacement,
-	UI& ui = UI::getInstance()
+	bool isBold
 ) {
 	oldPassingMessagePanel.destroyTextures();
-	return ui.createPassingMessagePanel(newMessage, topPlacement);
+	return createPassingMessagePanel(newMessage, topPlacement, isBold);
 }
 
 
@@ -2335,7 +2336,7 @@ export Panel getNewPassingMessagePanel(
 * It "passes" either with time, or some other non-button trigger.
 * Also, it doesn't stop the game.
 */
-Panel UI::createPassingMessagePanel(string message, bool topPlacement) {
+Panel UI::createPassingMessagePanel(string message, bool topPlacement, bool isBold) {
 	if (message == "") {
 		/* NO text? Return an empty panel with no buttons or dimensions. */
 		Panel newPanel = Panel();
@@ -2345,7 +2346,7 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement) {
 
 	Resources& resources = Resources::getInstance();
 	unordered_map<string, SDL_Color> colors = getColors();
-	TTF_Font* bodyFont = getBodyFont();
+	TTF_Font* bodyFont = isBold ? getButtonFont() : getBodyFont();
 
 	/* 
 	* Figure out the dimensions of the panel.
