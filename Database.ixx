@@ -323,7 +323,7 @@ export bool deleteLimb(int limbId) {
 
 
 /* When a limb changes owner.
-* SHOULD DO ON MASS
+* DO ON MASS
 */
 export bool updateLimbOwnerInTransaction(int limbID, int newCharacterID, sqlite3* db) {
     bool success = false;
@@ -606,6 +606,40 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
 * 
 * 
 */
+
+export void updateNpcHomePositionInTrans(int characterId, Point newPosition, sqlite3* db) {
+    /*
+    * TO DO: Do this in bulk with a vector and a transaction.
+    */
+
+    /* First update the Character. */
+
+    const char* updateCharacterSQL = "UPDATE character SET position_x = ?, position_y = ? WHERE id = ?;";
+    sqlite3_stmt* updateCharacterstatement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateCharacterSQL, -1, &updateCharacterstatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare NPC UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return;
+    }
+
+    /* Bind the values. */
+    sqlite3_bind_int(updateCharacterstatement, 1, newPosition.x);
+    sqlite3_bind_int(updateCharacterstatement, 2, newPosition.y);
+    sqlite3_bind_int(updateCharacterstatement, 3, characterId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(updateCharacterstatement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update failed: " << sqlite3_errmsg(db) << endl; }
+
+    // Get the number of rows affected by the last operation
+    int rowsAffected = sqlite3_changes(db);
+
+    /* Finalize statement. */
+    sqlite3_finalize(updateCharacterstatement);
+}
 
 export void updateNpcHomePosition(int characterId, Point newPosition) {
     /*
@@ -1130,6 +1164,7 @@ export Character loadCharacterInTransaction(sqlite3* db, int characterID) {
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
             position,
             joints,
+            mapSlug,
             drawOrder
         );
 
@@ -1319,6 +1354,7 @@ export Character loadPlayerCharacter() {
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
             position,
             joints,
+            mapSlug,
             drawOrder
         );
 
@@ -1499,6 +1535,7 @@ export MapCharacter loadPlayerMapCharacter() {
             getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryLimbsStatement, 1))),
             limbPosition,
             joints,
+            mapSlug,
             drawOrder
         );
 
@@ -2471,7 +2508,8 @@ export Map loadMap(string mapSlug) {
                 sqlite3_column_int(queryLimbsStatement, 2),
                 sqlite3_column_int(queryLimbsStatement, 3)
             ),
-            joints
+            joints,
+            mapSlug
         );
     }
 
@@ -2711,6 +2749,7 @@ export Map loadMap(string mapSlug) {
                 getLimbForm(stringFromUnsignedChar(sqlite3_column_text(queryNpcLimbsStatement, 1))),
                 limbPosition,
                 joints,
+                mapSlug,
                 drawOrder
             );
 
@@ -2887,6 +2926,7 @@ export Map loadMap(string mapSlug) {
                 getLimbForm(stringFromUnsignedChar(sqlite3_column_text(querySuitLimbsStatement, 1))),
                 limbPosition,
                 joints,
+                mapSlug,
                 drawOrder
             );
 

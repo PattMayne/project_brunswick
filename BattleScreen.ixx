@@ -565,6 +565,8 @@ void BattleScreen::drawNpc(UI& ui) {
 					SDL_FLIP_NONE);
 			}			
 
+			/* Rotate limbs to make the NPC dance. */
+
 			if (limbToRotateId == limb.getId()) {
 				limb.rotate(rotationAmount);
 				npc.setChildLimbDrawRects(limb, ui);
@@ -1269,6 +1271,15 @@ void BattleScreen::setAttackAdvance() {
 		else if (!attackAdvanceHitTarget) {
 			attackAdvanceHitTarget = true;
 			attackAdvance = attackAdvance - 20;
+
+			calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
+			animateEffect = true;
+			animationCountdown = 100;
+			flashingLimbCountdown = 10;
+			drawFlashingLimb = false;
+			flashLimb = true;
+
+			/* We deal with end of Effect Animation in the run() function. */
 		}
 		else if (attackAdvance > 0) {
 			attackAdvance = attackAdvance - 20;
@@ -1280,15 +1291,8 @@ void BattleScreen::setAttackAdvance() {
 			* But first we must STORE SOME INFORMATION.
 			*/
 
-			calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
-
-			animateEffect = true;
-			animationCountdown = 100;
-			flashingLimbCountdown = 10;
-			flashLimb = true;
 			attackAdvance = 0;
 
-			/* We deal with end of Effect Animation in the run() function. */
 		}
 	}
 

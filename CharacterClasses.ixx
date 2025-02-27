@@ -328,8 +328,8 @@ export class Limb {
 
 		/* Constructor to rebuild a limb from DB (primarily for roaming limbs).
 		*/
-		Limb(int id, LimbForm form, Point position, vector<Joint> joints, int drawOrder = -1) :
-			id(id), form(form), position(position), joints(joints), drawOrder(drawOrder)
+		Limb(int id, LimbForm form, Point position, vector<Joint> joints, string mapSlug, int drawOrder = -1) :
+			id(id), form(form), position(position), joints(joints), drawOrder(drawOrder), mapSlug(mapSlug)
 		{
 			lastPosition = Point(0, 0);
 			isAnchor = false;

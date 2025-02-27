@@ -1738,6 +1738,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 bool MapScreen::checkNpcOnLimbCollision() {
 	bool collisionFound = false;
 	vector<Limb>& roamingLimbs = map.getRoamingLimbs();
+	sqlite3* db = startTransaction();
 
 	for (MapCharacter& npc : map.getNPCs()) {
 		int npcID = npc.getId();
@@ -1750,7 +1751,9 @@ bool MapScreen::checkNpcOnLimbCollision() {
 
 				roamingLimb.setCharacterId(npcID);
 				npc.addLimb(roamingLimb);
-				updateLimbOwner(roamingLimb.getId(), npcID);
+				updateLimbOwnerInTransaction(roamingLimb.getId(), npcID, db);
+
+				cout << "Adding NPC limb in map slug: " << roamingLimb.getMapSlug() << "\n";
 
 				if (blockIsDrawable(npc.getPosition())) {
 					/* Make object for limb collision animation. */
@@ -1763,8 +1766,7 @@ bool MapScreen::checkNpcOnLimbCollision() {
 						7,
 						roamingLimb.getName()
 					);
-				}
-				
+				}				
 
 				roamingLimbs.erase(roamingLimbs.begin() + i);
 
@@ -1782,14 +1784,15 @@ bool MapScreen::checkNpcOnLimbCollision() {
 				}
 
 				npc.buildDrawLimbList();
-				updateCharacterLimbs(npc.getId(), npc.getAnchorLimbId(), npcLimbs);
+				updateCharacterLimbsInTransaction(npc.getId(), npc.getAnchorLimbId(), npcLimbs, db);
 				npc.setTexture(npc.createAvatar());
 				npc.setHomePosition(npcPosition);
-				updateNpcHomePosition(npcID, npc.getHomePosition());
+				updateNpcHomePositionInTrans(npcID, npc.getHomePosition(), db);
 			}
 		}
 	}
 
+	commitTransactionAndCloseDatabase(db);
 
 	return collisionFound;
 }
