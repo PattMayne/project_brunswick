@@ -2042,11 +2042,13 @@ bool MapScreen::checkPlayerNpcCollision(bool playerTurn) {
 
 			cout << "Player id: " << map.getPlayerCharacter().getId() << "\n";
 
+			BattleStatus battleStatus = playerTurn ? BattleStatus::PlayerTurn : BattleStatus::NpcTurn;
+
 			int battleId = createNewBattle(
 				map.getForm().slug,
 				map.getPlayerCharacter().getId(),
 				npc.getId(),
-				playerTurn
+				battleStatus
 			);
 
 			cout << "JUST CREATED battle id: " << battleId << "\n";

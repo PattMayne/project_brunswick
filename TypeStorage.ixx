@@ -45,7 +45,7 @@ export enum class WindowResType {
 
 
 export enum BattleStatus {
-	Active, PlayerVictory, PlayerDefeat
+	PlayerTurn, NpcTurn, PlayerVictory, PlayerDefeat, RebuildRequired
 };
 
 

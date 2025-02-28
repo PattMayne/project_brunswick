@@ -59,8 +59,7 @@ CREATE TABLE IF NOT EXISTS battle (
     map_slug TEXT NOT NULL,
     player_id INTEGER NOT NULL,
     npc_id INTEGER NOT NULL,
-    battle_status INTEGER NOT NULL,
-    player_turn INTEGER DEFAULT 0
+    battle_status INTEGER NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_limb_id ON joint (limb_id);

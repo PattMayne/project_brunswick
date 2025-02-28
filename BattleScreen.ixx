@@ -233,8 +233,6 @@ private:
 	void rebuildDisplay(Panel& settingsPanel);
 	void createTitleTexture(UI& ui);
 
-	void refreshNpcLimbsPanel();
-
 	void raiseTitleRect() { --titleRect.y; }
 	int getTitleBottomPosition() { return titleRect.y + titleRect.h; }
 
@@ -515,7 +513,7 @@ export void BattleScreen::run() {
 					npcStatsPanel.setShow(true);
 
 				}
-				else {
+				else if(battle.isNpcTurn()) {
 					/* End of NPC's animateEffect animation. */
 					flashLimb = false;
 
@@ -530,7 +528,7 @@ export void BattleScreen::run() {
 					playerStatsPanel.setShow(true);
 					npcStatsPanel.setShow(true);
 
-					battle.setPlayerTurn(true);
+					battle.setBattleStatus(BattleStatus::PlayerTurn);
 				}
 
 			}
@@ -745,7 +743,7 @@ void BattleScreen::draw(UI& ui) {
 		drawNpc(ui);
 		drawPlayer(ui);
 	}
-	else {
+	else if (battle.isNpcTurn()) {
 		drawPlayer(ui);
 		drawNpc(ui);
 	}
@@ -910,6 +908,10 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						passingMessageCountdown = 250;
 						passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
 						passingMessagePanel.setShow(true);
+
+						playerStatsPanel.setShow(true);
+						npcStatsPanel.setShow(true);
+						npcLimbsPanel.setShow(false);
 					}
 					else {
 						/* unload attack, reset panels. */
@@ -1600,7 +1602,7 @@ void BattleScreen::setNpcAttackAdvance() {
 * This function incrementally moves the player toward the NPC's position, and then bounces it back.
 */
 void BattleScreen::setPlayerAttackAdvance() {
-	if (!animateAttack || !battle.isPlayerTurn()) {
+	if (!animateAttack || battle.isNpcTurn()) {
 		attackAdvancePlayer = 0;
 		return;
 	}
@@ -1666,7 +1668,7 @@ void BattleScreen::launchNpcTurn() {
 
 	vector<AttackStruct> attackStructs = npc.getAttacks();
 
-	if (attackStructs.size() < 1 && !battle.isPlayerTurn()) {
+	if (attackStructs.size() < 1 && battle.isNpcTurn()) {
 		battle.switchTurn();
 		return;
 	}

@@ -49,25 +49,25 @@ public:
 
 	/* Always recreate a Battle from the DB (never create one without an ID). */
 	Battle(int id, Character playerCharacter, Character npc, string mapSlug,
-		BattleStatus battleStatus, bool playerTurn)
+		BattleStatus battleStatus)
 		:
 		id(id), playerCharacter(playerCharacter), npc(npc), mapSlug(mapSlug),
-		battleStatus(battleStatus), playerTurn(playerTurn)
+		battleStatus(battleStatus)
 	{}
 
-	bool switchTurn();
+	BattleStatus switchTurn();
 
 	Character& getPlayerCharacter() { return playerCharacter; }
 	Character& getNpc() { return npc; }
 
 	Point getDrawStartNpc() { return drawStartNpc; }
 	Point getDrawStartPlayer() { return drawStartPlayer; }
-	bool isPlayerTurn() { return playerTurn; }
+	bool isPlayerTurn() { return battleStatus == BattleStatus::PlayerTurn; }
+	bool isNpcTurn() { return battleStatus == BattleStatus::NpcTurn; }
 
 	void setDrawStartNpc(Point point) { drawStartNpc = point; }
 	void setDrawStartPlayer(Point point) { drawStartPlayer = point; }
-	void setPlayerTurn(bool playerTurn) { this->playerTurn = playerTurn; }
-
+	void setBattleStatus(BattleStatus status) { battleStatus = status; }
 
 
 private:
@@ -77,7 +77,6 @@ private:
 	string mapSlug;
 
 	BattleStatus battleStatus;
-	bool playerTurn;
 
 	Point drawStartPlayer;
 	Point drawStartNpc;
@@ -85,7 +84,13 @@ private:
 
 
 
-bool Battle::switchTurn() {
-	playerTurn = !playerTurn;
-	return playerTurn;
+BattleStatus Battle::switchTurn() {
+
+	if (battleStatus == BattleStatus::PlayerTurn) {
+		battleStatus = BattleStatus::NpcTurn;
+	} else if (battleStatus == BattleStatus::NpcTurn) {
+		battleStatus = BattleStatus::PlayerTurn;
+	}
+
+	return battleStatus;
 }

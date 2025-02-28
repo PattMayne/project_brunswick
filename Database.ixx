@@ -140,17 +140,15 @@ export void createDB() {
 */
 
 
-export int createNewBattle(string mapSlugString, int playerId, int npcId, bool playerTurn) {
+export int createNewBattle(string mapSlugString, int playerId, int npcId, BattleStatus battleStatus) {
 
-    BattleStatus battleStatus = BattleStatus::Active;
     int battleId = -1;
     const char* mapSlug = mapSlugString.c_str();
-    int playerTurnInt = playerTurn ? 1 : 0;
 
     sqlite3* db = startTransaction();
 
     const char* newBattleSql = "INSERT INTO battle "
-        "(map_slug, player_id, npc_id, battle_status, player_turn) VALUES (?, ?, ?, ?, ?);";
+        "(map_slug, player_id, npc_id, battle_status) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* newBattleStatement;
     int returnCode = sqlite3_prepare_v2(db, newBattleSql, -1, &newBattleStatement, nullptr);
 
@@ -160,7 +158,6 @@ export int createNewBattle(string mapSlugString, int playerId, int npcId, bool p
     sqlite3_bind_int(newBattleStatement, 2, playerId);
     sqlite3_bind_int(newBattleStatement, 3, npcId);
     sqlite3_bind_int(newBattleStatement, 4, battleStatus);
-    sqlite3_bind_int(newBattleStatement, 5, playerTurnInt);
 
     /* Execute the statement. */
     returnCode = sqlite3_step(newBattleStatement);
@@ -236,10 +233,8 @@ export Battle loadBattle(int battleId) {
     int playerId = sqlite3_column_int(battleStatement, 2);
     int npcId = sqlite3_column_int(battleStatement, 3);
     int battleStatusInt = sqlite3_column_int(battleStatement, 4);
-    int playerTurnInt = sqlite3_column_int(battleStatement, 5);
 
     BattleStatus battleStatus = static_cast<BattleStatus>(battleStatusInt);
-    bool playerTurn = playerTurnInt == 1;
 
     /* Finalize statement. */
     sqlite3_finalize(battleStatement);
@@ -253,8 +248,7 @@ export Battle loadBattle(int battleId) {
         playerCharacter,
         npc,
         mapSlug,
-        battleStatus,
-        playerTurn
+        battleStatus
     );
 
     commitTransactionAndCloseDatabase(db);
