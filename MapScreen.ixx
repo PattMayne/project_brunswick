@@ -153,7 +153,7 @@ export class MapScreen {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
 				for (MapCharacter& npc : map.getNPCs()) {
-					cout << "NPC # " << npc.getId() << "\n";
+
 					SDL_Texture* avatar = npc.createAvatar();
 					npc.setTexture(avatar);
 				}

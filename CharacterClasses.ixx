@@ -1074,7 +1074,6 @@ void Character::addToDrawLimbList(int limbId) {
 * quickly grab each limb to draw, during each frame.
 */
 void Character::buildDrawLimbList() {
-	cout << "DRAWING LIMB LIST 00000\n";
 	drawLimbListIDs = {};
 	sortLimbsByDrawOrder();
 	int drawOrder = 0;
@@ -1093,7 +1092,6 @@ void Character::buildDrawLimbList() {
 		}
 	}
 	setLimbDrawOrder(drawLimbListIDs);
-	cout << "DRAWING LIMB LIST 99999\n";
 }
 
 /* 

@@ -56,6 +56,7 @@ public:
 	{}
 
 	BattleStatus switchTurn();
+	BattleStatus& getBattleStatus() { return battleStatus; }
 
 	Character& getPlayerCharacter() { return playerCharacter; }
 	Character& getNpc() { return npc; }

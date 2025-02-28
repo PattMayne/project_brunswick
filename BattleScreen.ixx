@@ -205,6 +205,8 @@ public:
 	bool applyPlayerAttackEffects();
 	bool applyNpcAttackEffects();
 
+	void setExitMessage(BattleStatus battleStatus);
+
 private:
 	ScreenType screenType;
 	int id;
@@ -530,9 +532,7 @@ export void BattleScreen::run() {
 
 					battle.setBattleStatus(BattleStatus::PlayerTurn);
 				}
-
 			}
-
 		}
 
 		/* Initiate NPC turn. */
@@ -584,6 +584,12 @@ export void BattleScreen::run() {
 	}
 
 	/* set the next screen to load */
+	if (screenToLoadStruct.screenType == ScreenType::Map) {
+		cout << "GOING to the MAP\n";
+	} else if (screenToLoadStruct.screenType == ScreenType::Menu) {
+		cout << "GOING to the MENU\n";
+	}
+
 	gameState.setScreenStruct(screenToLoadStruct);
 }
 
@@ -809,7 +815,13 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 					cout << "\n\nCLICK CONFIRMATION PANEL \n\n";
 
 					if (clickStruct.buttonOption == ButtonOption::Agree) {
-						cout << "OK!\n";
+						BattleStatus battleStatus = battle.getBattleStatus();
+						if (battleStatus == BattleStatus::PlayerDefeat ||
+							battleStatus == BattleStatus::PlayerVictory ||
+							battleStatus == BattleStatus::RebuildRequired
+						) {
+							running = false;
+						}
 						confirmationPanel.setShow(false);
 					}
 				}				
@@ -1316,6 +1328,7 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 * If player loses anchor limb, send them to Characetr Creation screen.
 */
 bool BattleScreen::applyNpcAttackEffects() {
+	cout << "GOING TO APPLY NPC ATTACK EFFECTS\n";
 	Character& npc = battle.getNpc();
 	Character& playerCharacter = battle.getPlayerCharacter();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
@@ -1336,12 +1349,16 @@ bool BattleScreen::applyNpcAttackEffects() {
 	bool defeatedAnchorLimb = false;
 	bool defeatedAnyLimb = false;
 
-	for (int i = playerLimbs.size() - 1; i <= 0; --i) {
+	for (int i = playerLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = playerLimbs[i];
+		if (limb.isEquipped()) {
+			cout << "Limb " << limb.getName() << " has " << limb.getHP() << " hp\n";
+		}
+		
 		if (limb.isEquipped() && limb.getHP() < 1) {
 			/* Equipped limb is defeated. Give it to NPC. */
 			defeatedAnyLimb = true;
-
+			cout << "Limb " << limb.getName() << " is below 1HP\n";
 			if (playerCharacter.getAnchorLimbId() == limb.getId()) {
 				defeatedAnchorLimb = true; }
 
@@ -1354,30 +1371,25 @@ bool BattleScreen::applyNpcAttackEffects() {
 		}
 	}
 
-	if (defeatedAnyLimb && !defeatedAnchorLimb) {
-		playerCharacter.buildDrawLimbList();
-	}
-	else if (defeatedAnchorLimb) {
+	playerCharacter.buildDrawLimbList();
+
+	if (defeatedAnchorLimb) {
 		cout << "DEFEATED ANCHOR LIMB.\n Sending to Character Creation Screen.\n";
 		playerCharacter.clearSuit();
-		screenToLoadStruct.screenType == ScreenType::CharacterCreation;
-		running = false;
-		updateCharacterAnchorIdInTrans(playerId, playerCharacter.getAnchorLimbId(), db);
+		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+		setExitMessage(BattleStatus::RebuildRequired);
+		updateCharacterAnchorIdInTrans(playerId, -1, db);
 	}
-
 	
-
 	/* Save all the limbs. */
 	
 	for (Limb& limb : playerLimbs) {
-		updateLimbBattleEffectsInTransaction(limb, db);
-	
+		updateLimbBattleEffectsInTransaction(limb, db);	
 	}
 
 	if (defeatedAnyLimb) {
 		for (Limb& limb : npcLimbs) {
 			updateLimbBattleEffectsInTransaction(limb, db);
-
 		}
 	}
 
@@ -1388,6 +1400,12 @@ bool BattleScreen::applyNpcAttackEffects() {
 
 	npcAttackLoaded = AttackStruct();
 	limbIdsToUpdate = {};
+
+	/* If player has no limbs they lose. */
+
+	if (playerCharacter.getLimbs().size() < 1) {
+		setExitMessage(BattleStatus::PlayerDefeat);
+	}
 	
 	return true;
 }
@@ -1543,6 +1561,8 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		deleteCharacterInTrans(npc.getId(), db);
 		setLimbIdList();
 
+		setExitMessage(BattleStatus::PlayerVictory);
+
 		/* Victory Condition gives you a popup message, and then go back to the map. */
 	}
 	else {
@@ -1558,6 +1578,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	limbIdsToUpdate = {};
 
 	battle.switchTurn();
+
 
 	return true;
 }
@@ -1578,7 +1599,6 @@ void BattleScreen::setNpcAttackAdvance() {
 	else if (!attackAdvanceHitTarget) {
 		attackAdvanceHitTarget = true;
 		attackAdvanceNpc = attackAdvanceNpc + 20;
-		cout << "Hit target. Why no flash?\n";
 		calculateNpcDamageAttackStruct(-1, npcAttackLoaded.targetLimbId);
 		animateEffect = true;
 		animationCountdown = 100;
@@ -1720,4 +1740,45 @@ void BattleScreen::launchNpcTurn() {
 	* 3. copy the PlayerAttack functions to make the NPC attack the player.
 	* 4. Initiate the animation, calculations, and executions.
 	*/
+}
+
+/*
+* 
+* 
+*    EXIT FUNCTIONS
+* 
+* 
+*/
+
+/*
+* The exit message is the gatekeeper to actually leaving.
+*/
+void BattleScreen::setExitMessage(BattleStatus battleStatus) {
+	battle.setBattleStatus(battleStatus);
+	string exitMessage = "";
+	Character& playerCharacter = battle.getPlayerCharacter();
+	Character& npc = battle.getNpc();
+
+
+	if (battleStatus == BattleStatus::PlayerDefeat) {
+		exitMessage = npc.getName() + " has defeated " + playerCharacter.getName() + "!\n";
+		screenToLoadStruct.screenType = ScreenType::Menu;
+		confirmationPanel.destroyTextures();
+		confirmationPanel = getNewConfirmationMessage(confirmationPanel, exitMessage, ConfirmationButtonType::OkCancel, false);
+		confirmationPanel.setShow(true);
+
+	} else if (battleStatus == BattleStatus::PlayerVictory) {
+		exitMessage = playerCharacter.getName() + " has defeated " + npc.getName() + "!\n";
+		screenToLoadStruct.screenType = ScreenType::Map;
+		confirmationPanel.destroyTextures();
+		confirmationPanel = getNewConfirmationMessage(confirmationPanel, exitMessage, ConfirmationButtonType::OkCancel, false);
+		confirmationPanel.setShow(true);
+
+	} else if (battleStatus == BattleStatus::RebuildRequired) {
+		exitMessage = "Rebuild required\n";
+		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+		confirmationPanel.destroyTextures();
+		confirmationPanel = getNewConfirmationMessage(confirmationPanel, exitMessage, ConfirmationButtonType::OkCancel, false);
+		confirmationPanel.setShow(true);
+	}
 }
