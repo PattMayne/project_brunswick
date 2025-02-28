@@ -507,7 +507,7 @@ export void BattleScreen::run() {
 					* After it's a smooth  cycle.
 					*/
 
-					playerTurnPanel.setShow(true);
+					playerTurnPanel.setShow(false);
 					npcLimbsPanel.setShow(false);
 					playerStatsPanel.setShow(true);
 					npcStatsPanel.setShow(true);
@@ -1546,7 +1546,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		/* Victory Condition gives you a popup message, and then go back to the map. */
 	}
 	else {
-		cout << "NPC NOT DEFEATED YET!!! \n";
+		cout << "NPC NOT DEFEATED YET \n";
 	}
 
 	commitTransactionAndCloseDatabase(db);
