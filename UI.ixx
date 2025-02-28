@@ -51,14 +51,8 @@ SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal);
 vector<SDL_Rect> createSurfaceOverlay(SDL_Rect bgRect);
 SDL_Surface* createTransparentSurface(int w, int h);
 
-/* Add dominance cycle? Other attributes (strength etc)? */
-export struct LimbButtonData {
-	LimbButtonData(string texturePath, string name, int id) :
-		texturePath(texturePath), name(name), id(id) { }
-	string texturePath;
-	string name;
-	int id;
-};
+
+
 
 /* UI cannot import actual characters or their limbs, so Character object creates this struct and sends IT it. */
 export struct CharStatsData {
@@ -1625,6 +1619,7 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 
 		Resources& resources = Resources::getInstance();
 		string buttonText = !isBackButton ? limbBtnDataStructs[i].name : resources.getButtonText("BACK");
+
 		/* Get the TEXT surface. */
 		SDL_Surface* textSurface = createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["DARK_TEXT"]);
 		ButtonClickStruct clickStruct = !isBackButton ? ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStructs[i].id) :

@@ -393,6 +393,7 @@ export class Limb {
 		bool getIsFlipped() { return flipped; }
 
 		BodyPartType getBodyPartType() { return form.type; }
+		DominanceNode getDominanceNode() { return form.domNode; }
 		
 		int modifyStrength(int mod);
 		int modifySpeed(int mod);
@@ -403,6 +404,7 @@ export class Limb {
 		bool isEquipped();
 		Joint& getAnchorJoint();
 		int getAnchorJointId();
+		LimbButtonData getLimbButtonData();
 		
 		int rotate(int angleIncrement);
 		bool getUnscrambled() { return isUnscrambled; }
@@ -588,6 +590,13 @@ void Limb::resetRotationAngle() {
 }
 
 
+LimbButtonData Limb::getLimbButtonData() {
+	return LimbButtonData(
+		getTexturePath(), name, id, getHP(), getStrength(),
+		getIntelligence(), getSpeed(), getDominanceNode());
+}
+
+
 
 int Limb::rotate(int angleIncrement) {
 	rotationAngle = normalizeAngle(rotationAngle + angleIncrement);
@@ -595,7 +604,7 @@ int Limb::rotate(int angleIncrement) {
 	/* If this LIMB has no ANCHOR JOINT then it's the anchor limb, so rotate on the center instead of on a joint. */
 	Point anchorPoint =
 		//getAnchorJointId() < 0 ? joint.getPoint() : /* THIS is to test the getRotatedPoint */
-		getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) :
+		getAnchorJointId() < 0 ? Point(textureWidth / 2, textureHeight / 2) : /* This is the correct one to use. */
 		getAnchorJoint().getFormPoint();
 
 	/* Now update all the joint points (except the anchor point). */

@@ -317,7 +317,8 @@ void BattleScreen::createNpcLimbPanel() {
 	for (int i = 0; i < limbs.size(); ++i) {
 		Limb& thisLimb = limbs[i];
 		if (thisLimb.isEquipped()) {
-			limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
+			LimbButtonData newStruct = thisLimb.getLimbButtonData();
+			limbBtnDataStructs.emplace_back(newStruct);
 		}
 	}
 
@@ -346,10 +347,10 @@ void BattleScreen::createPlayerLimbPanels() {
 	for (int i = 0; i < limbs.size(); ++i) {
 		Limb& thisLimb = limbs[i];
 		if (thisLimb.isEquipped()) {
-			equippedLimbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
+			equippedLimbBtnDataStructs.push_back(thisLimb.getLimbButtonData());
 		}
 		else {
-			unequippedLimbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
+			unequippedLimbBtnDataStructs.push_back(thisLimb.getLimbButtonData());
 		}
 	}
 
@@ -581,7 +582,7 @@ export void BattleScreen::run() {
 				reverseBob = !reverseBob;
 			}
 		}
-	}
+	} /* END of run() */
 
 	/* set the next screen to load */
 	if (screenToLoadStruct.screenType == ScreenType::Map) {
@@ -818,9 +819,13 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						BattleStatus battleStatus = battle.getBattleStatus();
 						if (battleStatus == BattleStatus::PlayerDefeat ||
 							battleStatus == BattleStatus::PlayerVictory ||
-							battleStatus == BattleStatus::RebuildRequired
+							battleStatus == BattleStatus::RebuildRequired ||
+							screenToLoadStruct.screenType == ScreenType::CharacterCreation
 						) {
 							running = false;
+						}
+						else {
+							cout << "Which battlestatus?\n";
 						}
 						confirmationPanel.setShow(false);
 					}
@@ -1112,13 +1117,15 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 
 	/* Calculate the attack. */
 	int attack = 0;
+	int numberOfEquippedLimbs = 0;
 	for (Limb& limb : playerCharacter.getLimbs()) {
 		if (limb.isEquipped()) {
 			attack += limb.getStrength() + 1;
+			++numberOfEquippedLimbs;
 		}
 	}
 
-	attack = attack / 10; // add some RANDOMNESS.
+	attack = (attack / 5) + numberOfEquippedLimbs; // add some RANDOMNESS. // Make it smaller later? // Start with bigger numbers?
 	int spreadAttack = 0;
 
 	/* Get the target limb and make a vector of ids for spread attack. */
@@ -1236,13 +1243,15 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 
 	/* Calculate the attack. */
 	int attack = 0;
+	int numberOfEquippedLimbs = 0;
 	for (Limb& limb : npcLimbs) {
 		if (limb.isEquipped()) {
 			attack += limb.getStrength() + 1;
+			++numberOfEquippedLimbs;
 		}
 	}
 
-	attack = attack / 10; // add some RANDOMNESS.
+	attack = (attack / 5) + numberOfEquippedLimbs; // add some RANDOMNESS.
 	int spreadAttack = 0;
 
 	/* Get the target limb and make a vector of ids for spread attack. */
@@ -1404,7 +1413,15 @@ bool BattleScreen::applyNpcAttackEffects() {
 	/* If player has no limbs they lose. */
 
 	if (playerCharacter.getLimbs().size() < 1) {
+		cout << "No limbs at all?\n";
 		setExitMessage(BattleStatus::PlayerDefeat);
+	}
+
+	if (battle.getBattleStatus() == BattleStatus::RebuildRequired) {
+		cout << "YEP, it's STILL RebuildRequired\n";
+	}
+	else {
+		cout << "NOPE, it's Soemthin' else now!\n";
 	}
 	
 	return true;
@@ -1758,7 +1775,6 @@ void BattleScreen::setExitMessage(BattleStatus battleStatus) {
 	string exitMessage = "";
 	Character& playerCharacter = battle.getPlayerCharacter();
 	Character& npc = battle.getNpc();
-
 
 	if (battleStatus == BattleStatus::PlayerDefeat) {
 		exitMessage = npc.getName() + " has defeated " + playerCharacter.getName() + "!\n";

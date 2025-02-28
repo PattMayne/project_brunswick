@@ -5,10 +5,15 @@ module;
 #include "SDL_ttf.h"
 #include <string>
 #include <vector>
+#include <iostream>
 
 export module TypeStorage;
 
 using namespace std;
+
+/* Dominance Node is a Limb's node in the Dominance Cycle (think Rock, Paper, Scissors). */
+export enum class DominanceNode { Red, Green, Blue };
+export int const dominanceCycleAdvantage = 15;
 
 export enum class ScreenType {
 	NoScreen, Menu, Map, Battle, CharacterCreation
@@ -60,13 +65,33 @@ export struct Resolution {
 	}
 };
 
+
+/* Add dominance cycle? Other attributes (strength etc)? */
+export struct LimbButtonData {
+	LimbButtonData(string texturePath, string name, int id, int hp,
+		int strength, int intelligence, int speed, DominanceNode domNode)
+		:
+		texturePath(texturePath), name(name), id(id), hp(hp), intelligence(intelligence),
+		speed(speed), strength(strength), domNode(domNode) {
+	}
+
+	string texturePath;
+	string name;
+	int id;
+
+	int hp;
+	int intelligence;
+	int speed;
+	int strength;
+	DominanceNode domNode;
+};
+
+
+
 export enum class ConfirmationButtonType {
 	YesNo, OkCancel
 };
 
-/* Dominance Node is a Limb's node in the Dominance Cycle (think Rock, Paper, Scissors). */
-export enum class DominanceNode { Red, Green, Blue };
-export int const dominanceCycleAdvantage = 15;
 
 
 /* to avoid recursive self-referential class design, I'll make a Struct to hold information about parent Screens.

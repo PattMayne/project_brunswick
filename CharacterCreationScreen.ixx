@@ -238,7 +238,8 @@ void CharacterCreationScreen::createChooseLimbPanel(bool showEquippedLimbs = fal
 	for (int i = 0; i < inventoryLimbs.size(); ++i) {
 		Limb& thisLimb = inventoryLimbs[i];
 		if (thisLimb.isEquipped() == showEquippedLimbs) {
-			limbBtnDataStructs.emplace_back(thisLimb.getTexturePath(), thisLimb.getName(), thisLimb.getId());
+			LimbButtonData newStruct = thisLimb.getLimbButtonData();
+			limbBtnDataStructs.emplace_back(newStruct);
 		}
 	}
 
@@ -290,6 +291,7 @@ export void CharacterCreationScreen::run() {
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
 
+
 	settingsPanel.setShow(false);
 	gameMenuPanel.setShow(false);
 	reviewModePanel.setShow(true);
@@ -304,7 +306,11 @@ export void CharacterCreationScreen::run() {
 	SDL_Event e;
 	bool running = true;
 	setAnchorLimbDrawRect(ui);
-	playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
+
+	if (playerCharacter.getAnchorLimbId() > 0) {
+		playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
+	}
+	
 	playerCharacter.buildDrawLimbList();
 
 	while (running) {
