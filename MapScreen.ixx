@@ -128,7 +128,7 @@ export class MapScreen {
 		*/
 		MapScreen(string mapSlug) {
 			UI& ui = UI::getInstance();
-
+			cout << "LOADING MAP SCREEN 00000\n";
 			/* TEMPORARY MAP-CREATION SCHEME 
 			* 
 			* PHASE 1 (DONE):
@@ -152,13 +152,14 @@ export class MapScreen {
 			if (mapObjectExists(mapSlug)) {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
-
 				for (MapCharacter& npc : map.getNPCs()) {
-					npc.buildDrawLimbList();
-					npc.setTexture(npc.createAvatar());
+					cout << "NPC # " << npc.getId() << "\n";
+					SDL_Texture* avatar = npc.createAvatar();
+					npc.setTexture(avatar);
 				}
 
 				map.setPlayerCharacter(loadPlayerMapCharacter());
+
 				if (map.getPlayerCharacter().getEquippedLimbs().size() > 0) {
 					map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
 				}
@@ -169,7 +170,6 @@ export class MapScreen {
 					suit.buildDrawLimbList();
 					suit.setTexture(suit.createAvatar());
 				}
-
 			}
 			else {
 				/* Create new map. */

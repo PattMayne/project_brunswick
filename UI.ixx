@@ -2359,7 +2359,7 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement, bool isBo
 	int panelRectWidth = textWidth + (PANEL_PADDING * 2);
 	int panelRectHeight = textHeight + (PANEL_PADDING * 2);
 
-	/* Cerate many SDL_Rects */
+	/* Create many SDL_Rects */
 
 	int panelHeight = topPlacement ? PANEL_PADDING : getWindowHeight() - (panelRectHeight + PANEL_PADDING);
 

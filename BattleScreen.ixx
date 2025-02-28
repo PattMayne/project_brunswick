@@ -187,7 +187,8 @@ public:
 		drawFlashingLimb = true;
 		flashLimb = false;
 
-		attackAdvance = 0;
+		attackAdvancePlayer = 0;
+		attackAdvanceNpc = 0;
 		passingMessageCountdown = 0;
 
 		attackAdvanceHitTarget = false;
@@ -196,11 +197,13 @@ public:
 	void createPlayerLimbPanels();
 	void createNpcLimbPanel();
 	void calculatePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId);
+	void calculateNpcDamageAttackStruct(int sourceLimbId, int targetLimbId);
 
 	ScreenType getScreenType() { return screenType; }
 	void run();
 
 	bool applyPlayerAttackEffects();
+	bool applyNpcAttackEffects();
 
 private:
 	ScreenType screenType;
@@ -217,11 +220,14 @@ private:
 	void draw(UI& ui);
 	void drawPlayer(UI& ui);
 	void drawNpc(UI& ui);
-	void setAttackAdvance();
+	void setPlayerAttackAdvance();
+	void setNpcAttackAdvance();
 
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
 	void checkMouseLocation(SDL_Event& e);
 	void handlePlayerMove(ButtonClickStruct clickStruct);
+
+	void launchNpcTurn();
 
 	void getBackgroundTexture(UI& ui);
 	void rebuildDisplay(Panel& settingsPanel);
@@ -286,11 +292,14 @@ private:
 	bool animateEffect;
 	int animationCountdown;
 
-	int attackAdvance;
+	int attackAdvancePlayer;
+	int attackAdvanceNpc;
 	bool attackAdvanceHitTarget;
 
 	vector<int> limbsIdsToSteal;
 	vector<int> limbIdsToUpdate;
+
+	bool running;
 };
 
 
@@ -429,7 +438,7 @@ export void BattleScreen::run() {
 
 	/* loop and event control */
 	SDL_Event e;
-	bool running = true;
+	running = true;
 
 	if (gameState.getScreenStruct().id < 1) {
 		/* Invalid battle id. Give a notice to the user on the way out? Or after getting back?
@@ -479,10 +488,10 @@ export void BattleScreen::run() {
 
 			if (animateEffect) {
 				/* LAST FRAME. End of animateEffect animations (for either character). */
+				animateEffect = !animateEffect;
 
 				if (battle.isPlayerTurn()) {
 					/* End of Player's animateEffect animation. */
-					animateEffect = !animateEffect;
 					flashLimb = false;
 
 					cout << "FINISHED the EFFECT animation\n";
@@ -505,11 +514,33 @@ export void BattleScreen::run() {
 					playerStatsPanel.setShow(true);
 					npcStatsPanel.setShow(true);
 
+				}
+				else {
+					/* End of NPC's animateEffect animation. */
+					flashLimb = false;
+
+					applyNpcAttackEffects();
+
+					npcAttackLoaded = AttackStruct();
+					limbsIdsToSteal = {};
+					limbIdsToUpdate = {};
+					
+					playerTurnPanel.setShow(true);
+					npcLimbsPanel.setShow(false);
+					playerStatsPanel.setShow(true);
+					npcStatsPanel.setShow(true);
+
 					battle.setPlayerTurn(true);
 				}
 
 			}
 
+		}
+
+		/* Initiate NPC turn. */
+		if (!battle.isPlayerTurn() && animationCountdown < 1 && npcAttackLoaded.attackType == AttackType::NoAttack) {
+			cout << "NPC TURN!\n";
+			launchNpcTurn();
 		}
 
 
@@ -564,6 +595,8 @@ void BattleScreen::drawNpc(UI& ui) {
 	bool limbsLeftToUnrotate = false;
 	SDL_Rect limbRect = { 0, 0, 0, 0 };
 
+	setNpcAttackAdvance();
+
 	for (int i = 0; i < limbs.size(); ++i) {
 		Limb& limb = limbs[i];
 		if (limb.isEquipped()) {
@@ -571,7 +604,7 @@ void BattleScreen::drawNpc(UI& ui) {
 
 			SDL_Point rotationPoint = limb.getRotationPointSDL();
 			limbRect = limb.getDrawRect();
-			limbRect.x += npcDrawStartPoint.x;
+			limbRect.x += npcDrawStartPoint.x + attackAdvanceNpc;
 			limbRect.y += npcDrawStartPoint.y - bobbingMeter;
 
 			int limbRotationAngle = limb.getRotationAngle();
@@ -633,7 +666,7 @@ void BattleScreen::drawPlayer(UI& ui) {
 	Character& playerCharacter = battle.getPlayerCharacter();
 	vector<Limb>& limbs = playerCharacter.getLimbs();
 
-	setAttackAdvance();
+	setPlayerAttackAdvance();
 
 	SDL_Rect limbRect = { 0, 0, 0, 0 };
 	bool limbsLeftToUnrotate = false;
@@ -642,21 +675,26 @@ void BattleScreen::drawPlayer(UI& ui) {
 		Limb& limb = limbs[i];
 		if (limb.isEquipped()) {
 
+			bool drawLimb = !animateEffect || drawFlashingLimb || !intsContainInt(limbIdsToUpdate, limb.getId());
+
 			SDL_Point rotationPoint = limb.getRotationPointSDL();
 			limbRect = limb.getDrawRect();
-			limbRect.x += playerDrawStartPoint.x + attackAdvance;
+			limbRect.x += playerDrawStartPoint.x + attackAdvancePlayer;
 			limbRect.y += playerDrawStartPoint.y + bobbingMeter;
 
 			int limbRotationAngle = limb.getRotationAngle();
 
-			SDL_RenderCopyEx(
-				ui.getMainRenderer(),
-				limb.getTexture(),
-				NULL,
-				&limbRect,
-				limbRotationAngle,
-				&rotationPoint,
-				SDL_FLIP_NONE);
+			if (drawLimb) {
+				SDL_RenderCopyEx(
+					ui.getMainRenderer(),
+					limb.getTexture(),
+					NULL,
+					&limbRect,
+					limbRotationAngle,
+					&rotationPoint,
+					SDL_FLIP_NONE);
+			}
+						
 
 			/* Player rotation logic. */
 			if (!unrotatePlayer) {
@@ -1059,9 +1097,11 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	*/
 
 	/* Calculate the attack. */
-	int attack = playerLimbs.size();
+	int attack = 0;
 	for (Limb& limb : playerCharacter.getLimbs()) {
-		attack += limb.getStrength();
+		if (limb.isEquipped()) {
+			attack += limb.getStrength() + 1;
+		}
 	}
 
 	attack = attack / 10; // add some RANDOMNESS.
@@ -1118,11 +1158,6 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 			limb.modifyHP(-attack);
 			totalDamage -= attack;
 			limbIdsToUpdate.push_back(limb.getId());
-
-			if (limb.getHP() < 1) {
-				//limb.setCharacterId(playerCharacter.getId());
-				//limbsIdsToSteal.push_back(limb.getId());
-			}
 		}
 		else {
 			if (precision < 90) {
@@ -1132,11 +1167,6 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 						limb.modifyHP(-spreadAttack);
 						totalDamage -= spreadAttack;
 						limbIdsToUpdate.push_back(limb.getId());
-
-						if (limb.getHP() < 1) {
-							//limb.setCharacterId(playerCharacter.getId());
-							//limbsIdsToSteal.push_back(limb.getId());
-						}
 					}
 				}
 			}
@@ -1156,6 +1186,211 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	/* Attack is calculated and saved to BattleScreen variables, to be used after Effect animation. */
 
 }
+
+/*
+* BASIC ATTACK LOGIC is contained in this function.
+* I may later move attack logic to dedicated functions, in a dedicated module.
+* This is separate from the animations.
+* Attack animation happens, then this function happens (and stores data), then effect animation happens (based on stored data).
+* These calculations provide info for the next animation, but we don't execute on the calculations until after the last animation.
+*/
+void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLimbId) {
+
+
+	/* This should happen AFTER the animation.*/
+
+	AttackType attackType = npcAttackLoaded.attackType;
+	Character& playerCharacter = battle.getPlayerCharacter();
+	Character& npc = battle.getNpc();
+	vector<Limb>& npcLimbs = npc.getLimbs();
+	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+
+
+	/*
+	* Calculate how much of which attributes to take from which limbs.
+	* When a limb dies, figure out what to do with limbs attached to it.
+	* What are the rules?
+	* -- 0 hp limbs are stolen.
+	* -- If it's the anchored limb, find another limb to be an anchored limb (prefer ones with their own child limbs).
+	* sourceLimb to fly spinning at targetLimb -- calculated to do full 360s and return upright as normal... wants to share x/y with oppo
+	*
+	*
+	* CREATE ANIMATION STRUCT.
+	* BattleAnimationStruct
+	* EffectAnimationStruct
+	*/
+
+	/* Calculate the attack. */
+	int attack = 0;
+	for (Limb& limb : npcLimbs) {
+		if (limb.isEquipped()) {
+			attack += limb.getStrength() + 1;
+		}
+	}
+
+	attack = attack / 10; // add some RANDOMNESS.
+	int spreadAttack = 0;
+
+	/* Get the target limb and make a vector of ids for spread attack. */
+
+	vector<int> connectedLimbIds;
+	int totalDamage = 0;
+
+	int precision = npcAttackLoaded.precision;
+	int intensity = npcAttackLoaded.intensity;
+	bringSumTo100(precision, intensity);
+
+	if (precision < 90) {
+
+		spreadAttack = attack / (precision / 10);
+		attack = attack - spreadAttack;
+
+		/* attack must be higher. */
+		if (spreadAttack > attack) {
+			int tempNumber = spreadAttack;
+			spreadAttack = attack;
+			attack = tempNumber;
+		}
+
+		/* First get all touching limbs. */
+		for (int i = playerLimbs.size() - 1; i >= 0; --i) {
+			Limb& limb = playerLimbs[i];
+
+			for (Joint& joint : limb.getJoints()) {
+				int connectedLimbId = joint.getConnectedLimbId();
+
+				if (connectedLimbId == targetLimbId) {
+					connectedLimbIds.push_back(limb.getId());
+				}
+				else if (limb.getId() == targetLimbId) {
+					if (connectedLimbId >= 0) {
+						connectedLimbIds.push_back(connectedLimbId);
+					}
+				}
+			}
+		}
+	}
+
+	/* Now get the actual target limb, while also attacking the other limbs. */
+	for (int i = playerLimbs.size() - 1; i >= 0; --i) {
+		Limb& limb = playerLimbs[i];
+
+		/* Attack the target limb. */
+		if (limb.getId() == targetLimbId) {
+			limb.modifyHP(-attack);
+			totalDamage -= attack;
+			limbIdsToUpdate.push_back(limb.getId());
+		}
+		else {
+			if (precision < 90) {
+				/* Attack the spread limbs. */
+				for (int connectedLimbId : connectedLimbIds) {
+					if (limb.getId() == connectedLimbId) {
+						limb.modifyHP(-spreadAttack);
+						totalDamage -= spreadAttack;
+						limbIdsToUpdate.push_back(limb.getId());
+					}
+				}
+			}
+		}
+	}
+
+	int damageDisplayNumber = totalDamage * -1;
+	UI& ui = UI::getInstance();
+	cout << npc.getName() + " does " << damageDisplayNumber << " total damage\n";
+
+	string attackMessage = npc.getName() + " does " + to_string(damageDisplayNumber) + " damage!";
+	passingMessageCountdown = 250;
+	passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
+	passingMessagePanel.setShow(true);
+
+	/* Attack is calculated and saved to BattleScreen variables, to be used after Effect animation. */
+
+}
+
+
+/*
+* Apply the effects that we just calculated and animated.
+* If player loses anchor limb, send them to Characetr Creation screen.
+*/
+bool BattleScreen::applyNpcAttackEffects() {
+	Character& npc = battle.getNpc();
+	Character& playerCharacter = battle.getPlayerCharacter();
+	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+	vector<Limb>& npcLimbs = npc.getLimbs();
+	int playerId = playerCharacter.getId();
+	int npcId = npc.getId();
+	UI& ui = UI::getInstance();
+
+	sqlite3* db = startTransaction();
+
+	/*
+	* 1. Check for <1 hp and give those limbs to NPC.
+	*   ---> remove them from player object and vector.
+	* 2. Save all limbs and both characters.
+	* 
+	*/
+
+	bool defeatedAnchorLimb = false;
+	bool defeatedAnyLimb = false;
+
+	for (int i = playerLimbs.size() - 1; i <= 0; --i) {
+		Limb& limb = playerLimbs[i];
+		if (limb.isEquipped() && limb.getHP() < 1) {
+			/* Equipped limb is defeated. Give it to NPC. */
+			defeatedAnyLimb = true;
+
+			if (playerCharacter.getAnchorLimbId() == limb.getId()) {
+				defeatedAnchorLimb = true; }
+
+			playerCharacter.unEquipLimb(limb.getId());
+			limb.setCharacterId(npcId);
+
+			npc.getLimbs().push_back(limb);
+
+			playerLimbs.erase(playerLimbs.begin() + i);
+		}
+	}
+
+	if (defeatedAnyLimb && !defeatedAnchorLimb) {
+		playerCharacter.buildDrawLimbList();
+	}
+	else if (defeatedAnchorLimb) {
+		cout << "DEFEATED ANCHOR LIMB.\n Sending to Character Creation Screen.\n";
+		playerCharacter.clearSuit();
+		screenToLoadStruct.screenType == ScreenType::CharacterCreation;
+		running = false;
+		updateCharacterAnchorIdInTrans(playerId, playerCharacter.getAnchorLimbId(), db);
+	}
+
+	
+
+	/* Save all the limbs. */
+	
+	for (Limb& limb : playerLimbs) {
+		updateLimbBattleEffectsInTransaction(limb, db);
+	
+	}
+
+	if (defeatedAnyLimb) {
+		for (Limb& limb : npcLimbs) {
+			updateLimbBattleEffectsInTransaction(limb, db);
+
+		}
+	}
+
+	commitTransactionAndCloseDatabase(db);
+	createPlayerLimbPanels();
+	playerStatsPanel.destroyTextures();
+	playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
+
+	npcAttackLoaded = AttackStruct();
+	limbIdsToUpdate = {};
+	
+	return true;
+}
+
+
 
 /*
 * Apply the effects that we just calculated and animated.
@@ -1187,11 +1422,11 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			if (limbId == limb.getId()) {
 				/* Damage already happened in the calculations function. Now we just save them. */
 				updateLimbBattleEffectsInTransaction(limb, db);
+				break;
 			}
 		}
 
 		if (limb.getHP() < 1) {
-			cout << "Stealing a limb without the vector\n";
 			npc.unEquipLimb(limb.getId());
 			limb.setCharacterId(playerId);
 			limb.unEquip();
@@ -1228,7 +1463,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		npc.clearSuit();
 		for (Limb& limb : npc.getLimbs()) {
 			npc.unEquipLimb(limb.getId());
-			limb.unEquip();
+			updateLimbBattleEffectsInTransaction(limb, db);
 		}
 
 		if (limbIdsToEquip.size() > 0) {
@@ -1314,53 +1549,85 @@ bool BattleScreen::applyPlayerAttackEffects() {
 
 	commitTransactionAndCloseDatabase(db);
 	createNpcLimbPanel();
+	npcStatsPanel.destroyTextures();
 	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+
+	playerAttackLoaded = AttackStruct();
+	limbIdsToUpdate = {};
+
+	battle.switchTurn();
 
 	return true;
 }
 
 
-
-void BattleScreen::setAttackAdvance() {
-	if (!animateAttack) {
-		attackAdvance = 0;
+/* When the npc attacks the player, they must theatrically "advance" on their position.
+* This function incrementally moves the NPC toward the player's position, and then bounces it back.
+*/
+void BattleScreen::setNpcAttackAdvance() {
+	if (!animateAttack || battle.isPlayerTurn()) {
+		attackAdvanceNpc = 0;
 		return;
 	}
 
-	if (battle.isPlayerTurn()) {
+	if (!attackAdvanceHitTarget && npcDrawStartPoint.x + attackAdvanceNpc > playerDrawStartPoint.x) {
+		attackAdvanceNpc = attackAdvanceNpc - 20;
+	}
+	else if (!attackAdvanceHitTarget) {
+		attackAdvanceHitTarget = true;
+		attackAdvanceNpc = attackAdvanceNpc + 20;
+		cout << "Hit target. Why no flash?\n";
+		calculateNpcDamageAttackStruct(-1, npcAttackLoaded.targetLimbId);
+		animateEffect = true;
+		animationCountdown = 100;
+		flashingLimbCountdown = 10;
+		drawFlashingLimb = false;
+		flashLimb = true;
 
-		if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvance < npcDrawStartPoint.x) {
-			attackAdvance = attackAdvance + 20;
-		}
-		else if (!attackAdvanceHitTarget) {
-			attackAdvanceHitTarget = true;
-			attackAdvance = attackAdvance - 20;
+		/* We deal with end of Effect Animation in the run() function. */
+	}
+	else if (attackAdvanceNpc < 0) {
+		attackAdvanceNpc = attackAdvanceNpc + 20;
+	}
+	else {
+		animateAttack = !animateAttack;
+		attackAdvanceNpc = 0;
+	}
+}
 
-			calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
-			animateEffect = true;
-			animationCountdown = 100;
-			flashingLimbCountdown = 10;
-			drawFlashingLimb = false;
-			flashLimb = true;
 
-			/* We deal with end of Effect Animation in the run() function. */
-		}
-		else if (attackAdvance > 0) {
-			attackAdvance = attackAdvance - 20;
-		}
-		else {
-			animateAttack = !animateAttack;
-
-			/* NOW we must animate FLAHSHING LIMBs.
-			* But first we must STORE SOME INFORMATION.
-			*/
-
-			attackAdvance = 0;
-
-		}
+/* When the player attacks the npc, they must theatrically "advance" on their position.
+* This function incrementally moves the player toward the NPC's position, and then bounces it back.
+*/
+void BattleScreen::setPlayerAttackAdvance() {
+	if (!animateAttack || !battle.isPlayerTurn()) {
+		attackAdvancePlayer = 0;
+		return;
 	}
 
+	if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvancePlayer < npcDrawStartPoint.x) {
+		attackAdvancePlayer = attackAdvancePlayer + 20;
+	}
+	else if (!attackAdvanceHitTarget) {
+		attackAdvanceHitTarget = true;
+		attackAdvancePlayer = attackAdvancePlayer - 20;
 
+		calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
+		animateEffect = true;
+		animationCountdown = 100;
+		flashingLimbCountdown = 10;
+		drawFlashingLimb = false;
+		flashLimb = true;
+
+		/* We deal with end of Effect Animation in the run() function. */
+	}
+	else if (attackAdvancePlayer > 0) {
+		attackAdvancePlayer = attackAdvancePlayer - 20;
+	}
+	else {
+		animateAttack = !animateAttack;
+		attackAdvancePlayer = 0;
+	}
 }
 
 
@@ -1387,3 +1654,68 @@ void BattleScreen::setAttackAdvance() {
 * 
 * 
 */
+
+
+
+void BattleScreen::launchNpcTurn() {
+	cout << "Launching NPC turn\n";
+	Character& npc = battle.getNpc();
+	Character& playerCharacter = battle.getPlayerCharacter();
+
+	/* Get the ATTACKS. */
+
+	vector<AttackStruct> attackStructs = npc.getAttacks();
+
+	if (attackStructs.size() < 1 && !battle.isPlayerTurn()) {
+		battle.switchTurn();
+		return;
+	}
+
+	int attackStructIndex = rand() % attackStructs.size();
+
+	AttackStruct attackStruct = attackStructs[attackStructIndex];
+	npcAttackLoaded = attackStruct;
+
+	/* Make sure the player has limbs to attack. */
+	if (playerCharacter.getLimbs().size() < 1) {
+
+		cout << "PLAYER HAS NO LIMBS\n";
+		// LOSING CONDITIONS.
+	}
+
+	/* Get the TARGET LIMB ID. */
+
+	vector<int> targetLimbIds;
+
+	for (Limb& limb : playerCharacter.getLimbs()) {
+		if (limb.isEquipped()) {
+			targetLimbIds.push_back(limb.getId());
+		}
+	}
+
+	if (targetLimbIds.size() < 1) {
+		cout << "WE CANNOT FIGHT because the player has no limbs equipped\n";
+
+		/* 
+		* SEND the PLAYER to the CC screen...
+		* unless they have no limbs at all... in that case player loses.
+		*/
+	}
+
+	/* Load the targetLimbId, start the animation. */
+
+	npcAttackLoaded.targetLimbId = targetLimbIds[rand() % targetLimbIds.size()];
+
+	attackAdvanceHitTarget = false;
+	animateAttack = true;
+
+	/* START THE ANIMATION. */
+
+
+	/*
+	* 1. get available attacks.
+	* 2. randomly pick an attack and a targetLimb.
+	* 3. copy the PlayerAttack functions to make the NPC attack the player.
+	* 4. Initiate the animation, calculations, and executions.
+	*/
+}

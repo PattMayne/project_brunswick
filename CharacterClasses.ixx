@@ -536,7 +536,10 @@ void Limb::modifyAttribute(int& attributeMod, int formAttribute, int modMod) {
 }
 
 
-/* TO DO: This must also remove the limb id from the character's drawLimbList. */
+/* TO DO: This must also remove the limb id from the character's drawLimbList.
+* DEPRECATED.
+* Try to use limb.unEquip() instead, because it detaches child limbs.
+*/
 void Limb::unEquip() {
 	for (Joint& joint : joints) {
 		joint.setAnchor(false);
@@ -1071,6 +1074,7 @@ void Character::addToDrawLimbList(int limbId) {
 * quickly grab each limb to draw, during each frame.
 */
 void Character::buildDrawLimbList() {
+	cout << "DRAWING LIMB LIST 00000\n";
 	drawLimbListIDs = {};
 	sortLimbsByDrawOrder();
 	int drawOrder = 0;
@@ -1089,6 +1093,7 @@ void Character::buildDrawLimbList() {
 		}
 	}
 	setLimbDrawOrder(drawLimbListIDs);
+	cout << "DRAWING LIMB LIST 99999\n";
 }
 
 /* 
@@ -1492,6 +1497,9 @@ SDL_Texture* Character::createAvatar(bool resetRenderer) {
 
 void Character::clearSuit() {
 	for (Limb& limb : limbs) {
+		if (limb.isEquipped()) {
+			unEquipLimb(limb.getId());
+		}
 		limb.unEquip();
 	}
 	anchorLimbId = -1;
@@ -1530,16 +1538,22 @@ Limb& Character::getLimbById(int id) {
 }
 
 void Character::unEquipLimb(int limbId) {
-	/* First check if this is the anchor limb. */
-	if (anchorLimbId == limbId) { anchorLimbId = -1; }
 
-	/* Next remove reference from parent limb. */
+	/* First remove reference from parent limb. */
 	for (Limb& limb : limbs) {
 		for (Joint& joint : limb.getJoints()) {
 			if (joint.getConnectedLimbId() == limbId) {
 				joint.detachLimb();
 			}
 		}
+
+		if (limb.getId() == anchorLimbId && anchorLimbId == limbId) {
+			limb.setAnchor(false);
+		}
+	}
+
+	if (anchorLimbId == limbId) {
+		anchorLimbId = -1;
 	}
 
 	/* recursively unequip limbs and child limbs. */
