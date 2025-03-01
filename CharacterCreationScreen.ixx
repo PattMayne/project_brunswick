@@ -355,7 +355,8 @@ export void CharacterCreationScreen::run() {
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
 		/* Delay loop */
 		if (frameTimeElapsed < FRAME_DELAY) {
-			SDL_Delay(FRAME_DELAY - frameTimeElapsed); }
+			SDL_Delay(FRAME_DELAY - frameTimeElapsed);
+		}
 	}
 
 	/* set the next screen to load */

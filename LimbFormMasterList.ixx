@@ -61,7 +61,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Deer Head", "deer_head",
 			80, 40, 30, 70,
-			DominanceNode::Green, "data/maps/forest/deer_head.png",
+			DominanceNode::Blue, "data/maps/forest/deer_head.png",
 			{ Point(93, 129), Point(117, 33), Point(90, 37) },
 			BodyPartType::Head);
 		};
@@ -139,7 +139,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Bear Head", "bear_head",
 			80, 50, 30, 60,
-			DominanceNode::Green, "data/maps/forest/bear_head.png",
+			DominanceNode::Blue, "data/maps/forest/bear_head.png",
 			{ Point(101, 115) },
 			BodyPartType::Head);
 		};
@@ -148,7 +148,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Bear Left Arm", "bear_arm_left",
 			90, 90, 30, 20,
-			DominanceNode::Green, "data/maps/forest/bear_arm_left.png",
+			DominanceNode::Red, "data/maps/forest/bear_arm_left.png",
 			{ Point(59, 85) },
 			BodyPartType::Arm);
 		};
@@ -157,7 +157,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Bear Right Arm", "bear_arm_right",
 			90, 90, 30, 20,
-			DominanceNode::Green, "data/maps/forest/bear_arm_right.png",
+			DominanceNode::Red, "data/maps/forest/bear_arm_right.png",
 			{ Point(134, 59) },
 			BodyPartType::Arm);
 		};
@@ -187,7 +187,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Spider Body", "spider_body",
 			70, 80, 60, 40,
-			DominanceNode::Green, "data/maps/forest/spider_body.png",
+			DominanceNode::Blue, "data/maps/forest/spider_body.png",
 			{ Point(55, 51), Point(30, 99), Point(52, 153), Point(149, 158), Point(174, 105), Point(158, 44) },
 			BodyPartType::Torso);
 		};
@@ -231,7 +231,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Spider Leg 3", "spider_leg_3",
 			40, 60, 100, 40,
-			DominanceNode::Green, "data/maps/forest/spider_leg_3.png",
+			DominanceNode::Red, "data/maps/forest/spider_leg_3.png",
 			{ Point(147, 130) },
 			BodyPartType::Leg);
 		};
@@ -240,7 +240,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Spider Leg 4", "spider_leg_4",
 			40, 60, 100, 40,
-			DominanceNode::Green, "data/maps/forest/spider_leg_4.png",
+			DominanceNode::Red, "data/maps/forest/spider_leg_4.png",
 			{ Point(50, 63) },
 			BodyPartType::Leg);
 		};
@@ -263,7 +263,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Fairy Head", "fairy_head",
 			50, 40, 70, 100,
-			DominanceNode::Green, "data/maps/forest/fairy_head.png",
+			DominanceNode::Blue, "data/maps/forest/fairy_head.png",
 			{ Point(97, 102) },
 			BodyPartType::Head);
 		};
@@ -281,7 +281,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Fairy Left Wing", "fairy_wing_left",
 			20, 20, 100, 70,
-			DominanceNode::Green, "data/maps/forest/fairy_wing_left.png",
+			DominanceNode::Blue, "data/maps/forest/fairy_wing_left.png",
 			{ Point(109, 128) },
 			BodyPartType::Wing);
 		};
@@ -290,7 +290,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Fairy Left Leg", "fairy_leg_left",
 			40, 30, 80, 60,
-			DominanceNode::Green, "data/maps/forest/fairy_leg_left.png",
+			DominanceNode::Blue, "data/maps/forest/fairy_leg_left.png",
 			{ Point(25, 31) },
 			BodyPartType::Leg);
 		};
@@ -338,7 +338,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Owl Head", "owl_head",
 			50, 60, 60, 80,
-			DominanceNode::Green, "data/maps/forest/owl_head.png",
+			DominanceNode::Blue, "data/maps/forest/owl_head.png",
 			{ Point(88, 82) },
 			BodyPartType::Head);
 		};
@@ -347,7 +347,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 		return LimbForm(
 			"Owl Left Wing", "owl_wing_left",
 			40, 40, 80, 60,
-			DominanceNode::Green, "data/maps/forest/owl_wing_left.png",
+			DominanceNode::Blue, "data/maps/forest/owl_wing_left.png",
 			{ Point(128, 104) },
 			BodyPartType::Wing);
 		};

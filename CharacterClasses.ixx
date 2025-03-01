@@ -1539,7 +1539,7 @@ Limb& Character::getLimbById(int id) {
 		}
 	}
 
-	cout << "ERROR! LIMB NOT FOUND! MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!\n";
+	cout << "ERROR! LIMB " << id << " NOT FOUND!MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!\n";
 	/* UNSAFE! DO NOT KEEP THIS! */
 	return limbs[0];
 }

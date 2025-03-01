@@ -1009,10 +1009,12 @@ void UI::prepareColors() {
 	colorsByName["YALE_BLUE"] = { 0, 53, 102 }; /* slightly lighter blue */
 	colorsByName["OXFORD_BLUE"] = { 0, 29, 61 }; /* slightly darker blue */
 	colorsByName["FRENCH_BLUE"] = { 0, 99, 191 }; // almost light (normal) blue-green
+	colorsByName["FRENCH_BLUE_LIGHT"] = { 29, 131, 227 }; // Lighter than ever
 
 	/* NOT SURE YET */
 	colorsByName["ONYX"] = { 14, 14, 14 }; // almost black
 	colorsByName["FERN_GREEN"] = { 79, 119, 45 };
+	colorsByName["LIME"] = { 0, 199, 43 };
 	colorsByName["MIKADO_YELLOW"] = { 255, 195, 0 };
 	colorsByName["RICH_BLACK"] = { 0, 8, 20 }; // blue tinted dark
 	colorsByName["BLACK"] = { 3, 3, 3 }; // almost absolute... not quite
@@ -1020,6 +1022,7 @@ void UI::prepareColors() {
 	colorsByName["PAPAYA_WHIP"] = { 253, 240, 213 }; // beige
 	colorsByName["DESAT_ORANGE"] = { 213, 194, 154 }; // Slightly desaturated orange.
 	colorsByName["SCARLET"] = { 193, 18, 31 }; // red
+	colorsByName["SCARLIGHT"] = { 255, 57, 70 }; // lighter red
 	colorsByName["WOODLAND"] = { 97, 89, 30 }; // brown-green
 	colorsByName["SMOKEY_GREY"] = { 117, 117, 113 };
 	colorsByName["DARKISH_GRAYISH_BLUE"] = {142, 146, 169};
@@ -1041,6 +1044,10 @@ void UI::prepareColors() {
 	colorsByFunction["BG_LIGHT"] = colorsByName["FRENCH_BLUE"];
 	colorsByFunction["BG_MED"] = colorsByName["YALE_BLUE"];
 	colorsByFunction["PANEL_BG"] = colorsByName["PAPAYA_WHIP"];
+
+	colorsByFunction["RED_BG"] = colorsByName["SCARLIGHT"];
+	colorsByFunction["BLUE_BG"] = colorsByName["FRENCH_BLUE_LIGHT"];
+	colorsByFunction["GREEN_BG"] = colorsByName["LIME"];
 }
 
 void UI::getAndStoreWindowSize() {
@@ -1621,25 +1628,41 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 		SDL_Surface* hoverSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 
 		SDL_FillRect(normalSurface, NULL, convertSDL_ColorToUint32(normalSurface->format, colorsByFunction["BTN_BG"]));
-		SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, colorsByFunction["BTN_HOVER_BG"]));
-		
 
+		SDL_Color hoverColor = colorsByFunction["BTN_HOVER_BG"];
+		SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, hoverColor));
+
+		string domNodeText = "";
 		Resources& resources = Resources::getInstance();
 
 		/* Get the TEXT surface. */
 		SDL_Surface* textSurface = NULL;
 		string buttonText = "";
-
 		if (!isBackButton) {
 			LimbButtonData& limbButtonDataStruct = limbBtnDataStructs[i];
-			buttonText = limbButtonDataStruct.name + "\n";
+
+			if (limbButtonDataStruct.domNode == DominanceNode::Green) {
+				hoverColor = colorsByFunction["GREEN_BG"];
+				domNodeText = "GREEN";
+			}else if (limbButtonDataStruct.domNode == DominanceNode::Red) {
+				hoverColor = colorsByFunction["RED_BG"];
+				domNodeText = "RED";
+			} else if (limbButtonDataStruct.domNode == DominanceNode::Blue) {
+				hoverColor = colorsByFunction["BLUE_BG"];
+				domNodeText = "BLUE";
+			}
+
+
+			SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, hoverColor));
+		
+			//buttonText = limbButtonDataStruct.name + "\n";
 			buttonText = buttonText + "HP:  " + to_string(limbButtonDataStruct.hp) + "\n";
 			buttonText = buttonText + "SPD: " + to_string(limbButtonDataStruct.speed) + "\n";
 			buttonText = buttonText + "STR: " + to_string(limbButtonDataStruct.strength) + "\n";
 			buttonText = buttonText + "INT: " + to_string(limbButtonDataStruct.intelligence) + "\n";
+			buttonText = buttonText + domNodeText;
 
-			textSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, buttonText.c_str(), colorsByFunction["DARK_TEXT"], 140);
-			//textSurface = TTF_RenderUTF8_Blended(monoFont, buttonText.c_str(), colorsByFunction["DARK_TEXT"]);
+			textSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, buttonText.c_str(), colorsByFunction["DARK_TEXT"], 0);
 			cout << "Did the STATS BUTTON\n";
 		}
 		else {
@@ -1678,9 +1701,9 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 			textSurface = textSquareSurface;
 		}
 
-		
 
 		if (isBackButton) {
+			/* " "BACK" drawn onto BOTH surfaces.*/
 			if (textSurface->h < rect.h && textSurface->w < rect.w) {
 				textSurface = centerSurfaceInRect(textSurface, rect, true);
 			}
@@ -1700,12 +1723,12 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 			SDL_BlitScaled(textSurface, NULL, normalSurface, NULL);
 		}
 		else {
-			/* STATS BACKGROUND actually drawn onto the HoverSurface. */
+			/* STATS BACKGROUND finally drawn onto the hoverSurface. */
 			SDL_Rect hoverRect = {
-				PANEL_PADDING/2,
-				PANEL_PADDING/2,
-				rect.w - PANEL_PADDING,
-				rect.h - PANEL_PADDING
+				PANEL_PADDING,
+				PANEL_PADDING,
+				rect.w - PANEL_PADDING *2,
+				rect.h - PANEL_PADDING *2
 			};
 			SDL_BlitScaled(textSurface, NULL, hoverSurface, &hoverRect);
 		}
