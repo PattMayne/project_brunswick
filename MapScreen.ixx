@@ -1638,18 +1638,24 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 
 		if (collisionInfo.hasCollided) {
 			landmarkCollided = true;
+			vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 
 			if (collisionInfo.type == LandmarkType::Shrine) {
+				
+				vector<string> limbSlugsToHeal;
 
 				for (Character& suit : map.getSuits()) {
 					if (suit.getId() == landmark.getCharacterId()) {
+
+						for (Limb& limb : suit.getLimbs()) {
+							limbSlugsToHeal.push_back(limb.getForm().slug);
+						}
 
 						/* 
 						* Check each of the Suit's limbs against the player's non-equipped limbs.
 						* Cycle down from the top in case we get a match and need to remove limb from vector.
 						*/
-
-						vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+						
 						bool unscrambledSomething = false;
 
 						for (int u = playerLimbs.size() - 1; u >= 0; --u) {
@@ -1702,6 +1708,20 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 						if (unscrambledSomething) { break; }
 					}
 				}
+
+				/* Heal Limbs from this Shrine. */
+				sqlite3* db = startTransaction();
+				for (Limb& limb : playerLimbs) {
+					for (string slugToHeal : limbSlugsToHeal) {
+						if (slugToHeal == limb.getForm().slug) {
+							limb.heal();
+							updateLimbBattleEffectsInTransaction(limb, db);
+							break;
+						}
+					}
+					
+				}
+				commitTransactionAndCloseDatabase(db);
 
 			} else if (collisionInfo.type == LandmarkType::Exit) {
 				bool totallyUnscrambled = false;

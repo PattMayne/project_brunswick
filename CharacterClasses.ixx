@@ -433,6 +433,7 @@ export class Limb {
 		void resetRotationAngle();
 		void unscramble() { isUnscrambled = true; }
 		void unEquip();
+		void heal();
 
 		SDL_Point getRotationPointSDL() { return rotationPointSDL; }		
 
@@ -479,6 +480,12 @@ export class Limb {
 * 
 */
 
+void Limb::heal() {
+	if (hpMod < 0) {
+		hpMod = 0;
+		cout << "Healed\n";
+	}
+}
 
 
 /* SET the modifiers. */
