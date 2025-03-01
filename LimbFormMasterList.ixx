@@ -337,7 +337,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["owl_head"] = []() {
 		return LimbForm(
 			"Owl Head", "owl_head",
-			50, 60, 60, 80,
+			5000, 60, 60, 80,
 			DominanceNode::Blue, "data/maps/forest/owl_head.png",
 			{ Point(88, 82) },
 			BodyPartType::Head);

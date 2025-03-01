@@ -289,7 +289,7 @@ void CharacterCreationScreen::getBackgroundTexture(UI& ui) {
 	SDL_GetWindowSize(ui.getMainWindow(), &windowWidth, &windowHeight);
 	bgSourceRect = { 0, 0, windowWidth, windowHeight };
 	bgDestinationRect = { 0, 0, windowWidth, windowHeight };
-	bgTexture = ui.createBackgroundTexture();
+	bgTexture = getSkyBackgroundTexture();
 }
 
 export void CharacterCreationScreen::run() {

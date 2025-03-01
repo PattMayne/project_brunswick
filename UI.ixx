@@ -154,6 +154,7 @@ export class UI {
 		TTF_Font* getTitleFont() { return titleFont; }
 		TTF_Font* getBodyFont() { return bodyFont; }
 		TTF_Font* getMonoFont() { return monoFont; }
+		TTF_Font* getMonoFontLarge() { return monoFontLarge; }
 		unordered_map<string, SDL_Color> getColors() { return colorsByFunction; }
 
 
@@ -204,6 +205,7 @@ export class UI {
 		TTF_Font* bodyFont = NULL;
 		TTF_Font* dialogFont = NULL;
 		TTF_Font* monoFont = NULL;
+		TTF_Font* monoFontLarge = NULL;
 
 		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
@@ -1048,6 +1050,7 @@ void UI::prepareColors() {
 	colorsByFunction["RED_BG"] = colorsByName["SCARLIGHT"];
 	colorsByFunction["BLUE_BG"] = colorsByName["FRENCH_BLUE_LIGHT"];
 	colorsByFunction["GREEN_BG"] = colorsByName["LIME"];
+	colorsByFunction["LIMB_BTN_BG"] = colorsByName["OXFORD_BLUE"];
 }
 
 void UI::getAndStoreWindowSize() {
@@ -1133,7 +1136,8 @@ bool UI::initializeFonts(Resources& resources) {
 	int bodyFontSize = resources.getFontSize(FontContext::Body, mainWindowSurface->w);
 	int buttonFontSize = resources.getFontSize(FontContext::Button, mainWindowSurface->w);
 	int dialogFontSize = resources.getFontSize(FontContext::Dialog, mainWindowSurface->w);
-	int monoFontSize = bodyFontSize;
+	int monoFontSize = buttonFontSize;
+	int monoFontLargeSize = resources.getFontSize(FontContext::Title, mainWindowSurface->w);
 
 	/* Initialize TTF font library */
 	if (TTF_Init() == -1) {
@@ -1147,6 +1151,14 @@ bool UI::initializeFonts(Resources& resources) {
 	monoFont = TTF_OpenFont("assets/sono_reg.ttf", monoFontSize);
 
 	if (!monoFont) {
+		SDL_Log("Font (sono_reg) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (sono_reg) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
+
+	monoFontLarge = TTF_OpenFont("assets/sono_reg.ttf", monoFontLargeSize);
+
+	if (!monoFontLarge) {
 		SDL_Log("Font (sono_reg) failed to load. TTF_Error: %s\n", TTF_GetError());
 		cerr << "Font (sono_reg) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 		return false;
@@ -1627,7 +1639,7 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 		SDL_Surface* normalSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 		SDL_Surface* hoverSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 
-		SDL_FillRect(normalSurface, NULL, convertSDL_ColorToUint32(normalSurface->format, colorsByFunction["BTN_BG"]));
+		SDL_FillRect(normalSurface, NULL, convertSDL_ColorToUint32(normalSurface->format, colorsByFunction["LIMB_BTN_BG"]));
 
 		SDL_Color hoverColor = colorsByFunction["BTN_HOVER_BG"];
 		SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, hoverColor));
@@ -1652,18 +1664,15 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 				domNodeText = "BLUE";
 			}
 
-
 			SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, hoverColor));
 		
-			//buttonText = limbButtonDataStruct.name + "\n";
 			buttonText = buttonText + "HP:  " + to_string(limbButtonDataStruct.hp) + "\n";
 			buttonText = buttonText + "SPD: " + to_string(limbButtonDataStruct.speed) + "\n";
 			buttonText = buttonText + "STR: " + to_string(limbButtonDataStruct.strength) + "\n";
 			buttonText = buttonText + "INT: " + to_string(limbButtonDataStruct.intelligence) + "\n";
 			buttonText = buttonText + domNodeText;
 
-			textSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, buttonText.c_str(), colorsByFunction["DARK_TEXT"], 0);
-			cout << "Did the STATS BUTTON\n";
+			textSurface = TTF_RenderUTF8_Blended_Wrapped(monoFontLarge, buttonText.c_str(), colorsByFunction["DARK_TEXT"], 0);
 		}
 		else {
 			buttonText = resources.getButtonText("BACK");
@@ -1674,7 +1683,6 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 			std::cerr << "TTF_RenderUTF8_Blended_Wrapped Error: " << TTF_GetError() << std::endl; }
 		
 		
-
 		ButtonClickStruct clickStruct = !isBackButton ? ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStructs[i].id) :
 			ButtonClickStruct(ButtonOption::Back, -1);
 
@@ -2106,6 +2114,56 @@ struct FloatingObject {
 	int screenHeight;
 };
 
+export SDL_Texture* getSkyBackgroundTexture() {
+	UI& ui = UI::getInstance();
+	SDL_Renderer* renderer = ui.getMainRenderer();
+
+	int windowWidth = ui.getWindowWidth();
+	int windowHeight = ui.getWindowHeight();
+	/* Make the SKY surface. */
+	SDL_Surface* skyImageSurface = IMG_Load("assets/sky_and_clouds/sky.png");
+	int skyImageWidth = skyImageSurface->w;
+	int skyImageHeight = skyImageSurface->h;
+
+	int skySurfaceWidth = windowWidth;
+	int skySurfaceHeight = windowHeight;
+
+	/* make skySurface the same ratio as the window. */
+	if (skyImageWidth >= windowWidth && skyImageHeight >= windowHeight) {
+		/* Image is bigger than screen. Just get a rectangle from within the pic. */
+		skySurfaceWidth = windowWidth;
+		skySurfaceHeight = windowHeight;
+	}
+	else if (skyImageWidth < windowWidth && skyImageHeight >= windowHeight) {
+		/* Image is LESS WIDE than screen, but just as tall.
+		* So we HAVE THE WIDTH.
+		* We will use IMAGE WIDTH, and get a ratio (from the screen) for new height. */
+		float ratio = static_cast<float>(windowHeight) / static_cast<float>(windowWidth);
+
+		skySurfaceWidth = skyImageWidth;
+		skySurfaceHeight = static_cast<int>(skyImageWidth * ratio);
+	}
+	else {
+		/* Image is SHORTER than screen.
+		* So we HAVE THE HEIGHT.
+		* We will use IMAGE HEIGHT, and get a ratio (from window) to calculate NEW WIDTH from that. */
+		float ratio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
+		skySurfaceWidth = static_cast<int>(ratio * skyImageHeight);
+		skySurfaceHeight = skyImageWidth;
+	}
+
+	SDL_Rect sourceRect = { 0, 0, skySurfaceWidth, skySurfaceHeight };
+	SDL_Surface* skySurface = createTransparentSurface(skySurfaceWidth, skySurfaceHeight);
+
+	SDL_BlitSurface(skyImageSurface, &sourceRect, skySurface, NULL);
+	SDL_Texture* skyTexture = SDL_CreateTextureFromSurface(renderer, skySurface);
+
+	SDL_FreeSurface(skyImageSurface);
+	SDL_FreeSurface(skySurface);
+
+	return skyTexture;
+}
+
 /*
 * For the opening screen, the background will be a blue sky with various clouds flying around.
 * Later we will add limbs flying together and snapping together, then flying apart as new limbs fly in.
@@ -2142,45 +2200,7 @@ public:
 		SDL_FreeSurface(cloudSurface004);
 		SDL_FreeSurface(cloudSurface005);
 
-		/* Make the SKY surface. */
-		SDL_Surface* skyImageSurface = IMG_Load("assets/sky_and_clouds/sky.png");
-		int skyImageWidth = skyImageSurface->w;
-		int skyImageHeight = skyImageSurface->h;
-
-		int skySurfaceWidth = windowWidth;
-		int skySurfaceHeight = windowHeight;
-
-		/* make skySurface the same ratio as the window. */
-		if (skyImageWidth >= windowWidth && skyImageHeight >= windowHeight) {
-			/* Image is bigger than screen. Just get a rectangle from within the pic. */
-			skySurfaceWidth = windowWidth;
-			skySurfaceHeight = windowHeight;
-		}
-		else if (skyImageWidth < windowWidth && skyImageHeight >= windowHeight) {
-				/* Image is LESS WIDE than screen, but just as tall.
-				* So we HAVE THE WIDTH.
-				* We will use IMAGE WIDTH, and get a ratio (from the screen) for new height. */
-				float ratio =static_cast<float>(windowHeight)/ static_cast<float>(windowWidth);
-
-				skySurfaceWidth = skyImageWidth;
-				skySurfaceHeight = static_cast<int>(skyImageWidth * ratio);
-		} else {
-			/* Image is SHORTER than screen.
-			* So we HAVE THE HEIGHT.
-			* We will use IMAGE HEIGHT, and get a ratio (from window) to calculate NEW WIDTH from that. */
-			float ratio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
-			skySurfaceWidth = static_cast<int>(ratio * skyImageHeight);
-			skySurfaceHeight = skyImageWidth;
-		}
-
-		SDL_Rect sourceRect = { 0, 0, skySurfaceWidth, skySurfaceHeight };
-		SDL_Surface* skySurface = createTransparentSurface(skySurfaceWidth, skySurfaceHeight);
-
-		SDL_BlitSurface(skyImageSurface, &sourceRect, skySurface, NULL);
-		skyTexture = SDL_CreateTextureFromSurface(renderer, skySurface);
-
-		SDL_FreeSurface(skyImageSurface);
-		SDL_FreeSurface(skySurface);
+		skyTexture = getSkyBackgroundTexture();
 
 		floatingObjects.push_back(makeNewFloatingObject());
 		floatingObjects.push_back(makeNewFloatingObject());
