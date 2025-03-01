@@ -1139,7 +1139,13 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 
 	if (precision < 90) {
 
-		spreadAttack = attack / (precision / 10);
+		int precisionDivided = precision / 10;
+
+		if (precisionDivided < 1) {
+			precisionDivided = 1;
+		}
+
+		spreadAttack = attack / precisionDivided;
 		attack = attack - spreadAttack;
 
 		/* attack must be higher. */
@@ -1265,7 +1271,12 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 
 	if (precision < 90) {
 
-		spreadAttack = attack / (precision / 10);
+		int precisionDivided = precision / 10;
+		if (precisionDivided < 1) {
+			precisionDivided = 1;
+		}
+
+		spreadAttack = attack / precisionDivided;
 		attack = attack - spreadAttack;
 
 		/* attack must be higher. */
