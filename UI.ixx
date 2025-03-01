@@ -1555,7 +1555,8 @@ export SDL_Surface* createCenteredWrappedText(string text, TTF_Font* font, SDL_C
 * Creates a new surface based on the incoming rect, and centers the incoming surface in THAT new surface,
 * and returns the new surface.
 */
-export SDL_Surface* centerSurfaceInRect(SDL_Surface* surfaceToCenter, SDL_Rect rect) {
+export SDL_Surface* centerSurfaceInRect(SDL_Surface* surfaceToCenter, SDL_Rect rect, bool destroyOriginal = false) {
+
 	SDL_Surface* newSurface = createTransparentSurface(rect.w, rect.h);
 
 	int newX = (rect.w - surfaceToCenter->w) / 2;
@@ -1568,6 +1569,10 @@ export SDL_Surface* centerSurfaceInRect(SDL_Surface* surfaceToCenter, SDL_Rect r
 		newSurface,
 		&textRect
 	);
+
+	if (destroyOriginal) {
+		SDL_FreeSurface(surfaceToCenter);
+	}
 
 	return newSurface;
 }
@@ -1591,17 +1596,19 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 	vector<Button> buttons;
 
 	for (int i = 0; i < limbBtnDataStructs.size() + 1; ++i) {
+		
 		/* Many things change for the back button option (final option). */
 		bool isBackButton = i == limbBtnDataStructs.size();
 		if (isBackButton && !drawBackButton) {
 			continue;
 		}
-		
-		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));
+
+		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));		
 		int rectY = i < columnsCount ? PANEL_PADDING :
 			((i / columnsCount) * (PANEL_PADDING + buttonHeight)) + PANEL_PADDING;
-		rectY += labelOffsetY;
 
+		rectY += labelOffsetY;
+		
 		/* This rectangle defines the size and position of the button. */
 		SDL_Rect rect = {
 			rectX,
@@ -1609,44 +1616,110 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 			buttonWidth,
 			buttonHeight
 		};
-
 		/* create main surfaces */
 		SDL_Surface* normalSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 		SDL_Surface* hoverSurface = SDL_CreateRGBSurface(0, buttonWidth, buttonHeight, 32, 0, 0, 0, 0xFF000000);
 
 		SDL_FillRect(normalSurface, NULL, convertSDL_ColorToUint32(normalSurface->format, colorsByFunction["BTN_BG"]));
 		SDL_FillRect(hoverSurface, NULL, convertSDL_ColorToUint32(hoverSurface->format, colorsByFunction["BTN_HOVER_BG"]));
+		
 
 		Resources& resources = Resources::getInstance();
-		string buttonText = !isBackButton ? limbBtnDataStructs[i].name : resources.getButtonText("BACK");
 
 		/* Get the TEXT surface. */
-		SDL_Surface* textSurface = createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["DARK_TEXT"]);
+		SDL_Surface* textSurface = NULL;
+		string buttonText = "";
+
+		if (!isBackButton) {
+			LimbButtonData& limbButtonDataStruct = limbBtnDataStructs[i];
+			buttonText = limbButtonDataStruct.name + "\n";
+			buttonText = buttonText + "HP:  " + to_string(limbButtonDataStruct.hp) + "\n";
+			buttonText = buttonText + "SPD: " + to_string(limbButtonDataStruct.speed) + "\n";
+			buttonText = buttonText + "STR: " + to_string(limbButtonDataStruct.strength) + "\n";
+			buttonText = buttonText + "INT: " + to_string(limbButtonDataStruct.intelligence) + "\n";
+
+			textSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, buttonText.c_str(), colorsByFunction["DARK_TEXT"], 140);
+			//textSurface = TTF_RenderUTF8_Blended(monoFont, buttonText.c_str(), colorsByFunction["DARK_TEXT"]);
+			cout << "Did the STATS BUTTON\n";
+		}
+		else {
+			buttonText = resources.getButtonText("BACK");
+			textSurface = createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["DARK_TEXT"]);
+		}
+				
+		if (!textSurface) {
+			std::cerr << "TTF_RenderUTF8_Blended_Wrapped Error: " << TTF_GetError() << std::endl; }
+		
+		
+
 		ButtonClickStruct clickStruct = !isBackButton ? ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStructs[i].id) :
 			ButtonClickStruct(ButtonOption::Back, -1);
 
+		
 		if (!isBackButton) {
+			/* NORMAL button */
 			LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
 			SDL_Surface* limbSurface = IMG_Load(limbBtnDataStruct.texturePath.c_str());
 			SDL_BlitScaled(limbSurface, NULL, normalSurface, NULL);
 			SDL_FreeSurface(limbSurface);
+			limbSurface = NULL;
+
+			/* HOVER button */
+			/* Make textSurface square by blitting onto a new transparent surface. */
+
+			int textWidth = textSurface->w;
+			int textHeight = textSurface->h;
+			int dimension = textHeight > textWidth ? textHeight : textWidth;
+			SDL_Surface* textSquareSurface = createTransparentSurface(dimension, dimension);
+			SDL_Rect textRect = { 0, 0, textWidth, textHeight };
+			SDL_BlitScaled(textSurface, NULL, textSquareSurface, &textRect);
+
+			SDL_FreeSurface(textSurface);
+			textSurface = textSquareSurface;
 		}
 
-		/* If the text surface is too small, center it in a surface of the proper size (don't expand it). */
-		if (textSurface->h < rect.h && textSurface->w < rect.w) {
-			textSurface = centerSurfaceInRect(textSurface, rect); }
-
-		SDL_BlitScaled(textSurface, NULL, hoverSurface, NULL);
+		
 
 		if (isBackButton) {
-			textSurface = centerSurfaceInRect(createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["BTN_TEXT"]), rect);
-			SDL_BlitScaled(textSurface, NULL, normalSurface, NULL); }
+			if (textSurface->h < rect.h && textSurface->w < rect.w) {
+				textSurface = centerSurfaceInRect(textSurface, rect, true);
+			}
+			SDL_BlitScaled(textSurface, NULL, hoverSurface, NULL);
 
+			if (textSurface != NULL) {
+				SDL_FreeSurface(textSurface);
+				textSurface = NULL;
+			}
+
+			textSurface = centerSurfaceInRect(
+				createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["BTN_TEXT"]),
+				rect,
+				true
+			);
+
+			SDL_BlitScaled(textSurface, NULL, normalSurface, NULL);
+		}
+		else {
+			/* STATS BACKGROUND actually drawn onto the HoverSurface. */
+			SDL_Rect hoverRect = {
+				PANEL_PADDING/2,
+				PANEL_PADDING/2,
+				rect.w - PANEL_PADDING,
+				rect.h - PANEL_PADDING
+			};
+			SDL_BlitScaled(textSurface, NULL, hoverSurface, &hoverRect);
+		}
+		
 		SDL_Texture* normalTexture = SDL_CreateTextureFromSurface(mainRenderer, normalSurface);
 		SDL_Texture* hoverTexture = SDL_CreateTextureFromSurface(mainRenderer, hoverSurface);
-
+		
 		SDL_FreeSurface(hoverSurface);
 		SDL_FreeSurface(normalSurface);
+
+		if (textSurface != NULL) {
+			SDL_FreeSurface(textSurface);
+			textSurface = NULL;
+		}
 
 		buttons.emplace_back(
 			rect,

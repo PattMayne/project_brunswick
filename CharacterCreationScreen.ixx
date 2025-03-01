@@ -94,18 +94,22 @@ public:
 		UI& ui = UI::getInstance();
 		getBackgroundTexture(ui);
 		createTitleTexture(ui);
+
 		playerCharacter = loadPlayerCharacter();
+
 		limbLoaded = false;
 		loadedLimbId = -1;
 		showTitle = true;
 		titleCountdown = 140;
 		
+
 		/* create panels */
 		settingsPanel = ui.createSettingsPanel(ScreenType::Map);
 		gameMenuPanel = ui.createGameMenuPanel();
 		reviewModePanel = ui.createReviewModePanel();
 		createLimbLoadedPanel(ui);
 		createChooseLimbPanel(false);
+
 		changeCreationMode(CreationMode::Review);
 		messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
 		messagePanel.setShow(true);
@@ -119,6 +123,7 @@ public:
 
 		playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
 		playerStatsPanel.setShow(true);
+
 	}
 
 	/* Destructor */
@@ -371,14 +376,13 @@ void CharacterCreationScreen::draw(UI& ui) {
 		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 	}	
 
-	chooseLimbPanel.draw(ui);
 	limbLoadedPanel.draw(ui);
 	reviewModePanel.draw(ui);
 	settingsPanel.draw(ui);
-	//gameMenuPanel.draw(ui);
-	messagePanel.draw(ui);
 	drawCharacter(ui);
 	playerStatsPanel.draw();
+	chooseLimbPanel.draw(ui);
+	messagePanel.draw(ui);
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
