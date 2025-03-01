@@ -655,8 +655,9 @@ void Button::createButtonTextures(
 	vector<SDL_Rect> overlayRects = createSurfaceOverlay(buttonRect);
 
 	/* make two button surfaces with the correct BG colors, to blit the text surfaces onto */
-	SDL_Surface* hoverButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_HOVER_BG"], colors["BTN_HOVER_BRDR"], mainRenderer, overlayRects);
-	SDL_Surface* normalButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_BG"], colors["BTN_BRDR"], mainRenderer, overlayRects);
+	SDL_Surface* hoverButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_HOVER_BRDR"], colors["BTN_HOVER_BG"], mainRenderer, overlayRects);
+	//SDL_Surface* normalButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_BG"], colors["BTN_BRDR"], mainRenderer, overlayRects);
+	SDL_Surface* normalButtonSurface = createButtonSurfaceBG(buttonRect, colors["BTN_OVERLAY"], colors["BTN_BRDR"], mainRenderer, overlayRects);
 
 	/* possibility of flipping */
 	int hFlipInt = rand() % 2;
@@ -1028,13 +1029,15 @@ void UI::prepareColors() {
 	colorsByName["WOODLAND"] = { 97, 89, 30 }; // brown-green
 	colorsByName["SMOKEY_GREY"] = { 117, 117, 113 };
 	colorsByName["DARKISH_GRAYISH_BLUE"] = {142, 146, 169};
+	colorsByName["GRAPE_BRUISE"] = { 37, 35, 51 };
 
 	/* COLORS BY FUNCTION */
 	colorsByFunction["BTN_HOVER_BG"] = colorsByName["PERIDOT"];
 	colorsByFunction["BTN_HOVER_BG_DEMI"] = colorsByName["PERIDOT_DEMI"];
 	colorsByFunction["BTN_BG"] = colorsByName["OXFORD_BLUE"];
 	colorsByFunction["BTN_HOVER_BRDR"] = colorsByName["VIVID_YELLOW"];
-	colorsByFunction["BTN_BRDR"] = colorsByName["YALE_BLUE"];
+	colorsByFunction["BTN_BRDR"] = colorsByName["ONYX"];
+	colorsByFunction["BTN_OVERLAY"] = colorsByName["GRAPE_BRUISE"];
 	/* STILL DECIDING */
 	colorsByFunction["DARK_TEXT"] = colorsByName["BLACK"];
 	colorsByFunction["LIGHT_TEXT"] = colorsByName["WHITE"];

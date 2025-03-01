@@ -242,13 +242,13 @@ void CharacterCreationScreen::createChooseLimbPanel(bool showEquippedLimbs = fal
 
 	for (int i = 0; i < inventoryLimbs.size(); ++i) {
 		Limb& thisLimb = inventoryLimbs[i];
-		if (thisLimb.isEquipped() == showEquippedLimbs) {
+		if (thisLimb.isEquipped() == showEquippedLimbs && !(!showEquippedLimbs && thisLimb.getHP() < 1)) {
 			LimbButtonData newStruct = thisLimb.getLimbButtonData();
 			limbBtnDataStructs.emplace_back(newStruct);
 		}
 	}
 
-	string label = showEquippedLimbs ? "EQUIPPED LIMBS" : "NON-EQUIPPED LIMBS";
+	string label = showEquippedLimbs ? "EQUIPPED LIMBS" : "NON-EQUIPPED LIMBS (with HP)";
 
 	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs, label);
 }
@@ -295,7 +295,6 @@ void CharacterCreationScreen::getBackgroundTexture(UI& ui) {
 export void CharacterCreationScreen::run() {
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
-
 
 	settingsPanel.setShow(false);
 	gameMenuPanel.setShow(false);
