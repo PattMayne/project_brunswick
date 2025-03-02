@@ -192,12 +192,18 @@ public:
 		passingMessageCountdown = 0;
 
 		attackAdvanceHitTarget = false;
+		animateBrainDrain = false;
+		animateAttack = false;
+		headRotation = 0;
+		headSpins = 0;
 	}
 
 	void createPlayerLimbPanels();
 	void createNpcLimbPanel();
 	void calculatePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId);
 	void calculateNpcDamageAttackStruct(int sourceLimbId, int targetLimbId);
+
+	void calculatePlayerBrainDrain();
 
 	ScreenType getScreenType() { return screenType; }
 	void run();
@@ -288,15 +294,17 @@ private:
 	AttackStruct playerAttackLoaded;
 	AttackStruct npcAttackLoaded;
 
+	bool animateBrainDrain;
 	bool animateAttack;
 	bool animateEffect;
 	int animationCountdown;
 
+	int headRotation;
+	int headSpins;
 	int attackAdvancePlayer;
 	int attackAdvanceNpc;
 	bool attackAdvanceHitTarget;
 
-	vector<int> limbsIdsToSteal;
 	vector<int> limbIdsToUpdate;
 
 	bool running;
@@ -483,6 +491,31 @@ export void BattleScreen::run() {
 		/* Deal with animation. */
 		if (animationCountdown > 0) {
 			--animationCountdown;
+
+			if (animateBrainDrain) {
+				headRotation += 15;
+				if (headRotation >= 360) {
+					headRotation = 0;
+					++headSpins;
+				}
+
+				if (headSpins > 3) {
+					animationCountdown = 0;
+					headRotation = 0;
+					headSpins = 0;
+					animateBrainDrain = false;
+
+					/* CALCULATE damage so we can animate effect. */
+
+					calculatePlayerBrainDrain();
+
+					animateEffect = true;
+					animationCountdown = 100;
+					flashingLimbCountdown = 10;
+					drawFlashingLimb = false;
+					flashLimb = true;
+				}
+			}
 		}
 		else {
 			/* End of ANY animation. */
@@ -502,7 +535,6 @@ export void BattleScreen::run() {
 					applyPlayerAttackEffects();
 
 					playerAttackLoaded = AttackStruct();
-					limbsIdsToSteal = {};
 					limbIdsToUpdate = {};
 
 					/* RESETTING PLAYER TURN.
@@ -523,7 +555,6 @@ export void BattleScreen::run() {
 					applyNpcAttackEffects();
 
 					npcAttackLoaded = AttackStruct();
-					limbsIdsToSteal = {};
 					limbIdsToUpdate = {};
 					
 					playerTurnPanel.setShow(true);
@@ -614,6 +645,10 @@ void BattleScreen::drawNpc(UI& ui) {
 
 			int limbRotationAngle = limb.getRotationAngle();
 
+			if (animateBrainDrain && limb.getBodyPartType() == BodyPartType::Head) {
+				limbRotationAngle -= headRotation;
+			}
+
 			if (drawLimb) {
 				SDL_RenderCopyEx(
 					ui.getMainRenderer(),
@@ -688,6 +723,10 @@ void BattleScreen::drawPlayer(UI& ui) {
 			limbRect.y += playerDrawStartPoint.y + bobbingMeter;
 
 			int limbRotationAngle = limb.getRotationAngle();
+
+			if (animateBrainDrain && limb.getBodyPartType() == BodyPartType::Head) {
+				limbRotationAngle += headRotation;
+			}
 
 			if (drawLimb) {
 				SDL_RenderCopyEx(
@@ -1049,7 +1088,30 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 			}
 			else if (aStruct.attackType == AttackType::BrainDrain) {
 
-				/* This attack is general (all limbs), but is extra effective on Head body parts. */
+				/* 
+				* 1. No need to select a target.
+				* 2. Turning heads instead of advanceAttack.
+				* 3. 
+				*/
+				playerAttackLoaded = aStruct;
+
+				UI& ui = UI::getInstance();
+				playerAttackLoaded.targetLimbId = clickStruct.itemID;
+				animateBrainDrain = true;
+				headRotation = 0;
+				headSpins = 0;
+				animationCountdown = 1000;
+				attackAdvanceHitTarget = false;
+
+				string attackMessage = battle.getPlayerCharacter().getName() + " uses " + playerAttackLoaded.name + "!";
+				passingMessageCountdown = 250;
+				passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
+				passingMessagePanel.setShow(true);
+
+				playerStatsPanel.setShow(true);
+				npcStatsPanel.setShow(true);
+				npcLimbsPanel.setShow(false);
+				playerTurnPanel.setShow(false);
 
 				cout << "BRAIN DRAIN!\n";
 
@@ -1079,7 +1141,162 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 	}
 }
 
+void BattleScreen::calculatePlayerBrainDrain() {
+	/*
+	* Damage ATTACK but also STEAL INTELLIGENCE.
+	* Add all affected limbs to the idsToUpdate.
+	* Make that vector into an unordered_set.
+	* 
+	*/
 
+	AttackType attackType = playerAttackLoaded.attackType;
+	Character& playerCharacter = battle.getPlayerCharacter();
+	Character& npc = battle.getNpc();
+	vector<Limb>& npcLimbs = npc.getLimbs();
+	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+
+	/* Calculate the attack. */
+	int attack = 0;
+	int numberOfEquippedLimbs = 0;
+	int targetLimbId = -1;
+
+	/* Score some player character data. */
+	vector<int> equippedLimbIds = {};
+	for (Limb& limb : playerCharacter.getLimbs()) {
+		if (limb.isEquipped()) {
+			equippedLimbIds.emplace_back(limb.getId());
+			attack += limb.getStrength() + 1;
+			++numberOfEquippedLimbs;
+		}
+	}
+
+	/* Score some NPC data. */
+	vector<int> equippedNpcLimbIds = {};
+	for (Limb& limb : npcLimbs) {
+		if (limb.isEquipped()) {
+			equippedNpcLimbIds.emplace_back(limb.getId());
+
+			if (limb.getBodyPartType() == BodyPartType::Head) {
+				targetLimbId = limb.getId();
+			}
+		}
+	}
+
+	cout << "Target limb id is: " << targetLimbId << "\n";
+
+	if (targetLimbId < 1) {
+		targetLimbId = equippedNpcLimbIds[rand() % equippedNpcLimbIds.size()];
+	}
+
+	cout << "Target limb id is: " << targetLimbId << "\n";
+
+	attack = (attack / 8) + (numberOfEquippedLimbs / 2);
+	int spreadAttack = 0;
+
+	/* Add some randomness. */
+	int attackMod = rand() % ((attack / 10) + 1);
+	if (rand() % 2 == 0) {
+		attackMod *= -1;
+	}
+
+	attack += attackMod;
+
+	/* Get the target limb and make a vector of ids for spread attack. */
+
+	vector<int> connectedLimbIds;
+	int totalDamage = 0;
+
+	int precision = playerAttackLoaded.precision;
+	int intensity = playerAttackLoaded.intensity;
+	bringSumTo100(precision, intensity);
+
+	int precisionDivided = precision / 10;
+
+	if (precisionDivided < 1) {
+		precisionDivided = 1;
+	}
+
+	spreadAttack = attack / precisionDivided;
+	attack = attack - spreadAttack;
+
+	/* attack must be higher. */
+	if (spreadAttack > attack) {
+		int tempNumber = spreadAttack;
+		spreadAttack = attack;
+		attack = tempNumber;
+	}
+
+	/* First get all touching limbs. */
+	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+		Limb& limb = npcLimbs[i];
+
+		for (Joint& joint : limb.getJoints()) {
+			int connectedLimbId = joint.getConnectedLimbId();
+
+			if (connectedLimbId == targetLimbId) {
+				connectedLimbIds.push_back(limb.getId());
+			}
+			else if (limb.getId() == targetLimbId) {
+				if (connectedLimbId >= 0) {
+					connectedLimbIds.push_back(connectedLimbId);
+				}
+			}
+		}
+	}
+
+	int intelligenceDrained = 0;
+	int intelModMax = 10;
+
+	/* Now get the actual target limb, while also attacking the other limbs. */
+	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+		Limb& limb = npcLimbs[i];
+
+		/* Attack the target limb. */
+		if (limb.getId() == targetLimbId) {
+			int intelMod = (rand() % intelModMax) + 1;
+			intelligenceDrained += intelMod;
+			limb.modifyIntelligence(-intelMod);
+			limb.modifyHP(-attack);
+			totalDamage -= attack;
+			limbIdsToUpdate.push_back(limb.getId());
+		}
+		else {
+			if (precision < 90) {
+				/* Attack the spread limbs. */
+				for (int connectedLimbId : connectedLimbIds) {
+					if (limb.getId() == connectedLimbId) {
+						limb.modifyHP(-spreadAttack);
+						totalDamage -= spreadAttack;
+						limbIdsToUpdate.push_back(limb.getId());
+					}
+				}
+			}
+		}
+	}
+
+	/* Now also give those intelligenceDrained points to the Player. */
+	int intelDecreaser = intelligenceDrained + 0;
+	while (intelDecreaser > 0) {
+		
+		int limbToBoostId = equippedLimbIds[rand() % equippedLimbIds.size()];
+		int amountToBoost = (rand() % intelDecreaser) + 1;
+		intelDecreaser -= amountToBoost;
+		playerCharacter.getLimbById(limbToBoostId).modifyIntelligence(amountToBoost);
+		limbIdsToUpdate.push_back(limbToBoostId);
+	}
+
+	int damageDisplayNumber = totalDamage * -1;
+	UI& ui = UI::getInstance();
+	cout << "Player does " << damageDisplayNumber << " total damage\n";
+
+	string attackMessage = playerCharacter.getName() + " does " + to_string(damageDisplayNumber) + " damage, and stole " + to_string(intelligenceDrained) + " intelligence.";
+	passingMessageCountdown = 250;
+	passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
+	passingMessagePanel.setShow(true);
+
+
+	/* Attack is calculated and saved to BattleScreen variables, to be used after Effect animation. */
+}
 
 /*
 * BASIC ATTACK LOGIC is contained in this function.
@@ -1089,8 +1306,6 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 * These calculations provide info for the next animation, but we don't execute on the calculations until after the last animation.
 */
 void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId) {
-
-
 	/* This should happen AFTER the animation.*/
 
 	AttackType attackType = playerAttackLoaded.attackType;
@@ -1113,6 +1328,18 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	* CREATE ANIMATION STRUCT.
 	* BattleAnimationStruct
 	* EffectAnimationStruct
+	* 
+	* 
+	* ATTACK LOGIC:
+	* 
+	* 1 -  all Strength of equipped limbs, plus number of equipped limbs.
+	* 2 - divide by five, add number of equipped limbs (again).
+	* 3 - SPREAD ATTACK : attack spreads some percentage to other limbs.
+	* ----> High precision and high intelligence mean less spread.
+	* 
+	* TO DO:
+	* --- Actually use intelligence.
+	* --- Implement randomness.
 	*/
 
 	/* Calculate the attack. */
@@ -1125,8 +1352,16 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 		}
 	}
 
-	attack = (attack / 5) + numberOfEquippedLimbs; // add some RANDOMNESS. // Make it smaller later? // Start with bigger numbers?
+	attack = (attack / 5) + numberOfEquippedLimbs;
 	int spreadAttack = 0;
+
+	/* Add some randomness. */
+	int attackMod = rand() % ((attack / 10) + 1);
+	if (rand() % 2 == 0) {
+		attackMod *= -1;
+	}
+
+	attack += attackMod;
 
 	/* Get the target limb and make a vector of ids for spread attack. */
 
@@ -1173,7 +1408,6 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 			}
 		}
 	}
-
 
 	/* Now get the actual target limb, while also attacking the other limbs. */
 	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
@@ -1259,6 +1493,11 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 
 	attack = (attack / 5) + numberOfEquippedLimbs; // add some RANDOMNESS.
 	int spreadAttack = 0;
+
+	/* Add some randomness. */
+	int attackMod = rand() % ((attack / 11) + 1);
+	if (rand() % 2 == 0) { attackMod *= -1; }
+	attack += attackMod;
 
 	/* Get the target limb and make a vector of ids for spread attack. */
 
@@ -1386,7 +1625,6 @@ bool BattleScreen::applyNpcAttackEffects() {
 			limb.setCharacterId(npcId);
 
 			npc.getLimbs().push_back(limb);
-
 			playerLimbs.erase(playerLimbs.begin() + i);
 		}
 	}
@@ -1424,16 +1662,9 @@ bool BattleScreen::applyNpcAttackEffects() {
 	/* If player has no limbs they lose. */
 
 	if (playerCharacter.getLimbs().size() < 1) {
-		cout << "No limbs at all?\n";
 		setExitMessage(BattleStatus::PlayerDefeat);
 	}
 
-	if (battle.getBattleStatus() == BattleStatus::RebuildRequired) {
-		cout << "YEP, it's STILL RebuildRequired\n";
-	}
-	else {
-		cout << "NOPE, it's Soemthin' else now!\n";
-	}
 	
 	return true;
 }
@@ -1446,7 +1677,8 @@ bool BattleScreen::applyNpcAttackEffects() {
 */
 bool BattleScreen::applyPlayerAttackEffects() {
 	Character& npc = battle.getNpc();
-	int playerId = battle.getPlayerCharacter().getId();
+	Character& playerCharacter = battle.getPlayerCharacter();
+	int playerId = playerCharacter.getId();
 	int npcId = npc.getId();
 	UI& ui = UI::getInstance();
 
@@ -1493,7 +1725,6 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			npc.getLimbs().erase(npc.getLimbs().begin() + i);
 			continue;
 		}
-
 	}
 
 	bool npcDefeated = false;
@@ -1545,8 +1776,6 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			++numberOfEquippedLimbs;
 		}
 	}
-
-	cout << numberOfEquippedLimbs << " equippedLIMBS\n";
 
 	if (numberOfEquippedLimbs < 1 or npc.getAnchorLimbId() < 1) {
 		npcDefeated = true;
@@ -1602,11 +1831,14 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	npcStatsPanel.destroyTextures();
 	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
 
+	playerStatsPanel.destroyTextures();
+	playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
+	playerStatsPanel.setShow(true);
+
 	playerAttackLoaded = AttackStruct();
 	limbIdsToUpdate = {};
 
 	battle.switchTurn();
-
 
 	return true;
 }

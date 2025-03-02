@@ -224,6 +224,8 @@ export struct AttackStruct {
 		:
 		slug(slug), name(name), precision(precision), intensity(intensity), dNode(dNode),
 		attackType(attackType), attributeTypes(attributeTypes) { }
+
+	/* Empty constructor for null Attack. */
 	AttackStruct() {
 		name = "none";
 		slug = "none";

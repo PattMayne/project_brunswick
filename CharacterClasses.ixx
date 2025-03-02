@@ -38,6 +38,7 @@ import <vector>;
 import <tuple>;
 import <cmath>;
 import <limits>;
+import <unordered_map>;
 
 import TypeStorage;
 import UI;
@@ -483,7 +484,6 @@ export class Limb {
 void Limb::heal() {
 	if (hpMod < 0) {
 		hpMod = 0;
-		cout << "Healed\n";
 	}
 }
 
@@ -1219,10 +1219,16 @@ vector<AttackStruct> Character::getAttacks() {
 	int totalHp = 0;
 
 	int numberOfEquippedLimbs = 0;
+	unordered_map<DominanceNode, int> dNodeScores;
+	dNodeScores[DominanceNode::Blue] = 0;
+	dNodeScores[DominanceNode::Green] = 0;
+	dNodeScores[DominanceNode::Red] = 0;
 
+	/* Scoring up some data. */
 	for (Limb& limb : limbs) {
 		if (!limb.isEquipped()) { continue; }
 		++numberOfEquippedLimbs;
+		++dNodeScores[limb.getDominanceNode()];
 
 		/* Get the BodyPartType lists. */
 		BodyPartType bpType = limb.getBodyPartType();
@@ -1240,6 +1246,24 @@ vector<AttackStruct> Character::getAttacks() {
 		totalHp += limb.getHP();
 	}
 
+	/*
+	* Find the dominant dominance score.
+	* Use functional, a lambda or whatever here.
+	*/
+
+	DominanceNode dominantNode = DominanceNode::Blue;
+
+	if (dNodeScores[DominanceNode::Green] > dNodeScores[dominantNode]) {
+		dominantNode = DominanceNode::Green;
+	}
+	if (dNodeScores[DominanceNode::Red] > dNodeScores[dominantNode]) {
+		dominantNode = DominanceNode::Red;
+	}
+
+	string theColor = dominantNode == DominanceNode::Blue ? "Blue" : dominantNode == DominanceNode::Red ? "Red" : "Green";
+
+	cout << "Dominant node is " << theColor << " with " << dNodeScores[dominantNode] << " limbs\n";
+
 	/* THESE ARE CURRENTLY HARD-CODED. But we will need to make them based on attributes. */
 
 	if (headCount > 1) {
@@ -1252,9 +1276,9 @@ vector<AttackStruct> Character::getAttacks() {
 		attackStructs.emplace_back(
 			"Brain Drain",
 			"BRAIN_DRAIN",
-			70,
-			40,
-			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			55,
+			45,
+			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 			AttackType::BrainDrain,
 			attributeTypes
 		);
@@ -1266,7 +1290,7 @@ vector<AttackStruct> Character::getAttacks() {
 		AttributeType attTypeHP = AttributeType::HP;
 		vector<AttributeType> attributeTypes = { attTypeHP };
 
-		int intensity = torsoCount == 1 ? 70 : torsoCount == 2 ? 80 : torsoCount == 3 ? 90 : 95;
+		int intensity = torsoCount == 1 ? 70 : torsoCount == 2 ? 80 : torsoCount == 3 ? 89 : 95;
 		int precision = 100 - intensity;
 
 		attackStructs.emplace_back(
@@ -1274,7 +1298,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"BODY_SLAM",
 			intensity,
 			precision,
-			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 			AttackType::BodySlam,
 			attributeTypes
 		);
@@ -1291,7 +1315,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"SWOOP",
 			95,
 			5,
-			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 			AttackType::Swoop,
 			attributeTypes
 		);
@@ -1307,7 +1331,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"STEAL",
 			0,
 			100,
-			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 			AttackType::Steal,
 			attributeTypes
 		);
@@ -1322,7 +1346,7 @@ vector<AttackStruct> Character::getAttacks() {
 				"PUNCH",
 				30,
 				70,
-				DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 				AttackType::Punch,
 				attributeTypes
 			);
@@ -1336,7 +1360,7 @@ vector<AttackStruct> Character::getAttacks() {
 				"DOUBLE_PUNCH",
 				50,
 				50,
-				DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 				AttackType::DoublePunch,
 				attributeTypes2
 			);
@@ -1352,7 +1376,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"KICK",
 			70,
 			30,
-			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 			AttackType::Kick,
 			attributeTypes
 		);
@@ -1372,7 +1396,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"FAST_ATTACK",
 			intensity,
 			precision,
-			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 			AttackType::Attack,
 			attributeTypes
 		);
@@ -1390,7 +1414,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"HEAL",
 			100,
 			100,
-			DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 			AttackType::Heal,
 			attributeTypes
 		);
@@ -1407,7 +1431,7 @@ vector<AttackStruct> Character::getAttacks() {
 				"THROW",
 				intensity,
 				precision,
-				DominanceNode::Green, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
 				AttackType::Throw,
 				attributeTypes
 			);
