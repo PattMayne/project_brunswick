@@ -1264,8 +1264,6 @@ vector<AttackStruct> Character::getAttacks() {
 
 	cout << "Dominant node is " << theColor << " with " << dNodeScores[dominantNode] << " limbs\n";
 
-	/* THESE ARE CURRENTLY HARD-CODED. But we will need to make them based on attributes. */
-
 	if (headCount > 1) {
 		/* Two heads means BRAIN DRAIN. */
 
@@ -1278,7 +1276,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"BRAIN_DRAIN",
 			55,
 			45,
-			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode,
 			AttackType::BrainDrain,
 			attributeTypes
 		);
@@ -1298,7 +1296,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"BODY_SLAM",
 			intensity,
 			precision,
-			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, 
 			AttackType::BodySlam,
 			attributeTypes
 		);
@@ -1315,7 +1313,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"SWOOP",
 			95,
 			5,
-			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, 
 			AttackType::Swoop,
 			attributeTypes
 		);
@@ -1326,15 +1324,18 @@ vector<AttackStruct> Character::getAttacks() {
 		AttributeType attTypeHP = AttributeType::HP;
 		vector<AttributeType> attributeTypes = { attTypeHP };
 
-		attackStructs.emplace_back(
-			"Steal",
-			"STEAL",
-			0,
-			100,
-			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
-			AttackType::Steal,
-			attributeTypes
-		);
+		/* Only the Player can steal limbs. */
+		if (characterType == CharacterType::Player) {
+			attackStructs.emplace_back(
+				"Steal",
+				"STEAL",
+				0,
+				100,
+				dominantNode,
+				AttackType::Steal,
+				attributeTypes
+			);
+		}		
 
 
 		if (armCount == 1) {
@@ -1346,7 +1347,7 @@ vector<AttackStruct> Character::getAttacks() {
 				"PUNCH",
 				30,
 				70,
-				dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				dominantNode, 
 				AttackType::Punch,
 				attributeTypes
 			);
@@ -1360,7 +1361,7 @@ vector<AttackStruct> Character::getAttacks() {
 				"DOUBLE_PUNCH",
 				50,
 				50,
-				dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				dominantNode, 
 				AttackType::DoublePunch,
 				attributeTypes2
 			);
@@ -1376,7 +1377,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"KICK",
 			70,
 			30,
-			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, 
 			AttackType::Kick,
 			attributeTypes
 		);
@@ -1396,14 +1397,14 @@ vector<AttackStruct> Character::getAttacks() {
 			"FAST_ATTACK",
 			intensity,
 			precision,
-			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, 
 			AttackType::Attack,
 			attributeTypes
 		);
 	}
 
-
-	if (numberOfEquippedLimbs < limbs.size()) {
+	/* DELETE THIS if we remove Heal and Throw. */
+	if (numberOfEquippedLimbs < limbs.size() && false) {
 		/* There are non-equipped limbs, so we can add a Heal (and possibly Throw) move. */
 
 		AttributeType attTypeHP = AttributeType::HP;
@@ -1414,7 +1415,7 @@ vector<AttackStruct> Character::getAttacks() {
 			"HEAL",
 			100,
 			100,
-			dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+			dominantNode, 
 			AttackType::Heal,
 			attributeTypes
 		);
@@ -1431,7 +1432,7 @@ vector<AttackStruct> Character::getAttacks() {
 				"THROW",
 				intensity,
 				precision,
-				dominantNode, /* TO DO: get dominance node for bodypart types... or does a character's overall type take over? */
+				dominantNode,
 				AttackType::Throw,
 				attributeTypes
 			);

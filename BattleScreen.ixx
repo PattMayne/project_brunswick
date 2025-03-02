@@ -1084,7 +1084,8 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 				aStruct.attackType == AttackType::Punch ||
 				aStruct.attackType == AttackType::DoublePunch ||
 				aStruct.attackType == AttackType::Kick ||
-				aStruct.attackType == AttackType::BodySlam
+				aStruct.attackType == AttackType::BodySlam ||
+				aStruct.attackType == AttackType::Swoop
 				) {
 				/* REGULAR HP-DAMAGE ATTACKS */
 
@@ -1491,8 +1492,9 @@ void BattleScreen::calculateNpcBrainDrain() {
 */
 void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId) {
 	/* This should happen AFTER the animation.*/
-
 	AttackType attackType = playerAttackLoaded.attackType;
+	bool isSwoop = attackType == AttackType::Swoop;
+	cout << "Player is using " << attackTypeText(attackType);
 	Character& playerCharacter = battle.getPlayerCharacter();
 	Character& npc = battle.getNpc();
 	vector<Limb>& npcLimbs = npc.getLimbs();
@@ -1539,8 +1541,10 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	attack = (attack / 5) + numberOfEquippedLimbs;
 	int spreadAttack = 0;
 
+	int attackDivider = !isSwoop ? 10 : 14;
+
 	/* Add some randomness. */
-	int attackMod = rand() % ((attack / 10) + 1);
+	int attackMod = rand() % ((attack / attackDivider) + 1);
 	if (rand() % 2 == 0) {
 		attackMod *= -1;
 	}
@@ -1557,7 +1561,6 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	bringSumTo100(precision, intensity);
 
 	if (precision < 90) {
-
 		int precisionDivided = precision / 10;
 
 		if (precisionDivided < 1) {
@@ -1593,16 +1596,24 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 		}
 	}
 
+	int stolenSpeed = 0;
+	int speedStealAmount = !isSwoop ? 0 : (rand() % 10) + 9;
+	int quarterSteal = speedStealAmount / 4;
+
 	/* Now get the actual target limb, while also attacking the other limbs. */
 	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = npcLimbs[i];
-
 
 		/* Attack the target limb. */
 		if (limb.getId() == targetLimbId) {
 			limb.modifyHP(-attack);
 			totalDamage -= attack;
 			limbIdsToUpdate.push_back(limb.getId());
+
+			if (isSwoop) {
+				stolenSpeed += speedStealAmount;
+				limb.modifySpeed(-speedStealAmount);
+			}
 		}
 		else {
 			if (precision < 90) {
@@ -1612,8 +1623,28 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 						limb.modifyHP(-spreadAttack);
 						totalDamage -= spreadAttack;
 						limbIdsToUpdate.push_back(limb.getId());
+
+						if (isSwoop) {
+							stolenSpeed += quarterSteal;
+							limb.modifySpeed(-quarterSteal);
+						}
 					}
 				}
+			}
+		}
+	}
+
+	if (isSwoop) {
+		int speedAbsorbed = 0;
+		for (Limb& limb: playerLimbs) {
+			if (limb.isEquipped()) {
+				int amountToGiveBack = (rand() % (stolenSpeed - speedAbsorbed)) + 1;
+				limb.modifySpeed(amountToGiveBack);
+				speedAbsorbed += amountToGiveBack;
+			}
+
+			if (speedAbsorbed >= stolenSpeed) {
+				break;
 			}
 		}
 	}
@@ -1622,14 +1653,19 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	UI& ui = UI::getInstance();
 	cout << playerCharacter.getName() << " does " << damageDisplayNumber << " total damage\n";
 
-	string attackMessage = playerCharacter.getName() + " does " + to_string(damageDisplayNumber) + " damage!";
+	string attackMessage = playerCharacter.getName() + " does " + to_string(damageDisplayNumber) + " damage";
+
+	if (isSwoop) {
+		attackMessage += ", and stole " + to_string(stolenSpeed) + " speed";
+	}
+
+	attackMessage += " with " + attackTypeText(playerAttackLoaded.attackType) + "!";
+
 	passingMessageCountdown = 250;
 	passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
 	passingMessagePanel.setShow(true);
 
-
 	/* Attack is calculated and saved to BattleScreen variables, to be used after Effect animation. */
-
 }
 
 /*
@@ -1640,10 +1676,6 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 * These calculations provide info for the next animation, but we don't execute on the calculations until after the last animation.
 */
 void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLimbId) {
-
-
-	/* This should happen AFTER the animation.*/
-
 	AttackType attackType = npcAttackLoaded.attackType;
 	Character& playerCharacter = battle.getPlayerCharacter();
 	Character& npc = battle.getNpc();
