@@ -61,6 +61,7 @@ public:
 	Character& getPlayerCharacter() { return playerCharacter; }
 	Character& getNpc() { return npc; }
 
+	int getId() { return id; }
 	Point getDrawStartNpc() { return drawStartNpc; }
 	Point getDrawStartPlayer() { return drawStartPlayer; }
 	bool isPlayerTurn() { return battleStatus == BattleStatus::PlayerTurn; }
@@ -69,6 +70,7 @@ public:
 	void setDrawStartNpc(Point point) { drawStartNpc = point; }
 	void setDrawStartPlayer(Point point) { drawStartPlayer = point; }
 	void setBattleStatus(BattleStatus status) { battleStatus = status; }
+	void setId(int battleId) { id = battleId; }
 
 
 private:

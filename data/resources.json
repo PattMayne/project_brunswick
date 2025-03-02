@@ -16,7 +16,7 @@
   },
   "BUTTON_TEXT": {
     "ABOUT": "ABOUT",
-    "LOAD_GAME": "LOAD GAME",
+    "LOAD_GAME":  "CONTINUE",
     "SETTINGS": "SETTINGS",
     "NEW_GAME": "NEW GAME",
     "EXIT": "EXIT",

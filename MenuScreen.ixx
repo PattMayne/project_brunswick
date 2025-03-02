@@ -33,6 +33,7 @@ import <unordered_map>;
 import TypeStorage;
 import GameState;
 import Resources;
+import Database;
 import UI;
 
 using namespace std;
@@ -214,9 +215,34 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 					cout << "NEW GAME\n";
 					break;
 				case ButtonOption::LoadGame:
-					screenToLoadStruct.screenType = ScreenType::Battle;
+
+					/* Check to see if a Battle is ongoing.
+					* -- make sure the player has limbs (if they don't, make it a loss).
+					* -- make sure the NPC exists and has limbs (if they don't, make it a win).
+					* Send to battle if all above is true.
+					* Otherwise send to Map.
+					* Map will need a method to give vanilla limbs to limbless player.
+					* 
+					* TO DO: Check that NPCs exist for the id (we are already retrieving the NPC id).
+					*/
+
+					
 					running = false;
-					cout << "LOAD GAME (currently battle screen)\n";
+					cout << "LOAD GAME (currently map by default for now)\n";
+
+					if (true) {
+						int battleId = getCurrentBattleId(gameState.getPlayerID());
+						cout << "Battle id: " << battleId << endl;
+
+						if (battleId < 1) {
+							screenToLoadStruct.screenType = ScreenType::Map;
+						}
+						else {
+							screenToLoadStruct.screenType = ScreenType::Battle;
+							screenToLoadStruct.id = battleId;
+						}
+					}					
+
 					break;
 				case ButtonOption::Settings:
 					// switch to other panel

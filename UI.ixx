@@ -1279,8 +1279,8 @@ vector<PreButtonStruct> UI::getMainMenuPreButtonStructs() {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	return {
-		buildPreButtonStruct(resources.getButtonText("NEW_GAME"), ButtonOption::NewGame),
 		buildPreButtonStruct(resources.getButtonText("LOAD_GAME"), ButtonOption::LoadGame),
+		buildPreButtonStruct(resources.getButtonText("NEW_GAME"), ButtonOption::NewGame),
 		buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings),
 		buildPreButtonStruct(resources.getButtonText("ABOUT"), ButtonOption::About),
 		buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit)

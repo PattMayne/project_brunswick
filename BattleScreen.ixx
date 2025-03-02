@@ -110,6 +110,11 @@ public:
 		screenType = ScreenType::Battle;
 		battle = loadBattle(id);
 
+		if (battle.getBattleStatus() == BattleStatus::RebuildRequired) {
+			battle.setBattleStatus(BattleStatus::PlayerTurn);
+			updateBattleStatus(battle.getId(), battle.getBattleStatus());
+		}
+
 		getBackgroundTexture(ui);
 		createTitleTexture(ui);
 
@@ -562,13 +567,16 @@ export void BattleScreen::run() {
 					playerStatsPanel.setShow(true);
 					npcStatsPanel.setShow(true);
 
-					battle.setBattleStatus(BattleStatus::PlayerTurn);
+					if (battle.getBattleStatus() != BattleStatus::PlayerDefeat) {
+						battle.setBattleStatus(BattleStatus::PlayerTurn);
+						updateBattleStatus(battle.getId(), battle.getBattleStatus());
+					}
 				}
 			}
 		}
 
 		/* Initiate NPC turn. */
-		if (!battle.isPlayerTurn() && animationCountdown < 1 && npcAttackLoaded.attackType == AttackType::NoAttack) {
+		if (battle.getBattleStatus() == BattleStatus::NpcTurn && animationCountdown < 1 && npcAttackLoaded.attackType == AttackType::NoAttack) {
 			cout << "NPC TURN!\n";
 			launchNpcTurn();
 		}
@@ -1609,19 +1617,23 @@ bool BattleScreen::applyNpcAttackEffects() {
 
 	bool defeatedAnchorLimb = false;
 	bool defeatedAnyLimb = false;
+	int numberOfEquippableLimb = 0;
 
 	for (int i = playerLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = playerLimbs[i];
 		if (limb.isEquipped()) {
 			cout << "Limb " << limb.getName() << " has " << limb.getHP() << " hp\n";
 		}
-		
-		if (limb.isEquipped() && limb.getHP() < 1) {
+		if (limb.getHP() > 0) {
+			++numberOfEquippableLimb;
+
+		} else if (limb.isEquipped()) {
 			/* Equipped limb is defeated. Give it to NPC. */
 			defeatedAnyLimb = true;
 			cout << "Limb " << limb.getName() << " is below 1HP\n";
 			if (playerCharacter.getAnchorLimbId() == limb.getId()) {
-				defeatedAnchorLimb = true; }
+				defeatedAnchorLimb = true;
+			}
 
 			playerCharacter.unEquipLimb(limb.getId());
 			limb.setCharacterId(npcId);
@@ -1636,10 +1648,25 @@ bool BattleScreen::applyNpcAttackEffects() {
 	if (defeatedAnchorLimb) {
 		cout << "DEFEATED ANCHOR LIMB.\n Sending to Character Creation Screen.\n";
 		playerCharacter.clearSuit();
-		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
-		setExitMessage(BattleStatus::RebuildRequired);
 		updateCharacterAnchorIdInTrans(playerId, -1, db);
+
+		if (numberOfEquippableLimb > 0) {
+			cout << "Sending to Character Creation Screen.\n";
+			screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+			setExitMessage(BattleStatus::RebuildRequired);
+			updateBattleStatusInTrans(battle.getId(), BattleStatus::RebuildRequired, db);
+		}
+		else {
+			cout << "Sending to Menu DEFEATED.\n";
+			screenToLoadStruct.screenType = ScreenType::Menu;
+			setExitMessage(BattleStatus::PlayerDefeat);
+			cout << "PLAyer DEFOoTED\n";
+			cout << "Defeat is passing through here, but not being saved to the db. Why?\n";
+			updateBattleStatusInTrans(battle.getId(), BattleStatus::PlayerDefeat, db);
+		}
 	}
+
+	
 	
 	/* Save all the limbs. */
 	
@@ -1672,6 +1699,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 
 	if (equippableLimbsCount < 1) {
 		setExitMessage(BattleStatus::PlayerDefeat);
+		updateBattleStatus(battle.getId(), BattleStatus::PlayerDefeat);
 	}
 
 	
@@ -1828,6 +1856,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		setLimbIdList();
 
 		setExitMessage(BattleStatus::PlayerVictory);
+		updateBattleStatusInTrans(battle.getId(), BattleStatus::PlayerVictory, db);
 
 		/* Victory Condition gives you a popup message, and then go back to the map. */
 	}
@@ -1848,6 +1877,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	limbIdsToUpdate = {};
 
 	battle.switchTurn();
+	updateBattleStatus(battle.getId(), battle.getBattleStatus());
 
 	return true;
 }
@@ -1959,6 +1989,7 @@ void BattleScreen::launchNpcTurn() {
 
 	if (attackStructs.size() < 1 && battle.isNpcTurn()) {
 		battle.switchTurn();
+		updateBattleStatus(battle.getId(), battle.getBattleStatus());
 		return;
 	}
 
@@ -1983,9 +2014,11 @@ void BattleScreen::launchNpcTurn() {
 		playerCharacter.clearSuit();
 		updateCharacterAnchorIdInTrans(playerCharacter.getId(), playerCharacter.getAnchorLimbId(), db);
 		updateCharacterLimbsInTransaction(npc.getId(), npc.getAnchorLimbId(), npc.getLimbs(), db);
-		commitTransactionAndCloseDatabase(db);
 
 		setExitMessage(BattleStatus::PlayerDefeat);
+		updateBattleStatusInTrans(battle.getId(), BattleStatus::PlayerDefeat, db);
+		commitTransactionAndCloseDatabase(db);
+
 		return;
 	}
 
@@ -2029,13 +2062,15 @@ void BattleScreen::launchNpcTurn() {
 * The exit message is the gatekeeper to actually leaving.
 */
 void BattleScreen::setExitMessage(BattleStatus battleStatus) {
+	
 	battle.setBattleStatus(battleStatus);
 	string exitMessage = "";
 	Character& playerCharacter = battle.getPlayerCharacter();
 	Character& npc = battle.getNpc();
 
 	if (battleStatus == BattleStatus::PlayerDefeat) {
-		exitMessage = npc.getName() + " has defeated " + playerCharacter.getName() + "!\n";
+		exitMessage = npc.getName() + " has defeeeated " + playerCharacter.getName() + "!\n";
+		
 		screenToLoadStruct.screenType = ScreenType::Menu;
 		confirmationPanel.destroyTextures();
 		confirmationPanel = getNewConfirmationMessage(confirmationPanel, exitMessage, ConfirmationButtonType::OkCancel, false);
@@ -2043,6 +2078,7 @@ void BattleScreen::setExitMessage(BattleStatus battleStatus) {
 
 	} else if (battleStatus == BattleStatus::PlayerVictory) {
 		exitMessage = playerCharacter.getName() + " has defeated " + npc.getName() + "!\n";
+		
 		screenToLoadStruct.screenType = ScreenType::Map;
 		confirmationPanel.destroyTextures();
 		confirmationPanel = getNewConfirmationMessage(confirmationPanel, exitMessage, ConfirmationButtonType::OkCancel, false);

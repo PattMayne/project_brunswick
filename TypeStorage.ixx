@@ -265,6 +265,7 @@ export struct AttackStruct {
 	int sourceLimbId;
 };
 
+
 export unordered_map<AttackType, string> getAttackTypeTextDictionary() {
 	unordered_map<AttackType, string> typeDictionary;
 	typeDictionary[AttackType::NoAttack] = "No Attack";

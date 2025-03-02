@@ -137,7 +137,97 @@ export void createDB() {
 * | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
 * |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
 * |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
+* 
+* Battle-related functions.
+* 
 */
+
+
+export void updateBattleStatusInTrans(int battleId, BattleStatus battleStatus, sqlite3* db) {
+    /* Now update the battle's status in DB. */
+    cout << "Updating battle # " << battleId << endl;
+    const char* updateSQL = "UPDATE battle SET battle_status = ? WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare BATTLE battle_status UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+    }
+
+    int battleStatusId = static_cast<int>(battleStatus);
+
+    /* Bind the values. */
+    sqlite3_bind_int(statement, 1, battleStatusId);
+    sqlite3_bind_int(statement, 2, battleId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update failed: " << sqlite3_errmsg(db) << endl; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+}
+
+
+export void updateBattleStatus(int battleId, BattleStatus battleStatus) {
+    sqlite3* db = startTransaction();
+    updateBattleStatusInTrans(battleId, battleStatus, db);
+    commitTransactionAndCloseDatabase(db);
+}
+
+
+export int getCurrentBattleId(int playerId) {
+    int currentMapId = -1;
+
+    /* Open database. */
+    sqlite3* db;
+    char* errMsg = nullptr;
+    int dbFailed = sqlite3_open(dbPath(), &db);
+    if (dbFailed != 0) {
+        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+    /* Create statement template. */
+    const char* querySQL = "SELECT id, npc_id FROM battle WHERE player_id = ? AND "
+        "(battle_status = ? OR battle_status = ? OR battle_status = ?);";
+    sqlite3_stmt* statement;
+    int returnCode = sqlite3_prepare_v2(db, querySQL, -1, &statement, nullptr);
+
+    if (returnCode != SQLITE_OK) {
+        std::cerr << "Failed to prepare statement: " << sqlite3_errmsg(db) << std::endl;
+        sqlite3_close(db);
+        return false;
+    }
+
+    int battleStatusIntPlayer = static_cast<int>(BattleStatus::PlayerTurn);
+    int battleStatusIntNpc = static_cast<int>(BattleStatus::NpcTurn);
+    int battleStatusRebuild = static_cast<int>(BattleStatus::RebuildRequired);
+
+    /* Bind the slug value. */
+    sqlite3_bind_int(statement, 1, playerId);
+    sqlite3_bind_int(statement, 2, battleStatusIntPlayer);
+    sqlite3_bind_int(statement, 3, battleStatusIntNpc);
+    sqlite3_bind_int(statement, 4, battleStatusRebuild);
+
+    /* Execute binded statement. */
+    int numberOfOpenBattles = 0;
+    while ((returnCode = sqlite3_step(statement)) == SQLITE_ROW) {
+        ++numberOfOpenBattles;
+        currentMapId = sqlite3_column_int(statement, 0);
+        int oppoId = sqlite3_column_int(statement, 1);
+    }
+    cout << "There are " << numberOfOpenBattles << " open battles.\n";
+
+    /* Finalize statement and close DB. */
+    sqlite3_finalize(statement);
+    sqlite3_close(db);
+
+
+    return currentMapId;
+}
 
 
 export int createNewBattle(string mapSlugString, int playerId, int npcId, BattleStatus battleStatus) {
@@ -167,7 +257,6 @@ export int createNewBattle(string mapSlugString, int playerId, int npcId, Battle
         battleId = static_cast<int>(sqlite3_last_insert_rowid(db));
     }
 
-    /* Close DB. */
     sqlite3_finalize(newBattleStatement);
 
     /* Now update both characters' battle_id. */
@@ -250,6 +339,8 @@ export Battle loadBattle(int battleId) {
         mapSlug,
         battleStatus
     );
+
+    playerBattle.setId(battleId);
 
     commitTransactionAndCloseDatabase(db);
 
@@ -1733,6 +1824,7 @@ export int createPlayerCharacterOrGetID() {
 * Map-related functions.
 * 
 */
+
 
 
 export void updatePlayerMapLocation(string slugString, Point position) {
