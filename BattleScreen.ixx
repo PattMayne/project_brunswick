@@ -1118,7 +1118,9 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 			}
 			else if (aStruct.attackType == AttackType::Steal) {
 
-				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+				/* This attack is general (all limbs), but is LESS effective on Torso body parts.
+				* This is where SPEED and INTELLIGENCE help.
+				*/
 
 				cout << "STEALIMG LIMB!\n";
 
@@ -1132,7 +1134,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 			}
 			else if (aStruct.attackType == AttackType::Heal) {
 
-				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+				/* Select one to break down, and one to heal. */
 
 				cout << "HEAL!\n";
 
@@ -1436,9 +1438,9 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 
 	int damageDisplayNumber = totalDamage * -1;
 	UI& ui = UI::getInstance();
-	cout << "Player does " << damageDisplayNumber << " total damage\n";
+	cout << playerCharacter.getName() << " does " << damageDisplayNumber << " total damage\n";
 
-	string attackMessage = "Player does " + to_string(damageDisplayNumber) + " damage!";
+	string attackMessage = playerCharacter.getName() + " does " + to_string(damageDisplayNumber) + " damage!";
 	passingMessageCountdown = 250;
 	passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
 	passingMessagePanel.setShow(true);
@@ -1572,7 +1574,7 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 	UI& ui = UI::getInstance();
 	cout << npc.getName() + " does " << damageDisplayNumber << " total damage\n";
 
-	string attackMessage = npc.getName() + " does " + to_string(damageDisplayNumber) + " damage!";
+	string attackMessage = npc.getName() + " does " + to_string(damageDisplayNumber) + " damage with " + attackTypeText(attackType);
 	passingMessageCountdown = 250;
 	passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
 	passingMessagePanel.setShow(true);
@@ -1659,9 +1661,16 @@ bool BattleScreen::applyNpcAttackEffects() {
 	npcAttackLoaded = AttackStruct();
 	limbIdsToUpdate = {};
 
-	/* If player has no limbs they lose. */
+	/* If player has no EQUIPPABLE limbs they lose. */
 
-	if (playerCharacter.getLimbs().size() < 1) {
+	int equippableLimbsCount = 0;
+	for (Limb& limb : playerLimbs) {
+		if (limb.getHP() >= 0) {
+			++equippableLimbsCount;
+		}
+	}
+
+	if (equippableLimbsCount < 1) {
 		setExitMessage(BattleStatus::PlayerDefeat);
 	}
 
@@ -1953,16 +1962,31 @@ void BattleScreen::launchNpcTurn() {
 		return;
 	}
 
-	int attackStructIndex = rand() % attackStructs.size();
+	npcAttackLoaded = attackStructs[rand() % attackStructs.size()];
 
-	AttackStruct attackStruct = attackStructs[attackStructIndex];
-	npcAttackLoaded = attackStruct;
+	/* If player has no EQUIPPABLE limbs they lose. */
+
+	int equippableLimbsCount = 0;
+	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+	for (Limb& limb : playerLimbs) {
+		if (limb.getHP() >= 0) {
+			++equippableLimbsCount;
+		}
+	}
 
 	/* Make sure the player has limbs to attack. */
-	if (playerCharacter.getLimbs().size() < 1) {
+	if (equippableLimbsCount < 1) {
 
-		cout << "PLAYER HAS NO LIMBS\n";
+		cout << "PLAYER HAS NO --equippable-- LIMBS\n";
 		// LOSING CONDITIONS.
+		sqlite3* db = startTransaction();
+		playerCharacter.clearSuit();
+		updateCharacterAnchorIdInTrans(playerCharacter.getId(), playerCharacter.getAnchorLimbId(), db);
+		updateCharacterLimbsInTransaction(npc.getId(), npc.getAnchorLimbId(), npc.getLimbs(), db);
+		commitTransactionAndCloseDatabase(db);
+
+		setExitMessage(BattleStatus::PlayerDefeat);
+		return;
 	}
 
 	/* Get the TARGET LIMB ID. */
@@ -1977,7 +2001,8 @@ void BattleScreen::launchNpcTurn() {
 
 	if (targetLimbIds.size() < 1) {
 		cout << "WE CANNOT FIGHT because the player has no limbs equipped\n";
-
+		setExitMessage(BattleStatus::RebuildRequired);
+		return;
 		/* 
 		* SEND the PLAYER to the CC screen...
 		* unless they have no limbs at all... in that case player loses.
@@ -1990,16 +2015,6 @@ void BattleScreen::launchNpcTurn() {
 
 	attackAdvanceHitTarget = false;
 	animateAttack = true;
-
-	/* START THE ANIMATION. */
-
-
-	/*
-	* 1. get available attacks.
-	* 2. randomly pick an attack and a targetLimb.
-	* 3. copy the PlayerAttack functions to make the NPC attack the player.
-	* 4. Initiate the animation, calculations, and executions.
-	*/
 }
 
 /*
@@ -2039,5 +2054,8 @@ void BattleScreen::setExitMessage(BattleStatus battleStatus) {
 		confirmationPanel.destroyTextures();
 		confirmationPanel = getNewConfirmationMessage(confirmationPanel, exitMessage, ConfirmationButtonType::OkCancel, false);
 		confirmationPanel.setShow(true);
+	}
+	else {
+		cout << "Exit message is WRONG\n";
 	}
 }

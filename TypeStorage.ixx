@@ -6,6 +6,7 @@ module;
 #include <string>
 #include <vector>
 #include <iostream>
+#include <unordered_map>
 
 export module TypeStorage;
 
@@ -262,4 +263,27 @@ export struct AttackStruct {
 
 	int targetLimbId;
 	int sourceLimbId;
+};
+
+export unordered_map<AttackType, string> getAttackTypeTextDictionary() {
+	unordered_map<AttackType, string> typeDictionary;
+	typeDictionary[AttackType::NoAttack] = "No Attack";
+	typeDictionary[AttackType::Attack] = "Attack";
+	typeDictionary[AttackType::Punch] = "Punch";
+	typeDictionary[AttackType::DoublePunch] = "Double Punch";
+	typeDictionary[AttackType::Kick] = "Kick";
+	typeDictionary[AttackType::BodySlam] = "Body Slam";
+	typeDictionary[AttackType::Swoop] = "Swoop";
+	typeDictionary[AttackType::BrainDrain] = "Brain Drain";
+	typeDictionary[AttackType::Steal] = "Steal";
+	typeDictionary[AttackType::Throw] = "Throw";
+	typeDictionary[AttackType::Heal] = "Heal";
+
+	return typeDictionary;
+}
+
+
+export string attackTypeText(AttackType attackType) {
+	unordered_map<AttackType, string> typeDictionary = getAttackTypeTextDictionary();
+	return typeDictionary[attackType];
 };
