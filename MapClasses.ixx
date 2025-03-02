@@ -461,6 +461,14 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	for (LimbForm& limbForm : nativeLimbForms) {
 		int numberOfThisLimb = 4;
 
+		/* WEIGHT it HEAVY for HEADS and BODIES. */
+
+		if (limbForm.type == BodyPartType::Head) {
+			numberOfThisLimb = 6;
+		} else if (limbForm.type == BodyPartType::Torso) {
+			numberOfThisLimb = 5;
+		}
+
 		for (int n = 0; n < numberOfThisLimb; ++n) {
 			Limb& newLimb = roamingLimbs.emplace_back(limbForm);
 			Point newPosition = floorPositions[rand() % floorPositions.size()];

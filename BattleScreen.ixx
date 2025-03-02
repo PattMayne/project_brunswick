@@ -1595,7 +1595,7 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 			}
 		}
 	}
-
+	
 	int stolenSpeed = 0;
 	int speedStealAmount = !isSwoop ? 0 : (rand() % 10) + 9;
 	int quarterSteal = speedStealAmount / 4;
@@ -1677,6 +1677,7 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 */
 void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLimbId) {
 	AttackType attackType = npcAttackLoaded.attackType;
+	bool isSwoop = attackType == AttackType::Swoop;
 	Character& playerCharacter = battle.getPlayerCharacter();
 	Character& npc = battle.getNpc();
 	vector<Limb>& npcLimbs = npc.getLimbs();
@@ -1710,8 +1711,10 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 	attack = (attack / 5) + numberOfEquippedLimbs; // add some RANDOMNESS.
 	int spreadAttack = 0;
 
+	int attackDivider = !isSwoop ? 11 : 14;
+
 	/* Add some randomness. */
-	int attackMod = rand() % ((attack / 11) + 1);
+	int attackMod = rand() % ((attack / attackDivider) + 1);
 	if (rand() % 2 == 0) { attackMod *= -1; }
 	attack += attackMod;
 
@@ -1760,6 +1763,10 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 		}
 	}
 
+	int stolenSpeed = 0;
+	int speedStealAmount = !isSwoop ? 0 : (rand() % 14) + 5;
+	int quarterSteal = speedStealAmount / 4;
+
 	/* Now get the actual target limb, while also attacking the other limbs. */
 	for (int i = playerLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = playerLimbs[i];
@@ -1769,6 +1776,11 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 			limb.modifyHP(-attack);
 			totalDamage -= attack;
 			limbIdsToUpdate.push_back(limb.getId());
+
+			if (isSwoop) {
+				stolenSpeed += speedStealAmount;
+				limb.modifySpeed(-speedStealAmount);
+			}
 		}
 		else {
 			if (precision < 90) {
@@ -1778,8 +1790,28 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 						limb.modifyHP(-spreadAttack);
 						totalDamage -= spreadAttack;
 						limbIdsToUpdate.push_back(limb.getId());
+
+						if (isSwoop) {
+							stolenSpeed += quarterSteal;
+							limb.modifySpeed(-quarterSteal);
+						}
 					}
 				}
+			}
+		}
+	}
+
+	if (isSwoop) {
+		int speedAbsorbed = 0;
+		for (Limb& limb : npcLimbs) {
+			if (limb.isEquipped()) {
+				int amountToGiveBack = (rand() % (stolenSpeed - speedAbsorbed)) + 1;
+				limb.modifySpeed(amountToGiveBack);
+				speedAbsorbed += amountToGiveBack;
+			}
+
+			if (speedAbsorbed >= stolenSpeed) {
+				break;
 			}
 		}
 	}
@@ -1788,7 +1820,14 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 	UI& ui = UI::getInstance();
 	cout << npc.getName() + " does " << damageDisplayNumber << " total damage\n";
 
-	string attackMessage = npc.getName() + " does " + to_string(damageDisplayNumber) + " damage with " + attackTypeText(attackType);
+	string attackMessage = npc.getName() + " does " + to_string(damageDisplayNumber) + " damage";
+
+	if (isSwoop) {
+		attackMessage += ", and stole " + to_string(stolenSpeed) + " speed";
+	}
+
+	attackMessage += " with " + attackTypeText(npcAttackLoaded.attackType) + "!";
+
 	passingMessageCountdown = 250;
 	passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
 	passingMessagePanel.setShow(true);
@@ -2110,12 +2149,10 @@ void BattleScreen::setNpcAttackAdvance() {
 			npcAttackLoaded.attackType == AttackType::Punch ||
 			npcAttackLoaded.attackType == AttackType::DoublePunch ||
 			npcAttackLoaded.attackType == AttackType::Kick ||
-			npcAttackLoaded.attackType == AttackType::BodySlam
+			npcAttackLoaded.attackType == AttackType::BodySlam ||
+			npcAttackLoaded.attackType == AttackType::Swoop
 			) {
 			calculateNpcDamageAttackStruct(-1, npcAttackLoaded.targetLimbId);
-		}
-		else if (npcAttackLoaded.attackType == AttackType::Swoop) {
-			cout << attackTypeText(npcAttackLoaded.attackType) << endl;
 		}
 
 		animateEffect = true;
@@ -2282,6 +2319,8 @@ void BattleScreen::launchNpcTurn() {
 
 		attackAdvanceHitTarget = false;
 		animateAttack = true;
+
+		string attackMessage = npc.getName() + " uses " + npcAttackLoaded.name + "!";
 	}
 	else if(attackType == AttackType::BrainDrain) {
 
