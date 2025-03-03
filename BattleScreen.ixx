@@ -2080,10 +2080,7 @@ bool BattleScreen::applyPlayerStealEffects() {
 			/* Drop the child limbs. */
 			npc.unEquipLimb(limb.getId());
 			limb.unEquip();
-			limb.setCharacterId(-1);
-			limb.setPosition(npc.getPosition());
 			updateLimbBattleEffectsInTransaction(limb, db);
-			npcLimbs.erase(npcLimbs.begin() + i);
 			continue;
 		}
 	}
