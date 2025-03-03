@@ -60,6 +60,7 @@ import <vector>;
 import <cstdlib>;
 import <time.h>;
 import <unordered_map>;
+import <unordered_set>;
 
 import TypeStorage;
 import GameState;
@@ -132,7 +133,8 @@ public:
 		playerCharacter.buildDrawLimbList();
 
 		playerCharacter.setTexture(playerCharacter.createAvatar());
-		npc.setTexture(npc.createAvatar());
+		SDL_Texture* newTexture = npc.createAvatar();
+		npc.setTexture(newTexture);
 
 		/* Get the draw start points (WILL CHANGE after we implement button panels.) */
 		int playerAvatarWidth, playerAvatarHeight, npcAvatarWidth, npcAvatarHeight;
@@ -201,6 +203,7 @@ public:
 		animateAttack = false;
 		headRotation = 0;
 		headSpins = 0;
+		stealSuccess = false;
 	}
 
 	void createPlayerLimbPanels();
@@ -210,11 +213,13 @@ public:
 
 	void calculatePlayerBrainDrain();
 	void calculateNpcBrainDrain();
+	void calculatePlayerSteal();
 
 	ScreenType getScreenType() { return screenType; }
 	void run();
 
 	bool applyPlayerAttackEffects();
+	bool applyPlayerStealEffects();
 	bool applyNpcAttackEffects();
 
 	void setExitMessage(BattleStatus battleStatus);
@@ -289,6 +294,7 @@ private:
 	int bobbingMeter;
 	int bobbingMax;
 	bool reverseBob;
+	bool stealSuccess;
 
 	vector<AttackStruct> playerAttackStructs;
 	vector<AttackStruct> npcAttackStructs;
@@ -398,7 +404,7 @@ void BattleScreen::setLimbIdList() {
 }
 
 void BattleScreen::resetRotationAmount() {
-	rotationAmount = 2;
+	rotationAmount = 1;
 
 	if (rand() % 2 == 0) {
 		rotationAmount *= -1;
@@ -567,6 +573,8 @@ export void BattleScreen::run() {
 					npcAttackLoaded = AttackStruct();
 					limbIdsToUpdate = {};
 					
+					playerTurnPanel.destroyTextures();
+					playerTurnPanel = ui.createBattlePanel(playerAttackStructs);
 					playerTurnPanel.setShow(true);
 					npcLimbsPanel.setShow(false);
 					playerStatsPanel.setShow(true);
@@ -973,7 +981,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 
 
 					/* It might be the "back" button (but usually won't be so deal with that first). */
-					if (clickStruct.buttonOption != ButtonOption::Back) {
+					if (clickStruct.buttonOption == ButtonOption::LoadLimb) {
 						/* Do the animation.
 						* When it counts down we'll launch the calculations.
 						* After the NEXT animation we'll execute the results.
@@ -993,7 +1001,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						npcStatsPanel.setShow(true);
 						npcLimbsPanel.setShow(false);
 					}
-					else {
+					else if (clickStruct.buttonOption == ButtonOption::Back) {
 						/* unload attack, reset panels. */
 						playerTurnPanel.setShow(true);
 						npcLimbsPanel.setShow(false);
@@ -1149,23 +1157,105 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 
 				cout << "STEALIMG LIMB!\n";
 
-			}
-			else if (aStruct.attackType == AttackType::Throw) {
+				/* Show the panel of limbs and choose something to steal */
 
-				/* This attack is general (all limbs), but is LESS effective on Torso body parts. */
+				npcLimbsPanel.setShow(true);
+				playerStatsPanel.setShow(false);
+				npcStatsPanel.setShow(false);
+				playerTurnPanel.setShow(false);
 
-				cout << "THROW!\n";
-
-			}
-			else if (aStruct.attackType == AttackType::Heal) {
-
-				/* Select one to break down, and one to heal. */
-
-				cout << "HEAL!\n";
-
+				for (AttackStruct attackStruct : playerAttackStructs) {
+					if (attackStruct.attackType == AttackType::Steal) {
+						playerAttackLoaded = attackStruct;
+						break;
+					}
+				}
+				
 			}
 		}
 	}
+}
+
+/* When player tries to steal a limb, this calculates the chances and takes a shot.
+* Also, steals immediately.
+*/
+void BattleScreen::calculatePlayerSteal() {
+	Character& npc = battle.getNpc();
+	Character& playerCharacter = battle.getPlayerCharacter();
+	vector<Limb>& npcLimbs = npc.getLimbs();
+	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+	int targetLimbId = playerAttackLoaded.targetLimbId;
+
+	/*
+	* 1. Get target limb and info about player stats
+	* 2. Algorithm: The more hurt they are, the more likely the steal. Intelligence and Speed both boost it.
+	* 
+	* -- compare PLAYER speeds
+	*/
+
+	Limb& targetLimb = targetLimbId > 0 ? npc.getLimbById(targetLimbId) : npcLimbs[0];
+
+	int numNpcEqLimbs = 0;
+	int numPlayerEqLimbs = 0;
+
+	for (Limb& limb : npcLimbs) {
+		if (limb.isEquipped()) {
+			++numNpcEqLimbs;
+		}
+	}
+
+	
+	for (Limb& limb : playerLimbs) {
+		if (limb.isEquipped()) {
+			++numPlayerEqLimbs;
+		}
+	}
+
+	int boostDividerNpc = numNpcEqLimbs / 2;
+	int boostDividerPlayer = numPlayerEqLimbs / 2;
+
+	if (boostDividerNpc < 1) {
+		boostDividerNpc = 1;
+	}
+
+	if (boostDividerPlayer < 1) {
+		boostDividerPlayer = 1;
+	}
+
+	int playerSpeed = playerCharacter.getSpeed() / boostDividerPlayer;
+	int playerIntelligence = playerCharacter.getIntelligence() / boostDividerPlayer;
+	int npcIntelligence = npc.getIntelligence() / boostDividerNpc;
+	int npcSpeed = npc.getSpeed() / boostDividerNpc;
+
+	int drawSize = targetLimb.getForm().hp;
+
+	/* 
+	* Chance of steal STARTS at 0 with full health.
+	* % chance of steal =  percentage damage taken.
+	* 
+	*/
+
+	int chances = (drawSize - targetLimb.getHP()) +
+		(playerSpeed - npcSpeed) +
+		((playerIntelligence - npcIntelligence) / 2);
+
+
+	int bingo = rand() % drawSize;
+	stealSuccess = bingo <= chances;
+
+	stealSuccess = true;
+
+	if (stealSuccess) {
+		
+	}
+
+	UI& ui = UI::getInstance();
+	string stealMessage = stealSuccess ?
+		playerCharacter.getName() + " steals limb!" :
+		"STEAL FAILED";
+	passingMessageCountdown = 250;
+	passingMessagePanel = ui.getNewPassingMessagePanel(stealMessage, passingMessagePanel, true, true);
+	passingMessagePanel.setShow(true);
 }
 
 void BattleScreen::calculatePlayerBrainDrain() {
@@ -1925,6 +2015,8 @@ bool BattleScreen::applyNpcAttackEffects() {
 		}
 	}
 
+	updateCharacterAnchorIdInTrans(playerCharacter.getId(), playerCharacter.getAnchorLimbId(), db);
+
 	commitTransactionAndCloseDatabase(db);
 	createPlayerLimbPanels();
 	playerStatsPanel.destroyTextures();
@@ -1951,7 +2043,91 @@ bool BattleScreen::applyNpcAttackEffects() {
 	return true;
 }
 
+bool BattleScreen::applyPlayerStealEffects() {
+	if (!stealSuccess || playerAttackLoaded.targetLimbId < 1) { return false; }
 
+	Character& npc = battle.getNpc();
+	Character& playerCharacter = battle.getPlayerCharacter();
+	vector<Limb>& npcLimbs = npc.getLimbs();
+	int targetLimbId = playerAttackLoaded.targetLimbId;
+	Limb& targetLimb = npc.getLimbById(targetLimbId);
+
+	/*
+	* STEAL SUCCESS.
+	* Take the limb immediately.
+	*/
+	cout << "Steal succeeded\n";
+	/* Take the limb immediately. */
+	sqlite3* db = startTransaction();
+	unordered_set<int> stolenLimbChildIds = npc.getChildLimbIdsRecursively(targetLimb);
+
+	cout << npcLimbs.size() << " limbs\n";
+	cout << "targetLimbId: " << targetLimbId << endl;
+
+	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+		Limb& limb = npcLimbs[i];
+		if (limb.getId() == targetLimbId) {
+			/* Steal the target limb. */
+			cout << "Stealing " << limb.getName() << endl;
+			npc.unEquipLimb(limb.getId());
+			limb.unEquip();
+			targetLimb.setCharacterId(playerCharacter.getId());
+			playerCharacter.addLimb(targetLimb);
+			npcLimbs.erase(npcLimbs.begin() + i);
+			continue;
+		}
+		else if (stolenLimbChildIds.count(limb.getId()) > 0) {
+			/* Drop the child limbs. */
+			npc.unEquipLimb(limb.getId());
+			limb.unEquip();
+			limb.setCharacterId(-1);
+			limb.setPosition(npc.getPosition());
+			npcLimbs.erase(npcLimbs.begin() + i);
+			continue;
+		}
+	}
+
+	for (int i = 0; i < npcLimbs.size(); ++i) {
+		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
+	}
+
+	cout << "We have " << stolenLimbChildIds.size() << " stolenLimbChildIds\n";
+
+	if (stolenLimbChildIds.size() > 0) {
+		/* Rebuild suit. Save. */
+
+		for (Limb& limb : npcLimbs) {
+			npc.unEquipLimb(limb.getId());
+			limb.unEquip();
+		}
+
+		npc.sortLimbsByNumberOfJoints();
+		bool keepEquippingLimbs = true;
+
+		for (Limb& limb : npcLimbs) {
+			if (keepEquippingLimbs) {
+				keepEquippingLimbs = npc.equipLimb(limb.getId());
+			}
+			else { break; }
+		}
+
+		npc.buildDrawLimbList();
+		updateCharacterLimbsInTransaction(npc.getId(), npc.getAnchorLimbId(), npcLimbs, db);
+		npc.setTexture(npc.createAvatar());
+	}
+
+	updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
+	commitTransactionAndCloseDatabase(db);
+	setLimbIdList();
+
+	UI& ui = UI::getInstance();
+
+	npcStatsPanel.destroyTextures();
+	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+	createNpcLimbPanel();
+
+	return true;
+}
 
 /*
 * Apply the effects that we just calculated and animated.
@@ -1975,8 +2151,8 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	}
 
 	/* Damage has already been done (to attributes). Now save those changes. */
-	for (int i = npc.getLimbs().size() - 1; i >= 0; --i) {
-		Limb& limb = npc.getLimbs()[i];
+	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+		Limb& limb = npcLimbs[i];
 		bool erasedThisLimb = false;
 
 		/* For MODIFIED limbs (attacked, healed, whatever). */
@@ -2003,10 +2179,13 @@ bool BattleScreen::applyPlayerAttackEffects() {
 				}
 			}
 
-			updateLimbBattleEffectsInTransaction(limb, db);
 			npc.getLimbs().erase(npc.getLimbs().begin() + i);
 			continue;
 		}
+	}
+
+	for (int i = 0; i < npcLimbs.size(); ++i) {
+		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}
 
 	bool npcDefeated = false;
@@ -2182,19 +2361,25 @@ void BattleScreen::setPlayerAttackAdvance() {
 		return;
 	}
 
-	if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvancePlayer < npcDrawStartPoint.x) {
+	if (!attackAdvanceHitTarget && playerDrawStartPoint.x + attackAdvancePlayer < npcDrawStartPoint.x) { 
 		attackAdvancePlayer = attackAdvancePlayer + 20;
 	}
 	else if (!attackAdvanceHitTarget) {
 		attackAdvanceHitTarget = true;
 		attackAdvancePlayer = attackAdvancePlayer - 20;
 
-		calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
-		animateEffect = true;
-		animationCountdown = 100;
-		flashingLimbCountdown = 10;
-		drawFlashingLimb = false;
-		flashLimb = true;
+		if (playerAttackLoaded.attackType == AttackType::Steal) {
+			calculatePlayerSteal();
+		}
+		else {
+			calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
+			animateEffect = true;
+			animationCountdown = 100;
+			flashingLimbCountdown = 10;
+			drawFlashingLimb = false;
+			flashLimb = true;
+		}
+
 
 		/* We deal with end of Effect Animation in the run() function. */
 	}
@@ -2204,6 +2389,14 @@ void BattleScreen::setPlayerAttackAdvance() {
 	else {
 		animateAttack = !animateAttack;
 		attackAdvancePlayer = 0;
+
+		if (playerAttackLoaded.attackType == AttackType::Steal) {
+			applyPlayerStealEffects();
+			playerAttackLoaded = AttackStruct();
+			battle.switchTurn();
+			animationCountdown = 20;
+			animateEffect = false;
+		}
 	}
 }
 

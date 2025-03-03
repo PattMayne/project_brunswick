@@ -39,6 +39,7 @@ import <tuple>;
 import <cmath>;
 import <limits>;
 import <unordered_map>;
+import <unordered_set>;
 
 import TypeStorage;
 import UI;
@@ -361,7 +362,7 @@ export class Limb {
 
 		}
 
-
+		
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
 		Point getPosition() { return position; }
@@ -480,6 +481,9 @@ export class Limb {
 * 
 * 
 */
+
+
+
 
 void Limb::heal() {
 	if (hpMod < 0) {
@@ -851,6 +855,7 @@ public:
 		texture = NULL;
 	}
 
+	unordered_set<int> getChildLimbIdsRecursively(Limb& parentLimb, unordered_set<int> childLimbIds = {});
 	string getName() { return name; }
 	bool shiftChildLimb(int childLimbId);
 	vector<Limb> getEquippedLimbs();
@@ -952,6 +957,27 @@ protected:
 * |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
 */
 
+
+unordered_set<int> Character::getChildLimbIdsRecursively(Limb& parentLimb, unordered_set<int> childLimbIds) {
+	/* Protect against infinite recursion by checking for existing limb id, and returning if true. */
+
+	for (Joint& joint : parentLimb.getJoints()) {
+		int connectedLimbId = joint.getConnectedLimbId();
+		if (connectedLimbId > 0) {
+			if (childLimbIds.count(connectedLimbId) < 1) {
+				childLimbIds.insert(connectedLimbId);
+				Limb& childLimb = getLimbById(connectedLimbId);
+				childLimbIds = getChildLimbIdsRecursively(childLimb, childLimbIds);
+			} else {
+				/* We found a double. Bail before it loops.*/
+				cout << "We found a double. Bailing before it loops. ( getChildLimbIdsRecursively )\n";
+				return childLimbIds;
+			}
+		}
+	}
+
+	return childLimbIds;
+}
 
 CharStatsData Character::getCharStatsData(Point trackedPoint) {
 	return CharStatsData(
@@ -1319,7 +1345,7 @@ vector<AttackStruct> Character::getAttacks() {
 		);
 	}
 
-	if (armCount > 0) {
+	if (armCount > 0 && characterType == CharacterType::Player) {
 
 		AttributeType attTypeHP = AttributeType::HP;
 		vector<AttributeType> attributeTypes = { attTypeHP };
