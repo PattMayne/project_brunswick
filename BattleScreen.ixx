@@ -2109,14 +2109,19 @@ bool BattleScreen::applyPlayerStealEffects() {
 
 		for (Limb& limb : npcLimbs) {
 			if (keepEquippingLimbs) {
-				keepEquippingLimbs = npc.equipLimb(limb.getId());
+				if (stolenLimbChildIds.count(limb.getId()) > 0) {
+					keepEquippingLimbs = npc.equipLimb(limb.getId());
+				}
 			}
 			else { break; }
 		}
 
 		npc.buildDrawLimbList();
 		updateCharacterLimbsInTransaction(npc.getId(), npc.getAnchorLimbId(), npcLimbs, db);
-		npc.setTexture(npc.createAvatar());
+		if (npc.getNumberOfEquippedLimbs() > 0) {
+			npc.setTexture(npc.createAvatar());
+		}
+		
 	}
 
 	updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
@@ -2216,6 +2221,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 				}
 			}
 
+			updateLimbBattleEffectsInTransaction(limb, db);
 			npc.getLimbs().erase(npc.getLimbs().begin() + i);
 			continue;
 		}
@@ -2225,6 +2231,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}
 
+	npc.buildDrawLimbList();
 	bool npcDefeated = false;
 
 	if (erasedLimb) {
