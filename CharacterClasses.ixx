@@ -1420,7 +1420,7 @@ vector<AttackStruct> Character::getAttacks() {
 		);
 	}
 	
-	if (legCount < 1 && armCount < 1 && torsoCount < 1) {
+	if (attackStructs.size() < 1) {
 		/* Generic random attack. (randomize more by selecting a random attribute to attack). */
 
 		AttributeType attTypeHP = AttributeType::HP;
@@ -1439,43 +1439,6 @@ vector<AttackStruct> Character::getAttacks() {
 			attributeTypes
 		);
 	}
-
-	/* DELETE THIS if we remove Heal and Throw. */
-	if (numberOfEquippedLimbs < limbs.size() && false) {
-		/* There are non-equipped limbs, so we can add a Heal (and possibly Throw) move. */
-
-		AttributeType attTypeHP = AttributeType::HP;
-		vector<AttributeType> attributeTypes = { attTypeHP };
-
-		attackStructs.emplace_back(
-			"Heal",
-			"HEAL",
-			100,
-			100,
-			dominantNode, 
-			AttackType::Heal,
-			attributeTypes
-		);
-
-		if (armCount > 0) {
-			AttributeType attTypeHP = AttributeType::HP;
-			vector<AttributeType> attributeTypes = { attTypeHP };
-
-			int intensity = (rand() % 45) + 45;
-			int precision = 100 - intensity;
-
-			attackStructs.emplace_back(
-				"Throw",
-				"THROW",
-				intensity,
-				precision,
-				dominantNode,
-				AttackType::Throw,
-				attributeTypes
-			);
-		}
-	}
-
 
 	return attackStructs;
 }

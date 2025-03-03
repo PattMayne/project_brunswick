@@ -548,7 +548,17 @@ export void BattleScreen::run() {
 
 					/* NOW actually change the limbs, clear the queue, and make it the  */
 
-					applyPlayerAttackEffects();
+					if (playerAttackLoaded.attackType == AttackType::Steal) {
+						cout << "Applying STEAL effects\n";
+						applyPlayerStealEffects();
+						setLimbIdList();
+						limbIdsToUpdate = {};						
+						createNpcLimbPanel();
+						battle.switchTurn();
+					}
+					else {
+						applyPlayerAttackEffects();
+					}
 
 					playerAttackLoaded = AttackStruct();
 					limbIdsToUpdate = {};
@@ -590,7 +600,7 @@ export void BattleScreen::run() {
 
 		/* Initiate NPC turn. */
 		if (battle.getBattleStatus() == BattleStatus::NpcTurn && animationCountdown < 1 && npcAttackLoaded.attackType == AttackType::NoAttack) {
-			cout << "NPC TURN!\n";
+			cout << "lauching NPC TURN!\n";
 			launchNpcTurn();
 		}
 
@@ -1243,10 +1253,8 @@ void BattleScreen::calculatePlayerSteal() {
 	int bingo = rand() % drawSize;
 	stealSuccess = bingo <= chances;
 
-	stealSuccess = true;
-
 	if (stealSuccess) {
-		
+		limbIdsToUpdate.push_back(targetLimbId);
 	}
 
 	UI& ui = UI::getInstance();
@@ -2081,7 +2089,6 @@ bool BattleScreen::applyPlayerStealEffects() {
 			npc.unEquipLimb(limb.getId());
 			limb.unEquip();
 			updateLimbBattleEffectsInTransaction(limb, db);
-			continue;
 		}
 	}
 
@@ -2403,6 +2410,11 @@ void BattleScreen::setPlayerAttackAdvance() {
 
 		if (playerAttackLoaded.attackType == AttackType::Steal) {
 			calculatePlayerSteal();
+			animateEffect = true;
+			animationCountdown = 100;
+			flashingLimbCountdown = 10;
+			drawFlashingLimb = false;
+			flashLimb = true;
 		}
 		else {
 			calculatePlayerDamageAttackStruct(-1, playerAttackLoaded.targetLimbId);
@@ -2422,14 +2434,6 @@ void BattleScreen::setPlayerAttackAdvance() {
 	else {
 		animateAttack = !animateAttack;
 		attackAdvancePlayer = 0;
-
-		if (playerAttackLoaded.attackType == AttackType::Steal) {
-			applyPlayerStealEffects();
-			playerAttackLoaded = AttackStruct();
-			battle.switchTurn();
-			animationCountdown = 20;
-			animateEffect = false;
-		}
 	}
 }
 
@@ -2472,6 +2476,9 @@ void BattleScreen::launchNpcTurn() {
 	if (attackStructs.size() < 1 && battle.isNpcTurn()) {
 		battle.switchTurn();
 		updateBattleStatus(battle.getId(), battle.getBattleStatus());
+		playerTurnPanel.setShow(true);
+		playerStatsPanel.setShow(true);
+		npcStatsPanel.setShow(true);
 		return;
 	}
 
