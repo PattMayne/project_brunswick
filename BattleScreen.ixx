@@ -1956,9 +1956,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 
 	for (int i = playerLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = playerLimbs[i];
-		if (limb.isEquipped()) {
-			cout << "Limb " << limb.getName() << " has " << limb.getHP() << " hp\n";
-		}
+		
 		if (limb.getHP() > 0) {
 			++numberOfEquippableLimb;
 
@@ -1974,6 +1972,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 			limb.setCharacterId(npcId);
 
 			npc.getLimbs().push_back(limb);
+			updateLimbBattleEffectsInTransaction(limb, db);
 			playerLimbs.erase(playerLimbs.begin() + i);
 		}
 	}
@@ -2153,7 +2152,6 @@ bool BattleScreen::applyPlayerStealEffects() {
 	limbIdsToUpdate = {};
 	stealSuccess = false;
 
-	battle.switchTurn();
 	updateBattleStatusInTrans(battle.getId(), battle.getBattleStatus(), db);
 
 	string thisTurn = battle.getBattleStatus() == BattleStatus::NpcTurn ?
