@@ -884,6 +884,7 @@ public:
 	int getBlockX() { return blockPosition.x; }
 	int getBlockY() { return blockPosition.y; }
 	bool hasScrambledLimbs();
+	int getNumberOfEquippedLimbs();
 
 	int getLastX() { return lastBlockPosition.x; }
 	int getLastY() { return lastBlockPosition.y; }
@@ -1009,6 +1010,16 @@ void Character::moveToPosition(Point newPosition) {
 	blockPosition = newPosition;
 }
 
+int Character::getNumberOfEquippedLimbs() {
+	int count = 0;
+	for (Limb& limb : limbs) {
+		if (limb.isEquipped()) {
+			++count;
+		}
+	}
+
+	return count;
+}
 
 bool Character::hasScrambledLimbs() {
 	int scrambledCount = 0;

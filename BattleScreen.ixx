@@ -2073,6 +2073,7 @@ bool BattleScreen::applyPlayerStealEffects() {
 			limb.unEquip();
 			targetLimb.setCharacterId(playerCharacter.getId());
 			playerCharacter.addLimb(targetLimb);
+			updateLimbBattleEffectsInTransaction(limb, db);
 			npcLimbs.erase(npcLimbs.begin() + i);
 			continue;
 		}
@@ -2082,11 +2083,14 @@ bool BattleScreen::applyPlayerStealEffects() {
 			limb.unEquip();
 			limb.setCharacterId(-1);
 			limb.setPosition(npc.getPosition());
+			updateLimbBattleEffectsInTransaction(limb, db);
 			npcLimbs.erase(npcLimbs.begin() + i);
 			continue;
 		}
 	}
 
+	npc.buildDrawLimbList();
+	/* Update the rest, which might have been referencing the removed limbs. */
 	for (int i = 0; i < npcLimbs.size(); ++i) {
 		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}
@@ -2117,7 +2121,6 @@ bool BattleScreen::applyPlayerStealEffects() {
 	}
 
 	updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
-	commitTransactionAndCloseDatabase(db);
 	setLimbIdList();
 
 	UI& ui = UI::getInstance();
@@ -2125,6 +2128,42 @@ bool BattleScreen::applyPlayerStealEffects() {
 	npcStatsPanel.destroyTextures();
 	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
 	createNpcLimbPanel();
+
+	/* Now check for NPC defeat. */
+
+	if (npc.getNumberOfEquippedLimbs() < 1) {
+		/* NPC defeat. */
+		npc.buildDrawLimbList();
+		/* Now destroy the NPC from the database. */
+		deleteCharacterInTrans(npc.getId(), db);
+		setLimbIdList();
+
+		setExitMessage(BattleStatus::PlayerVictory);
+		updateBattleStatusInTrans(battle.getId(), BattleStatus::PlayerVictory, db);
+	}
+
+	/* Now switch turns. */
+
+	createNpcLimbPanel();
+	npcStatsPanel.destroyTextures();
+	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+	playerStatsPanel.setShow(true);
+
+	playerAttackLoaded = AttackStruct();
+	limbIdsToUpdate = {};
+	stealSuccess = false;
+
+	battle.switchTurn();
+	updateBattleStatusInTrans(battle.getId(), battle.getBattleStatus(), db);
+
+	string thisTurn = battle.getBattleStatus() == BattleStatus::NpcTurn ?
+		"NPC turn" :
+		battle.getBattleStatus() == BattleStatus::PlayerTurn ?
+		"Player turn" :
+		"Neither Turn (end of battle)";
+
+	commitTransactionAndCloseDatabase(db);
+	cout << "Turn should be " << thisTurn << " now\n";
 
 	return true;
 }
@@ -2230,15 +2269,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	}
 
 	/* After all this, make sure that the npc has equipped limbs. */
-	int numberOfEquippedLimbs = 0;
-	for (Limb& limb : npc.getLimbs()) {
-		if (limb.isEquipped()) {
-			npcDefeated = false;
-			++numberOfEquippedLimbs;
-		}
-	}
-
-	if (numberOfEquippedLimbs < 1 or npc.getAnchorLimbId() < 1) {
+	if (npc.getNumberOfEquippedLimbs() < 1 or npc.getAnchorLimbId() < 1) {
 		npcDefeated = true;
 	}
 
