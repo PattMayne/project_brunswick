@@ -2548,11 +2548,11 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 
 	/* Gather info for Stats Box (for any screen). */
 	string attsString = screenType == ScreenType::Battle ? statsData.name + "\n" : "";
+	attsString = attsString + dNodeString + "\n";
 	attsString = attsString + "HP:           " + to_string(statsData.hp) + "\n";
 	attsString = attsString + "SPEED:        " + to_string(statsData.speed) + "\n";
 	attsString = attsString + "STRENGTH:     " + to_string(statsData.strength) + "\n";
 	attsString = attsString + "INTELLIGENCE: " + to_string(statsData.intelligence) + "\n";
-	attsString = attsString + dNodeString + "\n";
 	
 	/* Make surfaces for other boxes
 	* Name should be word-wrapped on spaces or 14 characters.
