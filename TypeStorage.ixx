@@ -12,9 +12,49 @@ export module TypeStorage;
 
 using namespace std;
 
+export enum class DominancePosition { Dom, Sub, Neutral };
+
 /* Dominance Node is a Limb's node in the Dominance Cycle (think Rock, Paper, Scissors). */
 export enum class DominanceNode { Red, Green, Blue };
 export int const dominanceCycleAdvantage = 15;
+
+export DominancePosition attackerDominancePosition(DominanceNode attackerNode, DominanceNode defenderNode) {
+	DominancePosition dPosition = DominancePosition::Neutral;
+	if (attackerNode == defenderNode) { return dPosition; }
+
+	/*
+	* Blue beats Red (water douses fire).
+	* Red beats Green (fire burns life).
+	* Green beats Blue (life consumes water).
+	*/
+
+	if (attackerNode == DominanceNode::Blue) {
+		if (defenderNode == DominanceNode::Green) {
+			dPosition = DominancePosition::Sub;
+		}
+		else if (defenderNode == DominanceNode::Red) {
+			dPosition = DominancePosition::Dom;
+		}
+	}
+	else if (attackerNode == DominanceNode::Green) {
+		if (defenderNode == DominanceNode::Blue) {
+			dPosition = DominancePosition::Dom;
+		}
+		else if (defenderNode == DominanceNode::Red) {
+			dPosition = DominancePosition::Sub;
+		}
+	}
+	else if (attackerNode == DominanceNode::Red) {
+		if (defenderNode == DominanceNode::Blue) {
+			dPosition = DominancePosition::Sub;
+		}
+		else if (defenderNode == DominanceNode::Green) {
+			dPosition = DominancePosition::Dom;
+		}
+	}
+
+	return dPosition;
+}
 
 export enum class ScreenType {
 	NoScreen, Menu, Map, Battle, CharacterCreation

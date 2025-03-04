@@ -915,6 +915,7 @@ public:
 	void addToDrawLimbList(int limbId);
 	void buildDrawLimbList();
 	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct);
+	DominanceNode getDominanceNode();
 
 	CharStatsData getCharStatsData(Point trackedPoint = Point(-1, -1));
 
@@ -957,6 +958,31 @@ protected:
 * |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
 * |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
 */
+
+
+DominanceNode Character::getDominanceNode() {
+	unordered_map<DominanceNode, int> domCounts;
+	domCounts[DominanceNode::Green] = 0;
+	domCounts[DominanceNode::Red] = 0;
+	domCounts[DominanceNode::Blue] = 0;
+
+	for (Limb& limb : limbs) {
+		++domCounts[limb.getDominanceNode()];
+	}
+
+	DominanceNode mostPlentifulDominanceNode = DominanceNode::Blue;
+
+	if (domCounts[DominanceNode::Green] > domCounts[DominanceNode::Blue]) {
+		mostPlentifulDominanceNode = DominanceNode::Green;
+	}
+
+	if (domCounts[DominanceNode::Red] > domCounts[DominanceNode::Green]) {
+		mostPlentifulDominanceNode = DominanceNode::Red;
+	}
+
+	return mostPlentifulDominanceNode;
+}
+
 
 
 unordered_set<int> Character::getChildLimbIdsRecursively(Limb& parentLimb, unordered_set<int> childLimbIds) {

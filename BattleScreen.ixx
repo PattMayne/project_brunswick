@@ -1237,6 +1237,8 @@ void BattleScreen::calculatePlayerSteal() {
 	int npcIntelligence = npc.getIntelligence() / boostDividerNpc;
 	int npcSpeed = npc.getSpeed() / boostDividerNpc;
 
+	DominancePosition playerDomPosition = attackerDominancePosition(playerCharacter.getDominanceNode(), targetLimb.getDominanceNode());
+
 	int drawSize = targetLimb.getForm().hp;
 
 	/* 
@@ -1249,6 +1251,12 @@ void BattleScreen::calculatePlayerSteal() {
 		(playerSpeed - npcSpeed) +
 		((playerIntelligence - npcIntelligence) / 2);
 
+	int multiplier = chances >= 0 ? chances : -chances;
+	if (playerDomPosition == DominancePosition::Dom) {
+		chances += (multiplier / 3);
+	} else if (playerDomPosition == DominancePosition::Sub) {
+		chances -= (multiplier / 3);
+	}
 
 	int bingo = rand() % drawSize;
 	stealSuccess = bingo <= chances;
@@ -1279,6 +1287,7 @@ void BattleScreen::calculatePlayerBrainDrain() {
 	Character& npc = battle.getNpc();
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+	Limb& targetLimb = npcLimbs[0];
 
 	/* Calculate the attack. */
 	int attack = 0;
@@ -1303,6 +1312,7 @@ void BattleScreen::calculatePlayerBrainDrain() {
 
 			if (limb.getBodyPartType() == BodyPartType::Head) {
 				targetLimbId = limb.getId();
+				targetLimb = limb;
 			}
 		}
 	}
@@ -1311,12 +1321,21 @@ void BattleScreen::calculatePlayerBrainDrain() {
 
 	if (targetLimbId < 1) {
 		targetLimbId = equippedNpcLimbIds[rand() % equippedNpcLimbIds.size()];
+		targetLimb = npc.getLimbById(targetLimbId);
 	}
 
 	cout << "Target limb id is: " << targetLimbId << "\n";
 
 	attack = (attack / 8) + (numberOfEquippedLimbs / 2);
 	int spreadAttack = 0;
+
+	/* Give a possible Dominance Cycle boost or detriment. */
+	DominancePosition playerDomPosition = attackerDominancePosition(playerCharacter.getDominanceNode(), targetLimb.getDominanceNode());
+	if (playerDomPosition == DominancePosition::Dom) {
+		attack += (attack / 3);
+	} else if (playerDomPosition == DominancePosition::Sub) {
+		attack -= (attack / 3);
+	}
 
 	/* Add some randomness. */
 	int attackMod = rand() % ((attack / 10) + 1);
@@ -1442,6 +1461,7 @@ void BattleScreen::calculateNpcBrainDrain() {
 	int attack = 0;
 	int numberOfEquippedLimbs = 0;
 	int targetLimbId = -1;
+	Limb& targetLimb = playerLimbs[0];
 
 	/* Score some player NPC data. */
 	vector<int> equippedLimbIds = {};
@@ -1461,6 +1481,7 @@ void BattleScreen::calculateNpcBrainDrain() {
 
 			if (limb.getBodyPartType() == BodyPartType::Head) {
 				targetLimbId = limb.getId();
+				targetLimb = limb;
 			}
 		}
 	}
@@ -1475,6 +1496,15 @@ void BattleScreen::calculateNpcBrainDrain() {
 
 	attack = (attack / 8) + (numberOfEquippedLimbs / 2);
 	int spreadAttack = 0;
+
+	/* Get dominance cycle advantage. */
+	DominancePosition playerDomPosition = attackerDominancePosition(npc.getDominanceNode(), targetLimb.getDominanceNode());
+	if (playerDomPosition == DominancePosition::Dom) {
+		attack += (attack / 3);
+	}
+	else if (playerDomPosition == DominancePosition::Sub) {
+		attack -= (attack / 3);
+	}
 
 	/* Add some randomness. */
 	int attackMod = rand() % ((attack / 10) + 1);
@@ -1598,6 +1628,8 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 
+	Limb& targetLimb = targetLimbId > 0 ? npc.getLimbById(targetLimbId) : npcLimbs[0];
+
 	npcLimbsPanel.setShow(false);
 
 	/*
@@ -1640,6 +1672,15 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	int spreadAttack = 0;
 
 	int attackDivider = !isSwoop ? 10 : 14;
+
+	/* Get dominance cycle advantage. */
+	DominancePosition playerDomPosition = attackerDominancePosition(playerCharacter.getDominanceNode(), targetLimb.getDominanceNode());
+	if (playerDomPosition == DominancePosition::Dom) {
+		attack += (attack / 3);
+	}
+	else if (playerDomPosition == DominancePosition::Sub) {
+		attack -= (attack / 3);
+	}
 
 	/* Add some randomness. */
 	int attackMod = rand() % ((attack / attackDivider) + 1);
@@ -1693,9 +1734,18 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 			}
 		}
 	}
-	
+
 	int stolenSpeed = 0;
 	int speedStealAmount = !isSwoop ? 0 : (rand() % 10) + 9;
+
+	/* Get dominance cycle advantage. */
+	if (playerDomPosition == DominancePosition::Dom) {
+		speedStealAmount += (speedStealAmount / 3);
+	}
+	else if (playerDomPosition == DominancePosition::Sub) {
+		speedStealAmount -= (speedStealAmount / 3);
+	}
+
 	int quarterSteal = speedStealAmount / 4;
 
 	/* Now get the actual target limb, while also attacking the other limbs. */
@@ -1780,7 +1830,7 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 	Character& npc = battle.getNpc();
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
-
+	Limb& targetLimb = targetLimbId > 0 ? playerCharacter.getLimbById(targetLimbId) : playerLimbs[0];
 
 	/*
 	* Calculate how much of which attributes to take from which limbs.
@@ -1808,6 +1858,15 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 
 	attack = (attack / 5) + numberOfEquippedLimbs; // add some RANDOMNESS.
 	int spreadAttack = 0;
+
+	/* Get dominance cycle advantage. */
+	DominancePosition playerDomPosition = attackerDominancePosition(npc.getDominanceNode(), targetLimb.getDominanceNode());
+	if (playerDomPosition == DominancePosition::Dom) {
+		attack += (attack / 3);
+	}
+	else if (playerDomPosition == DominancePosition::Sub) {
+		attack -= (attack / 3);
+	}
 
 	int attackDivider = !isSwoop ? 11 : 14;
 
@@ -1863,6 +1922,14 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 
 	int stolenSpeed = 0;
 	int speedStealAmount = !isSwoop ? 0 : (rand() % 14) + 5;
+
+	if (playerDomPosition == DominancePosition::Dom) {
+		speedStealAmount += (speedStealAmount / 3);
+	}
+	else if (playerDomPosition == DominancePosition::Sub) {
+		speedStealAmount -= (speedStealAmount / 3);
+	}
+
 	int quarterSteal = speedStealAmount / 4;
 
 	/* Now get the actual target limb, while also attacking the other limbs. */
@@ -1940,7 +2007,6 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 * If player loses anchor limb, send them to Characetr Creation screen.
 */
 bool BattleScreen::applyNpcAttackEffects() {
-	cout << "GOING TO APPLY NPC ATTACK EFFECTS\n";
 	Character& npc = battle.getNpc();
 	Character& playerCharacter = battle.getPlayerCharacter();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
