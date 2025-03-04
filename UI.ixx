@@ -59,9 +59,10 @@ export struct CharStatsData {
 	CharStatsData(
 		string name, int hp,
 		int strength, int speed, int intelligence,
+		DominanceNode dNode,
 		Point trackedPoint = Point(0, 0)
 	) :
-		name(name), hp(hp), strength(strength), speed(speed),
+		name(name), hp(hp), strength(strength), speed(speed), dNode(dNode),
 		intelligence(intelligence), trackedPoint(trackedPoint) { }
 
 	
@@ -70,6 +71,7 @@ export struct CharStatsData {
 	int strength;
 	int hp;
 	int speed;
+	DominanceNode dNode;
 	Point trackedPoint;
 };
 
@@ -2542,12 +2544,15 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	* ----> Must include a string of text for name of limb.
 	*/
 
+	string dNodeString = dNodeText(statsData.dNode);
+
 	/* Gather info for Stats Box (for any screen). */
 	string attsString = screenType == ScreenType::Battle ? statsData.name + "\n" : "";
 	attsString = attsString + "HP:           " + to_string(statsData.hp) + "\n";
 	attsString = attsString + "SPEED:        " + to_string(statsData.speed) + "\n";
 	attsString = attsString + "STRENGTH:     " + to_string(statsData.strength) + "\n";
 	attsString = attsString + "INTELLIGENCE: " + to_string(statsData.intelligence) + "\n";
+	attsString = attsString + dNodeString + "\n";
 	
 	/* Make surfaces for other boxes
 	* Name should be word-wrapped on spaces or 14 characters.

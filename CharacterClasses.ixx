@@ -967,7 +967,9 @@ DominanceNode Character::getDominanceNode() {
 	domCounts[DominanceNode::Blue] = 0;
 
 	for (Limb& limb : limbs) {
-		++domCounts[limb.getDominanceNode()];
+		if (limb.isEquipped()) {
+			++domCounts[limb.getDominanceNode()];
+		}
 	}
 
 	DominanceNode mostPlentifulDominanceNode = DominanceNode::Blue;
@@ -983,8 +985,6 @@ DominanceNode Character::getDominanceNode() {
 	return mostPlentifulDominanceNode;
 }
 
-
-
 unordered_set<int> Character::getChildLimbIdsRecursively(Limb& parentLimb, unordered_set<int> childLimbIds) {
 	/* Protect against infinite recursion by checking for existing limb id, and returning if true. */
 
@@ -997,7 +997,6 @@ unordered_set<int> Character::getChildLimbIdsRecursively(Limb& parentLimb, unord
 				childLimbIds = getChildLimbIdsRecursively(childLimb, childLimbIds);
 			} else {
 				/* We found a double. Bail before it loops.*/
-				cout << "We found a double. Bailing before it loops. ( getChildLimbIdsRecursively )\n";
 				return childLimbIds;
 			}
 		}
@@ -1013,6 +1012,7 @@ CharStatsData Character::getCharStatsData(Point trackedPoint) {
 		getStrength(),
 		getSpeed(),
 		getIntelligence(),
+		getDominanceNode(),
 		trackedPoint
 	);
 }

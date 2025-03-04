@@ -328,3 +328,16 @@ export string attackTypeText(AttackType attackType) {
 	unordered_map<AttackType, string> typeDictionary = getAttackTypeTextDictionary();
 	return typeDictionary[attackType];
 };
+
+export unordered_map<DominanceNode, string> getDominanceNodeTextDictionary() {
+	unordered_map<DominanceNode, string> typeDictionary;
+	typeDictionary[DominanceNode::Green] = "Green";
+	typeDictionary[DominanceNode::Red] = "Red";
+	typeDictionary[DominanceNode::Blue] = "Blue";
+
+	return typeDictionary;
+}
+
+export string dNodeText(DominanceNode dNode) {
+	return getDominanceNodeTextDictionary()[dNode];
+}
