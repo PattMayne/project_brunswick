@@ -213,6 +213,7 @@ export class UI {
 		TTF_Font* dialogFont = NULL;
 		TTF_Font* monoFont = NULL;
 		TTF_Font* monoFontLarge = NULL;
+		TTF_Font* headlineFont = NULL;
 
 		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, bool left = true, int y = -1);
@@ -225,7 +226,7 @@ export class UI {
 
 		/* Battle panel building functions */
 		tuple<SDL_Rect, vector<Button>> createBattlePanelComponents(vector<AttackStruct> playerAttackStructs, int y);
-		vector<PreButtonStruct> getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs, int y);
+		vector<PreButtonStruct> getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs);
 
 		
 		/* main menu panel building functions */
@@ -894,10 +895,10 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 	int panelHeight = PANEL_PADDING; // start with one padding
 	int longestButtonTextLength = 0;
 	for (PreButtonStruct preButtonStruct : preButtonStructs) {
-		// add up the heights of the buttons plus padding
+		/* add up the heights of the buttons plus padding. */
 		panelHeight += preButtonStruct.textRectHeight + (buttonPadding * 2) + PANEL_PADDING;
 
-		// set the longest text length
+		/* set the longest text length. */
 		if (preButtonStruct.textRectWidth > longestButtonTextLength) {
 			longestButtonTextLength = preButtonStruct.textRectWidth;
 		}
@@ -907,9 +908,7 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 	int width = longestButtonTextLength + (buttonPadding * 2) + (PANEL_PADDING * 2);
 	/* x is always 0 except when it's not. */
 	int rectX = left ? 0 : (getWindowWidth() - width);
-	int rectY = y < 1 ? (windowHeight - panelHeight) : y;
-
-	cout << "y is " << y << endl;
+	int rectY = y < 1 ? (windowHeight - panelHeight) : (y + PANEL_PADDING);
 
 	return {
 		rectX,
@@ -1052,6 +1051,11 @@ void UI::prepareColors() {
 	colorsByName["SMOKEY_GREY"] = { 117, 117, 113 };
 	colorsByName["DARKISH_GRAYISH_BLUE"] = {142, 146, 169};
 	colorsByName["GRAPE_BRUISE"] = { 37, 35, 51 };
+	colorsByName["CORNFLOWER_BLUE"] = { 143, 154, 255 };
+	colorsByName["SALMON"] = { 255, 118, 118 };
+	colorsByName["SPRING_GREEN"] = { 111, 255, 111 };
+
+
 
 	/* COLORS BY FUNCTION */
 	colorsByFunction["BTN_HOVER_BG"] = colorsByName["PERIDOT"];
@@ -1072,9 +1076,14 @@ void UI::prepareColors() {
 	colorsByFunction["BG_MED"] = colorsByName["YALE_BLUE"];
 	colorsByFunction["PANEL_BG"] = colorsByName["PAPAYA_WHIP"];
 
-	colorsByFunction["RED_BG"] = colorsByName["SCARLIGHT"];
-	colorsByFunction["BLUE_BG"] = colorsByName["FRENCH_BLUE_LIGHT"];
-	colorsByFunction["GREEN_BG"] = colorsByName["LIME"];
+	colorsByFunction["RED_BG"] = colorsByName["SALMON"];
+	colorsByFunction["BLUE_BG"] = colorsByName["CORNFLOWER_BLUE"];
+	colorsByFunction["GREEN_BG"] = colorsByName["SPRING_GREEN"];
+
+	colorsByFunction["RED_FG"] = colorsByName["SCARLIGHT"];
+	colorsByFunction["BLUE_FG"] = colorsByName["FRENCH_BLUE_LIGHT"];
+	colorsByFunction["GREEN_FG"] = colorsByName["LIME"];
+
 	colorsByFunction["LIMB_BTN_BG"] = colorsByName["OXFORD_BLUE"];
 }
 
@@ -1163,6 +1172,7 @@ bool UI::initializeFonts(Resources& resources) {
 	int dialogFontSize = resources.getFontSize(FontContext::Dialog, mainWindowSurface->w);
 	int monoFontSize = buttonFontSize;
 	int monoFontLargeSize = resources.getFontSize(FontContext::Title, mainWindowSurface->w);
+	int headlineFontSize = resources.getFontSize(FontContext::Headline, mainWindowSurface->w);
 
 	/* Initialize TTF font library */
 	if (TTF_Init() == -1) {
@@ -1184,6 +1194,14 @@ bool UI::initializeFonts(Resources& resources) {
 	monoFontLarge = TTF_OpenFont("assets/sono_reg.ttf", monoFontLargeSize);
 
 	if (!monoFontLarge) {
+		SDL_Log("Font (sono_reg) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (sono_reg) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
+
+	headlineFont = TTF_OpenFont("assets/pr_viking.ttf", headlineFontSize);
+
+	if (!headlineFont) {
 		SDL_Log("Font (sono_reg) failed to load. TTF_Error: %s\n", TTF_GetError());
 		cerr << "Font (sono_reg) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 		return false;
@@ -1401,13 +1419,12 @@ void UI::rebuildSettingsPanel(Panel& settingsPanel, ScreenType context) {
 */
 
 /* build and deliver basic info for Battle panel buttons */
-vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs, int y) {
+vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs) {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	vector<PreButtonStruct> preButtonStructs;
 	
 	for (AttackStruct aStruct : playerAttackStructs) {
-
 		preButtonStructs.push_back(buildPreButtonStruct(
 			aStruct.name,
 			ButtonOption::BattleMove,
@@ -1416,14 +1433,13 @@ vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playe
 	}
 	
 	preButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("BUILD"), ButtonOption::Build));
-
 	return preButtonStructs;
 }
 
 
 /* create all the components for the Battle panel */
 tuple<SDL_Rect, vector<Button>> UI::createBattlePanelComponents(vector<AttackStruct> playerAttackStructs, int y) {
-	vector<PreButtonStruct> preButtonStructs = getBattlePreButtonStructs(playerAttackStructs, y);
+	vector<PreButtonStruct> preButtonStructs = getBattlePreButtonStructs(playerAttackStructs);
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs, true, y);
 	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
 	return { panelRect, buttons };
@@ -2581,17 +2597,6 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement, bool isBo
 Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRight) {
 	Panel hudPanel = Panel();
 	hudPanel.setRect({ 0,0,0,0 });
-	
-	/* FOR NOW we will assume that SCREEN TYPE IS MAP.
-	* 
-	* 1. gather the info
-	* 2. Character stats box (name, dominance cycle, attributes). NO AVATAR
-	* -----> Use monospace font for attributes. NEW FONT.
-	* 3. Tracked limb box.
-	* 4. Unequipped Limbs toggle.
-	* 
-	*/
-
 	Resources& resources = Resources::getInstance();
 	unordered_map<string, SDL_Color> colors = getColorsByFunction();
 
@@ -2604,15 +2609,32 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	* 
 	* 
 	* Future boxes:
+	* --> Avatar from surface (requires altering createAvatar() to deliver just a surface).
 	* --> Tracking Point box.
 	* ----> Must include a string of text for name of limb.
 	*/
 
-	string dNodeString = dNodeText(statsData.dNode);
+	/* First make the nameAndColorSurface */
+
+	SDL_Surface* nameAndColorSurface = NULL;
+	SDL_Rect nameAndColorRect = { 0, 0, 0, 0 };
+	if (screenType == ScreenType::Battle) {
+		string dNodeString = dNodeText(statsData.dNode);
+		string nameAndColorString = statsData.name + "\n" + dNodeString;
+		nameAndColorSurface = TTF_RenderUTF8_Blended_Wrapped(
+			headlineFont, nameAndColorString.c_str(), colors["DARK_TEXT"], 0);
+
+		/* We have the surface. Now make the rect. */
+		nameAndColorRect = {
+			PANEL_PADDING, PANEL_PADDING,
+			nameAndColorSurface->w,
+			nameAndColorSurface->h
+		};
+	}
+
 
 	/* Gather info for Stats Box (for any screen). */
-	string attsString = screenType == ScreenType::Battle ? statsData.name + "\n" : "";
-	attsString = attsString + dNodeString + "\n";
+	string attsString = "";
 	attsString = attsString + "HP:           " + to_string(statsData.hp) + "\n";
 	attsString = attsString + "SPEED:        " + to_string(statsData.speed) + "\n";
 	attsString = attsString + "STRENGTH:     " + to_string(statsData.strength) + "\n";
@@ -2629,10 +2651,16 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	/* Get the dimensions for the entire panel. */
 	int statsPanelWidth = attsWidth + (PANEL_PADDING * 2);
 	int statsPanelHeight = attsHeight + (PANEL_PADDING * 2);
+	if (screenType == ScreenType::Battle && nameAndColorSurface != NULL) {
+		statsPanelHeight += nameAndColorSurface->h + PANEL_PADDING;
+	}
 
 	/* Make the draw rects for the textures within the hud panel. */
 	int attsSurfaceDrawX = (statsPanelWidth - attsWidth) / 2;
-	int attsSurfaceDrawY = PANEL_PADDING;
+	int attsSurfaceDrawY = nameAndColorRect.h + PANEL_PADDING;
+	if (nameAndColorSurface != NULL) {
+		attsSurfaceDrawY += PANEL_PADDING;
+	}
 	SDL_Rect attsRect = { attsSurfaceDrawX, attsSurfaceDrawY, attsWidth, attsHeight };
 
 	/*
@@ -2649,6 +2677,10 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	/*
 	*      BLITTING
 	*/
+
+	if (nameAndColorSurface != NULL) {
+		SDL_BlitSurface(nameAndColorSurface, NULL, panelSurface, &nameAndColorRect);
+	}
 
 	SDL_BlitSurface(attributesSurface, NULL, panelSurface, &attsRect);
 	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);

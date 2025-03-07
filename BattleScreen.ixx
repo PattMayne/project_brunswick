@@ -596,7 +596,7 @@ export void BattleScreen::run() {
 					limbIdsToUpdate = {};
 					
 					playerTurnPanel.destroyTextures();
-					playerTurnPanel = ui.createBattlePanel(playerAttackStructs);
+					playerTurnPanel = ui.createBattlePanel(playerAttackStructs, playerStatsPanel.getRect().h);
 					playerTurnPanel.setShow(true);
 					npcLimbsPanel.setShow(false);
 					playerStatsPanel.setShow(true);

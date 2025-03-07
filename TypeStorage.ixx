@@ -70,7 +70,7 @@ export enum class MapLevel {
 };
 
 export enum class FontContext {
-	Title, Body, Button, Dialog
+	Title, Body, Button, Dialog, Headline
 };
 
 export enum SuitType {

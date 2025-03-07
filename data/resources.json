@@ -93,6 +93,12 @@
       "SMALL": 19,
       "MEDIUM": 22,
       "LARGE": 34
+    },
+    "HEADLINE": {
+      "X_SMALL": 14,
+      "SMALL": 20,
+      "MEDIUM": 24,
+      "LARGE": 32
     }
   },
   "MEDIA_MIN_WIDTHS": {
