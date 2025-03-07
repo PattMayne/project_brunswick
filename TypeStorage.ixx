@@ -178,6 +178,7 @@ export enum class ButtonOption {
 	Agree, Refuse, /* For confirmation panel (OK/Cancel or YES/NO) */
 	Back, /* for any submenu */
 	MainMenu, /* quit back to main menu from any screen */
+	Build, /* Character Creation screen. */
 	/* Main Menu panel buttons */
 	NewGame, LoadGame, Settings, About, Exit, Continue, Return, BackToGame,
 	/* Settings buttons */

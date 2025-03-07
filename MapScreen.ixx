@@ -236,9 +236,7 @@ export class MapScreen {
 			homeBaseRange = 5;
 			waitSpin = false;
 
-			settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-			gameMenuPanel = ui.createGameMenuPanel();
-			settingsPanel.setShow(false);
+			gameMenuPanel = ui.createGameMenuPanel(ScreenType::Map);
 			gameMenuPanel.setShow(true);
 
 			messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
@@ -319,7 +317,7 @@ export class MapScreen {
 		void checkMouseLocation(SDL_Event& e);
 
 		void buildMapDisplay();
-		void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
+		void rebuildDisplay(Panel& gameMenuPanel);
 		void setDrawStartBlock();
 		void setMaxDrawBlock();
 		void setViewResAndBlockWidth(UI& ui);
@@ -394,7 +392,6 @@ export class MapScreen {
 		*/
 
 		/* panels */
-		Panel settingsPanel;
 		Panel gameMenuPanel;
 		Panel messagePanel;
 		Panel passingMessagePanel;
@@ -503,10 +500,9 @@ void MapScreen::setScrollLimits() {
 
 
 /* Screen has been resized. Rebuild! */
-void MapScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
+void MapScreen::rebuildDisplay(Panel& gameMenuPanel) {
 	UI& ui = UI::getInstance();
-	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
-	ui.rebuildGameMenuPanel(gameMenuPanel);
+	ui.rebuildGameMenuPanel(gameMenuPanel, ScreenType::Map);
 	buildMapDisplay();
 	createTitleTexture(ui);
 }
@@ -942,7 +938,6 @@ void MapScreen::draw(UI& ui) {
 		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE); }
 
 	gameMenuPanel.draw(ui);
-	settingsPanel.draw(ui);
 	messagePanel.draw(ui);
 	passingMessagePanel.draw(ui);
 	hudPanel.draw(ui);
@@ -2251,53 +2246,18 @@ void MapScreen::handleMousedown(SDL_Event& e, bool& running) {
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 
-	if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
-
-		/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
-		ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
-		UI& ui = UI::getInstance();
-
-		/* see what button might have been clicked : */
-		switch (clickStruct.buttonOption) {
-		case ButtonOption::Mobile:
-			ui.resizeWindow(WindowResType::Mobile);
-			rebuildDisplay(settingsPanel, gameMenuPanel);
-			break;
-		case ButtonOption::Tablet:
-			ui.resizeWindow(WindowResType::Tablet);
-			rebuildDisplay(settingsPanel, gameMenuPanel);
-			break;
-		case ButtonOption::Desktop:
-			ui.resizeWindow(WindowResType::Desktop);
-			rebuildDisplay(settingsPanel, gameMenuPanel);
-			break;
-		case ButtonOption::Fullscreen:
-			ui.resizeWindow(WindowResType::Fullscreen);
-			rebuildDisplay(settingsPanel, gameMenuPanel);
-			break;
-		case ButtonOption::Back:
-			/* Switch to other panel. */
-			settingsPanel.setShow(false);
-			gameMenuPanel.setShow(true);
-			break;
-		case ButtonOption::Exit:
-			/* back to menu screen */
-			running = false;
-			break;
-		default:
-			cout << "ERROR\n";
-		}
-	}
-	else if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
+	if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
 		ButtonClickStruct clickStruct = gameMenuPanel.checkButtonClick(mouseX, mouseY);
 		UI& ui = UI::getInstance();
 		/* see what button might have been clicked : */
 		switch (clickStruct.buttonOption) {
-		case ButtonOption::MapOptions:
+		case ButtonOption::Build:
+			screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+			running = false;
 			break;
-		case ButtonOption::Settings:
-			settingsPanel.setShow(true);
-			gameMenuPanel.setShow(false);
+		case ButtonOption::Exit:
+			screenToLoadStruct.screenType = ScreenType::Menu;
+			running = false;
 			break;
 		default:
 			cout << "ERROR\n";
@@ -2322,7 +2282,6 @@ void MapScreen::checkMouseLocation(SDL_Event& e) {
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 	/* send the x and y to the panel and its buttons to change the color */
-	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
 	if (gameMenuPanel.getShow()) { gameMenuPanel.checkMouseOver(mouseX, mouseY); }
 	if (messagePanel.getShow()) { messagePanel.checkMouseOver(mouseX, mouseY); }
 }

@@ -114,8 +114,8 @@ export class UI {
 		Panel createBattlePanel(vector<AttackStruct> playerAttackStructs);
 		void rebuildSettingsPanel(Panel& settingsPanel, ScreenType context = ScreenType::Menu);
 
-		Panel createGameMenuPanel();
-		void rebuildGameMenuPanel(Panel& gameMenuPanel);
+		Panel createGameMenuPanel(ScreenType context);
+		void rebuildGameMenuPanel(Panel& gameMenuPanel, ScreenType context);
 
 		/* CHARACTER CREATION PANELS. */
 		Panel createReviewModePanel();
@@ -229,8 +229,8 @@ export class UI {
 		vector<PreButtonStruct> getMainMenuPreButtonStructs();
 
 		/* Map Menu panel building functions */
-		tuple<SDL_Rect, vector<Button>> createGameMenuPanelComponents();
-		vector<PreButtonStruct> getGameMenuPreButtonStructs();
+		tuple<SDL_Rect, vector<Button>> createGameMenuPanelComponents(ScreenType context);
+		vector<PreButtonStruct> getGameMenuPreButtonStructs(ScreenType context);
 
 		/* Character Creation panel building functions. */
 
@@ -1444,32 +1444,41 @@ Panel UI::createBattlePanel(vector<AttackStruct> playerAttackStructs) {
 */
 
 /* build and deliver basic info for main menu panel buttons */
-vector<PreButtonStruct> UI::getGameMenuPreButtonStructs() {
+vector<PreButtonStruct> UI::getGameMenuPreButtonStructs(ScreenType context) {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
-	return {
-		buildPreButtonStruct(resources.getButtonText("OPTIONS"), ButtonOption::MapOptions),
-		buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings)
-	};
+
+	if (context == ScreenType::Map) {
+		return {
+			buildPreButtonStruct(resources.getButtonText("BUILD"), ButtonOption::Build),
+			buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit)
+		};
+	}
+	else {
+		return {
+			buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit)
+		};
+	}
+	
 }
 
 /* create all the components for the main menu panel */
-tuple<SDL_Rect, vector<Button>> UI::createGameMenuPanelComponents() {
-	vector<PreButtonStruct> preButtonStructs = getGameMenuPreButtonStructs();
+tuple<SDL_Rect, vector<Button>> UI::createGameMenuPanelComponents(ScreenType context) {
+	vector<PreButtonStruct> preButtonStructs = getGameMenuPreButtonStructs(context);
 	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
 	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
 	return { panelRect, buttons };
 }
 
 /*  Settings available in every screen. */
-Panel UI::createGameMenuPanel() {
-	auto [panelRect, buttons] = createGameMenuPanelComponents();
+Panel UI::createGameMenuPanel(ScreenType context) {
+	auto [panelRect, buttons] = createGameMenuPanelComponents(context);
 	return Panel(panelRect, buttons);
 }
 
 /* rebuild the settings panel after resize */
-void UI::rebuildGameMenuPanel(Panel& gameMenuPanel) {
-	auto [panelRect, buttons] = createGameMenuPanelComponents();
+void UI::rebuildGameMenuPanel(Panel& gameMenuPanel, ScreenType context) {
+	auto [panelRect, buttons] = createGameMenuPanelComponents(context);
 	gameMenuPanel.rebuildSelf(panelRect, buttons);
 }
 

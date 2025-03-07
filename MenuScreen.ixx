@@ -230,6 +230,7 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 					running = false;
 					cout << "LOAD GAME (currently map by default for now)\n";
 
+					/* Cheating with an if statement to create a block where I can declare variables within switch/case options. */
 					if (true) {
 						int battleId = getCurrentBattleId(gameState.getPlayerID());
 						cout << "Battle id: " << battleId << endl;
