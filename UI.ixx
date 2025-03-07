@@ -111,7 +111,7 @@ export class UI {
 		void rebuildMainMenuPanel(Panel& mainMenuPanel);
 
 		Panel createSettingsPanel(ScreenType context = ScreenType::Menu);
-		Panel createBattlePanel(vector<AttackStruct> playerAttackStructs);
+		Panel createBattlePanel(vector<AttackStruct> playerAttackStructs, int y = -1);
 		void rebuildSettingsPanel(Panel& settingsPanel, ScreenType context = ScreenType::Menu);
 
 		tuple<SDL_Rect, vector<Button>> createGeneralMenuPanelComponents(unordered_map<string, ButtonOption> buttonOptions, bool left = true);
@@ -215,7 +215,7 @@ export class UI {
 		TTF_Font* monoFontLarge = NULL;
 
 		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
-		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, bool left = true);
+		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, bool left = true, int y = -1);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 		vector<Button> buildLimbButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 
@@ -224,8 +224,8 @@ export class UI {
 		vector<PreButtonStruct> getSettingsPreButtonStructs(ScreenType context = ScreenType::Menu);
 
 		/* Battle panel building functions */
-		tuple<SDL_Rect, vector<Button>> createBattlePanelComponents(vector<AttackStruct> playerAttackStructs);
-		vector<PreButtonStruct> getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs);
+		tuple<SDL_Rect, vector<Button>> createBattlePanelComponents(vector<AttackStruct> playerAttackStructs, int y);
+		vector<PreButtonStruct> getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs, int y);
 
 		
 		/* main menu panel building functions */
@@ -890,7 +890,7 @@ PreButtonStruct UI::buildPreButtonStruct(string text, ButtonOption buttonOption,
 }
 
 /* Now that we have some information about the buttons (via struct), we can build the Panel's RECT. */
-SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, bool left) {
+SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, bool left, int y) {
 	int panelHeight = PANEL_PADDING; // start with one padding
 	int longestButtonTextLength = 0;
 	for (PreButtonStruct preButtonStruct : preButtonStructs) {
@@ -906,11 +906,14 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 	/* Make the width first (just wide enough to accomodate the longest button). */
 	int width = longestButtonTextLength + (buttonPadding * 2) + (PANEL_PADDING * 2);
 	/* x is always 0 except when it's not. */
-	int x = left ? 0 : (getWindowWidth() - width);
+	int rectX = left ? 0 : (getWindowWidth() - width);
+	int rectY = y < 1 ? (windowHeight - panelHeight) : y;
+
+	cout << "y is " << y << endl;
 
 	return {
-		x,
-		windowHeight - panelHeight,
+		rectX,
+		rectY,
 		width,
 		panelHeight
 	};
@@ -1398,7 +1401,7 @@ void UI::rebuildSettingsPanel(Panel& settingsPanel, ScreenType context) {
 */
 
 /* build and deliver basic info for Battle panel buttons */
-vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs) {
+vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playerAttackStructs, int y) {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	vector<PreButtonStruct> preButtonStructs;
@@ -1419,9 +1422,9 @@ vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playe
 
 
 /* create all the components for the Battle panel */
-tuple<SDL_Rect, vector<Button>> UI::createBattlePanelComponents(vector<AttackStruct> playerAttackStructs) {
-	vector<PreButtonStruct> preButtonStructs = getBattlePreButtonStructs(playerAttackStructs);
-	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs);
+tuple<SDL_Rect, vector<Button>> UI::createBattlePanelComponents(vector<AttackStruct> playerAttackStructs, int y) {
+	vector<PreButtonStruct> preButtonStructs = getBattlePreButtonStructs(playerAttackStructs, y);
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs, true, y);
 	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
 	return { panelRect, buttons };
 }
@@ -1430,8 +1433,8 @@ tuple<SDL_Rect, vector<Button>> UI::createBattlePanelComponents(vector<AttackStr
 /*
 * List of battle move buttons for the Player in BattleScreen.
 */
-Panel UI::createBattlePanel(vector<AttackStruct> playerAttackStructs) {
-	auto [panelRect, buttons] = createBattlePanelComponents(playerAttackStructs);
+Panel UI::createBattlePanel(vector<AttackStruct> playerAttackStructs, int y) {
+	auto [panelRect, buttons] = createBattlePanelComponents(playerAttackStructs, y);
 	return Panel(panelRect, buttons);
 }
 

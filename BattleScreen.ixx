@@ -181,6 +181,7 @@ public:
 
 		playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
 		playerStatsPanel.setShow(true);
+		SDL_Rect playerStatsPanelRect = playerStatsPanel.getRect();
 
 		npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
 		npcStatsPanel.setShow(true);
@@ -188,7 +189,7 @@ public:
 		playerAttackStructs = playerCharacter.getAttacks();
 		npcAttackStructs = npc.getAttacks();
 
-		playerTurnPanel = ui.createBattlePanel(playerAttackStructs);
+		playerTurnPanel = ui.createBattlePanel(playerAttackStructs, playerStatsPanelRect.h);
 		playerTurnPanel.setShow(true);
 
 		confirmationPanel = ui.createConfirmationPanel("Ready for Battle!", ConfirmationButtonType::OkCancel, false);
