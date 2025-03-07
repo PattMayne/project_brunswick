@@ -104,8 +104,6 @@ public:
 		
 
 		/* create panels */
-		settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-		gameMenuPanel = ui.createGameMenuPanel();
 		reviewModePanel = ui.createReviewModePanel();
 		createLimbLoadedPanel(ui);
 		createChooseLimbPanel(false);
@@ -151,8 +149,6 @@ private:
 	SDL_Texture* titleTexture;
 	SDL_Rect titleRect;
 
-	Panel settingsPanel;
-	Panel gameMenuPanel;
 	Panel reviewModePanel;
 	Panel limbLoadedPanel;
 	Panel chooseLimbPanel;
@@ -169,7 +165,7 @@ private:
 	void checkMouseLocation(SDL_Event& e);
 
 	void getBackgroundTexture(UI& ui);
-	void rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel);
+	void rebuildDisplay();
 	void createTitleTexture(UI& ui);
 	void raiseTitleRect() { --titleRect.y; }
 	int getTitleBottomPosition() { return titleRect.y + titleRect.h; }
@@ -295,9 +291,6 @@ void CharacterCreationScreen::getBackgroundTexture(UI& ui) {
 export void CharacterCreationScreen::run() {
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
-
-	settingsPanel.setShow(false);
-	gameMenuPanel.setShow(false);
 	reviewModePanel.setShow(true);
 
 	/* Timeout data */
@@ -378,7 +371,6 @@ void CharacterCreationScreen::draw(UI& ui) {
 
 	limbLoadedPanel.draw(ui);
 	reviewModePanel.draw(ui);
-	settingsPanel.draw(ui);
 	drawCharacter(ui);
 	playerStatsPanel.draw();
 	chooseLimbPanel.draw(ui);
@@ -398,10 +390,11 @@ void CharacterCreationScreen::createTitleTexture(UI& ui) {
 
 
 /* Screen has been resized. Rebuild! */
-void CharacterCreationScreen::rebuildDisplay(Panel& settingsPanel, Panel& gameMenuPanel) {
+void CharacterCreationScreen::rebuildDisplay() {
 	UI& ui = UI::getInstance();
-	ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
-	ui.rebuildGameMenuPanel(gameMenuPanel);
+	/* These panels don't exist in this module anymore, but I'm keeping these function calls as a blueprint for rebuilding displays. */
+	//ui.rebuildSettingsPanel(settingsPanel, ScreenType::Map);
+	//ui.rebuildGameMenuPanel(gameMenuPanel);
 	getBackgroundTexture(ui);
 	createTitleTexture(ui);
 }
@@ -530,41 +523,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					messagePanel.setShow(false);
 					break;
 				}
-			} else if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
-				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
-				UI& ui = UI::getInstance();
-				/* see what button might have been clicked : */
-				switch (clickStruct.buttonOption) {
-				case ButtonOption::Mobile:
-					ui.resizeWindow(WindowResType::Mobile);
-					rebuildDisplay(settingsPanel, gameMenuPanel);
-					break;
-				case ButtonOption::Tablet:
-					ui.resizeWindow(WindowResType::Tablet);
-					rebuildDisplay(settingsPanel, gameMenuPanel);
-					break;
-				case ButtonOption::Desktop:
-					ui.resizeWindow(WindowResType::Desktop);
-					rebuildDisplay(settingsPanel, gameMenuPanel);
-					break;
-				case ButtonOption::Fullscreen:
-					ui.resizeWindow(WindowResType::Fullscreen);
-					rebuildDisplay(settingsPanel, gameMenuPanel);
-					break;
-				case ButtonOption::Back:
-					// switch to other panel
-					settingsPanel.setShow(false);
-					reviewModePanel.setShow(true);
-					break;
-				case ButtonOption::Exit:
-					/* back to menu screen */
-					running = false;
-					break;
-				default:
-					cout << "ERROR\n";
-				}
-			}
-			else if (reviewModePanel.getShow() && reviewModePanel.isInPanel(mouseX, mouseY)) {
+			} else if (reviewModePanel.getShow() && reviewModePanel.isInPanel(mouseX, mouseY)) {
 				cout << "\n\nCLICKED REVIEW MENU \n\n";
 				ButtonClickStruct clickStruct = reviewModePanel.checkButtonClick(mouseX, mouseY);
 				string suitSavedString = "Suit Saved.";
@@ -574,10 +533,6 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				switch (clickStruct.buttonOption) {
 				case ButtonOption::MapOptions:
 					cout << "\nMAP OPTIONS\n";
-					break;
-				case ButtonOption::Settings:
-					settingsPanel.setShow(true);
-					reviewModePanel.setShow(false);
 					break;
 				case ButtonOption::ShowLimbs:
 					changeCreationMode(CreationMode::ChooseLimb);
@@ -597,7 +552,6 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					messagePanel.setShow(true);
 					break;
 				case ButtonOption::Continue:
-					/* back to menu screen */
 
 					/* 
 					* 1. FIND OUT if player is ready to go (suit is saved, suit has limbs equipped).
@@ -734,8 +688,6 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	SDL_GetMouseState(&mouseX, &mouseY);
 	/* send the x and y to the panel and its buttons to change the color */
 	if (!messagePanel.getShow()) {
-		if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
-		if (gameMenuPanel.getShow()) { gameMenuPanel.checkMouseOver(mouseX, mouseY); }
 		if (reviewModePanel.getShow()) { reviewModePanel.checkMouseOver(mouseX, mouseY); }
 		if (limbLoadedPanel.getShow()) { limbLoadedPanel.checkMouseOver(mouseX, mouseY); }
 		if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
