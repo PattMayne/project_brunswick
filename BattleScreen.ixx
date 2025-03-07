@@ -122,6 +122,16 @@ public:
 		settingsPanel = ui.createSettingsPanel(ScreenType::Map);
 		settingsPanel.setShow(false);
 
+		unordered_map<string, ButtonOption> buttonOptions = {
+			{"OPTIONS", ButtonOption::Options },
+			{"EXIT", ButtonOption::Exit }
+		};
+		cout << "Getting OPTIONS menu\n";
+		optionsMenu = ui.createGeneralMenuPanel(buttonOptions, false);
+		optionsMenu.setShow(true);
+
+		cout << "Rect x: " << optionsMenu.getRect().x << endl;
+
 		showTitle = true;
 		titleCountdown = 140;
 
@@ -281,6 +291,7 @@ private:
 	Panel npcLimbsPanel;
 	Panel passingMessagePanel;
 	Panel confirmationPanel;
+	Panel optionsMenu;
 
 	int passingMessageCountdown;
 
@@ -838,6 +849,7 @@ void BattleScreen::draw(UI& ui) {
 	npcLimbsPanel.draw(ui);
 	confirmationPanel.draw(ui);
 	passingMessagePanel.draw(ui);
+	optionsMenu.draw(ui);
 
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
@@ -909,48 +921,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 			}
 			else {
 				cout << "user clicked mouse\n";
-				// These events might change the value of screenToLoad
-				if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
-					/* 
-					* 
-					*			SETTINGS PANEL.
-					* 
-					*/
-
-					/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
-					ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
-					UI& ui = UI::getInstance();
-					/* see what button might have been clicked : */
-					switch (clickStruct.buttonOption) {
-					case ButtonOption::Mobile:
-						ui.resizeWindow(WindowResType::Mobile);
-						rebuildDisplay(settingsPanel);
-						break;
-					case ButtonOption::Tablet:
-						ui.resizeWindow(WindowResType::Tablet);
-						rebuildDisplay(settingsPanel);
-						break;
-					case ButtonOption::Desktop:
-						ui.resizeWindow(WindowResType::Desktop);
-						rebuildDisplay(settingsPanel);
-						break;
-					case ButtonOption::Fullscreen:
-						ui.resizeWindow(WindowResType::Fullscreen);
-						rebuildDisplay(settingsPanel);
-						break;
-					case ButtonOption::Back:
-						settingsPanel.setShow(false);
-						playerTurnPanel.setShow(true);
-						break;
-					case ButtonOption::Exit:
-						/* back to menu screen */
-						running = false;
-						break;
-					default:
-						cout << "ERROR\n";
-					}
-				}
-				else if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
+				if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
 					/* 
 					* 
 					*				BATTLE MENU.
@@ -970,12 +941,8 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						handlePlayerMove(clickStruct);
 
 						break;
-					case ButtonOption::Settings:
-						settingsPanel.setShow(true);
-						playerTurnPanel.setShow(false);
-						break;
-					case ButtonOption::Exit:
-						/* back to menu screen */
+					case ButtonOption::Build:
+						screenToLoadStruct.screenType = ScreenType::CharacterCreation;
 						running = false;
 						break;
 					default:
@@ -1018,9 +985,19 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						playerStatsPanel.setShow(true);
 						npcStatsPanel.setShow(true);
 						playerAttackLoaded = AttackStruct();
-
 						return;
 					}
+				}
+				else if (optionsMenu.getShow() && optionsMenu.isInPanel(mouseX, mouseY)) {
+					/* OPTIONS MENU */
+
+					ButtonClickStruct clickStruct = optionsMenu.checkButtonClick(mouseX, mouseY);
+
+					if (clickStruct.buttonOption == ButtonOption::Exit) {
+						cout << "Clicked EXIT" << endl;
+						running = false;
+					}
+
 				}
 			}
 		}
@@ -1041,6 +1018,7 @@ void BattleScreen::checkMouseLocation(SDL_Event& e) {
 		if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
 		if (playerTurnPanel.getShow()) { playerTurnPanel.checkMouseOver(mouseX, mouseY); }
 		if (npcLimbsPanel.getShow()) { npcLimbsPanel.checkMouseOver(mouseX, mouseY); }
+		if (optionsMenu.getShow()) { optionsMenu.checkMouseOver(mouseX, mouseY); }
 	}
 }
 

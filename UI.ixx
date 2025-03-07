@@ -114,6 +114,10 @@ export class UI {
 		Panel createBattlePanel(vector<AttackStruct> playerAttackStructs);
 		void rebuildSettingsPanel(Panel& settingsPanel, ScreenType context = ScreenType::Menu);
 
+		tuple<SDL_Rect, vector<Button>> createGeneralMenuPanelComponents(unordered_map<string, ButtonOption> buttonOptions, bool left = true);
+		Panel createGeneralMenuPanel(unordered_map<string, ButtonOption> buttonOptions, bool left);
+		vector<PreButtonStruct> getGeneralMenuPreButtonStructs(unordered_map<string, ButtonOption> buttonOptions, bool left);
+
 		Panel createGameMenuPanel(ScreenType context);
 		void rebuildGameMenuPanel(Panel& gameMenuPanel, ScreenType context);
 
@@ -211,7 +215,7 @@ export class UI {
 		TTF_Font* monoFontLarge = NULL;
 
 		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
-		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs);
+		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, bool left = true);
 		vector<Button> buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 		vector<Button> buildLimbButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect);
 
@@ -886,7 +890,7 @@ PreButtonStruct UI::buildPreButtonStruct(string text, ButtonOption buttonOption,
 }
 
 /* Now that we have some information about the buttons (via struct), we can build the Panel's RECT. */
-SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs) {
+SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, bool left) {
 	int panelHeight = PANEL_PADDING; // start with one padding
 	int longestButtonTextLength = 0;
 	for (PreButtonStruct preButtonStruct : preButtonStructs) {
@@ -899,20 +903,23 @@ SDL_Rect UI::buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> p
 		}
 	}
 
+	/* Make the width first (just wide enough to accomodate the longest button). */
+	int width = longestButtonTextLength + (buttonPadding * 2) + (PANEL_PADDING * 2);
+	/* x is always 0 except when it's not. */
+	int x = left ? 0 : (getWindowWidth() - width);
+
 	return {
-		/* x is always 0 */
-		0,
+		x,
 		windowHeight - panelHeight,
-		/* panel is just wide enough to accomodate the longest button */
-		longestButtonTextLength + (buttonPadding * 2) + (PANEL_PADDING * 2),
+		width,
 		panelHeight
 	};
 }
-
+ 
 /* NOW that we have both some info about the buttons, plus the panel rect, make the actual buttons. */
 vector<Button> UI::buildButtonsFromPreButtonStructsAndPanelRect(vector<PreButtonStruct> preButtonStructs, SDL_Rect panelRect) {
 	vector<Button> buttons;
-	const int xForAll = PANEL_PADDING;
+	const int xForAll = panelRect.x + PANEL_PADDING;
 	int widthForAll = panelRect.w - (PANEL_PADDING * 2);
 	int heightSoFar = panelRect.y + PANEL_PADDING;
 
@@ -1405,8 +1412,7 @@ vector<PreButtonStruct> UI::getBattlePreButtonStructs(vector<AttackStruct> playe
 		));
 	}
 	
-	preButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings));
-	preButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("EXIT"), ButtonOption::Exit));
+	preButtonStructs.push_back(buildPreButtonStruct(resources.getButtonText("BUILD"), ButtonOption::Build));
 
 	return preButtonStructs;
 }
@@ -1481,6 +1487,39 @@ void UI::rebuildGameMenuPanel(Panel& gameMenuPanel, ScreenType context) {
 	auto [panelRect, buttons] = createGameMenuPanelComponents(context);
 	gameMenuPanel.rebuildSelf(panelRect, buttons);
 }
+
+/*	GENERIC MENU PANEL.  */
+
+/* 1 */
+Panel UI::createGeneralMenuPanel(unordered_map<string, ButtonOption> buttonOptions, bool left) {
+	auto [panelRect, buttons] = createGeneralMenuPanelComponents(buttonOptions, left);
+	return Panel(panelRect, buttons);
+}
+
+/* 2 */
+/* create all the components for the main menu panel */
+tuple<SDL_Rect, vector<Button>> UI::createGeneralMenuPanelComponents(unordered_map<string, ButtonOption> buttonOptions, bool left) {
+	vector<PreButtonStruct> preButtonStructs = getGeneralMenuPreButtonStructs(buttonOptions, left);
+	SDL_Rect panelRect = buildVerticalPanelRectFromButtonTextRects(preButtonStructs, left);
+	vector<Button> buttons = buildButtonsFromPreButtonStructsAndPanelRect(preButtonStructs, panelRect);
+	return { panelRect, buttons };
+}
+
+/* 3 */
+/* build and deliver basic info for menu panel buttons */
+vector<PreButtonStruct> UI::getGeneralMenuPreButtonStructs(unordered_map<string, ButtonOption> buttonOptions, bool left) {
+	Resources& resources = Resources::getInstance();
+	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
+
+	vector<PreButtonStruct> preButtonStructs = {};
+
+	for (const auto& pair : buttonOptions) {
+		preButtonStructs.push_back(buildPreButtonStruct(pair.first, pair.second));
+	}
+
+	return preButtonStructs;
+}
+
 
 
 /*

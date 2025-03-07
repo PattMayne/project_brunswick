@@ -184,7 +184,7 @@ export enum class ButtonOption {
 	/* Settings buttons */
 	Mobile, Tablet, Desktop, Fullscreen,
 	// TO COME: more options for Map, Battle
-	MapOptions,
+	Options, MapOptions,
 
 	/* CHARACTER CREATION SCREEN BUTTONS */
 	/* Review Mode panel buttons. */
