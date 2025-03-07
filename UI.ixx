@@ -1055,6 +1055,9 @@ void UI::prepareColors() {
 	colorsByName["SALMON"] = { 255, 118, 118 };
 	colorsByName["SPRING_GREEN"] = { 111, 255, 111 };
 
+	colorsByName["BLOOD_RED"] = { 203, 1, 1 };
+	colorsByName["MED_BLUE"] = { 2, 2, 200 };
+	colorsByName["DARK_GREEN"] = { 0, 122, 2 };
 
 
 	/* COLORS BY FUNCTION */
@@ -1080,9 +1083,9 @@ void UI::prepareColors() {
 	colorsByFunction["BLUE_BG"] = colorsByName["CORNFLOWER_BLUE"];
 	colorsByFunction["GREEN_BG"] = colorsByName["SPRING_GREEN"];
 
-	colorsByFunction["RED_FG"] = colorsByName["SCARLIGHT"];
-	colorsByFunction["BLUE_FG"] = colorsByName["FRENCH_BLUE_LIGHT"];
-	colorsByFunction["GREEN_FG"] = colorsByName["LIME"];
+	colorsByFunction["RED_FG"] = colorsByName["BLOOD_RED"];
+	colorsByFunction["BLUE_FG"] = colorsByName["MED_BLUE"];
+	colorsByFunction["GREEN_FG"] = colorsByName["DARK_GREEN"];
 
 	colorsByFunction["LIMB_BTN_BG"] = colorsByName["OXFORD_BLUE"];
 }
@@ -2614,24 +2617,41 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	* ----> Must include a string of text for name of limb.
 	*/
 
-	/* First make the nameAndColorSurface */
+	/* First make the nameSurface */
 
-	SDL_Surface* nameAndColorSurface = NULL;
-	SDL_Rect nameAndColorRect = { 0, 0, 0, 0 };
+
+	DominanceNode dNode = statsData.dNode;
+	SDL_Color dNodeColor = dNode == DominanceNode::Green ? colors["GREEN_FG"] :
+		dNode == DominanceNode::Blue ? colors["BLUE_FG"] :
+		dNode == DominanceNode::Red ? colors["RED_FG"] :
+		colors["DARK_TEXT"];
+	SDL_Surface* nameSurface = NULL;
+	SDL_Rect nameRect = { PANEL_PADDING, PANEL_PADDING, 0, 0 };
+
 	if (screenType == ScreenType::Battle) {
-		string dNodeString = dNodeText(statsData.dNode);
-		string nameAndColorString = statsData.name + "\n" + dNodeString;
-		nameAndColorSurface = TTF_RenderUTF8_Blended_Wrapped(
-			headlineFont, nameAndColorString.c_str(), colors["DARK_TEXT"], 0);
+		string nameString = statsData.name;
+		nameSurface = TTF_RenderUTF8_Blended_Wrapped(
+			headlineFont, nameString.c_str(), colors["DARK_TEXT"], 0);
 
 		/* We have the surface. Now make the rect. */
-		nameAndColorRect = {
+		nameRect = {
 			PANEL_PADDING, PANEL_PADDING,
-			nameAndColorSurface->w,
-			nameAndColorSurface->h
+			nameSurface->w,
+			nameSurface->h
 		};
 	}
+	string dNodeString = dNodeText(dNode);
+	SDL_Surface* dNodeSurface = TTF_RenderUTF8_Blended_Wrapped(headlineFont, dNodeString.c_str(), dNodeColor, 0);
+	int dNodeWidth = dNodeSurface->w;
+	int dNodeHeight = dNodeSurface->h;
 
+
+	SDL_Rect dNodeRect = {
+		nameRect.x,
+		nameRect.y + nameRect.h,
+		dNodeWidth,
+		dNodeHeight
+	};
 
 	/* Gather info for Stats Box (for any screen). */
 	string attsString = "";
@@ -2648,19 +2668,22 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	int attsWidth = attributesSurface->w;
 	int attsHeight = attributesSurface->h;
 
+	/*
+	* 
+	* ENTIRE PANEL
+	* 
+	*/
+
 	/* Get the dimensions for the entire panel. */
 	int statsPanelWidth = attsWidth + (PANEL_PADDING * 2);
-	int statsPanelHeight = attsHeight + (PANEL_PADDING * 2);
-	if (screenType == ScreenType::Battle && nameAndColorSurface != NULL) {
-		statsPanelHeight += nameAndColorSurface->h + PANEL_PADDING;
+	int statsPanelHeight = attsHeight + dNodeHeight + (PANEL_PADDING * 3);
+	if (screenType == ScreenType::Battle && nameSurface != NULL) {
+		statsPanelHeight += nameSurface->h;
 	}
 
 	/* Make the draw rects for the textures within the hud panel. */
 	int attsSurfaceDrawX = (statsPanelWidth - attsWidth) / 2;
-	int attsSurfaceDrawY = nameAndColorRect.h + PANEL_PADDING;
-	if (nameAndColorSurface != NULL) {
-		attsSurfaceDrawY += PANEL_PADDING;
-	}
+	int attsSurfaceDrawY = dNodeRect.y + dNodeRect.h + PANEL_PADDING;
 	SDL_Rect attsRect = { attsSurfaceDrawX, attsSurfaceDrawY, attsWidth, attsHeight };
 
 	/*
@@ -2674,15 +2697,17 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	SDL_Surface* panelSurface = createTransparentSurface(statsPanelWidth, statsPanelHeight);
 	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
 
+
 	/*
 	*      BLITTING
 	*/
 
-	if (nameAndColorSurface != NULL) {
-		SDL_BlitSurface(nameAndColorSurface, NULL, panelSurface, &nameAndColorRect);
+	if (nameSurface != NULL) {
+		SDL_BlitSurface(nameSurface, NULL, panelSurface, &nameRect);
 	}
 
 	SDL_BlitSurface(attributesSurface, NULL, panelSurface, &attsRect);
+	SDL_BlitSurface(dNodeSurface, NULL, panelSurface, &dNodeRect);
 	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
 
 	/*
@@ -2700,7 +2725,9 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	hudPanel.setTexture(panelTexture);
 
 	SDL_FreeSurface(attributesSurface);
+	SDL_FreeSurface(dNodeSurface);
 	SDL_FreeSurface(panelSurface);
+	if (nameSurface != NULL) { SDL_FreeSurface(nameSurface); }
 
 	return hudPanel;
 }
