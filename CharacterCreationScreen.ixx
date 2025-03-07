@@ -112,7 +112,7 @@ public:
 
 		changeCreationMode(CreationMode::Review);
 		messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
-		messagePanel.setShow(true);
+		messagePanel.setShow(false);
 
 		cout << playerCharacter.getLimbs().size() << " LIMBS\n";
 		drawLoadedLimb = true;
@@ -567,6 +567,8 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 			else if (reviewModePanel.getShow() && reviewModePanel.isInPanel(mouseX, mouseY)) {
 				cout << "\n\nCLICKED REVIEW MENU \n\n";
 				ButtonClickStruct clickStruct = reviewModePanel.checkButtonClick(mouseX, mouseY);
+				string suitSavedString = "Suit Saved.";
+
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
 				switch (clickStruct.buttonOption) {
@@ -590,7 +592,31 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					break;
 				case ButtonOption::SaveSuit:
 					updateCharacterLimbs(gameState.getPlayerID(), playerCharacter.getAnchorLimbId(), playerCharacter.getLimbs());
-					cout << "SAVING SUIT\n";
+					cout << suitSavedString << endl;
+					messagePanel = getNewConfirmationMessage(messagePanel, suitSavedString, ConfirmationButtonType::OkCancel, false);
+					messagePanel.setShow(true);
+					break;
+				case ButtonOption::Continue:
+					/* back to menu screen */
+
+					/* 
+					* 1. FIND OUT if player is ready to go (suit is saved, suit has limbs equipped).
+					* 2. FIND OUT where player is supposed to go (Map or Battle).
+					*/
+					if (true) {
+						int battleId = getCurrentBattleId(gameState.getPlayerID());
+						cout << "Battle id: " << battleId << endl;
+
+						if (battleId < 1) {
+							screenToLoadStruct.screenType = ScreenType::Map;
+						}
+						else {
+							screenToLoadStruct.screenType = ScreenType::Battle;
+							screenToLoadStruct.id = battleId;
+						}
+					}					
+
+					running = false;
 					break;
 				default:
 					cout << "ERROR\n";
@@ -707,12 +733,16 @@ void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 	/* send the x and y to the panel and its buttons to change the color */
-	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
-	if (gameMenuPanel.getShow()) { gameMenuPanel.checkMouseOver(mouseX, mouseY); }
-	if (reviewModePanel.getShow()) { reviewModePanel.checkMouseOver(mouseX, mouseY); }
-	if (limbLoadedPanel.getShow()) { limbLoadedPanel.checkMouseOver(mouseX, mouseY); }
-	if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
-	if (messagePanel.getShow()) { messagePanel.checkMouseOver(mouseX, mouseY); }
+	if (!messagePanel.getShow()) {
+		if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
+		if (gameMenuPanel.getShow()) { gameMenuPanel.checkMouseOver(mouseX, mouseY); }
+		if (reviewModePanel.getShow()) { reviewModePanel.checkMouseOver(mouseX, mouseY); }
+		if (limbLoadedPanel.getShow()) { limbLoadedPanel.checkMouseOver(mouseX, mouseY); }
+		if (chooseLimbPanel.getShow()) { chooseLimbPanel.checkMouseOver(mouseX, mouseY); }
+	}
+	else {
+		messagePanel.checkMouseOver(mouseX, mouseY);
+	}
 }
 
 
@@ -723,7 +753,7 @@ void drawJoints(Limb& limb, UI& ui) {
 		jointColor.r = 255;
 		jointColor.g = 255;
 		jointColor.b = 51;
-		jointColor.a = 255; // Alpha (fully opaque)
+		jointColor.a = 255; /* Alpha (fully opaque). */
 
 		for (Joint& joint : limb.getJoints()) {
 			Point point = joint.getPoint();

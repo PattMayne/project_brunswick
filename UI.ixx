@@ -141,6 +141,7 @@ export class UI {
 
 		/* OTHER FUNCTIONS. */
 
+		int getPanelPadding() { return PANEL_PADDING; }
 		int getWindowHeight() { return windowHeight; }
 		int getWindowWidth() { return windowWidth; }
 		void resizeWindow(WindowResType newResType);
@@ -626,9 +627,18 @@ SDL_Surface* Button::createButtonSurfaceBG(
 	vector<SDL_Rect> overlayRects
 ) {
 	UI& ui = UI::getInstance();
-	SDL_Surface* buttonSurface = SDL_CreateRGBSurface(0, buttonRect.w, buttonRect.h, 32, 0, 0, 0, 0xFF000000);
+	int panelPadding = ui.getPanelPadding();
+
+	SDL_Surface* buttonSurface = createTransparentSurface(buttonRect.w, buttonRect.h);
+
+	SDL_Rect bgColorRect = {
+		panelPadding, panelPadding,
+		buttonRect.w - (panelPadding * 2),
+		buttonRect.h - (panelPadding * 2),
+	};
+
 	// fill the rects with beautiful color
-	SDL_FillRect(buttonSurface, NULL, convertSDL_ColorToUint32(buttonSurface->format, color));
+	SDL_FillRect(buttonSurface, &bgColorRect, convertSDL_ColorToUint32(buttonSurface->format, color));
 
 	/* draw the overlay */
 	if (overlayRects.size() > 0) {
@@ -1177,7 +1187,9 @@ bool UI::initializeFonts(Resources& resources) {
 		return false;
 	}
 
-	buttonFont = TTF_OpenFont("assets/alte_haas_bold.ttf", buttonFontSize);
+	//buttonFont = TTF_OpenFont("assets/alte_haas_bold.ttf", buttonFontSize);
+	buttonFont = TTF_OpenFont("assets/knife_princess.ttf", buttonFontSize);
+	//buttonFont = TTF_OpenFont("assets/space_shards_italic.ttf", buttonFontSize);
 
 	if (!buttonFont) {
 		SDL_Log("Font (alte_haas_bold) failed to load. TTF_Error: %s\n", TTF_GetError());
@@ -1485,7 +1497,7 @@ vector<PreButtonStruct> UI::getReviewModePreButtonStructs() {
 		buildPreButtonStruct(resources.getButtonText("LIMBS"), ButtonOption::ShowLimbs),
 		buildPreButtonStruct(resources.getButtonText("SAVE"), ButtonOption::SaveSuit),
 		buildPreButtonStruct(resources.getButtonText("CLEAR"), ButtonOption::ClearSuit),
-		buildPreButtonStruct(resources.getButtonText("SETTINGS"), ButtonOption::Settings)
+		buildPreButtonStruct(resources.getButtonText("CONTINUE"), ButtonOption::Continue)
 	};
 }
 
@@ -1864,7 +1876,8 @@ export bool isInRect(SDL_Rect rect, int mouseX, int mouseY) {
 /* whenever we want to flip a surface */
 export SDL_Surface* flipSurface(SDL_Surface* surface, bool horizontal) {
 	/* new surface onto which we'll flip the original surface */
-	SDL_Surface* flippedSurface = SDL_CreateRGBSurface(0, surface->w, surface->h, 32, 0, 0, 0, 0xFF000000);
+	//SDL_Surface* flippedSurface = SDL_CreateRGBSurface(0, surface->w, surface->h, 32, 0, 0, 0, 0xFF000000);
+	SDL_Surface* flippedSurface = createTransparentSurface(surface->w, surface->h);
 
 	/* error check */
 	if (!flippedSurface) {

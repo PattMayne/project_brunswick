@@ -204,27 +204,55 @@ export int getCurrentBattleId(int playerId) {
 
     int battleStatusIntPlayer = static_cast<int>(BattleStatus::PlayerTurn);
     int battleStatusIntNpc = static_cast<int>(BattleStatus::NpcTurn);
-    int battleStatusRebuild = static_cast<int>(BattleStatus::RebuildRequired);
+    int battleStatusRebuildInt = static_cast<int>(BattleStatus::RebuildRequired);
 
     /* Bind the slug value. */
     sqlite3_bind_int(statement, 1, playerId);
     sqlite3_bind_int(statement, 2, battleStatusIntPlayer);
     sqlite3_bind_int(statement, 3, battleStatusIntNpc);
-    sqlite3_bind_int(statement, 4, battleStatusRebuild);
+    sqlite3_bind_int(statement, 4, battleStatusRebuildInt);
 
     /* Execute binded statement. */
     int numberOfOpenBattles = 0;
     while ((returnCode = sqlite3_step(statement)) == SQLITE_ROW) {
-        ++numberOfOpenBattles;
-        currentMapId = sqlite3_column_int(statement, 0);
+        //++numberOfOpenBattles;
         int oppoId = sqlite3_column_int(statement, 1);
+        //currentMapId = sqlite3_column_int(statement, 0);
+        /* Make sure opponent exists. */
+
+        const char* characterCountSQL = "SELECT COUNT(*) FROM character WHERE id = ?;";
+        sqlite3_stmt* characterCountStatement;
+        returnCode = sqlite3_prepare_v2(db, characterCountSQL, -1, &characterCountStatement, nullptr);
+
+        if (returnCode != SQLITE_OK) {
+            std::cerr << "Failed to prepare JOINTS retrieval statement: " << sqlite3_errmsg(db) << std::endl;
+            sqlite3_finalize(statement);
+            sqlite3_close(db);
+            return currentMapId;
+        }
+
+        sqlite3_bind_int(characterCountStatement, 1, oppoId);
+        int oppoCount = 0;
+        /* Execute count query. */
+        if (sqlite3_step(characterCountStatement) == SQLITE_ROW) {
+            oppoCount = sqlite3_column_int(characterCountStatement, 0);
+        }
+
+        if (oppoCount > 0) {
+            ++numberOfOpenBattles;
+            currentMapId = sqlite3_column_int(statement, 0);
+        }
+
+        sqlite3_finalize(characterCountStatement);
+    }
+    if (numberOfOpenBattles > 0) {
+        //currentMapId = sqlite3_column_int(statement, 0);
     }
     cout << "There are " << numberOfOpenBattles << " open battles.\n";
 
     /* Finalize statement and close DB. */
     sqlite3_finalize(statement);
     sqlite3_close(db);
-
 
     return currentMapId;
 }

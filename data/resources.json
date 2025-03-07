@@ -16,15 +16,18 @@
   },
   "BUTTON_TEXT": {
     "ABOUT": "ABOUT",
-    "LOAD_GAME":  "CONTINUE",
+    "LOAD_GAME":  "LOAD GAME",
     "SETTINGS": "SETTINGS",
     "NEW_GAME": "NEW GAME",
     "EXIT": "EXIT",
     "OPTIONS": "OPTIONS",
+    "CONTINUE":  "CONTINUE",
 
     "SAVE": "SAVE",
     "LIMBS": "LIMBS",
     "CLEAR": "CLEAR",
+    "RETURN": "RETURN",
+    "BACK_TO_GAME": "BACK TO GAME",
 
     "LOAD": "LOAD",
     "NEXT": "NEXT",
