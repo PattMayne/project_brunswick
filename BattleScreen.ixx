@@ -83,6 +83,15 @@ bool intsContainInt(vector<int> ints, int myInt) {
 	return false;
 }
 
+bool intsContainInt(unordered_set<int> ints, int myInt) {
+	for (int thisInt : ints) {
+		if (myInt == thisInt) {
+			return true;
+		}
+	}
+	return false;
+}
+
 
 void bringSumTo100(int& numA, int& numB) {
 	if (numA + numB > 100) {
@@ -329,7 +338,7 @@ private:
 	int attackAdvanceNpc;
 	bool attackAdvanceHitTarget;
 
-	vector<int> limbIdsToUpdate;
+	unordered_set<int> limbIdsToUpdate;
 
 	bool running;
 };
@@ -1241,7 +1250,7 @@ void BattleScreen::calculatePlayerSteal() {
 	stealSuccess = bingo <= chances;
 
 	if (stealSuccess) {
-		limbIdsToUpdate.push_back(targetLimbId);
+		limbIdsToUpdate.insert(targetLimbId);
 	}
 
 	UI& ui = UI::getInstance();
@@ -1381,7 +1390,7 @@ void BattleScreen::calculatePlayerBrainDrain() {
 			limb.modifyIntelligence(-intelMod);
 			limb.modifyHP(-attack);
 			totalDamage -= attack;
-			limbIdsToUpdate.push_back(limb.getId());
+			limbIdsToUpdate.insert(limb.getId());
 		}
 		else {
 			if (precision < 90) {
@@ -1390,7 +1399,7 @@ void BattleScreen::calculatePlayerBrainDrain() {
 					if (limb.getId() == connectedLimbId) {
 						limb.modifyHP(-spreadAttack);
 						totalDamage -= spreadAttack;
-						limbIdsToUpdate.push_back(limb.getId());
+						limbIdsToUpdate.insert(limb.getId());
 					}
 				}
 			}
@@ -1405,7 +1414,7 @@ void BattleScreen::calculatePlayerBrainDrain() {
 		int amountToBoost = (rand() % intelDecreaser) + 1;
 		intelDecreaser -= amountToBoost;
 		playerCharacter.getLimbById(limbToBoostId).modifyIntelligence(amountToBoost);
-		limbIdsToUpdate.push_back(limbToBoostId);
+		limbIdsToUpdate.insert(limbToBoostId);
 	}
 
 	int damageDisplayNumber = totalDamage * -1;
@@ -1550,7 +1559,7 @@ void BattleScreen::calculateNpcBrainDrain() {
 			limb.modifyIntelligence(-intelMod);
 			limb.modifyHP(-attack);
 			totalDamage -= attack;
-			limbIdsToUpdate.push_back(limb.getId());
+			limbIdsToUpdate.insert(limb.getId());
 		}
 		else {
 			if (precision < 90) {
@@ -1559,7 +1568,7 @@ void BattleScreen::calculateNpcBrainDrain() {
 					if (limb.getId() == connectedLimbId) {
 						limb.modifyHP(-spreadAttack);
 						totalDamage -= spreadAttack;
-						limbIdsToUpdate.push_back(limb.getId());
+						limbIdsToUpdate.insert(limb.getId());
 					}
 				}
 			}
@@ -1574,7 +1583,7 @@ void BattleScreen::calculateNpcBrainDrain() {
 		int amountToBoost = (rand() % intelDecreaser) + 1;
 		intelDecreaser -= amountToBoost;
 		npc.getLimbById(limbToBoostId).modifyIntelligence(amountToBoost);
-		limbIdsToUpdate.push_back(limbToBoostId);
+		limbIdsToUpdate.insert(limbToBoostId);
 	}
 
 	int damageDisplayNumber = totalDamage * -1;
@@ -1735,7 +1744,7 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 		if (limb.getId() == targetLimbId) {
 			limb.modifyHP(-attack);
 			totalDamage -= attack;
-			limbIdsToUpdate.push_back(limb.getId());
+			limbIdsToUpdate.insert(limb.getId());
 
 			if (isSwoop) {
 				stolenSpeed += speedStealAmount;
@@ -1749,7 +1758,7 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 					if (limb.getId() == connectedLimbId) {
 						limb.modifyHP(-spreadAttack);
 						totalDamage -= spreadAttack;
-						limbIdsToUpdate.push_back(limb.getId());
+						limbIdsToUpdate.insert(limb.getId());
 
 						if (isSwoop) {
 							stolenSpeed += quarterSteal;
@@ -1919,7 +1928,7 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 		if (limb.getId() == targetLimbId) {
 			limb.modifyHP(-attack);
 			totalDamage -= attack;
-			limbIdsToUpdate.push_back(limb.getId());
+			limbIdsToUpdate.insert(limb.getId());
 
 			if (isSwoop) {
 				stolenSpeed += speedStealAmount;
@@ -1933,7 +1942,7 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 					if (limb.getId() == connectedLimbId) {
 						limb.modifyHP(-spreadAttack);
 						totalDamage -= spreadAttack;
-						limbIdsToUpdate.push_back(limb.getId());
+						limbIdsToUpdate.insert(limb.getId());
 
 						if (isSwoop) {
 							stolenSpeed += quarterSteal;
