@@ -395,6 +395,108 @@ export Battle loadBattle(int battleId) {
 * 
 */
 
+export vector<Limb> createLimbsAtShrine(int characterId, string mapSlug, unordered_set<string> limbSlugs) {
+    vector<Limb> newLimbs = {};
+    sqlite3* db = startTransaction();
+
+    /* Create statements (before the loop) for adding new Limb and Joint objects to the database. */
+    const char* insertLimbSQL = "INSERT INTO limb (form_slug, map_slug, name, character_id) VALUES (?, ?, ?, ?);";
+    sqlite3_stmt* limbStatement;
+
+    /* Prepare the statements before starting the loop.
+    * Start with LIMB statement
+    */
+    int returnCode = sqlite3_prepare_v2(db, insertLimbSQL, -1, &limbStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB insert statement: " << sqlite3_errmsg(db) << endl;
+        return {};
+    }
+
+    /* Create statement for adding new JOINT object to the database. */
+    const char* insertJointSQL = "INSERT INTO joint (vector_index, limb_id, point_form_x, point_form_y) "
+        "VALUES (?, ?, ?, ?);";
+    sqlite3_stmt* jointStatement;
+
+    /* Prepare the JOINT statement before starting the loop. */
+    returnCode = sqlite3_prepare_v2(db, insertJointSQL, -1, &jointStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare JOINT insert statement: " << sqlite3_errmsg(db) << endl;
+        return {};
+    }
+
+    for (string slug : limbSlugs) {
+        /* Create limb object. */
+        LimbForm newLimbForm = getLimbForm(slug);
+        string newLimbName = newLimbForm.name;
+        newLimbs.emplace_back(newLimbForm);
+        Limb& limb = newLimbs[newLimbs.size() - 1];
+        limb.setName(newLimbName);
+        limb.setCharacterId(characterId);
+        limb.setMapSlug(mapSlug);
+
+        /* Save the limb object to the DB. */
+        char* errMsg = nullptr;
+        bool limbError = false;
+
+        /* Loop through the Limbs and save each one.
+        * This is also where we initially set each Limb's id,
+        * which we can only get after saving them to the DB.
+        */
+        sqlite3_bind_text(limbStatement, 1, slug.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(limbStatement, 2, mapSlug.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(limbStatement, 3, newLimbName.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_int(limbStatement, 4, characterId);
+
+        if (sqlite3_step(limbStatement) == SQLITE_DONE) {
+            /* Get the ID of the saved item. */
+            int limbID = static_cast<int>(sqlite3_last_insert_rowid(db));
+            limb.setId(limbID);
+
+            /* Loop through this limb's JOINT objects and save each of them to the DB.
+            * Use the statement created just beneath the LIMB statement.
+            */
+            bool jointError = false;
+            for (int i = 0; i < limb.getJoints().size(); ++i) {
+                Joint& joint = limb.getJoints()[i];
+
+                sqlite3_bind_int(jointStatement, 1, i); /* vector_index */
+                sqlite3_bind_int(jointStatement, 2, limbID); /* limb ID */
+                sqlite3_bind_int(jointStatement, 3, joint.getFormPoint().x); /* point form x */
+                sqlite3_bind_int(jointStatement, 4, joint.getFormPoint().y); /* point form y */
+
+                if (sqlite3_step(jointStatement) == SQLITE_DONE) {
+                    joint.setId(static_cast<int>(sqlite3_last_insert_rowid(db)));
+                }
+                else {
+                    cerr << "Insert failed for JOINT: " << sqlite3_errmsg(db) << endl;
+                    jointError = true;
+                    break;
+                }
+
+                /* Reset the JOINT statement for the next loop. */
+                sqlite3_reset(jointStatement);
+            }
+
+            if (jointError) { /* TO DO: DEAL WITH ERRORS. */ }
+        }
+        else {
+            cerr << "Insert failed for LIMB: " << sqlite3_errmsg(db) << endl;
+            limbError = true;
+            break;
+        }
+
+        /* Reset the LIMB statement for the next loop. */
+        sqlite3_reset(limbStatement);
+
+    }
+    /* Finalize the statements, commit the transaction. */
+    sqlite3_finalize(jointStatement);
+    sqlite3_finalize(limbStatement);
+    commitTransactionAndCloseDatabase(db);
+
+    return newLimbs;
+}
+
 
 /* When player unscrambles a limb and it gets deleted from their inventory. */
 export bool deleteLimbInTrans(int limbId, sqlite3* db) {

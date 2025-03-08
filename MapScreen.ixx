@@ -248,6 +248,7 @@ export class MapScreen {
 
 			hudPanel = ui.createHud(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
 			hudPanel.setShow(true);
+			slugsToBestow = {};
 		}
 
 		/* Destructor */
@@ -399,6 +400,7 @@ export class MapScreen {
 		Panel hudPanel;
 
 		int passingMessageCountdown = 0; /* optional */
+		unordered_set<string> slugsToBestow;
 };
 
 
@@ -1759,6 +1761,30 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 
 						createShrineMessage(suit);
 						if (unscrambledSomething) { break; }
+						else {
+							/* 
+							* Display "do you want some limbs" message.
+							* 1. Find out if suit has any unscrambled limbs.
+							* 2. Open popup and ask question. Set a flag. Store limb slugs in module-scoped set.
+							* 3. Make function to handle "yes" scenario (create limbs in DB and player inventory).
+							*/
+							slugsToBestow = {};
+							for (Limb& limb : suit.getLimbs()) {
+								if (limb.getUnscrambled()) {
+									/* Player can have this limb. */
+									slugsToBestow.insert(limb.getForm().slug);
+								}
+							}
+
+							if (slugsToBestow.size() > 0) {
+								/* Open the messagebox. */
+								string message = "Do you request " + suit.getName() + " to bestow fresh limbs upon you?";
+
+								messagePanel.destroyTextures();
+								messagePanel = getNewConfirmationMessage(messagePanel, message, ConfirmationButtonType::YesNo, true);
+								messagePanel.setShow(true);
+							}
+						}
 					}
 				}
 
@@ -2321,9 +2347,23 @@ void MapScreen::handleMousedown(SDL_Event& e, bool& running) {
 		switch (clickStruct.buttonOption) {
 		case ButtonOption::Agree:
 			messagePanel.setShow(false);
+			/* Find the context. */
+
+			if (slugsToBestow.size() > 0) {
+				MapCharacter& playerCharacter = map.getPlayerCharacter();
+				vector<Limb> newLimbs = createLimbsAtShrine(playerCharacter.getId(), map.getSlug(), slugsToBestow);
+
+				for (Limb& newLimb : newLimbs) {
+					playerCharacter.addLimb(newLimb);
+				}
+			}
+
+			slugsToBestow = {};
+
 			break;
 		case ButtonOption::Refuse:
 			messagePanel.setShow(false);
+			slugsToBestow = {};
 			break;
 		}
 	}
