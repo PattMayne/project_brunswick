@@ -1635,6 +1635,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 		if (collisionInfo.hasCollided) {
 			landmarkCollided = true;
 			vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+			sqlite3* db = startTransaction();
 
 			if (collisionInfo.type == LandmarkType::Shrine) {				
 				vector<string> limbSlugsToHeal;
@@ -1688,6 +1689,8 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							}
 						}
 
+						/* Now delete all non-equipped versions of this limb (player, NPCs, and Roaming Limbs). */
+
 						if (slugsToDeleteFromPlayer.size() > 0) {
 							/* Run through them again, this time to delete anything non-equipped with slugs to delete. */
 							for (int u = playerLimbs.size() - 1; u >= 0; --u) {
@@ -1700,7 +1703,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 											* Destroy texture.
 											* Erase from DB.
 											*/
-											deleteLimb(playerLimb.getId());
+											deleteLimbInTrans(playerLimb.getId(), db);
 											SDL_DestroyTexture(playerLimb.getTexture());
 											playerLimbs.erase(playerLimbs.begin() + u);
 										}
@@ -1709,7 +1712,6 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							}
 
 							/* Now do the same for all NPCs. */
-
 							vector<MapCharacter>& npcs = map.getNPCs();
 
 							for (int i = 0; i < npcs.size(); ++i) {
@@ -1727,7 +1729,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 												* Destroy texture.
 												* Erase from DB.
 												*/
-												deleteLimb(npcLimb.getId());
+												deleteLimbInTrans(npcLimb.getId(), db);
 												SDL_DestroyTexture(npcLimb.getTexture());
 												npcLimbs.erase(npcLimbs.begin() + u);
 											}
@@ -1735,7 +1737,6 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 									}
 								}
 							}
-
 
 							/* Also from Roaming Limbs. */
 							vector<Limb>& roamingLimbs = map.getRoamingLimbs();
@@ -1748,13 +1749,12 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										* Destroy texture.
 										* Erase from DB.
 										*/
-										deleteLimb(roamingLimb.getId());
+										deleteLimbInTrans(roamingLimb.getId(), db);
 										SDL_DestroyTexture(roamingLimb.getTexture());
 										roamingLimbs.erase(roamingLimbs.begin() + r);
 									}
 								}
 							}
-
 						}
 
 						createShrineMessage(suit);
@@ -1763,7 +1763,6 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 				}
 
 				/* Heal Limbs from this Shrine. */
-				sqlite3* db = startTransaction();
 				for (Limb& limb : playerLimbs) {
 					for (string slugToHeal : limbSlugsToHeal) {
 						if (slugToHeal == limb.getForm().slug) {
@@ -1774,7 +1773,6 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 					}
 					
 				}
-				commitTransactionAndCloseDatabase(db);
 
 			} else if (collisionInfo.type == LandmarkType::Exit) {
 				bool totallyUnscrambled = false;
@@ -1800,6 +1798,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 				passingMessagePanel.setShow(true);
 				passingMessageCountdown = 0;
 			}
+			commitTransactionAndCloseDatabase(db);
 		}
 	}
 

@@ -395,6 +395,37 @@ export Battle loadBattle(int battleId) {
 * 
 */
 
+
+/* When player unscrambles a limb and it gets deleted from their inventory. */
+export bool deleteLimbInTrans(int limbId, sqlite3* db) {
+    bool success = false;    
+
+    /* No need to change the map_slug because map only loads non-owned limbs. */
+    const char* updateSQL = "DELETE FROM limb WHERE id = ?;";
+    sqlite3_stmt* statement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateSQL, -1, &statement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        sqlite3_close(db);
+        return success;
+    }
+
+    /* Bind the value. */
+    sqlite3_bind_int(statement, 1, limbId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(statement);
+    if (returnCode != SQLITE_DONE) { cerr << "DELETE LIMB failed: " << sqlite3_errmsg(db) << endl; }
+    else { success = true; }
+
+    /* Finalize statement and close database. */
+    sqlite3_finalize(statement);
+
+    return success;
+}
+
 /* When player unscrambles a limb and it gets deleted from their inventory. */
 export bool deleteLimb(int limbId) {
     bool success = false;
