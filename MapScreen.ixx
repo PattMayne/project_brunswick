@@ -1738,7 +1738,22 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 
 
 							/* Also from Roaming Limbs. */
-
+							vector<Limb>& roamingLimbs = map.getRoamingLimbs();
+							for (int r = roamingLimbs.size() - 1; r >= 0; --r) {
+								Limb& roamingLimb = roamingLimbs[r];
+								for (string slug : slugsToDeleteFromPlayer) {
+									if (roamingLimb.getForm().slug == slug) {
+										/*
+										* Erase this limb from roaming limbs.
+										* Destroy texture.
+										* Erase from DB.
+										*/
+										deleteLimb(roamingLimb.getId());
+										SDL_DestroyTexture(roamingLimb.getTexture());
+										roamingLimbs.erase(roamingLimbs.begin() + r);
+									}
+								}
+							}
 
 						}
 
@@ -1810,8 +1825,6 @@ bool MapScreen::checkNpcOnLimbCollision() {
 				roamingLimb.setCharacterId(npcID);
 				npc.addLimb(roamingLimb);
 				updateLimbOwnerInTransaction(roamingLimb.getId(), npcID, db);
-
-				cout << "Adding NPC limb in map slug: " << roamingLimb.getMapSlug() << "\n";
 
 				if (blockIsDrawable(npc.getPosition())) {
 					/* Make object for limb collision animation. */
