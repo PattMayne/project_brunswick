@@ -79,6 +79,7 @@ import <vector>;
 import <cstdlib>;
 import <time.h>;
 import <unordered_map>;
+import <unordered_set>;
 
 import FormFactory;
 import TypeStorage;
@@ -1635,9 +1636,9 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 			landmarkCollided = true;
 			vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 
-			if (collisionInfo.type == LandmarkType::Shrine) {
-				
+			if (collisionInfo.type == LandmarkType::Shrine) {				
 				vector<string> limbSlugsToHeal;
+				unordered_set<string> slugsToDeleteFromPlayer;
 
 				for (Character& suit : map.getSuits()) {
 					if (suit.getId() == landmark.getCharacterId()) {
@@ -1672,6 +1673,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										suit.setTexture(suit.createAvatar(false));
 										isMatch = true; /* Flag to deal with the playerLimb. */
 										int rotationAngleIncrement = (rand() % 2) == 0 ? 4 : -4;
+										slugsToDeleteFromPlayer.insert(suitLimb.getForm().slug);
 
 										/* create acquiredLimbStruct for the animation. */
 										SDL_Rect diffRect = { 0, 0, 0, 0 };
@@ -1693,9 +1695,28 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 								* Destroy texture.
 								* Erase from DB.
 								*/
-								deleteLimb(playerLimb.getId());
-								SDL_DestroyTexture(playerLimb.getTexture());
-								playerLimbs.erase(playerLimbs.begin() + u);
+								//deleteLimb(playerLimb.getId());
+								//SDL_DestroyTexture(playerLimb.getTexture());
+								//playerLimbs.erase(playerLimbs.begin() + u);
+							}
+						}
+
+						/* Run through them again, this time to delete anything non-equipped with slugs to delete. */
+						for (int u = playerLimbs.size() - 1; u >= 0; --u) {
+							Limb& playerLimb = playerLimbs[u];
+							if (!playerLimb.isEquipped()) {
+								for (string slug : slugsToDeleteFromPlayer) {
+									if (slug == playerLimb.getForm().slug) {
+										/*
+										* Erase this limb from player inventory.
+										* Destroy texture.
+										* Erase from DB.
+										*/
+										deleteLimb(playerLimb.getId());
+										SDL_DestroyTexture(playerLimb.getTexture());
+										playerLimbs.erase(playerLimbs.begin() + u);
+									}
+								}
 							}
 						}
 
@@ -2235,9 +2256,6 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 	default:
 		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";
 	}
-
-	// cout << "Block Width: " << blockWidth << "\n";
-
 }
 
 

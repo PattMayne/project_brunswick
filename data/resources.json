@@ -77,9 +77,9 @@
       "LARGE": 128
     },
     "BUTTON": {
-      "X_SMALL": 18,
-      "SMALL": 22,
-      "MEDIUM": 28,
+      "X_SMALL": 20,
+      "SMALL": 24,
+      "MEDIUM": 30,
       "LARGE": 34
     },
     "DIALOG": {

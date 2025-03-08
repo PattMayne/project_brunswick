@@ -1180,7 +1180,6 @@ bool UI::initializeFonts(Resources& resources) {
 	int headlineFontLargeSize = resources.getFontSize(FontContext::HeadlineLarge, mainWindowSurface->w);
 
 
-	//
 	/* Initialize TTF font library */
 	if (TTF_Init() == -1) {
 		SDL_Log("WTTF failed to initialize. TTF_Error: %s\n", TTF_GetError());
