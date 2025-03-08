@@ -1658,7 +1658,6 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							Limb& playerLimb = playerLimbs[u];
 							if (playerLimb.isEquipped()) { continue; }
 
-							bool isMatch = false;
 							vector<Limb>& suitLimbs = suit.getLimbs();
 
 							for (int s = 0; s < suitLimbs.size(); ++s) {
@@ -1671,7 +1670,6 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										unscrambledSomething = true;
 										unscrambleLimb(suitLimb);
 										suit.setTexture(suit.createAvatar(false));
-										isMatch = true; /* Flag to deal with the playerLimb. */
 										int rotationAngleIncrement = (rand() % 2) == 0 ? 4 : -4;
 										slugsToDeleteFromPlayer.insert(suitLimb.getForm().slug);
 
@@ -1688,36 +1686,60 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 									}
 								}
 							}
-
-							if (isMatch) {
-								/* 
-								* Erase this limb from player inventory.
-								* Destroy texture.
-								* Erase from DB.
-								*/
-								//deleteLimb(playerLimb.getId());
-								//SDL_DestroyTexture(playerLimb.getTexture());
-								//playerLimbs.erase(playerLimbs.begin() + u);
-							}
 						}
 
-						/* Run through them again, this time to delete anything non-equipped with slugs to delete. */
-						for (int u = playerLimbs.size() - 1; u >= 0; --u) {
-							Limb& playerLimb = playerLimbs[u];
-							if (!playerLimb.isEquipped()) {
-								for (string slug : slugsToDeleteFromPlayer) {
-									if (slug == playerLimb.getForm().slug) {
-										/*
-										* Erase this limb from player inventory.
-										* Destroy texture.
-										* Erase from DB.
-										*/
-										deleteLimb(playerLimb.getId());
-										SDL_DestroyTexture(playerLimb.getTexture());
-										playerLimbs.erase(playerLimbs.begin() + u);
+						if (slugsToDeleteFromPlayer.size() > 0) {
+							/* Run through them again, this time to delete anything non-equipped with slugs to delete. */
+							for (int u = playerLimbs.size() - 1; u >= 0; --u) {
+								Limb& playerLimb = playerLimbs[u];
+								if (!playerLimb.isEquipped()) {
+									for (string slug : slugsToDeleteFromPlayer) {
+										if (slug == playerLimb.getForm().slug) {
+											/*
+											* Erase this limb from player inventory.
+											* Destroy texture.
+											* Erase from DB.
+											*/
+											deleteLimb(playerLimb.getId());
+											SDL_DestroyTexture(playerLimb.getTexture());
+											playerLimbs.erase(playerLimbs.begin() + u);
+										}
 									}
 								}
 							}
+
+							/* Now do the same for all NPCs. */
+
+							vector<MapCharacter>& npcs = map.getNPCs();
+
+							for (int i = 0; i < npcs.size(); ++i) {
+								MapCharacter& npc = npcs[i];
+								vector<Limb>& npcLimbs = npc.getLimbs();
+
+								/* Delete anything non-equipped with slugs to delete. */
+								for (int u = npcLimbs.size() - 1; u >= 0; --u) {
+									Limb& npcLimb = npcLimbs[u];
+									if (!npcLimb.isEquipped()) {
+										for (string slug : slugsToDeleteFromPlayer) {
+											if (slug == npcLimb.getForm().slug) {
+												/*
+												* Erase this limb from player inventory.
+												* Destroy texture.
+												* Erase from DB.
+												*/
+												deleteLimb(npcLimb.getId());
+												SDL_DestroyTexture(npcLimb.getTexture());
+												npcLimbs.erase(npcLimbs.begin() + u);
+											}
+										}
+									}
+								}
+							}
+
+
+							/* Also from Roaming Limbs. */
+
+
 						}
 
 						createShrineMessage(suit);
