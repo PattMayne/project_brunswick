@@ -77,14 +77,14 @@
       "LARGE": 128
     },
     "BUTTON": {
-      "X_SMALL": 16,
-      "SMALL":  20,
-      "MEDIUM": 24,
+      "X_SMALL": 18,
+      "SMALL": 22,
+      "MEDIUM": 28,
       "LARGE": 34
     },
     "DIALOG": {
       "X_SMALL": 15,
-      "SMALL":  18,
+      "SMALL": 18,
       "MEDIUM": 21,
       "LARGE": 33
     },
@@ -95,10 +95,16 @@
       "LARGE": 34
     },
     "HEADLINE": {
-      "X_SMALL": 14,
-      "SMALL": 20,
-      "MEDIUM": 24,
+      "X_SMALL": 16,
+      "SMALL": 22,
+      "MEDIUM": 28,
       "LARGE": 32
+    },
+    "HEADLINE_LG": {
+      "X_SMALL": 24,
+      "SMALL": 30,
+      "MEDIUM": 34,
+      "LARGE": 38
     }
   },
   "MEDIA_MIN_WIDTHS": {

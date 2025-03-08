@@ -214,6 +214,7 @@ export class UI {
 		TTF_Font* monoFont = NULL;
 		TTF_Font* monoFontLarge = NULL;
 		TTF_Font* headlineFont = NULL;
+		TTF_Font* headlineFontLarge = NULL;
 
 		PreButtonStruct buildPreButtonStruct(string text, ButtonOption buttonOption, int optionID = -1);
 		SDL_Rect buildVerticalPanelRectFromButtonTextRects(vector<PreButtonStruct> preButtonStructs, bool left = true, int y = -1);
@@ -1173,10 +1174,13 @@ bool UI::initializeFonts(Resources& resources) {
 	int bodyFontSize = resources.getFontSize(FontContext::Body, mainWindowSurface->w);
 	int buttonFontSize = resources.getFontSize(FontContext::Button, mainWindowSurface->w);
 	int dialogFontSize = resources.getFontSize(FontContext::Dialog, mainWindowSurface->w);
-	int monoFontSize = buttonFontSize;
+	int monoFontSize = bodyFontSize;
 	int monoFontLargeSize = resources.getFontSize(FontContext::Title, mainWindowSurface->w);
 	int headlineFontSize = resources.getFontSize(FontContext::Headline, mainWindowSurface->w);
+	int headlineFontLargeSize = resources.getFontSize(FontContext::HeadlineLarge, mainWindowSurface->w);
 
+
+	//
 	/* Initialize TTF font library */
 	if (TTF_Init() == -1) {
 		SDL_Log("WTTF failed to initialize. TTF_Error: %s\n", TTF_GetError());
@@ -1205,8 +1209,17 @@ bool UI::initializeFonts(Resources& resources) {
 	headlineFont = TTF_OpenFont("assets/pr_viking.ttf", headlineFontSize);
 
 	if (!headlineFont) {
-		SDL_Log("Font (sono_reg) failed to load. TTF_Error: %s\n", TTF_GetError());
-		cerr << "Font (sono_reg) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		SDL_Log("Font (pr_viking) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (pr_viking) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		return false;
+	}
+
+	//headlineFontLarge = TTF_OpenFont("assets/classica_bold.ttf", headlineFontLargeSize);
+	headlineFontLarge = TTF_OpenFont("assets/pr_viking.ttf", headlineFontLargeSize);
+
+	if (!headlineFontLarge) {
+		SDL_Log("Font (classica_bold) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (classica_bold) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 		return false;
 	}
 
@@ -1218,9 +1231,11 @@ bool UI::initializeFonts(Resources& resources) {
 		return false;
 	}
 
+	//  classica_italic
 	//buttonFont = TTF_OpenFont("assets/alte_haas_bold.ttf", buttonFontSize);
-	buttonFont = TTF_OpenFont("assets/knife_princess.ttf", buttonFontSize);
-	//buttonFont = TTF_OpenFont("assets/space_shards_italic.ttf", buttonFontSize);
+	//buttonFont = TTF_OpenFont("assets/knife_princess.ttf", buttonFontSize);
+	buttonFont = TTF_OpenFont("assets/pr_viking.ttf", buttonFontSize);
+
 
 	if (!buttonFont) {
 		SDL_Log("Font (alte_haas_bold) failed to load. TTF_Error: %s\n", TTF_GetError());
@@ -1228,11 +1243,11 @@ bool UI::initializeFonts(Resources& resources) {
 		return false;
 	}
 
-	bodyFont = TTF_OpenFont("assets/alte_haas.ttf", bodyFontSize);
+	bodyFont = TTF_OpenFont("assets/classica_book.ttf", bodyFontSize);
 
 	if (!bodyFont) {
-		SDL_Log("Font (alte_haas) failed to load. TTF_Error: %s\n", TTF_GetError());
-		cerr << "Font (alte_haas) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
+		SDL_Log("Font (classica_book) failed to load. TTF_Error: %s\n", TTF_GetError());
+		cerr << "Font (classica_book) failed to load. TTF_Error: " << TTF_GetError() << std::endl;
 		return false;
 	}
 
@@ -1879,7 +1894,7 @@ Panel UI::createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, b
 	* But we can't finish creating the panel background until after we create the buttons.
 	*/
 	if (label != "") {
-		labelSurface = TTF_RenderUTF8_Blended(buttonFont, label.c_str(), colors["DARK_TEXT"]);
+		labelSurface = TTF_RenderUTF8_Blended(headlineFontLarge, label.c_str(), colors["DARK_TEXT"]);
 		labelHeight = labelSurface->h;
 		labelWidth = labelSurface->w;
 		btnOffsetY = labelHeight + (PANEL_PADDING * 3);
@@ -2545,7 +2560,7 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement, bool isBo
 
 	Resources& resources = Resources::getInstance();
 	unordered_map<string, SDL_Color> colors = getColors();
-	TTF_Font* bodyFont = isBold ? getButtonFont() : getBodyFont();
+	TTF_Font* bodyFont = getBodyFont();
 
 	/* 
 	* Figure out the dimensions of the panel.

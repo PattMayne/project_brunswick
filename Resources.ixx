@@ -178,6 +178,7 @@ int Resources::getFontSize(FontContext fontContext, int windowWidth) {
                     fontContext == FontContext::Body ? "BODY" :
                     fontContext == FontContext::Dialog ? "DIALOG" :
                     fontContext == FontContext::Headline ? "HEADLINE" :
+                    fontContext == FontContext::HeadlineLarge ? "HEADLINE_LG" :
                     fontContext == FontContext::Button ? "BUTTON" : "ERROR";
 
                 if (fontContextLabel != "ERROR") {
