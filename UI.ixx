@@ -123,8 +123,10 @@ export class UI {
 
 		/* CHARACTER CREATION PANELS. */
 		Panel createReviewModePanel();
-		Panel createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints); /* Does this need a limb id? */
-		Panel createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, string label = "");
+		Panel createLimbLoadedModePanel(
+			bool loadedLimbHasExtraJoints, bool characterHasExtraJoints); /* Does this need a limb id? */
+		Panel createChooseLimbModePanel(
+			vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, string label, int page = 1);
 
 		/* TO DO: make rebuildPanel functions for Character Creation screen. */
 
@@ -243,7 +245,7 @@ export class UI {
 		tuple<SDL_Rect, vector<Button>> createReviewModePanelComponents();
 		tuple<SDL_Rect, vector<Button>> createLimbLoadedModePanelComponents(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints);
 		tuple<SDL_Rect, vector<Button>> createChooseLimbModePanelComponents(
-			vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, int labelOffsetY = 0);
+			vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, int labelOffsetY, int page = 1);
 
 		vector<PreButtonStruct> getReviewModePreButtonStructs();
 		vector<PreButtonStruct> getLimbLoadedModePreButtonStructs(bool loadedLimbHasExtraJoints, bool characterHasExtraJoints);
@@ -1706,29 +1708,49 @@ export SDL_Surface* centerSurfaceInRect(SDL_Surface* surfaceToCenter, SDL_Rect r
 * -- Do pagination (still keep Back button for EVERY page... but also add NEXT and PREVIOUS).
 */
 tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
-	vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, int labelOffsetY
+	vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, int labelOffsetY, int page
 ) {
+	cout << "Showing page " << page << endl;
 	SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
 	int columnsCount = 10;
+	int rowsPerPage = 3;
+	int pages = (limbBtnDataStructs.size() / (columnsCount * rowsPerPage)) + 1;
+	int nextPage = page < pages ? page + 1 : 1;
 	int buttonWidth = (windowWidth - ((PANEL_PADDING * columnsCount) + PANEL_PADDING)) / columnsCount;
 	int buttonHeight = buttonWidth; // buttonWidth * 2 + (PANEL_PADDING * 3);
 
 	vector<Button> buttons;
+	int startingIndex = (page - 1) * (columnsCount * rowsPerPage);
+	int excludedFinalIndex = page * (columnsCount * rowsPerPage);
 
-	for (int i = 0; i < limbBtnDataStructs.size() + 1; ++i) {
+	cout << "Showing limbs " << startingIndex << " through " << excludedFinalIndex << endl;
+
+	/* Keep it within this page's range. */
+	for (int i = startingIndex; i < excludedFinalIndex + 2 && i < limbBtnDataStructs.size() + 2; ++i) {
 		
 		/* Many things change for the back button option (final option). */
-		bool isBackButton = i == limbBtnDataStructs.size();
-		if (isBackButton && !drawBackButton) {
-			continue;
-		}
+		bool isBackButton = i == limbBtnDataStructs.size() || i == excludedFinalIndex;
+		bool isMoreButton = i == limbBtnDataStructs.size() + 1 || i == excludedFinalIndex + 1;
+		if (
+			(isBackButton && !drawBackButton) ||
+			(isMoreButton && pages < 2)
+			) { continue; }
 
-		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));		
-		int rectY = i < columnsCount ? PANEL_PADDING :
-			((i / columnsCount) * (PANEL_PADDING + buttonHeight)) + PANEL_PADDING;
+		//bool isFirstRow = i < columnsCount;
+		bool isFirstRow = page == 1 ?
+			i < columnsCount :
+			i < ((page - 1) * columnsCount * rowsPerPage) + columnsCount;
+
+		int ySubtractorForPagination = (buttonHeight + PANEL_PADDING) * rowsPerPage * (page - 1);
+
+		int rectX = PANEL_PADDING + ((i % columnsCount) * (buttonWidth + PANEL_PADDING));
+		int rectY = isFirstRow ? PANEL_PADDING :
+			(((i / columnsCount) * (PANEL_PADDING + buttonHeight)) + PANEL_PADDING) - ySubtractorForPagination;
 
 		rectY += labelOffsetY;
-		
+		if (isMoreButton && !drawBackButton) {
+			rectX -= (buttonWidth + PANEL_PADDING);
+		}
 		/* This rectangle defines the size and position of the button. */
 		SDL_Rect rect = {
 			rectX,
@@ -1751,8 +1773,9 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 		/* Get the TEXT surface. */
 		SDL_Surface* textSurface = NULL;
 		string buttonText = "";
-		if (!isBackButton) {
+		if (!isBackButton && !isMoreButton && i < limbBtnDataStructs.size()) {
 			LimbButtonData& limbButtonDataStruct = limbBtnDataStructs[i];
+			cout << limbButtonDataStruct.name << endl;
 
 			if (limbButtonDataStruct.domNode == DominanceNode::Green) {
 				hoverColor = colorsByFunction["GREEN_BG"];
@@ -1775,8 +1798,12 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 
 			textSurface = TTF_RenderUTF8_Blended_Wrapped(monoFontLarge, buttonText.c_str(), colorsByFunction["DARK_TEXT"], 0);
 		}
-		else {
+		else if(isBackButton) {
 			buttonText = resources.getButtonText("BACK");
+			textSurface = createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["DARK_TEXT"]);
+		}
+		else if (isMoreButton) {
+			buttonText = resources.getButtonText("MORE");
 			textSurface = createCenteredWrappedText(buttonText, getButtonFont(), colorsByFunction["DARK_TEXT"]);
 		}
 				
@@ -1784,11 +1811,14 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 			std::cerr << "TTF_RenderUTF8_Blended_Wrapped Error: " << TTF_GetError() << std::endl; }
 		
 		
-		ButtonClickStruct clickStruct = !isBackButton ? ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStructs[i].id) :
-			ButtonClickStruct(ButtonOption::Back, -1);
+		ButtonClickStruct clickStruct = !isBackButton && !isMoreButton ?
+			ButtonClickStruct(ButtonOption::LoadLimb, limbBtnDataStructs[i].id) :
+			isBackButton ? ButtonClickStruct(ButtonOption::Back, -1) :
+			isMoreButton ? ButtonClickStruct(ButtonOption::NextPage, nextPage) :
+			ButtonClickStruct(ButtonOption::NoOption, -1);
 
 		
-		if (!isBackButton) {
+		if (!isBackButton && !isMoreButton) {
 			/* NORMAL button */
 			LimbButtonData limbBtnDataStruct = limbBtnDataStructs[i];
 			SDL_Surface* limbSurface = IMG_Load(limbBtnDataStruct.texturePath.c_str());
@@ -1810,8 +1840,7 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 			textSurface = textSquareSurface;
 		}
 
-
-		if (isBackButton) {
+		if (isBackButton || isMoreButton) {
 			/* " "BACK" drawn onto BOTH surfaces.*/
 			if (textSurface->h < rect.h && textSurface->w < rect.w) {
 				textSurface = centerSurfaceInRect(textSurface, rect, true);
@@ -1861,7 +1890,7 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 			clickStruct
 		);
 	}
-
+	cout << "we have " << buttons.size() << " buttons\n";
 	return { panelRect, buttons };
 }
 
@@ -1879,7 +1908,7 @@ Panel UI::createLimbLoadedModePanel(bool loadedLimbHasExtraJoints, bool characte
 }
 
 /* Entry point for any panel that hosts limb buttons. */
-Panel UI::createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, string label) {
+Panel UI::createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, string label, int page) {
 	Resources& resources = Resources::getInstance();
 	unordered_map<string, SDL_Color> colors = getColorsByFunction();
 
@@ -1899,7 +1928,7 @@ Panel UI::createChooseLimbModePanel(vector<LimbButtonData> limbBtnDataStructs, b
 		btnOffsetY = labelHeight + (PANEL_PADDING * 3);
 	}
 
-	auto [panelRect, buttons] = createChooseLimbModePanelComponents(limbBtnDataStructs, drawBackButton, btnOffsetY);
+	auto [panelRect, buttons] = createChooseLimbModePanelComponents(limbBtnDataStructs, drawBackButton, btnOffsetY, page);
 
 	/* Now blit the label onto the actual panel bg. */
 	if (label != "") {

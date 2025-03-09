@@ -304,11 +304,8 @@ private:
 	Panel optionsMenu;
 
 	int passingMessageCountdown;
-
 	Battle battle;
-
 	SkyAndCloudsBackground skyBG;
-
 	bool unrotatePlayer;
 	bool unrotateNpc;
 
@@ -363,7 +360,7 @@ void BattleScreen::createNpcLimbPanel() {
 		}
 	}
 
-	npcLimbsPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, true, "CHOOSE AN OPPONENT LIMB TO ATTACK:");
+	npcLimbsPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, true, "CHOOSE AN OPPONENT LIMB TO ATTACK:", 1);
 	npcLimbsPanel.setShow(false);
 }
 
@@ -395,8 +392,8 @@ void BattleScreen::createPlayerLimbPanels() {
 		}
 	}
 
-	unequippedLimbsPanel = ui.createChooseLimbModePanel(unequippedLimbBtnDataStructs, true, "NON-EQUIPPED LIMBS");
-	equippedLimbsPanel = ui.createChooseLimbModePanel(equippedLimbBtnDataStructs, true, "EQUIPPED LIMBS");
+	unequippedLimbsPanel = ui.createChooseLimbModePanel(unequippedLimbBtnDataStructs, true, "NON-EQUIPPED LIMBS", 1);
+	equippedLimbsPanel = ui.createChooseLimbModePanel(equippedLimbBtnDataStructs, true, "EQUIPPED LIMBS", 1);
 
 	equippedLimbsPanel.setShow(false);
 	unequippedLimbsPanel.setShow(false);

@@ -131,7 +131,7 @@ public:
 	}
 
 	void createLimbLoadedPanel(UI& ui);
-	void createChooseLimbPanel(bool showEquippedLimbs);
+	void createChooseLimbPanel(bool showEquippedLimbs, int page = 1);
 	void setAnchorLimbDrawRect(UI& ui);
 	void changeCreationMode(CreationMode creationMode);
 	ScreenType getScreenType() { return screenType; }
@@ -225,7 +225,7 @@ void CharacterCreationScreen::createLimbLoadedPanel(UI& ui = UI::getInstance()) 
 * In ChooseLimb mode we load the non-equipped limbs.
 * Panel must be rebuilt every time we load/equip or unequip a limb.
 */
-void CharacterCreationScreen::createChooseLimbPanel(bool showEquippedLimbs = false) {
+void CharacterCreationScreen::createChooseLimbPanel(bool showEquippedLimbs, int page) {
 	UI& ui = UI::getInstance();
 	/* Destroy textures if they already exist. */
 	if (chooseLimbPanel.getButtons().size() > 0) {
@@ -246,7 +246,8 @@ void CharacterCreationScreen::createChooseLimbPanel(bool showEquippedLimbs = fal
 
 	string label = showEquippedLimbs ? "EQUIPPED LIMBS" : "NON-EQUIPPED LIMBS (with HP)";
 
-	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs, label);
+	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs, label, page);
+	cout << "Choose limb panel has " << chooseLimbPanel.getButtons().size() << " buttons\n";
 }
 
 
@@ -261,7 +262,7 @@ void CharacterCreationScreen::changeCreationMode(CreationMode creationMode) {
 
 	switch (creationMode) {
 	case CreationMode::ChooseLimb:
-		createChooseLimbPanel();
+		createChooseLimbPanel(false);
 		chooseLimbPanel.setShow(true);
 		reviewModePanel.setShow(false);
 		limbLoadedPanel.setShow(false);
@@ -587,6 +588,11 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				}
 				else if(clickStruct.buttonOption == ButtonOption::Back) {
 					changeCreationMode(CreationMode::Review);
+				}
+				else if (clickStruct.buttonOption == ButtonOption::NextPage) {
+					bool showEquippedLimbs = creationMode == CreationMode::Review;
+					createChooseLimbPanel(showEquippedLimbs, clickStruct.itemID);
+					chooseLimbPanel.setShow(true);
 				}
 			}
 			else if (limbLoadedPanel.getShow() && limbLoadedPanel.isInPanel(mouseX, mouseY)) {
