@@ -182,9 +182,9 @@ export class MapScreen {
 				map = Map(mapForm);
 				createNewMap(map);
 				updatePlayerMap(mapSlug);
-				//map.getPlayerCharacter().setId(createPlayerCharacterOrGetID());
 
-				cout << "Player has " << map.getPlayerCharacter().getLimbs().size() << " warden forms\n";
+				MapCharacter& playerCharacter = map.getPlayerCharacter();
+				cout << "Player has " << playerCharacter.getLimbs().size() << " warden forms\n";
 
 				/* Now that the map is saved to the DB, the Suits have their limbs.
 				* So we can equip their limbs and then save them.
@@ -212,15 +212,15 @@ export class MapScreen {
 				}
 
 
-				if (map.getPlayerCharacter().getEquippedLimbs().size() > 0 ) {
-					map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
+				if (playerCharacter.getEquippedLimbs().size() > 0 ) {
+					playerCharacter.setTexture(playerCharacter.createAvatar());
 				}
 				else {
 					/* Must replace with DEFAULT LIMBS. */
 					SDL_Surface* characterSurface = IMG_Load("assets/player_character.png");
 					SDL_Texture* characterTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), characterSurface);
 					SDL_FreeSurface(characterSurface);
-					map.getPlayerCharacter().setTexture(characterTexture);
+					playerCharacter.setTexture(characterTexture);
 				}
 			}
 

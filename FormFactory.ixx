@@ -318,6 +318,68 @@ export vector<LimbForm> getWardenLimbForms() {
 	return wardenLimbForms;
 }
 
+export void equipWardenSuit(Character& playerCharacter) {
+	cout << "Equipping warden suit\n";
+
+	playerCharacter.clearSuit();
+	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+
+	/* Equip BODY first. */
+	for (Limb& limb : playerLimbs) {
+		if (limb.getFormSlug() == "warden_body") {
+			cout << "found the body\n";
+			playerCharacter.equipLimb(limb.getId());
+			limb.setDrawOrder(0);
+			break;
+		}
+	}
+
+	/* Equip HEAD. */
+	for (Limb& limb : playerLimbs) {
+		if (limb.getFormSlug() == "warden_head") {
+			playerCharacter.equipLimb(limb.getId());
+			limb.setDrawOrder(1);
+			break;
+		}
+	}
+
+	/* Equip LEFT arm. */
+	for (Limb& limb : playerLimbs) {
+		if (limb.getFormSlug() == "warden_arm_left") {
+			playerCharacter.equipLimb(limb.getId());
+			limb.setDrawOrder(2);
+			break;
+		}
+	}
+
+	/* Equip LEFT leg. */
+	for (Limb& limb : playerLimbs) {
+		if (limb.getFormSlug() == "warden_leg_left") {
+			playerCharacter.equipLimb(limb.getId());
+			limb.setDrawOrder(3);
+			break;
+		}
+	}
+
+	/* Equip RIGHT leg. */
+	for (Limb& limb : playerLimbs) {
+		if (limb.getFormSlug() == "warden_leg_right") {
+			playerCharacter.equipLimb(limb.getId());
+			limb.setDrawOrder(4);
+			break;
+		}
+	}
+
+	/* Equip RIGHT arm. */
+	for (Limb& limb : playerLimbs) {
+		if (limb.getFormSlug() == "warden_arm_right") {
+			playerCharacter.equipLimb(limb.getId());
+			limb.setDrawOrder(5);
+			break;
+		}
+	}
+}
+
 
 export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 

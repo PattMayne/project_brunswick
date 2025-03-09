@@ -2265,8 +2265,8 @@ export bool createNewMap(Map& map) {
 
     /* Create statements for adding new Limb and Joint objects to the database. */
     const char* insertPlayerLimbSQL = "INSERT INTO limb (form_slug, map_slug, name, "
-        "position_x, position_y, character_id, is_anchor) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?);";
+        "position_x, position_y, character_id, is_anchor, draw_order) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* playerLimbStatement;
 
     /* Prepare the statements before starting the loop.
@@ -2311,6 +2311,7 @@ export bool createNewMap(Map& map) {
         sqlite3_bind_int(playerLimbStatement, 5, limb.getPosition().y);
         sqlite3_bind_int(playerLimbStatement, 6, map.getPlayerCharacter().getId());
         sqlite3_bind_int(playerLimbStatement, 7, isAnchorInt);
+        sqlite3_bind_int(playerLimbStatement, 8, limb.getDrawOrder());
 
         if (sqlite3_step(playerLimbStatement) == SQLITE_DONE) {
             /* Get the ID of the saved item. */
@@ -2360,18 +2361,25 @@ export bool createNewMap(Map& map) {
     sqlite3_finalize(playerJointStatement);
     sqlite3_finalize(playerLimbStatement);
 
+    equipWardenSuit(map.getPlayerCharacter());
+    updateCharacterLimbsInTransaction(
+        map.getPlayerCharacter().getId(), map.getPlayerCharacter().getAnchorLimbId(), playerLimbs, db);
+    /* Update the MAP CHARACTER with the correct anchorLimb ID. */
+    updateCharacterAnchorIdInTrans(
+        map.getPlayerCharacter().getId(), map.getPlayerCharacter().getAnchorLimbId(), db);
+
 
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
 
     if (limbError) { /* TO DO: DELETE map and all blocks and all limbs. */
-        cout << "Limb error somewhere\n";
+        cerr << "Limb error somewhere\n";
     }
 
 
 
     /*
     * 
-    * Save the SUIT characters to the DB.
+    * Save the SUIT characters to the DB (the guys at the shrines).
     * 
     * 
     */
