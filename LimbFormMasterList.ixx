@@ -381,7 +381,66 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			{ Point(15, 108), Point(185, 105) },
 			BodyPartType::Other);
 		};
+
+	/* WARDEN LIMBS. */
+	/* HP / STRENGTH / SPEED / INTELLIGENCE */
+
+	limbForms["warden_body"] = []() {
+		return LimbForm(
+			"Warden Body", "warden_body",
+			10, 10, 10, 10,
+			DominanceNode::Green, "data/maps/forest/warden_body.png",
+			{ Point(100, 43), Point(68, 51), Point(71, 152), Point(109, 158), Point(137, 63) },
+			BodyPartType::Warden);
+		};
+
+	limbForms["warden_head"] = []() {
+		return LimbForm(
+			"Warden Left Leg", "warden_head",
+			10, 10, 10, 10,
+			DominanceNode::Green, "data/maps/forest/warden_head.png",
+			{ Point(107, 121) },
+			BodyPartType::Warden);
+		};
+
+	limbForms["warden_arm_left"] = []() {
+		return LimbForm(
+			"Warden Left Arm", "warden_arm_left",
+			10, 10, 10, 10,
+			DominanceNode::Green, "data/maps/forest/warden_arm_left.png",
+			{ Point(155, 92) },
+			BodyPartType::Warden);
+		};
+
+	limbForms["warden_leg_left"] = []() {
+		return LimbForm(
+			"Warden Left Leg", "warden_leg_left",
+			10, 10, 10, 10,
+			DominanceNode::Green, "data/maps/forest/warden_leg_left.png",
+			{ Point(112, 18) },
+			BodyPartType::Warden);
+		};
+
+	limbForms["warden_leg_right"] = []() {
+		return LimbForm(
+			"Warden Right Leg", "warden_leg_right",
+			10, 10, 10, 10,
+			DominanceNode::Green, "data/maps/forest/warden_leg_right.png",
+			{ Point(82, 14) },
+			BodyPartType::Warden);
+		};
+
+	limbForms["warden_arm_right"] = []() {
+		return LimbForm(
+			"Warden Left Leg", "warden_arm_right",
+			10, 10, 10, 10,
+			DominanceNode::Green, "data/maps/forest/warden_arm_right.png",
+			{ Point(117, 70) },
+			BodyPartType::Warden);
+		};
+
 }
+
 
 
 /* 

@@ -417,6 +417,8 @@ export class Limb {
 		bool shiftJointOfLimb(int limbId);
 		bool shiftAnchorLimb();
 
+		void setTexture(SDL_Texture* newTexture);
+		void destroyTexture();
 		void setUnscrambled(bool isUnscrambled) { this->isUnscrambled = isUnscrambled; }
 		void setAnchorJointId();
 		void setDrawOrder(int newDrawOrder) { this->drawOrder = newDrawOrder; }
@@ -773,6 +775,21 @@ bool Limb::shiftJointOfLimb(int limbId) {
 	return false;
 }
 
+
+void Limb::setTexture(SDL_Texture* newTexture) {
+	if (texture != NULL) {
+		SDL_DestroyTexture(texture);
+		texture = NULL;
+	}
+	texture = newTexture;
+}
+
+void Limb::destroyTexture() {
+	if (texture != NULL) {
+		SDL_DestroyTexture(texture);
+	}
+	texture = NULL;
+}
 
 
 void Limb::setRotationPointSDL() {

@@ -2040,6 +2040,7 @@ export bool createNewMap(Map& map) {
     const char* mapSlug = slugString.c_str();
     int playerX = map.getPlayerCharacter().getBlockX();
     int playerY = map.getPlayerCharacter().getBlockY();
+    map.getPlayerCharacter().setId(createPlayerCharacterOrGetID());
 
     /* Open database. */
     int dbFailed = sqlite3_open(dbPath(), &db);
@@ -2253,9 +2254,118 @@ export bool createNewMap(Map& map) {
     /* Finalize the statements, commit the transaction. */
     sqlite3_finalize(jointStatement);
     sqlite3_finalize(limbStatement);
+
+    cout << "BEFORE ROAMING LIMBS SAVE: character has " << map.getPlayerCharacter().getLimbs().size() << " limbs\n";
+
+    /* 
+    * 
+    * NOW save the CHARACTER limbs:
+    * 
+    */
+
+    /* Create statements for adding new Limb and Joint objects to the database. */
+    const char* insertPlayerLimbSQL = "INSERT INTO limb (form_slug, map_slug, name, "
+        "position_x, position_y, character_id, is_anchor) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?);";
+    sqlite3_stmt* playerLimbStatement;
+
+    /* Prepare the statements before starting the loop.
+    * Start with LIMB statement
+    */
+    returnCode = sqlite3_prepare_v2(db, insertPlayerLimbSQL, -1, &playerLimbStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare LIMB insert statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+    /* Create statement for adding new JOINT object to the database. */
+    const char* insertPlayerJointSQL = "INSERT INTO joint (vector_index, limb_id, point_form_x, point_form_y, "
+        "modified_point_x, modified_point_y) VALUES (?, ?, ?, ?, ?, ?);";
+    sqlite3_stmt* playerJointStatement;
+
+    /* Prepare the JOINT statement before starting the loop. */
+    returnCode = sqlite3_prepare_v2(db, insertPlayerJointSQL, -1, &playerJointStatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare JOINT insert statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+    /* Begin the transaction. */
+    limbError = false;
+
+    /* Loop through the Limbs and save each one.
+    * This is also where we initially set each Limb's id,
+    * which we can only get after saving them to the DB.
+    */
+    vector<Limb>& playerLimbs = map.getPlayerCharacter().getLimbs();
+    for (Limb& limb : playerLimbs) {
+        limbFormSlugString = limb.getForm().slug;
+        string limbNameString = limb.getForm().name;
+        const char* limbName = limbNameString.c_str();
+        int isAnchorInt = limb.getIsAnchor() == 1;
+
+        sqlite3_bind_text(playerLimbStatement, 1, limbFormSlugString.c_str(), -1, SQLITE_STATIC);
+        sqlite3_bind_text(playerLimbStatement, 2, mapSlug, -1, SQLITE_STATIC);
+        sqlite3_bind_text(playerLimbStatement, 3, limbName, -1, SQLITE_STATIC);
+        sqlite3_bind_int(playerLimbStatement, 4, limb.getPosition().x);
+        sqlite3_bind_int(playerLimbStatement, 5, limb.getPosition().y);
+        sqlite3_bind_int(playerLimbStatement, 6, map.getPlayerCharacter().getId());
+        sqlite3_bind_int(playerLimbStatement, 7, isAnchorInt);
+
+        if (sqlite3_step(playerLimbStatement) == SQLITE_DONE) {
+            /* Get the ID of the saved item. */
+            int limbID = static_cast<int>(sqlite3_last_insert_rowid(db));
+            limb.setId(limbID);
+
+            /* Loop through this limb's JOINT objects and save each of them to the DB.
+            * Use the statement created just beneath the LIMB statement.
+            */
+            bool jointError = false;
+            for (int i = 0; i < limb.getJoints().size(); ++i) {
+                Joint& joint = limb.getJoints()[i];
+
+                sqlite3_bind_int(playerJointStatement, 1, i); /* vector_index */
+                sqlite3_bind_int(playerJointStatement, 2, limbID); /* limb ID */
+                sqlite3_bind_int(playerJointStatement, 3, joint.getFormPoint().x); /* point form x */
+                sqlite3_bind_int(playerJointStatement, 4, joint.getFormPoint().y); /* point form y */
+                sqlite3_bind_int(playerJointStatement, 5, joint.getPoint().x); /* modified point x */
+                sqlite3_bind_int(playerJointStatement, 6, joint.getPoint().y); /* modified point y */
+
+                if (sqlite3_step(playerJointStatement) == SQLITE_DONE) {
+                    joint.setId(static_cast<int>(sqlite3_last_insert_rowid(db)));
+                }
+                else {
+                    cerr << "Insert failed for JOINT: " << sqlite3_errmsg(db) << endl;
+                    jointError = true;
+                    break;
+                }
+
+                /* Reset the JOINT statement for the next loop. */
+                sqlite3_reset(playerJointStatement);
+            }
+
+            if (jointError) { /* TO DO: DELETE map and all blocks and all limbs. */ }
+        }
+        else {
+            cerr << "Insert failed for LIMB: " << sqlite3_errmsg(db) << endl;
+            limbError = true;
+            break;
+        }
+
+        /* Reset the LIMB statement for the next loop. */
+        sqlite3_reset(playerLimbStatement);
+    }
+
+    /* Finalize the statements, commit the transaction. */
+    sqlite3_finalize(playerJointStatement);
+    sqlite3_finalize(playerLimbStatement);
+
+
     sqlite3_exec(db, "COMMIT;", nullptr, nullptr, &errMsg);
 
-    if (limbError) { /* TO DO: DELETE map and all blocks and all limbs. */ }
+    if (limbError) { /* TO DO: DELETE map and all blocks and all limbs. */
+        cout << "Limb error somewhere\n";
+    }
 
 
 

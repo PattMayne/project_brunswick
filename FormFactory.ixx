@@ -293,6 +293,32 @@ export void equipSuitLimbs(MapLevel mapLevel, vector<Character>& suits) {
 	}
 }
 
+/* 
+* To be used ONLY when character has NO limbs.
+*/
+
+export vector<LimbForm> getWardenLimbForms() {
+	vector<LimbForm> forestLimbForms = getMapLimbs(MapLevel::Forest);
+	vector<LimbForm> wardenLimbForms = {};
+
+	for (LimbForm& limbForm : forestLimbForms) {
+		if (
+			limbForm.slug == "warden_body" ||
+			limbForm.slug == "warden_head" ||
+			limbForm.slug == "warden_arm_left" ||
+			limbForm.slug == "warden_leg_left" ||
+			limbForm.slug == "warden_leg_right" ||
+			limbForm.slug == "warden_arm_right"
+			)
+		{
+			wardenLimbForms.emplace_back(limbForm);
+		}
+	}
+
+	return wardenLimbForms;
+}
+
+
 export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 
 	/* HERE we must EQUIP in the correct and explicit order. THEN set the DRAW order. */

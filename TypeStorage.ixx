@@ -162,7 +162,7 @@ export struct AvatarAndDrawRect {
 };
 
 export enum class BodyPartType {
-	Head, Torso, Arm, Leg, Wing, Other
+	Head, Torso, Arm, Leg, Wing, Warden, Other
 };
 
 

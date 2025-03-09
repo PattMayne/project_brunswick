@@ -468,6 +468,9 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 		} else if (limbForm.type == BodyPartType::Torso) {
 			numberOfThisLimb = 5;
 		}
+		else if (limbForm.type == BodyPartType::Warden) {
+			numberOfThisLimb = 0;
+		}
 
 		for (int n = 0; n < numberOfThisLimb; ++n) {
 			Limb& newLimb = roamingLimbs.emplace_back(limbForm);
@@ -950,8 +953,6 @@ vector<Point> Map::buildMap() {
 		rows[lPoint.y - 2][lPoint.x].setIsPath(true);
 		rows[lPoint.y - 2][lPoint.x].setIsFloor(true);
 		rows[lPoint.y - 2][lPoint.x].setIsPath(true);
-
-
 	}
 
 	/* create Player Character */
@@ -962,6 +963,16 @@ vector<Point> Map::buildMap() {
 	SDL_FreeSurface(characterSurface);
 	playerCharacter = MapCharacter(CharacterType::Player, playerX, playerY);
 	playerCharacter.setTexture(characterTexture);
+
+	/* HERE we must first give Player his Warden. THIS ONLY HAPPENS ONCE. */
+	vector<LimbForm> wardenLimbForms =  getWardenLimbForms();
+	for (LimbForm limbForm : wardenLimbForms) {
+		Limb wardenLimb = Limb(limbForm);
+		wardenLimb.setCharacterId(playerCharacter.getId());
+		playerCharacter.addLimb(wardenLimb);
+	}
+
+	/* Now save them all to the DB. */
 
 	vector<Point> removedPoints;
 

@@ -136,16 +136,21 @@ export class MapScreen {
 			* 1) Get vanilla Forest Map every time.
 			* 2) Save the map immediately after creation.
 			* 
-			* PHASE 2 (PRESENT PHASE IMPLEMENTED):
+			* PHASE 2:
 			* 1) Check for EXISTING Forest Map.
 			* 2) LOAD that map from the database if it exists.
 			* 3) If it does NOT exist, do PHASE 1 steps.
 			* 
-			* PHASE 3:
+			* PHASE 3 (DONE):
 			* 1) Load shrines for each native Suit.
 			* 2) Path creation is built on connecting those shrines to the entrance and exit.
 			* 3) Hostile NPC-creation on limb collision.
 			* 4) Collision with hostile NPC goes to Battle screen.
+			* 
+			* PHASE 4:
+			* 1) NPCs consume each other.
+			* 2) NPCs chase you in their range.
+			* 3) Player has default Warden suit.
 			*/
 
 			mapForm = getMapFormFromSlug(mapSlug);
@@ -177,7 +182,9 @@ export class MapScreen {
 				map = Map(mapForm);
 				createNewMap(map);
 				updatePlayerMap(mapSlug);
-				map.getPlayerCharacter().setId(createPlayerCharacterOrGetID());
+				//map.getPlayerCharacter().setId(createPlayerCharacterOrGetID());
+
+				cout << "Player has " << map.getPlayerCharacter().getLimbs().size() << " warden forms\n";
 
 				/* Now that the map is saved to the DB, the Suits have their limbs.
 				* So we can equip their limbs and then save them.
