@@ -102,7 +102,6 @@ public:
 		showTitle = true;
 		titleCountdown = 140;
 		
-
 		/* create panels */
 		reviewModePanel = ui.createReviewModePanel();
 		createLimbLoadedPanel(ui);
@@ -246,8 +245,7 @@ void CharacterCreationScreen::createChooseLimbPanel(bool showEquippedLimbs, int 
 
 	string label = showEquippedLimbs ? "EQUIPPED LIMBS" : "NON-EQUIPPED LIMBS (with HP)";
 
-	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, !showEquippedLimbs, label, page);
-	cout << "Choose limb panel has " << chooseLimbPanel.getButtons().size() << " buttons\n";
+	chooseLimbPanel = ui.createChooseLimbModePanel(limbBtnDataStructs, true, label, page);
 }
 
 
@@ -587,7 +585,13 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					loadLimbAttempt(limbToLoadID);
 				}
 				else if(clickStruct.buttonOption == ButtonOption::Back) {
-					changeCreationMode(CreationMode::Review);
+					if (creationMode != CreationMode::Review) {
+						changeCreationMode(CreationMode::Review);
+					}
+					else {
+						chooseLimbPanel.setShow(false);
+					}
+					
 				}
 				else if (clickStruct.buttonOption == ButtonOption::NextPage) {
 					bool showEquippedLimbs = creationMode == CreationMode::Review;
@@ -682,6 +686,13 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					break;
 				default:
 					cout << "ERROR\n";
+				}
+			}
+			else {
+				/* Clicked outside all panels. */
+
+				if (creationMode == CreationMode::Review && !chooseLimbPanel.getShow()) {
+					chooseLimbPanel.setShow(true);
 				}
 			}
 		}

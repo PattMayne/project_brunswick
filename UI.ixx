@@ -1580,7 +1580,7 @@ vector<PreButtonStruct> UI::getReviewModePreButtonStructs() {
 	Resources& resources = Resources::getInstance();
 	/* preButonStructs just don't know their positions (will get that from choice of PANEL (horizontal vs vertical) */
 	return {
-		buildPreButtonStruct(resources.getButtonText("LIMBS"), ButtonOption::ShowLimbs),
+		buildPreButtonStruct(resources.getButtonText("FREE_LIMBS"), ButtonOption::ShowLimbs),
 		buildPreButtonStruct(resources.getButtonText("SAVE"), ButtonOption::SaveSuit),
 		buildPreButtonStruct(resources.getButtonText("CLEAR"), ButtonOption::ClearSuit),
 		buildPreButtonStruct(resources.getButtonText("CONTINUE"), ButtonOption::Continue)

@@ -25,6 +25,8 @@
 
     "SAVE": "SAVE",
     "LIMBS": "LIMBS",
+    "FREE_LIMBS": "FREE LIMBS",
+    "EQUIPPED_LIMBS":  "EQUIPPED LIMBS",
     "CLEAR": "CLEAR",
     "RETURN": "RETURN",
     "BACK_TO_GAME": "BACK TO GAME",
