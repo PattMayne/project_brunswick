@@ -1803,12 +1803,13 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	/* Attack is calculated and saved to BattleScreen variables, to be used after Effect animation. */
 }
 
+
 /*
 * BASIC ATTACK LOGIC is contained in this function.
-* I may later move attack logic to dedicated functions, in a dedicated module.
-* This is separate from the animations.
-* Attack animation happens, then this function happens (and stores data), then effect animation happens (based on stored data).
+* 
+* Attack animation happens first, then this function happens (and stores data), then effect animation happens (based on stored data).
 * These calculations provide info for the next animation, but we don't execute on the calculations until after the last animation.
+* The reason we don't execute yet is because the affected Limbs and character must still be available and together for their animation.
 */
 void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLimbId) {
 	AttackType attackType = npcAttackLoaded.attackType;
@@ -1823,14 +1824,6 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 	* Calculate how much of which attributes to take from which limbs.
 	* When a limb dies, figure out what to do with limbs attached to it.
 	* What are the rules?
-	* -- 0 hp limbs are stolen.
-	* -- If it's the anchored limb, find another limb to be an anchored limb (prefer ones with their own child limbs).
-	* sourceLimb to fly spinning at targetLimb -- calculated to do full 360s and return upright as normal... wants to share x/y with oppo
-	*
-	*
-	* CREATE ANIMATION STRUCT.
-	* BattleAnimationStruct
-	* EffectAnimationStruct
 	*/
 
 	/* Calculate the attack. */
@@ -1869,7 +1862,7 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 
 	int precision = npcAttackLoaded.precision;
 	int intensity = npcAttackLoaded.intensity;
-	bringSumTo100(precision, intensity);
+	bringSumTo100(precision, intensity); /* may be dangerous? */
 
 	if (precision < 90) {
 
@@ -1970,7 +1963,6 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 
 	int damageDisplayNumber = totalDamage * -1;
 	UI& ui = UI::getInstance();
-	cout << npc.getName() + " does " << damageDisplayNumber << " total damage\n";
 
 	string attackMessage = npc.getName() + " does " + to_string(damageDisplayNumber) + " damage";
 
@@ -1991,7 +1983,7 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 
 /*
 * Apply the effects that we just calculated and animated.
-* If player loses anchor limb, send them to Characetr Creation screen.
+* If player loses anchor limb, send them to Character Creation screen.
 */
 bool BattleScreen::applyNpcAttackEffects() {
 	Character& npc = battle.getNpc();
@@ -2102,6 +2094,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 	
 	return true;
 }
+
 
 bool BattleScreen::applyPlayerStealEffects() {
 	if (!stealSuccess || playerAttackLoaded.targetLimbId < 1) { return false; }
@@ -2244,34 +2237,26 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	bool erasedLimb = false;
 
-	vector<int> limbIdsToEquip;
-	for (int thisId : npc.getDrawLimbIDs()) {
-		limbIdsToEquip.emplace_back(thisId);
+	vector<int> limbIdsToEquip; /* CURRENTLY EQUIPPED limb ids. We will remove the ones that get destroyed (never rebuild from whole set for NPC). */
+	for (Limb& limb : npcLimbs) {
+		if (limb.isEquipped()) {
+			limbIdsToEquip.emplace_back(limb.getId());
+		}
 	}
 
 	/* Damage has already been done (to attributes). Now save those changes. */
 	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = npcLimbs[i];
-		bool erasedThisLimb = false;
-
-		/* For MODIFIED limbs (attacked, healed, whatever). */
-		for (int limbId : limbIdsToUpdate) {
-			if (limbId == limb.getId()) {
-				/* Damage already happened in the calculations function. Now we just save them. */
-				updateLimbBattleEffectsInTransaction(limb, db);
-				break;
-			}
-		}
 
 		if (limb.getHP() < 1) {
 			npc.unEquipLimb(limb.getId());
-			limb.setCharacterId(playerId);
 			limb.unEquip();
+			limb.setCharacterId(playerId);
+			playerCharacter.addLimb(limb);
 
 			erasedLimb = true;
-			erasedThisLimb = true;
-
 			int limbId = limb.getId();
+
 			for (int k = limbIdsToEquip.size() - 1; k >= 0; --k) {
 				if (limbIdsToEquip[k] == limbId) {
 					limbIdsToEquip.erase(limbIdsToEquip.begin() + k);
@@ -2279,11 +2264,12 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			}
 
 			updateLimbBattleEffectsInTransaction(limb, db);
-			npc.getLimbs().erase(npc.getLimbs().begin() + i);
+			npcLimbs.erase(npcLimbs.begin() + i);
 			continue;
 		}
 	}
 
+	/* Update all survivors in the DB. */
 	for (int i = 0; i < npcLimbs.size(); ++i) {
 		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}
@@ -2292,7 +2278,6 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	bool npcDefeated = false;
 
 	if (erasedLimb) {
-		cout << "\nLIMB ERASED\n";
 
 		/* REBUILD CHARACTER.
 		* We need a function to REBUILD CHARACTER after losing a limb.
@@ -2302,25 +2287,28 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		* ALSO check for VICTORY CONDITIONS.
 		*/
 		npc.clearSuit();
-		for (Limb& limb : npc.getLimbs()) {
+
+		for (Limb& limb : npcLimbs) {
 			npc.unEquipLimb(limb.getId());
 			updateLimbBattleEffectsInTransaction(limb, db);
 		}
 
 		if (limbIdsToEquip.size() > 0) {
-			for (Limb& limb : npc.getLimbs()) {
+			bool keepEquippingLimbs = true;
 
-				for (int limbIdToEquip : limbIdsToEquip) {
-					if (limb.getId() == limbIdToEquip) {
-						bool equipSuccess = npc.equipLimb(limbIdToEquip);
+			for (Limb& limb : npc.getLimbs()) {
+				if (keepEquippingLimbs) {
+					for (int limbIdToEquip : limbIdsToEquip) {
+						if (limb.getId() == limbIdToEquip) {
+							keepEquippingLimbs = npc.equipLimb(limbIdToEquip);
+							updateLimbBattleEffectsInTransaction(limb, db);
+						}
 					}
 				}
-
-				/* Update them all because some may have been cut out. */
-				npc.setTexture(npc.createAvatar());
-				updateLimbBattleEffectsInTransaction(limb, db);
+				else { break; }
 			}
 
+			npc.setTexture(npc.createAvatar());
 			npc.buildDrawLimbList();
 			updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
 			setLimbIdList();

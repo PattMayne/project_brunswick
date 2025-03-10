@@ -634,10 +634,6 @@ export void MapScreen::run() {
 				playerLimbCollision = checkPlayerLimbCollision(); /* Player collects new limb. */
 				playerNpcCollision = checkPlayerNpcCollision(false); /* Go to battle screen. */
 				npcOnNpcCollision = checkNpcOnNpcCollision();
-
-				if (npcOnNpcCollision) {
-					cout << "There are " << map.getNPCs().size() << " NPCs\n";
-				}
 			}
 
 			if (playerLimbCollision) {
@@ -1680,6 +1676,11 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 
 								/* is it a match? */
 								if (suitLimb.getForm().slug == playerLimb.getForm().slug) {
+									/* Delete any non-equipped, no-health matches. */
+									if (!playerLimb.isEquipped()) {
+										slugsToDeleteFromPlayer.insert(suitLimb.getForm().slug);
+									}
+
 									if (!suitLimb.getUnscrambled()) {
 										/* We are FINALLY unscrambling this Suit's Limb. */
 										unscrambledSomething = true;
@@ -1709,7 +1710,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							/* Run through them again, this time to delete anything non-equipped with slugs to delete. */
 							for (int u = playerLimbs.size() - 1; u >= 0; --u) {
 								Limb& playerLimb = playerLimbs[u];
-								if (!playerLimb.isEquipped()) {
+								if (!playerLimb.isEquipped() && playerLimb.getId() != map.getPlayerCharacter().getAnchorLimbId()) {
 									for (string slug : slugsToDeleteFromPlayer) {
 										if (slug == playerLimb.getForm().slug) {
 											/*
@@ -2193,7 +2194,6 @@ bool MapScreen::checkNpcOnNpcCollision() {
 		// 5: make sure the limbs are also saved to the DB.
 		// 6: animations?
 		int x = doublesMap.first;
-		cout << "x is " << x << endl;
 		unordered_map<int, unordered_set<int>> yMap = doublesMap.second;
 		string npcName = map.getName() + " Hunter";
 
@@ -2234,7 +2234,7 @@ bool MapScreen::checkNpcOnNpcCollision() {
 			hunter.clearSuit();
 			hunter.sortLimbsByNumberOfJoints();
 
-			/* Now actually EQUIP! */
+			/* Now actually EQUIP. */
 			vector<Limb>& hunterLimbs = hunter.getLimbs();
 			bool keepEquippingLimbs = true;
 
