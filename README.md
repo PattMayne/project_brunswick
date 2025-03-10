@@ -15,22 +15,21 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 ## TO DO:
 
 - [x] TO DO list
-- [ ] Build battle system
-    - [ ] Green attacks.
-    - [ ] Blue attacks.
-    - [ ] Red attacks.
-    - [ ] Steal.
-- [ ] Build Battle Screen
-    - [ ] Load both character objects.
-    - [ ] Draw both character objects.
-    - [ ] Animate limbs.
-    - [ ] 
+- [x] Build battle system
+    - [x] Green attacks.
+    - [x] Blue attacks.
+    - [x] Red attacks.
+    - [x] Steal.
+- [x] Build Battle Screen
+    - [x] Load both character objects.
+    - [x] Draw both character objects.
+    - [x] Animate limbs.
 - [ ] Switch to SDL3
 - [ ] Terminology for game objects ("Suits" not sexy enough. Citizens v. monsters? Natives v. monsters? Map = world ? Scrambled v. unscrambled?)
-- [ ] Access Character Creation screen through Map screen button.
-- [ ] Access Map screen through Character Creation screen button.
-- [ ] Redraw Avatar on resize in Map.
-- [ ] Put DB access in dedicated function.
+- [x] Access Character Creation screen through Map screen button.
+- [x] Access Map screen through Character Creation screen button.
+- [x] Redraw Avatar on resize in Map.
+- [x] Put DB access in dedicated function.
 - [ ] Multiple (3) save files (DBs), option stored in GameState singleton.
 - [ ] Finish main menu screen
   - [ ] New vs Continue
@@ -42,19 +41,18 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
         - [ ] Avatar of character
         - [ ] Distance to chosen scrambled Limb
             - [ ] Requires a new Point member in MapScreen object.
-    - [ ] Character Creation Screen button.
-    - [ ] Option to view non-equipped limbs.
-    - [ ] Option to throw limbs?
+    - [x] Character Creation Screen ("build") button.
+    - [ ] Option to throw limbs? (Not in this game).
     - [ ] Put string messages in resource file.
     - [ ] High speed characters can move multiple spaces with mouse-click (or number followed by direction key).
         - [ ] Passing OVER each other means collision.
         - [ ] Works for Player, NPC, and Limb.
         - [ ] Mouseover block can click if in-range?
 - [x] Build Character Creation Screen.
-- [ ] Finish Character Creation Screen.
-    - [ ] Show stats of character in panel (bottom right).
-    - [ ] Show stats of loaded limb in panel (top right).
-    - [ ] Map Screen button.
+- [x] Finish Character Creation Screen.
+    - [x] Show stats of character in panel (bottom right).
+    - [x] Show stats of loaded limb in panel (top right).
+    - [x] Continue button.
 - [x] Represent some STATIC limbs
 - [x] Incorporate LIMBS and AVATARS into MAP screen
 - [ ] When closing program close each font with TTF_CloseFont()
