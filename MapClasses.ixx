@@ -363,6 +363,7 @@ public:
 	MapLevel getMapLevel() { return mapForm.mapLevel; }
 	vector<MapCharacter>& getNPCs() { return NPCs; }
 	vector<Character>& getSuits() { return mapForm.suits; }
+	MapCharacter& getNpcById(int id);
 
 	void setLandmarks(vector<Landmark> landmarks) { this->landmarks = landmarks; }
 	void setPlayerCharacter(MapCharacter playerCharacter) { this->playerCharacter = playerCharacter; }
@@ -541,6 +542,17 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 /* For each NPC, if they're on a landmark, */
 void Map::removeRoamingLimbsFromLandmarks() {
 
+}
+
+MapCharacter& Map::getNpcById(int id) {
+	for (MapCharacter& npc : NPCs) {
+		if (npc.getId() == id) {
+			return npc;
+		}
+	}
+
+	cerr << "NO NPC BY THAT ID. DANGEROUS REPLACE.\n";
+	return NPCs[0];
 }
 
 /* For each landmark, compare its position with each other landmark. */

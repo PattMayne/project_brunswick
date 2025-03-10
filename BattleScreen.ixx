@@ -135,7 +135,7 @@ public:
 			{"OPTIONS", ButtonOption::Options },
 			{"EXIT", ButtonOption::Exit }
 		};
-		cout << "Getting OPTIONS menu\n";
+
 		optionsMenu = ui.createGeneralMenuPanel(buttonOptions, false);
 		optionsMenu.setShow(true);
 
@@ -224,6 +224,8 @@ public:
 		headRotation = 0;
 		headSpins = 0;
 		stealSuccess = false;
+
+		cout << "reached the end of the function\n";
 	}
 
 	void createPlayerLimbPanels();

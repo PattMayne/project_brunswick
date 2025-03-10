@@ -2161,17 +2161,17 @@ bool MapScreen::checkNpcOnNpcCollision() {
 
 				/* First check if an appropriate amalgamatedGuy already exists, and add to that.  */
 				//for (unordered_set<int> thisGuysIds : amalgamatedGuysIds) {
-				for (int i = 0; i < amalgamatedGuysIds.size(); ++i) {
-					unordered_set<int> thisGuysIds = amalgamatedGuysIds[i];
+				for (int m = 0; m < amalgamatedGuysIds.size(); ++m) {
+					unordered_set<int>& thisGuysIds = amalgamatedGuysIds[m];
 					/* Now check each of this guy's ids to see if there's a match. If so, mark their new homes. */
 
 					for (int thisId : thisGuysIds) {
 						if (comparisonNpcId == thisId) {
-							idsToGuyIndex[baseNpcId] = i;
+							idsToGuyIndex[baseNpcId] = m;
 							guyAlreadyExists = true;
 						}
 						else if (baseNpcId == thisId) {
-							idsToGuyIndex[comparisonNpcId] = i;
+							idsToGuyIndex[comparisonNpcId] = m;
 							guyAlreadyExists = true;
 						}
 					}
@@ -2197,12 +2197,104 @@ bool MapScreen::checkNpcOnNpcCollision() {
 	}
 
 	/* Now iterate through amalgamatedGuysIds and make new guys from the old guys. */
+	unordered_set<int> characterIdsToDelete = {};
+	unordered_set<int> characterIdsToUpdate = {};
 
 	for (unordered_set<int> amalGuy : amalgamatedGuysIds) {
-		// do something
+		// 1: get the CHARACTERS.
+		// 2: for each group, pick one guy to survive.
+		// 3: give that guy all the limbs.
+		// 4: delete the other guys for that group.
+		// 5: make sure the limbs are also saved to the DB.
+		// 6: animations?
+
+		int i = 0;
+		MapCharacter& mainGuy = map.getNPCs()[0];
+		for (int id : amalGuy) {
+			if (i == 0) {
+				/* Make the main guy who absorbs the other guys. */
+				MapCharacter& mainGuy = map.getNpcById(id);
+				characterIdsToUpdate.insert(id);
+			}
+			else {
+				MapCharacter& eatenGuy = map.getNpcById(id);
+				eatenGuy.clearSuit();
+				eatenGuy.clearAcquiredLimbStructs();
+				vector<Limb>& eatenGuyLimbs = eatenGuy.getLimbs();
+
+				for (int k = eatenGuyLimbs.size() - 1; k >= 0; --k) {
+					Limb& eatenLimb = eatenGuyLimbs[k];
+					mainGuy.addLimb(eatenLimb);
+					eatenGuyLimbs.erase(eatenGuyLimbs.begin() + k);
+				}
+				characterIdsToDelete.insert(id);
+			}
+
+			++i;
+		}
+	}
+
+	/* 
+	* Now we have eaten the guys.
+	* We must save limbs' ownership to the DB.
+	* We must delete the eaten NPCs from the NPCs list.
+	* We must delete those NPCs from the database.
+	*/
+
+	sqlite3* db = startTransaction();
+
+	for (int idToDelete : characterIdsToDelete) {
+		for (int i = npcs.size() - 1; i >= 0; --i) {
+			MapCharacter& npc = npcs[i];
+
+			if (idToDelete == npc.getId()) {
+				deleteCharacterInTrans(npc.getId(), db);
+				npcs.erase(npcs.begin() + i);
+				break;
+			}
+		}
+	}
+
+	for (int idToUpdate : characterIdsToUpdate) {
+		for (int i = npcs.size() - 1; i >= 0; --i) {
+			MapCharacter& npc = npcs[i];
+
+			if (idToUpdate == npc.getId()) {
+				// Re-equip this NPC and their limbs.
+				// Save the new setup.
+
+				npc.clearSuit();
+				npc.sortLimbsByNumberOfJoints();
+
+				/* Now actually EQUIP! */
+				vector<Limb>& npcLimbs = npc.getLimbs();
+				bool keepEquippingLimbs = true;
+				Point npcPosition = npc.getPosition();
+
+				for (Limb& limb : npcLimbs) {
+					if (keepEquippingLimbs) {
+						keepEquippingLimbs = npc.equipLimb(limb.getId());
+					}
+					else { break; }
+				}
+
+				npc.buildDrawLimbList();
+				updateCharacterLimbsInTransaction(idToUpdate, npc.getAnchorLimbId(), npcLimbs, db);
+				npc.setTexture(npc.createAvatar());
+				npc.setHomePosition(npcPosition);
+				updateNpcHomePositionInTrans(idToUpdate, npc.getHomePosition(), db);
+
+
+				/* ALSO update the new location... their home base is where they consumed the other guys. */
+
+				/* ALSO animate the acquisition. */
+			}
+		}
 	}
 
 	cout << "We would make " << amalgamatedGuysIds.size() << " new guys this turn\n";
+
+	commitTransactionAndCloseDatabase(db);
 
 	return true;
 }
