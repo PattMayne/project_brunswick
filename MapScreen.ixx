@@ -129,7 +129,6 @@ export class MapScreen {
 		*/
 		MapScreen(string mapSlug) {
 			UI& ui = UI::getInstance();
-			cout << "LOADING MAP SCREEN 00000\n";
 			/* TEMPORARY MAP-CREATION SCHEME 
 			* 
 			* PHASE 1 (DONE):
@@ -293,6 +292,7 @@ export class MapScreen {
 		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
 		bool checkNpcOnLimbCollision();
 		bool checkLandmarkCollision(bool& running, MapCharacter& playerCharacter);
+		bool checkNpcOnNpcCollision();
 
 		void run();
 		void startAnimationCountdown(AnimationType iType);
@@ -632,6 +632,7 @@ export void MapScreen::run() {
 				limbLimbCollision = checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
 				playerLimbCollision = checkPlayerLimbCollision(); /* Player collects new limb. */
 				playerNpcCollision = checkPlayerNpcCollision(false); /* Go to battle screen. */
+				checkNpcOnNpcCollision();
 			}
 
 			if (playerLimbCollision) {
@@ -2133,6 +2134,62 @@ bool MapScreen::checkPlayerLimbCollision() {
 		}
 	}
 	return collisionDetected;
+}
+
+
+bool MapScreen::checkNpcOnNpcCollision() {
+	vector<MapCharacter>& npcs = map.getNPCs();
+	vector<unordered_set<int>> amalgamatedGuysIds = {};
+
+	/* First make lists of doubles (use nested sets?) */
+	for (int i = 0; i < npcs.size() - 1; ++i) {
+		MapCharacter& baseNpc = npcs[i];
+		Point baseLocation = baseNpc.getPosition();
+
+		/* Check every npc ABOVE this one for their location. */
+		for (int k = i + 1; k < npcs.size(); ++k) {
+			MapCharacter& comparisonNpc = npcs[k];
+			if (comparisonNpc.getId() == baseNpc.getId()) { continue; }
+			else if (comparisonNpc.getPosition().equals(baseNpc.getPosition())) {
+				/* We are on the SAME LOCATION now. A new "guy" must be "amalgamated" from our limbs. */
+				unordered_map<int, int> idsToGuyIndex;
+				idsToGuyIndex[baseNpc.getId()] = -1;
+				idsToGuyIndex[comparisonNpc.getId()] = -1;
+				bool guyAlreadyExists = false;
+
+				/* First check if an appropriate amalgamatedGuy already exists, and add to that.  */
+				//for (unordered_set<int> thisGuysIds : amalgamatedGuysIds) {
+				for (int i = 0; i < amalgamatedGuysIds.size(); ++i) {
+					unordered_set<int> thisGuysIds = amalgamatedGuysIds[i];
+					/* Now check each of this guy's ids to see if there's a match. If so, mark their new homes. */
+
+					for (int thisId : thisGuysIds) {
+						if (comparisonNpc.getId() == thisId) {
+							idsToGuyIndex[baseNpc.getId()] = i;
+							guyAlreadyExists = true;
+						}
+						else if (baseNpc.getId() == thisId) {
+							idsToGuyIndex[comparisonNpc.getId()] = i;
+							guyAlreadyExists = true;
+						}
+					}
+				}
+
+				if (!guyAlreadyExists) {
+					unordered_set<int> newGuy;
+					newGuy.insert(baseNpc.getId());
+					newGuy.insert(comparisonNpc.getId());
+					amalgamatedGuysIds.push_back(newGuy);
+				}
+
+				/* Now we've iterated through amalgamatedGuysIds, make the additions. */
+			}
+		}
+	}
+
+	cout << "We would make " << amalgamatedGuysIds.size() << " new guys this turn\n";
+
+	return true;
 }
 
 

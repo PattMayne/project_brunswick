@@ -692,8 +692,6 @@ vector<Point> Map::buildMap() {
 		}
 	}
 
-
-
 	vector<Point> floorPositions;
 
 	/* while loop makes the path.
@@ -848,7 +846,6 @@ vector<Point> Map::buildMap() {
 			subPath.seed = 0;
 		}
 	}
-		
 
 	/* Set wall and floor texture indexes. */
 	for (int i = 0; i < rows.size(); ++i) {
