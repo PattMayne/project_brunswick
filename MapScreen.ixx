@@ -2144,17 +2144,19 @@ bool MapScreen::checkNpcOnNpcCollision() {
 	/* First make lists of doubles (use nested sets?) */
 	for (int i = 0; i < npcs.size() - 1; ++i) {
 		MapCharacter& baseNpc = npcs[i];
+		int baseNpcId = baseNpc.getId();
 		Point baseLocation = baseNpc.getPosition();
 
 		/* Check every npc ABOVE this one for their location. */
 		for (int k = i + 1; k < npcs.size(); ++k) {
 			MapCharacter& comparisonNpc = npcs[k];
-			if (comparisonNpc.getId() == baseNpc.getId()) { continue; }
+			int comparisonNpcId = comparisonNpc.getId();
+			if (comparisonNpcId == baseNpcId) { continue; }
 			else if (comparisonNpc.getPosition().equals(baseNpc.getPosition())) {
 				/* We are on the SAME LOCATION now. A new "guy" must be "amalgamated" from our limbs. */
 				unordered_map<int, int> idsToGuyIndex;
-				idsToGuyIndex[baseNpc.getId()] = -1;
-				idsToGuyIndex[comparisonNpc.getId()] = -1;
+				idsToGuyIndex[baseNpcId] = -1;
+				idsToGuyIndex[comparisonNpcId] = -1;
 				bool guyAlreadyExists = false;
 
 				/* First check if an appropriate amalgamatedGuy already exists, and add to that.  */
@@ -2164,27 +2166,40 @@ bool MapScreen::checkNpcOnNpcCollision() {
 					/* Now check each of this guy's ids to see if there's a match. If so, mark their new homes. */
 
 					for (int thisId : thisGuysIds) {
-						if (comparisonNpc.getId() == thisId) {
-							idsToGuyIndex[baseNpc.getId()] = i;
+						if (comparisonNpcId == thisId) {
+							idsToGuyIndex[baseNpcId] = i;
 							guyAlreadyExists = true;
 						}
-						else if (baseNpc.getId() == thisId) {
-							idsToGuyIndex[comparisonNpc.getId()] = i;
+						else if (baseNpcId == thisId) {
+							idsToGuyIndex[comparisonNpcId] = i;
 							guyAlreadyExists = true;
 						}
 					}
 				}
 
+				/* We flagged the right ids to be put in the right indexes for "new guys" (collections of old guy ids to be amalgamated). */
 				if (!guyAlreadyExists) {
 					unordered_set<int> newGuy;
-					newGuy.insert(baseNpc.getId());
-					newGuy.insert(comparisonNpc.getId());
+					newGuy.insert(baseNpcId);
+					newGuy.insert(comparisonNpcId);
 					amalgamatedGuysIds.push_back(newGuy);
 				}
-
-				/* Now we've iterated through amalgamatedGuysIds, make the additions. */
+				else {
+					if (idsToGuyIndex[baseNpcId] >= 0) {
+						amalgamatedGuysIds[idsToGuyIndex[baseNpcId]].insert(baseNpcId);
+					}
+					if (idsToGuyIndex[comparisonNpcId] >= 0) {
+						amalgamatedGuysIds[idsToGuyIndex[comparisonNpcId]].insert(comparisonNpcId);
+					}
+				}
 			}
 		}
+	}
+
+	/* Now iterate through amalgamatedGuysIds and make new guys from the old guys. */
+
+	for (unordered_set<int> amalGuy : amalgamatedGuysIds) {
+		// do something
 	}
 
 	cout << "We would make " << amalgamatedGuysIds.size() << " new guys this turn\n";
