@@ -551,7 +551,7 @@ MapCharacter& Map::getNpcById(int id) {
 		}
 	}
 
-	cerr << "NO NPC BY THAT ID. DANGEROUS REPLACE.\n";
+	cerr << "NO NPC WITH ID " << id << ". DANGEROUS REPLACE.\n";
 	return NPCs[0];
 }
 

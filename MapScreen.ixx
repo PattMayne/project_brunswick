@@ -587,6 +587,7 @@ export void MapScreen::run() {
 			bool limbLimbCollision = false;
 			bool npcLimbCollition = false;
 			bool playerLimbCollision = false;
+			bool npcOnNpcCollision = false;
 			waitSpin = false;
 			MapCharacter& playerCharacter = map.getPlayerCharacter();
 			
@@ -632,7 +633,11 @@ export void MapScreen::run() {
 				limbLimbCollision = checkLimbOnLimbCollision(); /* Limbs combine to form new NPC. */
 				playerLimbCollision = checkPlayerLimbCollision(); /* Player collects new limb. */
 				playerNpcCollision = checkPlayerNpcCollision(false); /* Go to battle screen. */
-				checkNpcOnNpcCollision();
+				npcOnNpcCollision = checkNpcOnNpcCollision();
+
+				if (npcOnNpcCollision) {
+					cout << "There are " << map.getNPCs().size() << " NPCs\n";
+				}
 			}
 
 			if (playerLimbCollision) {
@@ -1062,8 +1067,7 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 * Also, the acquired limbs can be considered part of the player character.
 * 
 */
-void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX, int charDrawY) {
-	
+void MapScreen::drawAcquiredLimbs(UI& ui, MapCharacter& character, int charDrawX, int charDrawY) {	
 	vector<AcquiredLimb>& acquiredLimbStructs = character.getAcquiredLimbStructs();
 
 	for (int i = acquiredLimbStructs.size() - 1; i >= 0; --i) {
@@ -2026,7 +2030,6 @@ bool MapScreen::checkLimbOnLimbCollision() {
 				if (limb.getId() == limbID) {
 					limb.setCharacterId(npcID);
 					npc.addLimb(limb);
-					//updateLimbOwnerInTransaction(limbID, npcID, db);
 
 					/* The acquired limbs should animate. */
 					if (npcIsDrawable) {
@@ -2069,7 +2072,6 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		npc.buildDrawLimbList();
 		updateCharacterLimbsInTransaction(npcID, npc.getAnchorLimbId(), npcLimbs, db);
 		npc.setTexture(npc.createAvatar());
-
 		map.addNPC(npc);
 	}
 
@@ -2141,7 +2143,7 @@ bool MapScreen::checkNpcOnNpcCollision() {
 	vector<MapCharacter>& npcs = map.getNPCs();
 	vector<unordered_set<int>> amalgamatedGuysIds = {};
 
-	/* First make lists of doubles (use nested sets?) */
+	/* First make lists of doubles. */
 	for (int i = 0; i < npcs.size() - 1; ++i) {
 		MapCharacter& baseNpc = npcs[i];
 		int baseNpcId = baseNpc.getId();
@@ -2160,7 +2162,6 @@ bool MapScreen::checkNpcOnNpcCollision() {
 				bool guyAlreadyExists = false;
 
 				/* First check if an appropriate amalgamatedGuy already exists, and add to that.  */
-				//for (unordered_set<int> thisGuysIds : amalgamatedGuysIds) {
 				for (int m = 0; m < amalgamatedGuysIds.size(); ++m) {
 					unordered_set<int>& thisGuysIds = amalgamatedGuysIds[m];
 					/* Now check each of this guy's ids to see if there's a match. If so, mark their new homes. */
@@ -2202,21 +2203,24 @@ bool MapScreen::checkNpcOnNpcCollision() {
 
 	for (unordered_set<int> amalGuy : amalgamatedGuysIds) {
 		// 1: get the CHARACTERS.
-		// 2: for each group, pick one guy to survive.
-		// 3: give that guy all the limbs.
-		// 4: delete the other guys for that group.
+		// 2: for each group, pick one guy to survive (first guy in the list).
+		// 3: give all the limbs to that guy.
+		// 4: delete the other guys from that group.
 		// 5: make sure the limbs are also saved to the DB.
 		// 6: animations?
 
 		int i = 0;
-		MapCharacter& mainGuy = map.getNPCs()[0];
+		MapCharacter& mainGuy = npcs[0];
 		for (int id : amalGuy) {
 			if (i == 0) {
 				/* Make the main guy who absorbs the other guys. */
-				MapCharacter& mainGuy = map.getNpcById(id);
+				mainGuy = map.getNpcById(id);
 				characterIdsToUpdate.insert(id);
+				mainGuy.startNewNpcCountup();
+				cout << "\nMAIN GUY is " << id << " \n";
 			}
 			else {
+				cout << "EATEN GUY is " << id << " \n";
 				MapCharacter& eatenGuy = map.getNpcById(id);
 				eatenGuy.clearSuit();
 				eatenGuy.clearAcquiredLimbStructs();
@@ -2224,12 +2228,27 @@ bool MapScreen::checkNpcOnNpcCollision() {
 
 				for (int k = eatenGuyLimbs.size() - 1; k >= 0; --k) {
 					Limb& eatenLimb = eatenGuyLimbs[k];
+
+					/* Add limb to the acquisition animation. */
+
+					/* Make object for limb collision animation. */
+					SDL_Rect diffRect = { 0, 0, 0, 0 };
+					mainGuy.getAcquiredLimbStructs().emplace_back(
+						eatenLimb.getTexture(),
+						limbCollisionCountdown,
+						eatenLimb.getRotationAngle(),
+						diffRect,
+						7,
+						eatenLimb.getName()
+					);
+
+					/* Move the limb to mainGuy object's inventory. */
 					mainGuy.addLimb(eatenLimb);
 					eatenGuyLimbs.erase(eatenGuyLimbs.begin() + k);
 				}
 				characterIdsToDelete.insert(id);
 			}
-
+			cout << i << endl;
 			++i;
 		}
 	}
@@ -2243,26 +2262,27 @@ bool MapScreen::checkNpcOnNpcCollision() {
 
 	sqlite3* db = startTransaction();
 
-	for (int idToDelete : characterIdsToDelete) {
-		for (int i = npcs.size() - 1; i >= 0; --i) {
-			MapCharacter& npc = npcs[i];
+	cout << "There are now " << npcs.size() << " npcs\n";
+	for (int i = npcs.size() - 1; i >= 0; --i) {
 
-			if (idToDelete == npc.getId()) {
-				deleteCharacterInTrans(npc.getId(), db);
+		for (int idToDelete : characterIdsToDelete) {
+			if (idToDelete == npcs[i].getId()) {
+				cout << "Deleting guy " << idToDelete << endl;
+				deleteCharacterInTrans(idToDelete, db);
+				npcs[i].setTexture(NULL);
 				npcs.erase(npcs.begin() + i);
 				break;
 			}
 		}
 	}
+	
+	cout << "There are now " << npcs.size() << " npcs\n";
 
 	for (int idToUpdate : characterIdsToUpdate) {
 		for (int i = npcs.size() - 1; i >= 0; --i) {
 			MapCharacter& npc = npcs[i];
 
 			if (idToUpdate == npc.getId()) {
-				// Re-equip this NPC and their limbs.
-				// Save the new setup.
-
 				npc.clearSuit();
 				npc.sortLimbsByNumberOfJoints();
 
