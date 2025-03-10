@@ -2141,7 +2141,8 @@ bool MapScreen::checkPlayerLimbCollision() {
 
 bool MapScreen::checkNpcOnNpcCollision() {
 	vector<MapCharacter>& npcs = map.getNPCs();
-	vector<unordered_set<int>> amalgamatedGuysIds = {};
+	/* <x, <y, ids>>  */
+	unordered_map<int, unordered_map<int, unordered_set<int>>> doublesMaps = {};
 
 	/* First make lists of doubles. */
 	for (int i = 0; i < npcs.size() - 1; ++i) {
@@ -2152,47 +2153,18 @@ bool MapScreen::checkNpcOnNpcCollision() {
 		/* Check every npc ABOVE this one for their location. */
 		for (int k = i + 1; k < npcs.size(); ++k) {
 			MapCharacter& comparisonNpc = npcs[k];
+			Point comparisonPoint = comparisonNpc.getPosition();
 			int comparisonNpcId = comparisonNpc.getId();
 			if (comparisonNpcId == baseNpcId) { continue; }
-			else if (comparisonNpc.getPosition().equals(baseNpc.getPosition())) {
+			else if (comparisonPoint.equals(baseNpc.getPosition())) {
 				/* We are on the SAME LOCATION now. A new "guy" must be "amalgamated" from our limbs. */
 				unordered_map<int, int> idsToGuyIndex;
 				idsToGuyIndex[baseNpcId] = -1;
 				idsToGuyIndex[comparisonNpcId] = -1;
 				bool guyAlreadyExists = false;
 
-				/* First check if an appropriate amalgamatedGuy already exists, and add to that.  */
-				for (int m = 0; m < amalgamatedGuysIds.size(); ++m) {
-					unordered_set<int>& thisGuysIds = amalgamatedGuysIds[m];
-					/* Now check each of this guy's ids to see if there's a match. If so, mark their new homes. */
-
-					for (int thisId : thisGuysIds) {
-						if (comparisonNpcId == thisId) {
-							idsToGuyIndex[baseNpcId] = m;
-							guyAlreadyExists = true;
-						}
-						else if (baseNpcId == thisId) {
-							idsToGuyIndex[comparisonNpcId] = m;
-							guyAlreadyExists = true;
-						}
-					}
-				}
-
-				/* We flagged the right ids to be put in the right indexes for "new guys" (collections of old guy ids to be amalgamated). */
-				if (!guyAlreadyExists) {
-					unordered_set<int> newGuy;
-					newGuy.insert(baseNpcId);
-					newGuy.insert(comparisonNpcId);
-					amalgamatedGuysIds.push_back(newGuy);
-				}
-				else {
-					if (idsToGuyIndex[baseNpcId] >= 0) {
-						amalgamatedGuysIds[idsToGuyIndex[baseNpcId]].insert(baseNpcId);
-					}
-					if (idsToGuyIndex[comparisonNpcId] >= 0) {
-						amalgamatedGuysIds[idsToGuyIndex[comparisonNpcId]].insert(comparisonNpcId);
-					}
-				}
+				doublesMaps[comparisonPoint.x][comparisonPoint.y].insert(baseNpcId);
+				doublesMaps[comparisonPoint.x][comparisonPoint.y].insert(comparisonNpcId);
 			}
 		}
 	}
@@ -2201,55 +2173,62 @@ bool MapScreen::checkNpcOnNpcCollision() {
 	unordered_set<int> characterIdsToDelete = {};
 	unordered_set<int> characterIdsToUpdate = {};
 
-	for (unordered_set<int> amalGuy : amalgamatedGuysIds) {
+	for (const auto& doublesMap : doublesMaps) {
 		// 1: get the CHARACTERS.
 		// 2: for each group, pick one guy to survive (first guy in the list).
 		// 3: give all the limbs to that guy.
 		// 4: delete the other guys from that group.
 		// 5: make sure the limbs are also saved to the DB.
 		// 6: animations?
+		int x = doublesMap.first;
+		unordered_map<int, unordered_set<int>> yMap = doublesMap.second;
 
-		int i = 0;
-		MapCharacter& mainGuy = npcs[0];
-		for (int id : amalGuy) {
-			if (i == 0) {
-				/* Make the main guy who absorbs the other guys. */
-				mainGuy = map.getNpcById(id);
-				characterIdsToUpdate.insert(id);
-				mainGuy.startNewNpcCountup();
-				cout << "\nMAIN GUY is " << id << " \n";
-			}
-			else {
-				cout << "EATEN GUY is " << id << " \n";
-				MapCharacter& eatenGuy = map.getNpcById(id);
-				eatenGuy.clearSuit();
-				eatenGuy.clearAcquiredLimbStructs();
-				vector<Limb>& eatenGuyLimbs = eatenGuy.getLimbs();
+		for (const auto& yAndIds : yMap) {
+			int y = yAndIds.first;
+			unordered_set ids = yAndIds.second;
 
-				for (int k = eatenGuyLimbs.size() - 1; k >= 0; --k) {
-					Limb& eatenLimb = eatenGuyLimbs[k];
-
-					/* Add limb to the acquisition animation. */
-
-					/* Make object for limb collision animation. */
-					SDL_Rect diffRect = { 0, 0, 0, 0 };
-					mainGuy.getAcquiredLimbStructs().emplace_back(
-						eatenLimb.getTexture(),
-						limbCollisionCountdown,
-						eatenLimb.getRotationAngle(),
-						diffRect,
-						7,
-						eatenLimb.getName()
-					);
-
-					/* Move the limb to mainGuy object's inventory. */
-					mainGuy.addLimb(eatenLimb);
-					eatenGuyLimbs.erase(eatenGuyLimbs.begin() + k);
+			int i = 0;
+			MapCharacter& mainGuy = npcs[0];
+			for (int id: ids) {
+				if (i == 0) {
+					/* Make the main guy who absorbs the other guys. */
+					mainGuy = map.getNpcById(id);
+					characterIdsToUpdate.insert(id);
+					mainGuy.startNewNpcCountup();
+					cout << "\nMAIN GUY is " << id << " \n";
 				}
-				characterIdsToDelete.insert(id);
+				else {
+					cout << "EATEN GUY is " << id << " \n";
+					MapCharacter& eatenGuy = map.getNpcById(id);
+					eatenGuy.clearSuit();
+					eatenGuy.clearAcquiredLimbStructs();
+					vector<Limb>& eatenGuyLimbs = eatenGuy.getLimbs();
+
+					for (int k = eatenGuyLimbs.size() - 1; k >= 0; --k) {
+						Limb& eatenLimb = eatenGuyLimbs[k];
+
+						/* Add limb to the acquisition animation. */
+
+						/* Make object for limb collision animation. */
+						SDL_Rect diffRect = { 0, 0, 0, 0 };
+						mainGuy.getAcquiredLimbStructs().emplace_back(
+							eatenLimb.getTexture(),
+							limbCollisionCountdown,
+							eatenLimb.getRotationAngle(),
+							diffRect,
+							7,
+							eatenLimb.getName()
+						);
+
+						/* Move the limb to mainGuy object's inventory. */
+						mainGuy.addLimb(eatenLimb);
+						eatenGuyLimbs.erase(eatenGuyLimbs.begin() + k);
+					}
+					characterIdsToDelete.insert(id);
+				}
+				cout << i << endl;
+				++i;
 			}
-			cout << i << endl;
-			++i;
 		}
 	}
 
@@ -2312,7 +2291,7 @@ bool MapScreen::checkNpcOnNpcCollision() {
 		}
 	}
 
-	cout << "We would make " << amalgamatedGuysIds.size() << " new guys this turn\n";
+	//cout << "We would make " << amalgamatedGuysIds.size() << " new guys this turn\n";
 
 	commitTransactionAndCloseDatabase(db);
 
