@@ -2011,7 +2011,7 @@ bool MapScreen::checkLimbOnLimbCollision() {
 		*/
 
 		MapCharacter npc = MapCharacter(CharacterType::Hostile);
-		string npcName = "Forest Creature"; /* TO DO: Create a system for giving them names based on their limbs or map. */
+		string npcName = map.getName() + " Creature";
 		
 		npc.setBlockPosition(collidedLimbsStruct.point);
 		npc.updateLastBlock();
@@ -2138,11 +2138,20 @@ bool MapScreen::checkPlayerLimbCollision() {
 	return collisionDetected;
 }
 
-
+/*
+* When multiple NPCs collide on one tile, they are all destroyed.
+* Their limbs are given to a new NPC who exists on that tile.
+* 
+* doublesMaps is an unordered map whose key is the X position of the point where they met.
+* doublesMaps's value (second item) is another unordered map whose key is the Y position.
+* That second map's value is a set of ids of NPCs who met on that tile.
+* 
+* We first build those sets, then iterate through them to collect the limbs and delete the NPCs.
+* Finally we create a new NPC on that tile and give them the limbs we collected.
+*/
 bool MapScreen::checkNpcOnNpcCollision() {
 	vector<MapCharacter>& npcs = map.getNPCs();
-	/* <x, <y, ids>>  */
-	unordered_map<int, unordered_map<int, unordered_set<int>>> doublesMaps = {};
+	unordered_map<int, unordered_map<int, unordered_set<int>>> doublesMaps = {}; /* <x, <y, ids>>  */
 
 	/* First make lists of doubles. */
 	for (int i = 0; i < npcs.size() - 1; ++i) {
@@ -2170,8 +2179,11 @@ bool MapScreen::checkNpcOnNpcCollision() {
 	}
 
 	/* Now iterate through amalgamatedGuysIds and make new guys from the old guys. */
-	unordered_set<int> characterIdsToDelete = {};
-	unordered_set<int> characterIdsToUpdate = {};
+	unordered_set<int> characterIdsToDelete = {}; // keep
+	unordered_set<int> characterIdsToUpdate = {}; // new characters. also keep
+
+	/* NEW WAY: delete ALL "amalgamated" characters. create a new one. */
+	sqlite3* db = startTransaction();
 
 	for (const auto& doublesMap : doublesMaps) {
 		// 1: get the CHARACTERS.
@@ -2181,117 +2193,94 @@ bool MapScreen::checkNpcOnNpcCollision() {
 		// 5: make sure the limbs are also saved to the DB.
 		// 6: animations?
 		int x = doublesMap.first;
+		cout << "x is " << x << endl;
 		unordered_map<int, unordered_set<int>> yMap = doublesMap.second;
+		string npcName = map.getName() + " Hunter";
 
 		for (const auto& yAndIds : yMap) {
 			int y = yAndIds.first;
 			unordered_set ids = yAndIds.second;
+			Point genesisPoint = Point(x, y);
+			cout << "Point " << x << ", " << y << endl;
 
-			int i = 0;
-			MapCharacter& mainGuy = npcs[0];
+			/* every y has one NEW NPC. Make it in the DB first, use the ID with the limbs to make the real one later. */
+			int hunterId = createNpcOnMap(map.getForm().slug, npcName, genesisPoint, db);
+			characterIdsToUpdate.insert(hunterId);
+			/* Make a vector of all the limbs. */
+			vector<Limb> limbsToConsume = {};
+
 			for (int id: ids) {
-				if (i == 0) {
-					/* Make the main guy who absorbs the other guys. */
-					mainGuy = map.getNpcById(id);
-					characterIdsToUpdate.insert(id);
-					mainGuy.startNewNpcCountup();
-					cout << "\nMAIN GUY is " << id << " \n";
+
+				cout << "EATEN GUY is " << id << " \n";
+				MapCharacter& eatenGuy = map.getNpcById(id);
+				eatenGuy.clearSuit();
+				eatenGuy.clearAcquiredLimbStructs();
+				vector<Limb>& eatenGuyLimbs = eatenGuy.getLimbs();
+
+				for (int k = eatenGuyLimbs.size() - 1; k >= 0; --k) {
+					Limb& eatenLimb = eatenGuyLimbs[k];
+					limbsToConsume.push_back(eatenLimb);
+					/* Add limb to the acquisition animation. */
+					eatenGuyLimbs.erase(eatenGuyLimbs.begin() + k);
 				}
-				else {
-					cout << "EATEN GUY is " << id << " \n";
-					MapCharacter& eatenGuy = map.getNpcById(id);
-					eatenGuy.clearSuit();
-					eatenGuy.clearAcquiredLimbStructs();
-					vector<Limb>& eatenGuyLimbs = eatenGuy.getLimbs();
+				characterIdsToDelete.insert(id);
+			}
 
-					for (int k = eatenGuyLimbs.size() - 1; k >= 0; --k) {
-						Limb& eatenLimb = eatenGuyLimbs[k];
+			/* Now make the hunter and update them. */
+			MapCharacter hunter = MapCharacter(hunterId, npcName, -1, genesisPoint, limbsToConsume);
+			hunter.setBlockPosition(genesisPoint);
+			hunter.moveToPosition(genesisPoint);
 
-						/* Add limb to the acquisition animation. */
+			hunter.clearSuit();
+			hunter.sortLimbsByNumberOfJoints();
 
-						/* Make object for limb collision animation. */
-						SDL_Rect diffRect = { 0, 0, 0, 0 };
-						mainGuy.getAcquiredLimbStructs().emplace_back(
-							eatenLimb.getTexture(),
-							limbCollisionCountdown,
-							eatenLimb.getRotationAngle(),
-							diffRect,
-							7,
-							eatenLimb.getName()
-						);
+			/* Now actually EQUIP! */
+			vector<Limb>& hunterLimbs = hunter.getLimbs();
+			bool keepEquippingLimbs = true;
 
-						/* Move the limb to mainGuy object's inventory. */
-						mainGuy.addLimb(eatenLimb);
-						eatenGuyLimbs.erase(eatenGuyLimbs.begin() + k);
+			for (Limb& limb : hunterLimbs) {
+				if (keepEquippingLimbs) {
+					keepEquippingLimbs = hunter.equipLimb(limb.getId());
+
+					/* Make object for limb collision animation. */
+					SDL_Rect diffRect = { 0, 0, 0, 0 };
+					hunter.getAcquiredLimbStructs().emplace_back(
+						limb.getTexture(),
+						limbCollisionCountdown,
+						limb.getRotationAngle(),
+						diffRect,
+						-7,
+						limb.getName()
+					);
+				}
+				else { break; }
+			}
+
+			hunter.buildDrawLimbList();
+			updateCharacterLimbsInTransaction(hunterId, hunter.getAnchorLimbId(), hunter.getLimbs(), db);
+			hunter.setTexture(hunter.createAvatar());
+			hunter.startNewNpcCountup();
+
+			/* Now erase the original NPCs from the DB and from the NPCs list. */
+			for (int i = npcs.size() - 1; i >= 0; --i) {
+
+				for (int idToDelete : characterIdsToDelete) {
+					if (idToDelete == npcs[i].getId()) {
+						cout << "Deleting guy " << idToDelete << endl;
+						deleteCharacterInTrans(idToDelete, db);
+						npcs[i].setTexture(NULL);
+						npcs.erase(npcs.begin() + i);
+						break;
 					}
-					characterIdsToDelete.insert(id);
 				}
-				cout << i << endl;
-				++i;
 			}
-		}
-	}
 
-	/* 
-	* Now we have eaten the guys.
-	* We must save limbs' ownership to the DB.
-	* We must delete the eaten NPCs from the NPCs list.
-	* We must delete those NPCs from the database.
-	*/
-
-	sqlite3* db = startTransaction();
-
-	cout << "There are now " << npcs.size() << " npcs\n";
-	for (int i = npcs.size() - 1; i >= 0; --i) {
-
-		for (int idToDelete : characterIdsToDelete) {
-			if (idToDelete == npcs[i].getId()) {
-				cout << "Deleting guy " << idToDelete << endl;
-				deleteCharacterInTrans(idToDelete, db);
-				npcs[i].setTexture(NULL);
-				npcs.erase(npcs.begin() + i);
-				break;
-			}
-		}
-	}
-	
-	cout << "There are now " << npcs.size() << " npcs\n";
-
-	for (int idToUpdate : characterIdsToUpdate) {
-		for (int i = npcs.size() - 1; i >= 0; --i) {
-			MapCharacter& npc = npcs[i];
-
-			if (idToUpdate == npc.getId()) {
-				npc.clearSuit();
-				npc.sortLimbsByNumberOfJoints();
-
-				/* Now actually EQUIP! */
-				vector<Limb>& npcLimbs = npc.getLimbs();
-				bool keepEquippingLimbs = true;
-				Point npcPosition = npc.getPosition();
-
-				for (Limb& limb : npcLimbs) {
-					if (keepEquippingLimbs) {
-						keepEquippingLimbs = npc.equipLimb(limb.getId());
-					}
-					else { break; }
-				}
-
-				npc.buildDrawLimbList();
-				updateCharacterLimbsInTransaction(idToUpdate, npc.getAnchorLimbId(), npcLimbs, db);
-				npc.setTexture(npc.createAvatar());
-				npc.setHomePosition(npcPosition);
-				updateNpcHomePositionInTrans(idToUpdate, npc.getHomePosition(), db);
-
-
-				/* ALSO update the new location... their home base is where they consumed the other guys. */
-
-				/* ALSO animate the acquisition. */
-			}
+			npcs.push_back(hunter);
 		}
 	}
 
 	//cout << "We would make " << amalgamatedGuysIds.size() << " new guys this turn\n";
+	/* END OBSOLETE SECTION. */
 
 	commitTransactionAndCloseDatabase(db);
 
