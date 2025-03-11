@@ -704,7 +704,8 @@ export bool updateLimbBattleEffectsInTransaction(Limb& limb, sqlite3* db) {
 
     /* No need to change the map_slug because map only loads non-owned limbs. */
     const char* updateSQL = "UPDATE limb SET character_id = ?, hp_mod = ?, strength_mod = ?, "
-        "speed_mod = ?, intelligence_mod = ?, is_anchor = ?, draw_order = ?, rotation_angle = ? WHERE id = ?;";
+        "speed_mod = ?, intelligence_mod = ?, is_anchor = ?, draw_order = ?, rotation_angle = ?, "
+        "position_x = ?, position_y = ? WHERE id = ?;";
     sqlite3_stmt* statement;
 
     /* Prepare the statement. */
@@ -726,7 +727,9 @@ export bool updateLimbBattleEffectsInTransaction(Limb& limb, sqlite3* db) {
     sqlite3_bind_int(statement, 6, isAnchorInt);
     sqlite3_bind_int(statement, 7, limb.getDrawOrder());
     sqlite3_bind_int(statement, 8, limb.getRotationAngle());
-    sqlite3_bind_int(statement, 9, limb.getId());
+    sqlite3_bind_int(statement, 9, limb.getPosition().x);
+    sqlite3_bind_int(statement, 10, limb.getPosition().y);
+    sqlite3_bind_int(statement, 11, limb.getId());
 
     /* Execute the statement. */
     returnCode = sqlite3_step(statement);

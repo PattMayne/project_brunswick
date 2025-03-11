@@ -1180,6 +1180,14 @@ void Character::buildDrawLimbList() {
 		if (suitType != SuitType::NoSuit && !limb.getUnscrambled()) { continue; }
 
 		if (limb.isEquipped()) {
+
+			/* Check to make sure its child limbs are still in the vector. */
+			for (Joint& joint : limb.getJoints()) {
+				if (joint.getConnectedLimbId() > 0 && !limbsContainId(joint.getConnectedLimbId())) {
+					joint.detachLimb();
+				}
+			}
+
 			addToDrawLimbList(limb.getId());
 			limb.setDrawOrder(drawOrder);
 			++drawOrder;
@@ -1618,14 +1626,15 @@ void Character::setAnchorJointIDs() {
 	}
 }
 
-Limb& Character::getLimbById(int id) {
+Limb& Character::getLimbById(int limbId) {
 	for (Limb& limb : limbs) {
-		if (limb.getId() == id) {
+		if (limb.getId() == limbId) {
 			return limb;
 		}
 	}
 
-	cout << "ERROR! LIMB " << id << " NOT FOUND!MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!\n";
+	cout << "ERROR! LIMB " << limbId << " NOT FOUND!MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!\n";
+	cout << "Player is " << getName() << endl;
 	/* UNSAFE! DO NOT KEEP THIS! */
 	return limbs[0];
 }

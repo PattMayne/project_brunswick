@@ -2255,10 +2255,10 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	bool erasedLimb = false;
 
-	vector<int> limbIdsToEquip; /* CURRENTLY EQUIPPED limb ids. We will remove the ones that get destroyed (never rebuild from whole set for NPC). */
+	unordered_set<int> limbIdsToEquip; /* CURRENTLY EQUIPPED limb ids. We will remove the ones that get destroyed (never rebuild from whole set for NPC). */
 	for (Limb& limb : npcLimbs) {
 		if (limb.isEquipped()) {
-			limbIdsToEquip.emplace_back(limb.getId());
+			limbIdsToEquip.insert(limb.getId());
 		}
 	}
 
@@ -2275,10 +2275,8 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			erasedLimb = true;
 			int limbId = limb.getId();
 
-			for (int k = limbIdsToEquip.size() - 1; k >= 0; --k) {
-				if (limbIdsToEquip[k] == limbId) {
-					limbIdsToEquip.erase(limbIdsToEquip.begin() + k);
-				}
+			if (limbIdsToEquip.count(limbId) > 0) {
+				limbIdsToEquip.erase(limbId);
 			}
 
 			updateLimbBattleEffectsInTransaction(limb, db);
@@ -2349,7 +2347,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	* Destroy NPC.
 	* Spread limbs
 	* ---> Player gets previously-equipped limbs.
-	* ---> Non-equipped limbs move to the NPCs block.
+	* ---> Non-equipped limbs return to Roaming Limbs (on the NPCs block).
 	*/
 		for (Limb& limb : npc.getLimbs()) {
 			npc.unEquipLimb(limb.getId());
