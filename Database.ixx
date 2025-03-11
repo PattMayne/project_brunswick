@@ -717,6 +717,7 @@ export bool updateLimbBattleEffectsInTransaction(Limb& limb, sqlite3* db) {
     }
 
     int isAnchorInt = !limb.getIsAnchor() ? 0 : 1;
+    Point limbPosition = limb.getPosition();
 
     /* Bind the values. */
     sqlite3_bind_int(statement, 1, limb.getCharacterId());
@@ -727,8 +728,8 @@ export bool updateLimbBattleEffectsInTransaction(Limb& limb, sqlite3* db) {
     sqlite3_bind_int(statement, 6, isAnchorInt);
     sqlite3_bind_int(statement, 7, limb.getDrawOrder());
     sqlite3_bind_int(statement, 8, limb.getRotationAngle());
-    sqlite3_bind_int(statement, 9, limb.getPosition().x);
-    sqlite3_bind_int(statement, 10, limb.getPosition().y);
+    sqlite3_bind_int(statement, 9, limbPosition.x);
+    sqlite3_bind_int(statement, 10, limbPosition.y);
     sqlite3_bind_int(statement, 11, limb.getId());
 
     /* Execute the statement. */
@@ -2267,9 +2268,7 @@ export bool createNewMap(Map& map) {
     */
 
     /* Create statements for adding new Limb and Joint objects to the database. */
-    const char* insertPlayerLimbSQL = "INSERT INTO limb (form_slug, map_slug, name, "
-        "position_x, position_y, character_id, is_anchor, draw_order) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
+    const char* insertPlayerLimbSQL = "INSERT INTO limb (map_slug, form_slug, name, position_x, position_y, character_id, is_anchor, draw_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt* playerLimbStatement;
 
     /* Prepare the statements before starting the loop.
@@ -2307,8 +2306,11 @@ export bool createNewMap(Map& map) {
         const char* limbName = limbNameString.c_str();
         int isAnchorInt = limb.getIsAnchor() == 1;
 
-        sqlite3_bind_text(playerLimbStatement, 1, limbFormSlugString.c_str(), -1, SQLITE_STATIC);
-        sqlite3_bind_text(playerLimbStatement, 2, mapSlug, -1, SQLITE_STATIC);
+        //cout << mapSlug.c_str() << endl;
+        limb.setMapSlug(slugString);
+
+        sqlite3_bind_text(playerLimbStatement, 1, mapSlug, -1, SQLITE_STATIC);
+        sqlite3_bind_text(playerLimbStatement, 2, limbFormSlugString.c_str(), -1, SQLITE_STATIC);
         sqlite3_bind_text(playerLimbStatement, 3, limbName, -1, SQLITE_STATIC);
         sqlite3_bind_int(playerLimbStatement, 4, limb.getPosition().x);
         sqlite3_bind_int(playerLimbStatement, 5, limb.getPosition().y);

@@ -2070,8 +2070,6 @@ bool BattleScreen::applyNpcAttackEffects() {
 			updateBattleStatusInTrans(battle.getId(), BattleStatus::PlayerDefeat, db);
 		}
 	}
-
-	
 	
 	/* Save all the limbs. */
 	
@@ -2109,7 +2107,6 @@ bool BattleScreen::applyNpcAttackEffects() {
 		updateBattleStatus(battle.getId(), BattleStatus::PlayerDefeat);
 	}
 
-	
 	return true;
 }
 
@@ -2127,21 +2124,17 @@ bool BattleScreen::applyPlayerStealEffects() {
 	* STEAL SUCCESS.
 	* Take the limb immediately.
 	*/
-	cout << "Steal succeeded\n";
+
 	/* Take the limb immediately. */
 	sqlite3* db = startTransaction();
 	unordered_set<int> stolenLimbChildIds = npc.getChildLimbIdsRecursively(targetLimb);
-
-	cout << npcLimbs.size() << " limbs\n";
-	cout << "targetLimbId: " << targetLimbId << endl;
 
 	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = npcLimbs[i];
 		if (limb.getId() == targetLimbId) {
 			/* Steal the target limb. */
-			cout << "Stealing " << limb.getName() << endl;
-			npc.unEquipLimb(limb.getId());
-			limb.unEquip();
+
+			npc.unEquipLimb(targetLimbId);
 			targetLimb.setCharacterId(playerCharacter.getId());
 			playerCharacter.addLimb(targetLimb);
 			updateLimbBattleEffectsInTransaction(limb, db);
@@ -2149,10 +2142,8 @@ bool BattleScreen::applyPlayerStealEffects() {
 			continue;
 		}
 		else if (stolenLimbChildIds.count(limb.getId()) > 0) {
-			/* Drop the child limbs. */
+			/* Unequip the child limbs. */
 			npc.unEquipLimb(limb.getId());
-			limb.unEquip();
-			updateLimbBattleEffectsInTransaction(limb, db);
 		}
 	}
 
@@ -2162,14 +2153,11 @@ bool BattleScreen::applyPlayerStealEffects() {
 		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}
 
-	cout << "We have " << stolenLimbChildIds.size() << " stolenLimbChildIds\n";
-
 	if (stolenLimbChildIds.size() > 0) {
 		/* Rebuild suit. Save. */
 
 		for (Limb& limb : npcLimbs) {
 			npc.unEquipLimb(limb.getId());
-			limb.unEquip();
 		}
 
 		npc.sortLimbsByNumberOfJoints();
@@ -2234,7 +2222,6 @@ bool BattleScreen::applyPlayerStealEffects() {
 		"Neither Turn (end of battle)";
 
 	commitTransactionAndCloseDatabase(db);
-	cout << "Turn should be " << thisTurn << " now\n";
 
 	return true;
 }
@@ -2285,7 +2272,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		}
 	}
 
-	/* Update all survivors in the DB. */
+	/* Update all survivors in the DB (also updates the joints which might previously have linked to now-removed limbs). */
 	for (int i = 0; i < npcLimbs.size(); ++i) {
 		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}

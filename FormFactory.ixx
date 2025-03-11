@@ -319,7 +319,6 @@ export vector<LimbForm> getWardenLimbForms() {
 }
 
 export void equipWardenSuit(Character& playerCharacter) {
-	cout << "Equipping warden suit\n";
 
 	playerCharacter.clearSuit();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
@@ -327,7 +326,6 @@ export void equipWardenSuit(Character& playerCharacter) {
 	/* Equip BODY first. */
 	for (Limb& limb : playerLimbs) {
 		if (limb.getFormSlug() == "warden_body") {
-			cout << "found the body\n";
 			playerCharacter.equipLimb(limb.getId());
 			limb.setDrawOrder(0);
 			break;

@@ -563,6 +563,7 @@ void Limb::unEquip() {
 	}
 	isAnchor = false;
 	rotationAngle = 0;
+	drawOrder = -1;
 }
 
 Joint& Limb::getAnchorJoint() {
@@ -892,6 +893,7 @@ public:
 	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
 	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 	vector<AttackStruct> getAttacks();
+	unordered_set<int> getChildLimbIds(Limb& parentLimb, unordered_set<int> collectedIds = {});
 
 	int getHP();
 	int getIntelligence();
@@ -1008,7 +1010,7 @@ unordered_set<int> Character::getChildLimbIdsRecursively(Limb& parentLimb, unord
 
 	for (Joint& joint : parentLimb.getJoints()) {
 		int connectedLimbId = joint.getConnectedLimbId();
-		if (connectedLimbId > 0) {
+		if (connectedLimbId > 0 && limbsContainId(connectedLimbId)) {
 			if (childLimbIds.count(connectedLimbId) < 1) {
 				childLimbIds.insert(connectedLimbId);
 				Limb& childLimb = getLimbById(connectedLimbId);
@@ -1172,14 +1174,22 @@ void Character::addToDrawLimbList(int limbId) {
 */
 void Character::buildDrawLimbList() {
 	drawLimbListIDs = {};
+	if (anchorLimbId < 1 || !limbsContainId(anchorLimbId)) {
+		setLimbDrawOrder(drawLimbListIDs);
+		return;
+	}
+
 	sortLimbsByDrawOrder();
 	int drawOrder = 0;
+	unordered_set<int> allConnectedLimbs = getChildLimbIdsRecursively(getAnchorLimb());
+	allConnectedLimbs.insert(anchorLimbId);
 
 	for (Limb& limb : limbs) {
 		/* Skip unscrambled Suit limbs. */
 		if (suitType != SuitType::NoSuit && !limb.getUnscrambled()) { continue; }
+		int limbId = limb.getId();
 
-		if (limb.isEquipped()) {
+		if (limb.isEquipped() && allConnectedLimbs.count(limbId) > 0) {
 
 			/* Check to make sure its child limbs are still in the vector. */
 			for (Joint& joint : limb.getJoints()) {
@@ -1188,7 +1198,7 @@ void Character::buildDrawLimbList() {
 				}
 			}
 
-			addToDrawLimbList(limb.getId());
+			addToDrawLimbList(limbId);
 			limb.setDrawOrder(drawOrder);
 			++drawOrder;
 		}
@@ -1198,6 +1208,7 @@ void Character::buildDrawLimbList() {
 	}
 	setLimbDrawOrder(drawLimbListIDs);
 }
+
 
 bool Character::limbsContainId(int idQuery) {
 	for (Limb& limb : limbs) {
@@ -1284,6 +1295,31 @@ void Character::checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimen
 			checkChildLimbsForAvatarBoundaries(getLimbById(connectedLimbId), dimStruct);
 		}
 	}
+}
+
+unordered_set<int> Character::getChildLimbIds(Limb& parentLimb, unordered_set<int> collectedIds) {
+	unordered_set<int> childLimbIds = {};
+
+	/* Avoid infintie recursion. */
+	if (collectedIds.count(parentLimb.getId()) > 0) {
+		return collectedIds;
+	}
+
+	for (Joint& joint : parentLimb.getJoints()) {
+		int connectedLimbId = joint.getConnectedLimbId();
+
+		if (connectedLimbId > 0 && limbsContainId(connectedLimbId)) {
+			unordered_set<int> grandChildLimbIds = getChildLimbIds(getLimbById(connectedLimbId), childLimbIds);
+			/* Add this ID after the recursive call to check for looped recursion. */
+			childLimbIds.insert(connectedLimbId);
+
+			for (int grandChildId : grandChildLimbIds) {
+				childLimbIds.insert(grandChildId);
+			}
+		}
+	}
+
+	return childLimbIds;
 }
 
 /*
@@ -1640,6 +1676,7 @@ Limb& Character::getLimbById(int limbId) {
 }
 
 void Character::unEquipLimb(int limbId) {
+	if (!limbsContainId(limbId)) { return; }
 
 	/* First remove reference from parent limb. */
 	for (Limb& limb : limbs) {
@@ -1647,10 +1684,6 @@ void Character::unEquipLimb(int limbId) {
 			if (joint.getConnectedLimbId() == limbId) {
 				joint.detachLimb();
 			}
-		}
-
-		if (limb.getId() == anchorLimbId && anchorLimbId == limbId) {
-			limb.setAnchor(false);
 		}
 	}
 
@@ -1660,6 +1693,7 @@ void Character::unEquipLimb(int limbId) {
 
 	/* recursively unequip limbs and child limbs. */
 	Limb& baseLimb = getLimbById(limbId);
+	baseLimb.setAnchor(false);
 	for (int i = 0; i < baseLimb.getJoints().size(); ++i) {
 		Joint& joint = baseLimb.getJoints()[i];
 		joint.resetModifiedPoint();
