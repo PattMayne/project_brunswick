@@ -901,6 +901,7 @@ public:
 	int getBlockX() { return blockPosition.x; }
 	int getBlockY() { return blockPosition.y; }
 	bool hasScrambledLimbs();
+	bool limbsContainId(int idQuery);
 	int getNumberOfEquippedLimbs();
 
 	int getLastX() { return lastBlockPosition.x; }
@@ -1188,6 +1189,16 @@ void Character::buildDrawLimbList() {
 		}
 	}
 	setLimbDrawOrder(drawLimbListIDs);
+}
+
+bool Character::limbsContainId(int idQuery) {
+	for (Limb& limb : limbs) {
+		if (limb.getId() == idQuery) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /* 

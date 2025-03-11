@@ -2006,6 +2006,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 	bool defeatedAnchorLimb = false;
 	bool defeatedAnyLimb = false;
 	int numberOfEquippableLimb = 0;
+	unordered_set<int> removedIds = {};
 
 	for (int i = playerLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = playerLimbs[i];
@@ -2023,6 +2024,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 
 			playerCharacter.unEquipLimb(limb.getId());
 			limb.setCharacterId(npcId);
+			removedIds.insert(limb.getId());
 
 			npc.getLimbs().push_back(limb);
 			updateLimbBattleEffectsInTransaction(limb, db);
@@ -2030,7 +2032,23 @@ bool BattleScreen::applyNpcAttackEffects() {
 		}
 	}
 
+	/* If limb is still connected to a limbs that's been removed, disconnect. */
+	for (Limb& limb : playerLimbs) {
+		for (Joint& joint : limb.getJoints()) {
+			int connectedLimbId = joint.getConnectedLimbId();
+			if (connectedLimbId > 0 && removedIds.count(connectedLimbId) > 0) {
+				cout << "Manually detached limb\n";
+				joint.detachLimb();
+				updateLimbBattleEffectsInTransaction(limb, db);
+			}
+		}
+	}
+
 	playerCharacter.buildDrawLimbList();
+
+	if (!playerCharacter.limbsContainId(playerCharacter.getAnchorLimbId())) {
+		defeatedAnchorLimb = true;
+	}
 
 	if (defeatedAnchorLimb) {
 		cout << "DEFEATED ANCHOR LIMB.\n Sending to Character Creation Screen.\n";
@@ -2081,7 +2099,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 
 	int equippableLimbsCount = 0;
 	for (Limb& limb : playerLimbs) {
-		if (limb.getHP() >= 0) {
+		if (limb.getHP() > 0) {
 			++equippableLimbsCount;
 		}
 	}
