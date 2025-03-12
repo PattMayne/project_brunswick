@@ -268,26 +268,14 @@ Point getRotatedPoint(Point anchorPoint, Point pointToRotate, int rotationAngle)
 
 
 /*
-* Minimalistic class from which useful Limb classes will derive for their objects.
-* Every Limb object must be stored in the database. As soon as it exists it must have an ID.
-* 
-* Maybe "attack" should be "strength".
-* "Intelligence" can affect how precisely you hit a limb, vs how much the damage is spread around.
-* Certain Low-intelligence limbs can create a special power which spreads damage around intentionally.
-* Intelligence raises your chances of hitting at all. Or hitting the correct target.
-* Intelligence also raises your chance of being missed (make whole limb twirl around on a joint-pivot or something?)
-* Position is where the Limb is located in any Character or Suit that's holding it.
-* 
-* 
+* The core component of a Character.
+* Each Limb contains the character's attributes (strength, intelligence, hp, speed).
 * 
 * Limb should have a LimbForm, and modifiers.
-* Modifiers cannot be larger than the original.
-* 
-* Let a Limb take a Form as its constructor... and a 2nd consrtructor which also takes an ID? Or only an ID (and gets the Form based on slug?)?
-* 
-* Limb object should take a Form as its basic stats, and have modifiers.
 * Only the modifiers are saved to the DB.
 * The Form is retrieved fresh from the definition every time the Limb is constructed/instantiated.
+* 
+* Let a Limb take a Form as its constructor... and a 2nd consrtructor to rebuild existing (or just more specific for any reason) limbs.
 * 
 * Limb textures will be destroyed by the screens handling them.
 */
@@ -854,6 +842,7 @@ public:
 		characterType(characterType), anchorLimbId(-1), suitType(suitType) 
 	{
 		texture = NULL;
+		setLatestLandmarkId(-1);
 	}
 
 	/**/
@@ -861,12 +850,14 @@ public:
 		characterType(characterType), limbs(limbs), name(name), anchorLimbId(-1), suitType(suitType)
 	{
 		texture = NULL;
+		setLatestLandmarkId(-1);
 	}
 
 	Character(CharacterType characterType, int x, int y, SuitType suitType = SuitType::NoSuit) :
 		characterType(characterType), blockPosition(x, y), lastBlockPosition(x, y), suitType(suitType)
 	{
 		texture = NULL;
+		setLatestLandmarkId(-1);
 	}
 
 	/* constructor for when hostile NPC MapCharacter is created. */
@@ -875,6 +866,7 @@ public:
 		lastBlockPosition(position), limbs(limbs), characterType(CharacterType::Hostile), suitType(suitType)
 	{
 		texture = NULL;
+		setLatestLandmarkId(-1);
 	}
 
 	unordered_set<int> getChildLimbIdsRecursively(Limb& parentLimb, unordered_set<int> childLimbIds = {});
@@ -912,6 +904,7 @@ public:
 
 	int getLastX() { return lastBlockPosition.x; }
 	int getLastY() { return lastBlockPosition.y; }
+	int getLatestLandmarkId() { return latestLandmarkId; }
 
 	Point getPosition() { return blockPosition; }
 	Point getLastPosition() { return lastBlockPosition; }
@@ -941,6 +934,8 @@ public:
 	void addToDrawLimbList(int limbId);
 	void buildDrawLimbList();
 	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct);
+	void setLatestLandmarkId(int newId) { latestLandmarkId = newId; }
+
 	DominanceNode getDominanceNode();
 
 	CharStatsData getCharStatsData(Point trackedPoint = Point(-1, -1));
@@ -955,7 +950,7 @@ public:
 protected:
 	CharacterType characterType;
 	int id;
-	int anchorLimbId; /* Currently using INDEX for dev purposes... will replace with actual DB ID. */
+	int anchorLimbId;
 	vector<Limb> limbs;
 	string name;
 	vector<int> drawLimbListIDs;
@@ -964,6 +959,7 @@ protected:
 	Point lastBlockPosition;
 	SuitType suitType;
 	SDL_Texture* texture;
+	int latestLandmarkId;
 };
 
 

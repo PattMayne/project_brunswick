@@ -51,7 +51,8 @@ CREATE TABLE IF NOT EXISTS character (
     position_x INTEGER DEFAULT 0,
     position_y INTEGER DEFAULT 0,
     character_type INTEGER NOT NULL,
-    suit_type INTEGER DEFAULT 0
+    suit_type INTEGER DEFAULT 0,
+    latest_landmark_id INTEGER DEFAULT -1
 );
 
 CREATE TABLE IF NOT EXISTS battle (

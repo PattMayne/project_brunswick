@@ -1769,39 +1769,41 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 						}
 
 						createShrineMessage(suit);
-						if (unscrambledSomething && false) { break; }
-						else {
-							/* 
-							* Automatically give all unscrambled limbs to player.
-							* We already deleted any unequipped limbs from this shrine.
-							*/
 
-							unordered_set<string> slugsToBestow = {};
-							for (Limb& limb : suit.getLimbs()) {
-								if (limb.getUnscrambled()) {
-									/* Player can have this limb. */
-									slugsToBestow.insert(limb.getForm().slug);
-								}
+						/* 
+						* Automatically give all unscrambled limbs to player.
+						* We already deleted any unequipped limbs from this shrine.
+						*/
+
+						unordered_set<string> slugsToBestow = {};
+						for (Limb& limb : suit.getLimbs()) {
+							if (limb.getUnscrambled()) {
+								/* Player can have this limb. */
+								slugsToBestow.insert(limb.getForm().slug);
+							}
+						}
+
+						if (slugsToBestow.size() > 0) {
+							MapCharacter& playerCharacter = map.getPlayerCharacter();
+							vector<Limb> newLimbs = createLimbsAtShrineInTrans(playerCharacter.getId(), map.getSlug(), slugsToBestow, db);
+
+							for (Limb& newLimb : newLimbs) {
+								playerCharacter.addLimb(newLimb);
+
+								SDL_Rect diffRect = { 0, 0, 0, 0 };
+								playerCharacter.getAcquiredLimbStructs().emplace_back(
+									newLimb.getTexture(),
+									limbCollisionCountdown,
+									newLimb.getRotationAngle(),
+									diffRect,
+									7,
+									newLimb.getName()
+								);
 							}
 
-							if (slugsToBestow.size() > 0) {
-								MapCharacter& playerCharacter = map.getPlayerCharacter();
-								vector<Limb> newLimbs = createLimbsAtShrineInTrans(playerCharacter.getId(), map.getSlug(), slugsToBestow, db);
-
-								for (Limb& newLimb : newLimbs) {
-									playerCharacter.addLimb(newLimb);
-
-									SDL_Rect diffRect = { 0, 0, 0, 0 };
-									playerCharacter.getAcquiredLimbStructs().emplace_back(
-										newLimb.getTexture(),
-										limbCollisionCountdown,
-										newLimb.getRotationAngle(),
-										diffRect,
-										7,
-										newLimb.getName()
-									);
-								}
-							}
+							/* Set the latest landmark flag. This can ONLY be your new home IF you have unscrambled at least one limb here. */
+							playerCharacter.setLatestLandmarkId(landmark.getId());
+							updateLatestLandmarkIdInTrans(playerCharacter.getId(), landmark.getId(), db);
 						}
 					}
 				}

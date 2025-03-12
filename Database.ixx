@@ -213,11 +213,9 @@ export int getCurrentBattleId(int playerId) {
     sqlite3_bind_int(statement, 4, battleStatusRebuildInt);
 
     /* Execute binded statement. */
-    int numberOfOpenBattles = 0;
     while ((returnCode = sqlite3_step(statement)) == SQLITE_ROW) {
-        //++numberOfOpenBattles;
         int oppoId = sqlite3_column_int(statement, 1);
-        //currentMapId = sqlite3_column_int(statement, 0);
+
         /* Make sure opponent exists. */
 
         const char* characterCountSQL = "SELECT COUNT(*) FROM character WHERE id = ?;";
@@ -239,16 +237,11 @@ export int getCurrentBattleId(int playerId) {
         }
 
         if (oppoCount > 0) {
-            ++numberOfOpenBattles;
             currentMapId = sqlite3_column_int(statement, 0);
         }
 
         sqlite3_finalize(characterCountStatement);
     }
-    if (numberOfOpenBattles > 0) {
-        //currentMapId = sqlite3_column_int(statement, 0);
-    }
-    cout << "There are " << numberOfOpenBattles << " open battles.\n";
 
     /* Finalize statement and close DB. */
     sqlite3_finalize(statement);
@@ -864,13 +857,33 @@ export void updateLimbsLocation(vector<Limb>& limbs) {
 * 
 */
 
+export bool updateLatestLandmarkIdInTrans(int characterId, int landmarkId, sqlite3* db) {
+
+    const char* updateCharacterSQL = "UPDATE character SET latest_landmark_id = ? WHERE id = ?;";
+    sqlite3_stmt* updateCharacterstatement;
+
+    /* Prepare the statement. */
+    int returnCode = sqlite3_prepare_v2(db, updateCharacterSQL, -1, &updateCharacterstatement, nullptr);
+    if (returnCode != SQLITE_OK) {
+        cerr << "Failed to prepare NPC UPDATE statement: " << sqlite3_errmsg(db) << endl;
+        return false;
+    }
+
+    /* Bind the values. */
+    sqlite3_bind_int(updateCharacterstatement, 1, landmarkId);
+    sqlite3_bind_int(updateCharacterstatement, 2, characterId);
+
+    /* Execute the statement. */
+    returnCode = sqlite3_step(updateCharacterstatement);
+    if (returnCode != SQLITE_DONE) { cerr << "Update character (latest_landmark_id) failed: " << sqlite3_errmsg(db) << endl; }
+
+    /* Finalize statement. */
+    sqlite3_finalize(updateCharacterstatement);
+
+    return true;
+}
+
 export void updateNpcHomePositionInTrans(int characterId, Point newPosition, sqlite3* db) {
-    /*
-    * TO DO: Do this in bulk with a vector and a transaction.
-    */
-
-    /* First update the Character. */
-
     const char* updateCharacterSQL = "UPDATE character SET position_x = ?, position_y = ? WHERE id = ?;";
     sqlite3_stmt* updateCharacterstatement;
 
@@ -878,7 +891,6 @@ export void updateNpcHomePositionInTrans(int characterId, Point newPosition, sql
     int returnCode = sqlite3_prepare_v2(db, updateCharacterSQL, -1, &updateCharacterstatement, nullptr);
     if (returnCode != SQLITE_OK) {
         cerr << "Failed to prepare NPC UPDATE statement: " << sqlite3_errmsg(db) << endl;
-        sqlite3_close(db);
         return;
     }
 
@@ -1320,6 +1332,7 @@ export Character loadCharacterInTransaction(sqlite3* db, int characterID) {
         sqlite3_column_int(characterStatement, 6)
     );
     CharacterType characterType = static_cast<CharacterType>(sqlite3_column_int(characterStatement, 7));
+    int latestLandmarkId = sqlite3_column_int(characterStatement, 9);
 
     /* Finalize statement. */
     sqlite3_finalize(characterStatement);
@@ -1449,6 +1462,7 @@ export Character loadCharacterInTransaction(sqlite3* db, int characterID) {
     sqlite3_finalize(queryLimbsStatement);
 
     character.setType(characterType);
+    character.setLatestLandmarkId(latestLandmarkId);
     character.setName(name);
     character.setId(characterID);
     character.setAnchorLimbId(anchorLimbID);
@@ -1509,6 +1523,7 @@ export Character loadPlayerCharacter() {
     anchorLimbID = sqlite3_column_int(characterStatement, 2);
     mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 3));
     battleID = sqlite3_column_int(characterStatement, 4);
+    int latestLandmarkId = sqlite3_column_int(characterStatement, 9);
 
     /* Finalize statement. */
     sqlite3_finalize(characterStatement);
@@ -1639,6 +1654,7 @@ export Character loadPlayerCharacter() {
     sqlite3_finalize(queryLimbsStatement);
     sqlite3_close(db);
 
+    character.setLatestLandmarkId(latestLandmarkId);
     character.setType(CharacterType::Player);
     character.setName(name);
     character.setId(characterID);
@@ -1694,6 +1710,7 @@ export MapCharacter loadPlayerMapCharacter() {
     anchorLimbID = sqlite3_column_int(characterStatement, 2);
     mapSlug = stringFromUnsignedChar(sqlite3_column_text(characterStatement, 3));
     battleID = sqlite3_column_int(characterStatement, 4);
+    int latestLandmarkId = sqlite3_column_int(characterStatement, 9);
 
     /* Finalize statement. */
     sqlite3_finalize(characterStatement);
@@ -1819,6 +1836,7 @@ export MapCharacter loadPlayerMapCharacter() {
     /* Finalize prepared statement. */
     sqlite3_finalize(queryLimbsStatement);
 
+    character.setLatestLandmarkId(latestLandmarkId);
     character.setType(CharacterType::Player);
     character.setName(name);
     character.setId(characterID);
@@ -2957,14 +2975,15 @@ export Map loadMap(string mapSlug) {
             SDL_Surface* shrineSurface = IMG_Load("assets/shrine.png");
             SDL_Texture* shrineTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), shrineSurface);
             SDL_FreeSurface(shrineSurface);
-
-            landmarks.emplace_back(
+            Landmark shrine = Landmark(
                 position,
                 shrineTexture,
                 landmarkType,
                 suitCharacterId,
                 suitType
             );
+            shrine.setId(landmarkId);
+            landmarks.push_back(shrine);
         }
     }
 

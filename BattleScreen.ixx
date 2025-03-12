@@ -1216,7 +1216,6 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 				if (playerRunsAway) {
 					battle.setBattleStatus(BattleStatus::RanAway);
 					updateBattleStatus(battle.getId(), BattleStatus::RanAway);
-
 					string ranAwayString = battle.getPlayerCharacter().getName() + " ran away!";
 
 					confirmationPanel.destroyTextures();

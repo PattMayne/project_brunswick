@@ -236,7 +236,7 @@ public:
 	Point getPosition() { return position; }
 	LandmarkType getType() { return landmarkType; }
 
-	void setId(int id) { this->id = id; }
+	void setId(int newId) { id = newId; }
 	void setCharacterId(int characterId) { this->characterId = characterId; }
 	void setPosition(Point position) { this->position = position; }
 	void clearAcquiredLimbStructs() { acquiredLimbStructs = {}; }
