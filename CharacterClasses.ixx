@@ -1544,6 +1544,20 @@ vector<AttackStruct> Character::getAttacks() {
 		);
 	}
 
+	if (characterType == CharacterType::Player) {
+		vector<AttributeType> attributeTypes = { };
+		attackStructs.emplace_back(
+			"Run Away",
+			"RUN_AWAY",
+			100,
+			0,
+			dominantNode,
+			AttackType::RunAway,
+			attributeTypes
+		);
+	}
+	
+
 	return attackStructs;
 }
 

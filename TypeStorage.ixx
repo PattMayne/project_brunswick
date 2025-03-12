@@ -90,7 +90,7 @@ export enum class WindowResType {
 
 
 export enum BattleStatus {
-	PlayerTurn, NpcTurn, PlayerVictory, PlayerDefeat, RebuildRequired
+	PlayerTurn, NpcTurn, PlayerVictory, PlayerDefeat, RanAway, RebuildRequired
 };
 
 
@@ -252,6 +252,7 @@ export enum AttributeType {
 
 export enum AttackType {
 	NoAttack,
+	RunAway,
 	Attack, /* Generic "attack" */
 	Punch, DoublePunch, Kick, BodySlam, /* Just damage HP. */
 	Swoop, /* steal Speed and damage HP. */
@@ -319,6 +320,7 @@ export unordered_map<AttackType, string> getAttackTypeTextDictionary() {
 	typeDictionary[AttackType::Steal] = "Steal";
 	typeDictionary[AttackType::Throw] = "Throw";
 	typeDictionary[AttackType::Heal] = "Heal";
+	typeDictionary[AttackType::RunAway] = "Run Away";
 
 	return typeDictionary;
 }

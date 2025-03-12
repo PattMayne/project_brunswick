@@ -916,6 +916,11 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						) {
 							running = false;
 						}
+						else if (battleStatus == BattleStatus::RanAway) {
+							screenToLoadStruct.screenType = ScreenType::Map;
+							running = false;
+						}
+
 						confirmationPanel.setShow(false);
 					}
 				}				
@@ -1161,6 +1166,70 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 					}
 				}
 				
+			}
+			else if (aStruct.attackType == AttackType::RunAway) {
+				/* 
+				* calculate chances to run away
+				* give a confirmation box saying "you ran away"
+				* save battle status and return to map.
+				* 
+				* FOR NOW it always works. Add chances later.
+				*/
+
+				int numberOfPlayerLegs = 0;
+				int numberOfNpcLegs = 0;
+
+				Character& playerCharacter = battle.getPlayerCharacter();
+				Character& npc = battle.getNpc();
+				vector<Limb>& npcLimbs = npc.getLimbs();
+				vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+
+				for (Limb& limb : playerLimbs) {
+					if (limb.isEquipped() && (limb.getBodyPartType() == BodyPartType::Leg || limb.getBodyPartType() == BodyPartType::Wing)) {
+						++numberOfPlayerLegs;
+					}
+				}
+
+				for (Limb& limb : npcLimbs) {
+					if (limb.isEquipped() && (limb.getBodyPartType() == BodyPartType::Leg || limb.getBodyPartType() == BodyPartType::Wing)) {
+						++numberOfNpcLegs;
+					}
+				}
+
+				bool playerRunsAway = false;
+
+				if (playerCharacter.getSpeed() > npc.getSpeed() || numberOfPlayerLegs > numberOfNpcLegs) {
+					playerRunsAway = true;
+				}
+				else {
+					/* Roll the dice! */
+					int playerShare = playerCharacter.getSpeed() + numberOfPlayerLegs;
+					int npcShare = npc.getSpeed() + numberOfNpcLegs;
+					int totalSides = playerShare + npcShare;
+					int randomNumber = rand() % totalSides;
+
+					if(randomNumber <= playerShare){
+						playerRunsAway = true;
+					}
+				}
+
+				if (playerRunsAway) {
+					battle.setBattleStatus(BattleStatus::RanAway);
+					updateBattleStatus(battle.getId(), BattleStatus::RanAway);
+
+					string ranAwayString = battle.getPlayerCharacter().getName() + " ran away!";
+
+					confirmationPanel.destroyTextures();
+					confirmationPanel = getNewConfirmationMessage(confirmationPanel, ranAwayString, ConfirmationButtonType::OkCancel, false);
+					confirmationPanel.setShow(true);
+				}
+				else {
+					string failMessage = battle.getPlayerCharacter().getName() + " failed to run away!";
+					passingMessageCountdown = 250;
+					passingMessagePanel = ui.getNewPassingMessagePanel(failMessage, passingMessagePanel, true, true);
+					passingMessagePanel.setShow(true);
+					battle.switchTurn();
+				}
 			}
 		}
 	}
