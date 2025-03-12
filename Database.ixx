@@ -395,9 +395,9 @@ export Battle loadBattle(int battleId) {
 * 
 */
 
-export vector<Limb> createLimbsAtShrine(int characterId, string mapSlug, unordered_set<string> limbSlugs) {
+export vector<Limb> createLimbsAtShrineInTrans(int characterId, string mapSlug, unordered_set<string> limbSlugs, sqlite3* db) {
+
     vector<Limb> newLimbs = {};
-    sqlite3* db = startTransaction();
 
     /* Create statements (before the loop) for adding new Limb and Joint objects to the database. */
     const char* insertLimbSQL = "INSERT INTO limb (form_slug, map_slug, name, character_id) VALUES (?, ?, ?, ?);";
@@ -480,7 +480,7 @@ export vector<Limb> createLimbsAtShrine(int characterId, string mapSlug, unorder
             if (jointError) { /* TO DO: DEAL WITH ERRORS. */ }
         }
         else {
-            cerr << "Insert failed for LIMB: " << sqlite3_errmsg(db) << endl;
+            cerr << "Insertttt failed for LIMB: " << sqlite3_errmsg(db) << endl;
             limbError = true;
             break;
         }
@@ -492,6 +492,13 @@ export vector<Limb> createLimbsAtShrine(int characterId, string mapSlug, unorder
     /* Finalize the statements, commit the transaction. */
     sqlite3_finalize(jointStatement);
     sqlite3_finalize(limbStatement);
+
+    return newLimbs;
+}
+
+export vector<Limb> createLimbsAtShrine(int characterId, string mapSlug, unordered_set<string> limbSlugs) {
+    sqlite3* db = startTransaction();
+    vector<Limb> newLimbs = createLimbsAtShrineInTrans(characterId, mapSlug, limbSlugs, db);
     commitTransactionAndCloseDatabase(db);
 
     return newLimbs;

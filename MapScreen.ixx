@@ -253,7 +253,6 @@ export class MapScreen {
 
 			hudPanel = ui.createHud(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
 			hudPanel.setShow(true);
-			slugsToBestow = {};
 		}
 
 		/* Destructor */
@@ -406,7 +405,6 @@ export class MapScreen {
 		Panel hudPanel;
 
 		int passingMessageCountdown = 0; /* optional */
-		unordered_set<string> slugsToBestow;
 };
 
 
@@ -1589,7 +1587,8 @@ void MapScreen::createShrineMessage(Character& suit) {
 		suitMessage = suitMessage + unscrambledCountMessage;
 	}
 	else {
-		string statsMessage = to_string(stillScrambledCount) + " limbs remaining to unscramble.";
+		string limbOrLimbs = stillScrambledCount > 1 ? " limbs" : " limb";
+		string statsMessage = to_string(stillScrambledCount) + limbOrLimbs + " remaining to unscramble.";
 		suitMessage = suitMessage + statsMessage;
 	}
 
@@ -1710,17 +1709,15 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							for (int u = playerLimbs.size() - 1; u >= 0; --u) {
 								Limb& playerLimb = playerLimbs[u];
 								if (!playerLimb.isEquipped() && playerLimb.getId() != map.getPlayerCharacter().getAnchorLimbId()) {
-									for (string slug : slugsToDeleteFromPlayer) {
-										if (slug == playerLimb.getForm().slug) {
-											/*
+									if (slugsToDeleteFromPlayer.count(playerLimb.getForm().slug) > 0) {
+										/*
 											* Erase this limb from player inventory.
 											* Destroy texture.
 											* Erase from DB.
 											*/
-											deleteLimbInTrans(playerLimb.getId(), db);
-											SDL_DestroyTexture(playerLimb.getTexture());
-											playerLimbs.erase(playerLimbs.begin() + u);
-										}
+										deleteLimbInTrans(playerLimb.getId(), db);
+										SDL_DestroyTexture(playerLimb.getTexture());
+										playerLimbs.erase(playerLimbs.begin() + u);
 									}
 								}
 							}
@@ -1772,15 +1769,14 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 						}
 
 						createShrineMessage(suit);
-						if (unscrambledSomething) { break; }
+						if (unscrambledSomething && false) { break; }
 						else {
 							/* 
-							* Display "do you want some limbs" message.
-							* 1. Find out if suit has any unscrambled limbs.
-							* 2. Open popup and ask question. Set a flag. Store limb slugs in module-scoped set.
-							* 3. Make function to handle "yes" scenario (create limbs in DB and player inventory).
+							* Automatically give all unscrambled limbs to player.
+							* We already deleted any unequipped limbs from this shrine.
 							*/
-							slugsToBestow = {};
+
+							unordered_set<string> slugsToBestow = {};
 							for (Limb& limb : suit.getLimbs()) {
 								if (limb.getUnscrambled()) {
 									/* Player can have this limb. */
@@ -1789,12 +1785,22 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							}
 
 							if (slugsToBestow.size() > 0) {
-								/* Open the messagebox. */
-								string message = "Do you request " + suit.getName() + " to bestow fresh limbs upon you?";
+								MapCharacter& playerCharacter = map.getPlayerCharacter();
+								vector<Limb> newLimbs = createLimbsAtShrineInTrans(playerCharacter.getId(), map.getSlug(), slugsToBestow, db);
 
-								messagePanel.destroyTextures();
-								messagePanel = getNewConfirmationMessage(messagePanel, message, ConfirmationButtonType::YesNo, true);
-								messagePanel.setShow(true);
+								for (Limb& newLimb : newLimbs) {
+									playerCharacter.addLimb(newLimb);
+
+									SDL_Rect diffRect = { 0, 0, 0, 0 };
+									playerCharacter.getAcquiredLimbStructs().emplace_back(
+										newLimb.getTexture(),
+										limbCollisionCountdown,
+										newLimb.getRotationAngle(),
+										diffRect,
+										7,
+										newLimb.getName()
+									);
+								}
 							}
 						}
 					}
@@ -2498,21 +2504,10 @@ void MapScreen::handleMousedown(SDL_Event& e, bool& running) {
 			messagePanel.setShow(false);
 			/* Find the context. */
 
-			if (slugsToBestow.size() > 0) {
-				MapCharacter& playerCharacter = map.getPlayerCharacter();
-				vector<Limb> newLimbs = createLimbsAtShrine(playerCharacter.getId(), map.getSlug(), slugsToBestow);
-
-				for (Limb& newLimb : newLimbs) {
-					playerCharacter.addLimb(newLimb);
-				}
-			}
-
-			slugsToBestow = {};
 
 			break;
 		case ButtonOption::Refuse:
 			messagePanel.setShow(false);
-			slugsToBestow = {};
 			break;
 		}
 	}
