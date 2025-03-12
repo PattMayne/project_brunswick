@@ -362,6 +362,10 @@ export class Limb {
 
 		}
 
+		/* Define equality based on the id. */
+		bool operator==(const Limb& other) const {
+			return id == other.id;  
+		}
 		
 		void setFlipped(bool flip) { flipped = flip; }
 		void flip() { flipped = !flipped; }
@@ -918,7 +922,9 @@ public:
 	void setBlockPosition(Point blockPosition) { this->blockPosition = blockPosition; }
 
 	void setId(int id) { this->id = id; }
-	void addLimb(Limb& newLimb) { limbs.emplace_back(newLimb); }
+	void addLimb(Limb& newLimb) {
+		limbs.emplace_back(newLimb);
+	}
 	void setName(string newName) { name = newName; }
 	void setType(CharacterType type) { characterType = type; }
 	void setAnchorLimbId(int newId) { anchorLimbId = newId; }

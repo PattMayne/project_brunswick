@@ -699,7 +699,7 @@ export bool updateJointInTrans(Joint& joint, sqlite3* db) {
 /* When a limb changes stats.
 * DO ON MASS
 */
-export bool updateLimbBattleEffectsInTransaction(Limb& limb, sqlite3* db) {
+export bool updateLimbBattleEffectsInTransaction(Limb limb, sqlite3* db) {
     bool success = false;
 
     /* No need to change the map_slug because map only loads non-owned limbs. */
@@ -2259,8 +2259,6 @@ export bool createNewMap(Map& map) {
     sqlite3_finalize(jointStatement);
     sqlite3_finalize(limbStatement);
 
-    cout << "BEFORE ROAMING LIMBS SAVE: character has " << map.getPlayerCharacter().getLimbs().size() << " limbs\n";
-
     /* 
     * 
     * NOW save the CHARACTER limbs:
@@ -2306,7 +2304,6 @@ export bool createNewMap(Map& map) {
         const char* limbName = limbNameString.c_str();
         int isAnchorInt = limb.getIsAnchor() == 1;
 
-        //cout << mapSlug.c_str() << endl;
         limb.setMapSlug(slugString);
 
         sqlite3_bind_text(playerLimbStatement, 1, mapSlug, -1, SQLITE_STATIC);

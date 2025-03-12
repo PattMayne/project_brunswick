@@ -80,7 +80,6 @@ export enum SuitType {
 	Deer, Bear, Spider, Fairy, Owl,
 
 	/* Total */
-
 	TotalSuit
 };
 

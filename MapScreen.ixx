@@ -183,7 +183,6 @@ export class MapScreen {
 				updatePlayerMap(mapSlug);
 
 				MapCharacter& playerCharacter = map.getPlayerCharacter();
-				cout << "Player has " << playerCharacter.getLimbs().size() << " warden forms\n";
 
 				/* Now that the map is saved to the DB, the Suits have their limbs.
 				* So we can equip their limbs and then save them.
@@ -2201,7 +2200,6 @@ bool MapScreen::checkNpcOnNpcCollision() {
 			int y = yAndIds.first;
 			unordered_set ids = yAndIds.second;
 			Point genesisPoint = Point(x, y);
-			cout << "Point " << x << ", " << y << endl;
 
 			/* every y has one NEW NPC. Make it in the DB first, use the ID with the limbs to make the real one later. */
 			int hunterId = createNpcOnMap(map.getForm().slug, npcName, genesisPoint, db);
@@ -2211,7 +2209,6 @@ bool MapScreen::checkNpcOnNpcCollision() {
 
 			for (int id: ids) {
 
-				cout << "EATEN GUY is " << id << " \n";
 				MapCharacter& eatenGuy = map.getNpcById(id);
 				eatenGuy.clearSuit();
 				eatenGuy.clearAcquiredLimbStructs();
@@ -2266,7 +2263,6 @@ bool MapScreen::checkNpcOnNpcCollision() {
 
 				for (int idToDelete : characterIdsToDelete) {
 					if (idToDelete == npcs[i].getId()) {
-						cout << "Deleting guy " << idToDelete << endl;
 						deleteCharacterInTrans(idToDelete, db);
 						npcs[i].setTexture(NULL);
 						npcs.erase(npcs.begin() + i);
@@ -2293,10 +2289,6 @@ bool MapScreen::checkPlayerNpcCollision(bool playerTurn) {
 
 	for (MapCharacter& npc : map.getNPCs()) {
 		if (npc.getPosition().equals(map.getPlayerCharacter().getPosition())) {
-			cout << "Player collided with " << npc.getName() << "\n";
-
-			cout << "Player id: " << map.getPlayerCharacter().getId() << "\n";
-
 			BattleStatus battleStatus = playerTurn ? BattleStatus::PlayerTurn : BattleStatus::NpcTurn;
 
 			int battleId = createNewBattle(
@@ -2305,8 +2297,6 @@ bool MapScreen::checkPlayerNpcCollision(bool playerTurn) {
 				npc.getId(),
 				battleStatus
 			);
-
-			cout << "JUST CREATED battle id: " << battleId << "\n";
 
 			/*
 			* In Database create a Battle with player id and opponent id.

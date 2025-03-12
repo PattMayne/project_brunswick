@@ -388,7 +388,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["warden_body"] = []() {
 		return LimbForm(
 			"Warden Body", "warden_body",
-			10, 10, 10, 10,
+			100, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_body.png",
 			{ Point(100, 43), Point(68, 51), Point(71, 152), Point(109, 158), Point(137, 63) },
 			BodyPartType::Warden);
@@ -396,7 +396,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 
 	limbForms["warden_head"] = []() {
 		return LimbForm(
-			"Warden Left Leg", "warden_head",
+			"Warden Head", "warden_head",
 			10, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_head.png",
 			{ Point(107, 121) },
@@ -432,7 +432,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 
 	limbForms["warden_arm_right"] = []() {
 		return LimbForm(
-			"Warden Left Leg", "warden_arm_right",
+			"Warden Right Arm", "warden_arm_right",
 			10, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_arm_right.png",
 			{ Point(117, 70) },

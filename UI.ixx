@@ -1710,7 +1710,6 @@ export SDL_Surface* centerSurfaceInRect(SDL_Surface* surfaceToCenter, SDL_Rect r
 tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 	vector<LimbButtonData> limbBtnDataStructs, bool drawBackButton, int labelOffsetY, int page
 ) {
-	cout << "Showing page " << page << endl;
 	SDL_Rect panelRect = { 0, 0, windowWidth, windowHeight };
 	int columnsCount = 10;
 	int rowsPerPage = 3;
@@ -1722,8 +1721,6 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 	vector<Button> buttons;
 	int startingIndex = (page - 1) * (columnsCount * rowsPerPage);
 	int excludedFinalIndex = page * (columnsCount * rowsPerPage);
-
-	cout << "Showing limbs " << startingIndex << " through " << excludedFinalIndex << endl;
 
 	/* Keep it within this page's range. */
 	for (int i = startingIndex; i < excludedFinalIndex + 2 && i < limbBtnDataStructs.size() + 2; ++i) {
@@ -1775,7 +1772,6 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 		string buttonText = "";
 		if (!isBackButton && !isMoreButton && i < limbBtnDataStructs.size()) {
 			LimbButtonData& limbButtonDataStruct = limbBtnDataStructs[i];
-			cout << limbButtonDataStruct.name << endl;
 
 			if (limbButtonDataStruct.domNode == DominanceNode::Green) {
 				hoverColor = colorsByFunction["GREEN_BG"];
@@ -1890,7 +1886,6 @@ tuple<SDL_Rect, vector<Button>> UI::createChooseLimbModePanelComponents(
 			clickStruct
 		);
 	}
-	cout << "we have " << buttons.size() << " buttons\n";
 	return { panelRect, buttons };
 }
 

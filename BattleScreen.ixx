@@ -139,8 +139,6 @@ public:
 		optionsMenu = ui.createGeneralMenuPanel(buttonOptions, false);
 		optionsMenu.setShow(true);
 
-		cout << "Rect x: " << optionsMenu.getRect().x << endl;
-
 		showTitle = true;
 		titleCountdown = 140;
 
@@ -224,8 +222,6 @@ public:
 		headRotation = 0;
 		headSpins = 0;
 		stealSuccess = false;
-
-		cout << "reached the end of the function\n";
 	}
 
 	void createPlayerLimbPanels();
@@ -564,8 +560,6 @@ export void BattleScreen::run() {
 					/* End of Player's animateEffect animation. */
 					flashLimb = false;
 
-					cout << "FINISHED the EFFECT animation\n";
-
 					/* NOW actually change the limbs, clear the queue, and make it the  */
 
 					if (playerAttackLoaded.attackType == AttackType::Steal) {
@@ -578,6 +572,8 @@ export void BattleScreen::run() {
 					}
 					else {
 						applyPlayerAttackEffects();
+						Character& thisNpc = battle.getNpc();
+						int number7 = 7;
 					}
 
 					playerAttackLoaded = AttackStruct();
@@ -919,9 +915,6 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 							screenToLoadStruct.screenType == ScreenType::CharacterCreation
 						) {
 							running = false;
-						}
-						else {
-							cout << "Which battlestatus?\n";
 						}
 						confirmationPanel.setShow(false);
 					}
@@ -1304,14 +1297,11 @@ void BattleScreen::calculatePlayerBrainDrain() {
 		}
 	}
 
-	cout << "Target limb id is: " << targetLimbId << "\n";
 
 	if (targetLimbId < 1) {
 		targetLimbId = equippedNpcLimbIds[rand() % equippedNpcLimbIds.size()];
 		targetLimb = npc.getLimbById(targetLimbId);
 	}
-
-	cout << "Target limb id is: " << targetLimbId << "\n";
 
 	attack = (attack / 8) + (numberOfEquippedLimbs / 2);
 	int spreadAttack = 0;
@@ -1418,7 +1408,6 @@ void BattleScreen::calculatePlayerBrainDrain() {
 
 	int damageDisplayNumber = totalDamage * -1;
 	UI& ui = UI::getInstance();
-	cout << "Player does " << damageDisplayNumber << " total damage\n";
 
 	string attackMessage = playerCharacter.getName() + " does " + to_string(damageDisplayNumber) + " damage, and stole " + to_string(intelligenceDrained) + " intelligence.";
 	passingMessageCountdown = 250;
@@ -1473,13 +1462,9 @@ void BattleScreen::calculateNpcBrainDrain() {
 		}
 	}
 
-	cout << "Target limb id is: " << targetLimbId << "\n";
-
 	if (targetLimbId < 1) {
 		targetLimbId = equippedPlayerLimbIds[rand() % equippedPlayerLimbIds.size()];
 	}
-
-	cout << "Target limb id is: " << targetLimbId << "\n";
 
 	attack = (attack / 8) + (numberOfEquippedLimbs / 2);
 	int spreadAttack = 0;
@@ -1587,7 +1572,6 @@ void BattleScreen::calculateNpcBrainDrain() {
 
 	int damageDisplayNumber = totalDamage * -1;
 	UI& ui = UI::getInstance();
-	cout << "NPC does " << damageDisplayNumber << " total damage\n";
 
 	string attackMessage = npc.getName() + " does " + to_string(damageDisplayNumber) + " damage, and stole " + to_string(intelligenceDrained) + " intelligence.";
 	passingMessageCountdown = 250;
@@ -1609,7 +1593,7 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	/* This should happen AFTER the animation.*/
 	AttackType attackType = playerAttackLoaded.attackType;
 	bool isSwoop = attackType == AttackType::Swoop;
-	cout << "Player is using " << attackTypeText(attackType);
+
 	Character& playerCharacter = battle.getPlayerCharacter();
 	Character& npc = battle.getNpc();
 	vector<Limb>& npcLimbs = npc.getLimbs();
@@ -1786,7 +1770,6 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 
 	int damageDisplayNumber = totalDamage * -1;
 	UI& ui = UI::getInstance();
-	cout << playerCharacter.getName() << " does " << damageDisplayNumber << " total damage\n";
 
 	string attackMessage = playerCharacter.getName() + " does " + to_string(damageDisplayNumber) + " damage";
 
@@ -2010,6 +1993,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 
 	for (int i = playerLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = playerLimbs[i];
+		int limbId = limb.getId();
 		
 		if (limb.getHP() > 0) {
 			++numberOfEquippableLimb;
@@ -2017,35 +2001,41 @@ bool BattleScreen::applyNpcAttackEffects() {
 		} else if (limb.isEquipped()) {
 			/* Equipped limb is defeated. Give it to NPC. */
 			defeatedAnyLimb = true;
-			cout << "Limb " << limb.getName() << " is below 1HP\n";
-			if (playerCharacter.getAnchorLimbId() == limb.getId()) {
+
+			if (playerCharacter.getAnchorLimbId() == limbId) {
 				defeatedAnchorLimb = true;
 			}
 
-			playerCharacter.unEquipLimb(limb.getId());
-			limb.setCharacterId(npcId);
-			removedIds.insert(limb.getId());
-
-			npc.getLimbs().push_back(limb);
-			updateLimbBattleEffectsInTransaction(limb, db);
-			playerLimbs.erase(playerLimbs.begin() + i);
+			removedIds.insert(limbId);
 		}
 	}
+
+
+	for (int idToRemove : removedIds) {
+		if (playerCharacter.limbsContainId(idToRemove)) {
+			Limb limbToRemove = playerCharacter.getLimbById(idToRemove);
+			playerCharacter.unEquipLimb(idToRemove);
+			limbToRemove.unEquip(); /* Must unEquip this one specifically... it's a COPY that we're sending. */
+			limbToRemove.setCharacterId(npc.getId());
+			npc.addLimb(limbToRemove);
+			updateLimbBattleEffectsInTransaction(limbToRemove, db);
+			playerLimbs.erase(std::remove(playerLimbs.begin(), playerLimbs.end(), limbToRemove), playerLimbs.end());
+		}
+	}
+
 
 	/* If limb is still connected to a limbs that's been removed, disconnect. */
 	for (Limb& limb : playerLimbs) {
 		for (Joint& joint : limb.getJoints()) {
 			int connectedLimbId = joint.getConnectedLimbId();
 			if (connectedLimbId > 0 && removedIds.count(connectedLimbId) > 0) {
-				cout << "Manually detached limb\n";
+				cout << "Manually detached something FROM limb " << limb.getName() << "\n";
 				joint.detachLimb();
 				updateLimbBattleEffectsInTransaction(limb, db);
 			}
 		}
 	}
-
-	playerCharacter.buildDrawLimbList();
-
+	
 	if (!playerCharacter.limbsContainId(playerCharacter.getAnchorLimbId())) {
 		defeatedAnchorLimb = true;
 	}
@@ -2066,18 +2056,19 @@ bool BattleScreen::applyNpcAttackEffects() {
 			screenToLoadStruct.screenType = ScreenType::Menu;
 			setExitMessage(BattleStatus::PlayerDefeat);
 			cout << "PLAyer DEFOoTED\n";
-			cout << "Defeat is passing through here, but not being saved to the db. Why?\n";
 			updateBattleStatusInTrans(battle.getId(), BattleStatus::PlayerDefeat, db);
 		}
 	}
-	
+
+	playerCharacter.buildDrawLimbList();
+
 	/* Save all the limbs. */
 	
 	for (Limb& limb : playerLimbs) {
 		updateLimbBattleEffectsInTransaction(limb, db);	
 	}
-
 	if (defeatedAnyLimb) {
+		npc.buildDrawLimbList();
 		for (Limb& limb : npcLimbs) {
 			updateLimbBattleEffectsInTransaction(limb, db);
 		}
@@ -2243,6 +2234,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	bool erasedLimb = false;
 
 	unordered_set<int> limbIdsToEquip; /* CURRENTLY EQUIPPED limb ids. We will remove the ones that get destroyed (never rebuild from whole set for NPC). */
+	unordered_set<int> removedIds = {};
 	for (Limb& limb : npcLimbs) {
 		if (limb.isEquipped()) {
 			limbIdsToEquip.insert(limb.getId());
@@ -2250,15 +2242,10 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	}
 
 	/* Damage has already been done (to attributes). Now save those changes. */
-	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+	for (int i = 0; i < npcLimbs.size(); ++i) {
 		Limb& limb = npcLimbs[i];
 
-		if (limb.getHP() < 1) {
-			npc.unEquipLimb(limb.getId());
-			limb.unEquip();
-			limb.setCharacterId(playerId);
-			playerCharacter.addLimb(limb);
-
+		if (limb.isEquipped() && limb.getHP() < 1) {
 			erasedLimb = true;
 			int limbId = limb.getId();
 
@@ -2266,14 +2253,29 @@ bool BattleScreen::applyPlayerAttackEffects() {
 				limbIdsToEquip.erase(limbId);
 			}
 
-			updateLimbBattleEffectsInTransaction(limb, db);
-			npcLimbs.erase(npcLimbs.begin() + i);
-			continue;
+			removedIds.insert(limbId);
+		}
+	}
+
+	for (int idToRemove : removedIds) {
+		if (npc.limbsContainId(idToRemove)) {
+			Limb limbToRemove = npc.getLimbById(idToRemove);
+			cout << "11111 Going to remove NPC limb " << limbToRemove.getId() << ", " << limbToRemove.getName() << endl;
+			npc.unEquipLimb(idToRemove);
+			limbToRemove.unEquip(); /* Must unEquip this one specifically... it's a COPY that we're sending. */
+			limbToRemove.setCharacterId(playerCharacter.getId());
+			playerCharacter.addLimb(limbToRemove); /* Limb must be added AFTER we change the characterId! */
+			cout << "Limb to remove character id is " << limbToRemove.getCharacterId() << endl;
+			updateLimbBattleEffectsInTransaction(limbToRemove, db);
+			npcLimbs.erase(std::remove(npcLimbs.begin(), npcLimbs.end(), limbToRemove), npcLimbs.end());
 		}
 	}
 
 	/* Update all survivors in the DB (also updates the joints which might previously have linked to now-removed limbs). */
 	for (int i = 0; i < npcLimbs.size(); ++i) {
+		if (removedIds.count(npcLimbs[i].getId()) > 0) {
+			cout << "Removed limb STILL INSIDE NPC LIST (erase didn't work)\n";
+		}
 		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}
 
@@ -2292,6 +2294,9 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		npc.clearSuit();
 
 		for (Limb& limb : npcLimbs) {
+			if (removedIds.count(limb.getId()) > 0) {
+				cout << "Removed limb STILL INSIDE NPC LIST (erase didn't work) 22222 \n";
+			}
 			npc.unEquipLimb(limb.getId());
 			updateLimbBattleEffectsInTransaction(limb, db);
 		}
@@ -2354,8 +2359,6 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			else {
 				limb.setCharacterId(playerId);
 			}
-
-			updateLimbBattleEffectsInTransaction(limb, db);
 		}
 
 		npc.buildDrawLimbList();
@@ -2372,6 +2375,10 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		cout << "NPC NOT DEFEATED YET \n";
 	}
 
+	for (Limb& limb : playerCharacter.getLimbs()) {
+		updateLimbBattleEffectsInTransaction(limb, db);
+	}
+
 	commitTransactionAndCloseDatabase(db);
 	createNpcLimbPanel();
 	npcStatsPanel.destroyTextures();
@@ -2386,6 +2393,8 @@ bool BattleScreen::applyPlayerAttackEffects() {
 
 	battle.switchTurn();
 	updateBattleStatus(battle.getId(), battle.getBattleStatus());
+	setLimbIdList();
+
 
 	return true;
 }
@@ -2618,6 +2627,7 @@ void BattleScreen::launchNpcTurn() {
 		npcStatsPanel.setShow(true);
 		playerTurnPanel.setShow(false);
 	}
+	int number11 = 11;
 	
 }
 
