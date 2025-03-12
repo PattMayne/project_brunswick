@@ -164,6 +164,68 @@ export class MapScreen {
 				}
 
 				map.setPlayerCharacter(loadPlayerMapCharacter());
+				MapCharacter& playerCharacter = map.getPlayerCharacter();
+
+				/* IF you have no limbs AND you have offered to a shrine, go to that shrine and get those limbs. */
+				/* TO DO: If that shrine is on a different map, go there. */
+				if (playerCharacter.getNumberOfEquippableLimbs() < 1) {
+					int latestLandmarkId = playerCharacter.getLatestLandmarkId();
+
+					if (latestLandmarkId > 0) {
+						// get the landmark (and its point).
+						// change the character's location to that. (object and DB)
+						// get the shrine's limbs.
+						// equip the limbs.
+
+						for (Landmark& landmark : map.getLandmarks()) {
+							if (landmark.getId() == latestLandmarkId) {
+								Point latestLandmarkPoint = landmark.getPosition();
+								playerCharacter.setHomePosition(latestLandmarkPoint);
+								playerCharacter.moveToPosition(latestLandmarkPoint);
+								Character& suit = map.getSuitFromLandmarkId(latestLandmarkId);
+
+								unordered_set<string> slugsToBestow = {};
+								for (Limb& limb : suit.getLimbs()) {
+									if (limb.getUnscrambled()) {
+										/* Player can have this limb. */
+										slugsToBestow.insert(limb.getForm().slug);
+									}
+								}
+
+								if (slugsToBestow.size() > 0) {
+									sqlite3* db = startTransaction();
+									vector<Limb> newLimbs = createLimbsAtShrineInTrans(playerCharacter.getId(), map.getSlug(), slugsToBestow, db);
+
+									for (Limb& newLimb : newLimbs) {
+										playerCharacter.addLimb(newLimb);
+
+										SDL_Rect diffRect = { 0, 0, 0, 0 };
+										playerCharacter.getAcquiredLimbStructs().emplace_back(
+											newLimb.getTexture(),
+											limbCollisionCountdown,
+											newLimb.getRotationAngle(),
+											diffRect,
+											5,
+											newLimb.getName()
+										);
+									}
+
+									playerCharacter.sortLimbsByDrawOrder();
+									vector<Limb>& playerLimbs = playerCharacter.getLimbs();
+									playerCharacter.equipLimbsDefault();
+									playerCharacter.setTexture(playerCharacter.createAvatar());
+									updateCharacterLimbsInTransaction(playerCharacter.getId(), playerCharacter.getAnchorLimbId(), playerLimbs, db);
+
+									commitTransactionAndCloseDatabase(db);
+								}
+
+								break;
+							}
+						}
+
+					}
+				}
+
 
 				if (map.getPlayerCharacter().getEquippedLimbs().size() > 0) {
 					map.getPlayerCharacter().setTexture(map.getPlayerCharacter().createAvatar());
@@ -220,6 +282,7 @@ export class MapScreen {
 					SDL_FreeSurface(characterSurface);
 					playerCharacter.setTexture(characterTexture);
 				}
+
 			}
 
 			screenType = ScreenType::Map;

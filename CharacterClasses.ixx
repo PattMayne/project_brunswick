@@ -869,6 +869,7 @@ public:
 		setLatestLandmarkId(-1);
 	}
 
+	void equipLimbsDefault();
 	unordered_set<int> getChildLimbIdsRecursively(Limb& parentLimb, unordered_set<int> childLimbIds = {});
 	string getName() { return name; }
 	bool shiftChildLimb(int childLimbId);
@@ -880,6 +881,7 @@ public:
 	bool equipLimb(int limbId);
 	Limb& getLimbById(int id);
 	int getParentLimbId(int childLimbId);
+	int getNumberOfEquippableLimbs();
 	vector<tuple<int, int, bool>> getEquippedJointsData(int limbToSkipId);
 	int getAnchorLimbId() { return anchorLimbId; }
 	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
@@ -1005,6 +1007,23 @@ DominanceNode Character::getDominanceNode() {
 	}
 
 	return mostPlentifulDominanceNode;
+}
+
+void Character::equipLimbsDefault() {
+	clearSuit();
+	sortLimbsByNumberOfJoints();
+
+	bool keepEquippingLimbs = true;
+
+	for (Limb& limb : limbs) {
+		if (limb.getHP() < 1) { continue; }
+		if (keepEquippingLimbs) {
+			keepEquippingLimbs = equipLimb(limb.getId());
+		}
+		else { break; }
+	}
+
+	buildDrawLimbList();
 }
 
 unordered_set<int> Character::getChildLimbIdsRecursively(Limb& parentLimb, unordered_set<int> childLimbIds) {
@@ -1686,7 +1705,7 @@ Limb& Character::getLimbById(int limbId) {
 	}
 
 	cout << "ERROR! LIMB " << limbId << " NOT FOUND!MUST REPLACE THIS WITH DEFAULT LIMB SOMEHOW!\n";
-	cout << "Player is " << getName() << endl;
+	cout << "Player is " << getName() << " id: " << getId() << endl;
 	/* UNSAFE! DO NOT KEEP THIS! */
 	return limbs[0];
 }
@@ -1721,6 +1740,19 @@ void Character::unEquipLimb(int limbId) {
 
 	baseLimb.unEquip();
 	buildDrawLimbList();
+}
+
+
+int Character::getNumberOfEquippableLimbs() {
+	int numberOfEquippableLimbs = 0;
+
+	for (Limb& limb : limbs) {
+		if (limb.getHP() > 0) {
+			++numberOfEquippableLimbs;
+		}
+	}
+
+	return numberOfEquippableLimbs;
 }
 
 

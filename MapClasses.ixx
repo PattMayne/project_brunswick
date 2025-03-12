@@ -132,7 +132,6 @@ public:
 
 	~MapCharacter() {} /* destroy texture. */
 
-	
 	Point getHomePosition() { return homePosition; }
 	vector<AcquiredLimb>& getAcquiredLimbStructs() { return acquiredLimbStructs; }
 	bool isNewNpc() { return newNpc; }
@@ -371,7 +370,7 @@ public:
 
 	MapForm& getForm() { return mapForm; }
 	void randomizePathOptions(Block& block);
-
+	Character& getSuitFromLandmarkId(int landmarkId);
 
 private:
 	MapForm mapForm;
@@ -997,6 +996,27 @@ vector<Point> Map::buildMap() {
 	}
 
 	return floorPositions;
+}
+
+
+Character& Map::getSuitFromLandmarkId(int landmarkId) {
+
+	for (Landmark& landmark : landmarks) {
+		if (landmark.getId() == landmarkId) {
+			int suitId = landmark.getCharacterId();
+
+			for (Character& suit : mapForm.suits) {
+				if (suit.getId() == suitId) {
+					/* THIS is the suit for this landmark */
+					return suit;
+				}
+			}
+		}
+	}
+
+	cout << "ERROR: LANDMARK'S SUIT ID NOT FOUND AMONG THE SUITS.\n";
+	cerr << "ERROR: LANDMARK'S SUIT ID NOT FOUND AMONG THE SUITS.\n";
+	return mapForm.suits[0];
 }
 
 void Map::randomizePathOptions(Block& block) {
