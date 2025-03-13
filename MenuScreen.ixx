@@ -226,8 +226,15 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) 
 				// see what button might have been clicked:
 				switch (clickStruct.buttonOption) {
 					case ButtonOption::About:
-						screenToLoadStruct.screenType = ScreenType::CharacterCreation;
-						running = false;
+						
+						if (true) {
+							string messageString = "  Land of Limbs is an action-puzzle game where you (The Warden) collect all the scrambled limbs from across the land";
+							messageString += " and reassemble the citizens of each world!\n\n  Land of Limbs was created by Matt Payne.";
+							confirmationPanel.destroyTextures();
+							confirmationPanel = getNewConfirmationMessage(confirmationPanel, messageString, ConfirmationButtonType::YesNo, false);
+							confirmationPanel.setShow(true);
+						}
+						
 						cout << "ABOUT\n";
 						break;
 					case ButtonOption::NoOption:
@@ -235,7 +242,15 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) 
 						break;
 					case ButtonOption::NewGame:
 						screenToLoadStruct.screenType = ScreenType::Map;
-						running = false;
+						
+						if (true) {
+							string messageString = "  Starting a new game will erase your existing game.\n\n";
+							messageString += " Do you want to proceed?";
+							confirmationPanel.destroyTextures();
+							confirmationPanel = getNewConfirmationMessage(confirmationPanel, messageString, ConfirmationButtonType::YesNo, true);
+							confirmationPanel.setShow(true);
+						}
+
 						cout << "NEW GAME\n";
 						break;
 					case ButtonOption::LoadGame:
@@ -251,7 +266,6 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) 
 						*/
 						if (true) {
 							Character playerCharacter = loadPlayerCharacter();
-							cout << playerCharacter.getName() << endl << endl;
 
 							if (!playerCharacter.isGameOver() || !mapObjectExists("forest")) {
 								running = false;
