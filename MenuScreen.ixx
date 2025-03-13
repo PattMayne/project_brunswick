@@ -35,6 +35,7 @@ import GameState;
 import Resources;
 import Database;
 import UI;
+import CharacterClasses;
 
 using namespace std;
 
@@ -48,6 +49,10 @@ export class MenuScreen {
 			getBackgroundTexture(ui);
 			createTitleTexture(ui);
 			skyBG = SkyAndCloudsBackground(true);
+			menuPanel = ui.createMainMenuPanel();
+			settingsPanel = ui.createSettingsPanel();
+			confirmationPanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
+			confirmationPanel.setShow(false);
 		}
 
 		/* Destructor */
@@ -74,11 +79,14 @@ export class MenuScreen {
 		SDL_Rect bgDestinationRect;
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
-		void handleEvent(SDL_Event &e, bool& running, Panel& menuPanel, Panel& settingsPanel, GameState& gameState);
-		void checkMouseLocation(SDL_Event& e, Panel& menuPanel, Panel& settingsPanel);
-		void rebuildDisplay(Panel& menuPanel, Panel& settingsPanel);
-		void draw(UI& ui, Panel& menuPanel, Panel& settingsPanel);
+		void handleEvent(SDL_Event &e, bool& running, GameState& gameState);
+		void checkMouseLocation(SDL_Event& e);
+		void rebuildDisplay();
+		void draw(UI& ui);
 		SkyAndCloudsBackground skyBG;
+		Panel menuPanel;
+		Panel settingsPanel;
+		Panel confirmationPanel;
 };
 
 /* The main function of the class. Contains the game loop. */
@@ -87,8 +95,6 @@ void MenuScreen::run() {
 	// Get reference to UI singleton for the loop
 	UI& ui = UI::getInstance();
 	GameState& gameState = GameState::getInstance();
-	Panel menuPanel = ui.createMainMenuPanel();
-	Panel settingsPanel = ui.createSettingsPanel();
 	menuPanel.setShow(true);
 	settingsPanel.setShow(false);
 
@@ -108,13 +114,12 @@ void MenuScreen::run() {
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
-			handleEvent(e, running, menuPanel, settingsPanel, gameState);
+			handleEvent(e, running, gameState);
 		}
 
 		/* check mouse location in every frame (so buttons stay "hovered" after click */
-		checkMouseLocation(e, menuPanel, settingsPanel);
-
-		draw(ui, menuPanel, settingsPanel);
+		checkMouseLocation(e);
+		draw(ui);
 
 		/* Delay so the app doesn't just crash */
 		frameTimeElapsed = SDL_GetTicks() - frameStartTime; // Calculate how long the frame took to process
@@ -138,18 +143,18 @@ void MenuScreen::run() {
 * 
 * Send in a vector of panels.
 */
-void MenuScreen::draw(UI& ui, Panel& menuPanel, Panel& settingsPanel) {
+void MenuScreen::draw(UI& ui) {
 
 	/* draw panel(make this a function of the UI object which takes a panel as a parameter) */
 	SDL_SetRenderDrawColor(ui.getMainRenderer(), 14, 14, 14, 1);
 	SDL_RenderClear(ui.getMainRenderer());
 
-	/* print the BG image) */
-	//SDL_RenderCopyEx(ui.getMainRenderer(), bgTexture, &bgSourceRect, &bgDestinationRect, 0, NULL, SDL_FLIP_NONE);
+	/* print the BG. */
 	skyBG.draw();
 
 	/* draw the actual panels */
 	settingsPanel.draw(ui);
+	confirmationPanel.draw(ui);
 	menuPanel.draw(ui);
 
 	/* draw the logo */
@@ -174,7 +179,7 @@ void MenuScreen::createTitleTexture(UI& ui) {
 }
 
 /* Screen has been resized. Rebuild! */
-void MenuScreen::rebuildDisplay(Panel& menuPanel, Panel& settingsPanel) {
+void MenuScreen::rebuildDisplay() {
 	UI& ui = UI::getInstance();
 	getBackgroundTexture(ui);
 	createTitleTexture(ui);
@@ -183,7 +188,7 @@ void MenuScreen::rebuildDisplay(Panel& menuPanel, Panel& settingsPanel) {
 }
 
 /* Process user input */
-void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Panel& settingsPanel, GameState& gameState) {
+void MenuScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) { running = false; }
 	else {
@@ -193,93 +198,124 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 			// These events might change the value of screenToLoad
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
+			if (confirmationPanel.getShow()) {
+				if (confirmationPanel.isInPanel(mouseX, mouseY)) {
+					ButtonClickStruct clickStruct = confirmationPanel.checkButtonClick(mouseX, mouseY);
 
-			if (menuPanel.getShow() && menuPanel.isInPanel(mouseX, mouseY)) {
+					// see what button might have been clicked:
+					switch (clickStruct.buttonOption) {
+					case ButtonOption::Agree:
+						cout << "AGREED\n";
+						confirmationPanel.setShow(false);
+						break;
+					case ButtonOption::Refuse:
+						cout << "REFUSED\n";
+						confirmationPanel.setShow(false);
+						break;
+					default:
+						cout << "NEITHER AGREED NOR REFUSED\n";
+						break;
+					}
+				}
+			}
+			else if (menuPanel.getShow() && menuPanel.isInPanel(mouseX, mouseY)) {
 
 				// panel has a function to return which ButtonOption was clicked, and an ID (in the ButtonClickStruct).
 				ButtonClickStruct clickStruct = menuPanel.checkButtonClick(mouseX, mouseY);
 
 				// see what button might have been clicked:
 				switch (clickStruct.buttonOption) {
-				case ButtonOption::About:
-					screenToLoadStruct.screenType = ScreenType::CharacterCreation;
-					running = false;
-					cout << "ABOUT\n";
-					break;
-				case ButtonOption::NoOption:
-					cout << "NO OPTION\n";
-					break;
-				case ButtonOption::NewGame:
-					screenToLoadStruct.screenType = ScreenType::Map;
-					running = false;
-					cout << "NEW GAME\n";
-					break;
-				case ButtonOption::LoadGame:
+					case ButtonOption::About:
+						screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+						running = false;
+						cout << "ABOUT\n";
+						break;
+					case ButtonOption::NoOption:
+						cout << "NO OPTION\n";
+						break;
+					case ButtonOption::NewGame:
+						screenToLoadStruct.screenType = ScreenType::Map;
+						running = false;
+						cout << "NEW GAME\n";
+						break;
+					case ButtonOption::LoadGame:
 
-					/* Check to see if a Battle is ongoing.
-					* -- make sure the player has limbs (if they don't, make it a loss).
-					* -- make sure the NPC exists and has limbs (if they don't, make it a win).
-					* Send to battle if all above is true.
-					* Otherwise send to Map.
-					* Map will need a method to give vanilla limbs to limbless player.
-					* 
-					* TO DO: Check that NPCs exist for the id (we are already retrieving the NPC id).
-					*/
+						/* Check to see if a Battle is ongoing.
+						* -- make sure the player has limbs (if they don't, make it a loss).
+						* -- make sure the NPC exists and has limbs (if they don't, make it a win).
+						* Send to battle if all above is true.
+						* Otherwise send to Map.
+						* Map will need a method to give vanilla limbs to limbless player.
+						* 
+						* TO DO: Check that NPCs exist for the id (we are already retrieving the NPC id).
+						*/
+						if (true) {
+							Character playerCharacter = loadPlayerCharacter();
+							cout << playerCharacter.getName() << endl << endl;
 
-					
-					running = false;
-					cout << "LOAD GAME (currently map by default for now)\n";
+							if (!playerCharacter.isGameOver() || !mapObjectExists("forest")) {
+								running = false;
+								cout << "LOAD GAME (currently map by default for now)\n";
 
-					/* Cheating with an if statement to create a block where I can declare variables within switch/case options. */
-					if (true) {
-						int battleId = getCurrentBattleId(gameState.getPlayerID());
-						cout << "Battle id: " << battleId << endl;
+								/* Cheating with an if statement to create a block where I can declare variables within switch/case options. */
+								if (true) {
+									int battleId = getCurrentBattleId(gameState.getPlayerID());
+									cout << "Battle id: " << battleId << endl;
 
-						if (battleId < 1) {
-							screenToLoadStruct.screenType = ScreenType::Map;
+									if (battleId < 1) {
+										screenToLoadStruct.screenType = ScreenType::Map;
+									}
+									else {
+										screenToLoadStruct.screenType = ScreenType::Battle;
+										screenToLoadStruct.id = battleId;
+									}
+								}
+							}
+							else {
+								cout << "It's game over, man!" << endl;
+								string messageString = "GAME OVER!\n\nYour player ran out of limbs before making an offering at a shrine.\n\nStart a new game?";
+								confirmationPanel.destroyTextures();
+								confirmationPanel = getNewConfirmationMessage(confirmationPanel, messageString, ConfirmationButtonType::YesNo, false);
+								confirmationPanel.setShow(true);
+							}
 						}
-						else {
-							screenToLoadStruct.screenType = ScreenType::Battle;
-							screenToLoadStruct.id = battleId;
-						}
-					}					
+						break;
 
-					break;
-				case ButtonOption::Settings:
-					// switch to other panel
-					settingsPanel.setShow(true);
-					menuPanel.setShow(false);
-					cout << "SETTINGS\n";
-					break;
-				case ButtonOption::Exit:
-					gameState.setScreenType(ScreenType::NoScreen);
-					running = false;
-					break;
-				default:
-					cout << "ERROR\n";
-				}
-			} else if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
-
-				// panel has a function to return which ButtonOption was clicked, and an ID (in the ButtonClickStruct).
-				ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
-				UI& ui = UI::getInstance();
-				// see what button might have been clicked:
-				switch (clickStruct.buttonOption) {
+					case ButtonOption::Settings:
+						// switch to other panel
+						settingsPanel.setShow(true);
+						menuPanel.setShow(false);
+						cout << "SETTINGS\n";
+						break;
+					case ButtonOption::Exit:
+						gameState.setScreenType(ScreenType::NoScreen);
+						running = false;
+						break;
+					default:
+						cout << "ERROR\n";
+						break;
+			}
+		} else if (settingsPanel.getShow() && settingsPanel.isInPanel(mouseX, mouseY)) {
+			// panel has a function to return which ButtonOption was clicked, and an ID (in the ButtonClickStruct).
+			ButtonClickStruct clickStruct = settingsPanel.checkButtonClick(mouseX, mouseY);
+			UI& ui = UI::getInstance();
+			// see what button might have been clicked:
+			switch (clickStruct.buttonOption) {
 				case ButtonOption::Mobile:
 					ui.resizeWindow(WindowResType::Mobile);
-					rebuildDisplay(menuPanel, settingsPanel);
+					rebuildDisplay();
 					break;
 				case ButtonOption::Tablet:
 					ui.resizeWindow(WindowResType::Tablet);
-					rebuildDisplay(menuPanel, settingsPanel);
+					rebuildDisplay();
 					break;
 				case ButtonOption::Desktop:
 					ui.resizeWindow(WindowResType::Desktop);
-					rebuildDisplay(menuPanel, settingsPanel);
+					rebuildDisplay();
 					break;
 				case ButtonOption::Fullscreen:
 					ui.resizeWindow(WindowResType::Fullscreen);
-					rebuildDisplay(menuPanel, settingsPanel);
+					rebuildDisplay();
 					break;
 				case ButtonOption::Back:
 					// switch to other panel
@@ -294,11 +330,14 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, Panel& menuPanel, Pane
 	}
 }
 
-void MenuScreen::checkMouseLocation(SDL_Event& e, Panel& menuPanel, Panel& settingsPanel) {
+void MenuScreen::checkMouseLocation(SDL_Event& e) {
 	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 	/* send the x and y to the panel and its buttons to change the color */
-	if (menuPanel.getShow()) { menuPanel.checkMouseOver(mouseX, mouseY); }
-	if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
+	if (confirmationPanel.getShow()) { confirmationPanel.checkMouseOver(mouseX, mouseY); }
+	else {
+		if (menuPanel.getShow()) { menuPanel.checkMouseOver(mouseX, mouseY); }
+		if (settingsPanel.getShow()) { settingsPanel.checkMouseOver(mouseX, mouseY); }
+	}
 }

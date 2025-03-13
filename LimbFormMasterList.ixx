@@ -388,7 +388,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 	limbForms["warden_body"] = []() {
 		return LimbForm(
 			"Warden Body", "warden_body",
-			100, 10, 10, 10,
+			25, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_body.png",
 			{ Point(100, 43), Point(68, 51), Point(71, 152), Point(109, 158), Point(137, 63) },
 			BodyPartType::Warden);

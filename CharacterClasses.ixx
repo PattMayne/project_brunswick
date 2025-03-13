@@ -902,6 +902,7 @@ public:
 	int getBlockY() { return blockPosition.y; }
 	bool hasScrambledLimbs();
 	bool limbsContainId(int idQuery);
+	bool isGameOver();
 	int getNumberOfEquippedLimbs();
 
 	int getLastX() { return lastBlockPosition.x; }
@@ -1228,6 +1229,11 @@ void Character::buildDrawLimbList() {
 		}
 	}
 	setLimbDrawOrder(drawLimbListIDs);
+}
+
+/* Only to be used on Player Character. */
+bool Character::isGameOver() {
+	return latestLandmarkId < 1 && getNumberOfEquippableLimbs() < 1;
 }
 
 

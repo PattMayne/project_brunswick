@@ -1976,7 +1976,7 @@ export int createPlayerCharacterOrGetID() {
     returnCode = sqlite3_prepare_v2(db, newCharacterSQL, -1, &newCharStatement, nullptr);
 
     /* Bind values. */
-    const char* name = "Player";
+    const char* name = "The Warden";
     sqlite3_bind_text(newCharStatement, 1, name, -1, SQLITE_STATIC);
     sqlite3_bind_int(newCharStatement, 2, characterType);
 
