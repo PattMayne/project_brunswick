@@ -196,6 +196,15 @@ export class MapScreen {
 				}
 			}
 
+			gameMenuPanel = ui.createGameMenuPanel(ScreenType::Map);
+			gameMenuPanel.setShow(true);
+
+			messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
+			messagePanel.setShow(false);
+
+			passingMessagePanel = ui.createPassingMessagePanel("", true, false);
+			passingMessagePanel.setShow(false);
+
 			screenType = ScreenType::Map;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
@@ -219,14 +228,7 @@ export class MapScreen {
 			homeBaseRange = 5;
 			waitSpin = false;
 
-			gameMenuPanel = ui.createGameMenuPanel(ScreenType::Map);
-			gameMenuPanel.setShow(true);
 
-			messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
-			messagePanel.setShow(false);
-
-			passingMessagePanel = ui.createPassingMessagePanel("", true, false);
-			passingMessagePanel.setShow(false);
 
 			hudPanel = ui.createHud(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
 			hudPanel.setShow(true);
@@ -427,6 +429,7 @@ bool MapScreen::ensurePlayerHasSuit() {
 					}
 
 					if (slugsToBestow.size() > 0) {
+						UI& ui = UI::getInstance();
 						sqlite3* db = startTransaction();
 						vector<Limb> newLimbs = createLimbsAtShrineInTrans(playerCharacter.getId(), map.getSlug(), slugsToBestow, db);
 
@@ -450,6 +453,12 @@ bool MapScreen::ensurePlayerHasSuit() {
 						playerCharacter.setTexture(playerCharacter.createAvatar());
 						updateCharacterLimbsInTransaction(playerCharacter.getId(), playerCharacter.getAnchorLimbId(), playerLimbs, db);
 						commitTransactionAndCloseDatabase(db);
+
+						string message = playerCharacter.getName() + " is resurrected at the " + suit.getName() + " shrine.";
+						passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, true);
+						passingMessagePanel.setShow(true);
+						passingMessageCountdown = 2;
+
 						playerHasSuit = true;
 					}
 

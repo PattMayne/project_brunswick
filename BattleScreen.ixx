@@ -2725,11 +2725,10 @@ void BattleScreen::setExitMessage(BattleStatus battleStatus) {
 	if (battleStatus == BattleStatus::PlayerDefeat) {
 		exitMessage = npc.getName() + " has defeeeated " + playerCharacter.getName() + "!\n";
 		
-		screenToLoadStruct.screenType = ScreenType::Menu;
+		screenToLoadStruct.screenType = ScreenType::Map;
 		confirmationPanel.destroyTextures();
 		confirmationPanel = getNewConfirmationMessage(confirmationPanel, exitMessage, ConfirmationButtonType::OkCancel, false);
 		confirmationPanel.setShow(true);
-		//updatePlayerMapLocation(playerCharacter.getMapSlug(), playerCharacter.getPosition());
 
 	} else if (battleStatus == BattleStatus::PlayerVictory) {
 		exitMessage = playerCharacter.getName() + " has defeated " + npc.getName() + "!\n";

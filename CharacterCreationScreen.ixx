@@ -298,9 +298,19 @@ export void CharacterCreationScreen::run() {
 	Uint32 frameStartTime; /* Tick count when this particular frame began. */
 	int frameTimeElapsed; /* how much time has elapsed during this frame. */
 
+	/* Make sure player has limbs.
+	* If no limbs, but latestLandmarkId > 0, send to map.
+	* At this point we're assuming there is no active battle (that's filtered out before getting here).
+	* If no limbs and latestLandmarkId < 1, game over.
+	*/
+	bool running = true;
+	if (playerCharacter.getNumberOfEquippableLimbs() < 1) {
+		screenToLoadStruct.screenType == ScreenType::Map;
+		running = false;
+	}
+
 	/* loop and event control */
 	SDL_Event e;
-	bool running = true;
 	setAnchorLimbDrawRect(ui);
 
 	if (playerCharacter.getAnchorLimbId() > 0) {
