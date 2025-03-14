@@ -3374,6 +3374,3 @@ export Map loadMap(string mapSlug) {
 
     return map;
 }
-
-//Landmark getLandmarkById(int landmarkId) {
-//}

@@ -2165,6 +2165,11 @@ bool BattleScreen::applyNpcAttackEffects() {
 		setExitMessage(BattleStatus::PlayerDefeat);
 		updateBattleStatus(battle.getId(), BattleStatus::PlayerDefeat);
 	}
+	else {
+		/* Reload playerTurnPanel in case they lost a limb. */
+		playerTurnPanel.destroyTextures();
+		playerTurnPanel = ui.createBattlePanel(playerAttackStructs, playerStatsPanel.getRect().h);
+	}
 
 	return true;
 }
