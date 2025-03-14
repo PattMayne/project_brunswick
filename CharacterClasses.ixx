@@ -872,24 +872,25 @@ public:
 	void equipLimbsDefault();
 	unordered_set<int> getChildLimbIdsRecursively(Limb& parentLimb, unordered_set<int> childLimbIds = {});
 	string getName() { return name; }
+	string getMapSlug() { return mapSlug; }
 	bool shiftChildLimb(int childLimbId);
+	bool equipLimb(int limbId);
 	vector<Limb> getEquippedLimbs();
 	vector<int>& getDrawLimbIDs() { return drawLimbListIDs; }
+	vector<tuple<int, int, bool>> getEquippedJointsData(int limbToSkipId);
+	vector<Limb>& getLimbs() { return limbs; }
+	Limb& getLimbById(int id);
+	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
 	int getType() { return characterType; }
 	int getId() { return id; }
-	vector<Limb>& getLimbs() { return limbs; }
-	bool equipLimb(int limbId);
-	Limb& getLimbById(int id);
 	int getParentLimbId(int childLimbId);
 	int getNumberOfEquippableLimbs();
-	vector<tuple<int, int, bool>> getEquippedJointsData(int limbToSkipId);
 	int getAnchorLimbId() { return anchorLimbId; }
-	Limb& getAnchorLimb() { return getLimbById(anchorLimbId); }
 	tuple<int, int> getLimbIdAndJointIndexForConnection(int limbIdToSearch, int limbIdToExclude = -1);
 	SDL_Texture* createAvatar(bool resetRenderer = true);
+	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 	SuitType getSuitType() { return suitType; }
 	vector<int> getDrawLimbIndexes() { return drawLimbListIndexes; }
-	SDL_Texture* getTexture() { return texture; } /* This must move to the parent class. */
 	vector<AttackStruct> getAttacks();
 	unordered_set<int> getChildLimbIds(Limb& parentLimb, unordered_set<int> collectedIds = {});
 
@@ -938,9 +939,9 @@ public:
 	void buildDrawLimbList();
 	void checkChildLimbsForAvatarBoundaries(Limb& parentLimb, AvatarDimensionsStruct& dimStruct);
 	void setLatestLandmarkId(int newId) { latestLandmarkId = newId; }
+	void setMapSlug(string mapSlug) { this->mapSlug = mapSlug; }
 
 	DominanceNode getDominanceNode();
-
 	CharStatsData getCharStatsData(Point trackedPoint = Point(-1, -1));
 
 	void sortLimbsByNumberOfJoints() {
@@ -956,6 +957,7 @@ protected:
 	int anchorLimbId;
 	vector<Limb> limbs;
 	string name;
+	string mapSlug;
 	vector<int> drawLimbListIDs;
 	vector<int> drawLimbListIndexes;
 	Point blockPosition;

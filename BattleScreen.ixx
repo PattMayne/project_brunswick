@@ -2724,6 +2724,7 @@ void BattleScreen::setExitMessage(BattleStatus battleStatus) {
 		confirmationPanel.destroyTextures();
 		confirmationPanel = getNewConfirmationMessage(confirmationPanel, exitMessage, ConfirmationButtonType::OkCancel, false);
 		confirmationPanel.setShow(true);
+		//updatePlayerMapLocation(playerCharacter.getMapSlug(), playerCharacter.getPosition());
 
 	} else if (battleStatus == BattleStatus::PlayerVictory) {
 		exitMessage = playerCharacter.getName() + " has defeated " + npc.getName() + "!\n";

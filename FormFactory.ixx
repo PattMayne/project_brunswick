@@ -709,20 +709,3 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 
 
 }
-
-
-/*
-* 
-FUNCTIONS TO CREATE:
-
-export SDL_Texture buildAvatarFromLimbs() {}
-
-each map definition will have it collection of Suits like:
-
-vector<Character> suits = {
-	getSuit(slugName1),
-	getSuit(slugName2),
-	getSuit(slugName3)
-}
-
-*/

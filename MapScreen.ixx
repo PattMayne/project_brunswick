@@ -100,7 +100,7 @@ enum class AnimationType { Player, NPC, Collision, None }; /* This is about whos
 const int DRAW_TEST_SUITS_IN_CORNER = false;
 
 /* Map Screen class: where we navigate worlds, dungeons, and buildings.
-* (Actually only worlds. Dungeons and buildings happen in sequel).
+* (Actually only worlds. Dungeons and buildings will happen in sequel).
 * 
 * We either create a new map (based on the map_slug) and save it to the database,
 * or we load it from the database. map_slug is the primary key in the DB table,
@@ -121,7 +121,7 @@ const int DRAW_TEST_SUITS_IN_CORNER = false;
 export class MapScreen {
 	public:
 		/* 
-		* constructor:
+		* constructor (for both new map and loading existing map):
 		* 
 		* Only needs the slug.
 		* We check the DB to see if this mapSlug already has a map (map_slug is primary key).
@@ -129,36 +129,12 @@ export class MapScreen {
 		*/
 		MapScreen(string mapSlug) {
 			UI& ui = UI::getInstance();
-			/* TEMPORARY MAP-CREATION SCHEME 
-			* 
-			* PHASE 1 (DONE):
-			* 1) Get vanilla Forest Map every time.
-			* 2) Save the map immediately after creation.
-			* 
-			* PHASE 2:
-			* 1) Check for EXISTING Forest Map.
-			* 2) LOAD that map from the database if it exists.
-			* 3) If it does NOT exist, do PHASE 1 steps.
-			* 
-			* PHASE 3 (DONE):
-			* 1) Load shrines for each native Suit.
-			* 2) Path creation is built on connecting those shrines to the entrance and exit.
-			* 3) Hostile NPC-creation on limb collision.
-			* 4) Collision with hostile NPC goes to Battle screen.
-			* 
-			* PHASE 4:
-			* 1) NPCs consume each other.
-			* 2) NPCs chase you in their range.
-			* 3) Player has default Warden suit.
-			*/
-
 			mapForm = getMapFormFromSlug(mapSlug);
 
 			if (mapObjectExists(mapSlug)) {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
 				for (MapCharacter& npc : map.getNPCs()) {
-
 					SDL_Texture* avatar = npc.createAvatar();
 					npc.setTexture(avatar);
 				}
@@ -208,7 +184,6 @@ export class MapScreen {
 					suit.setTexture(suit.createAvatar());
 				}
 
-
 				if (playerCharacter.getEquippedLimbs().size() > 0 ) {
 					playerCharacter.setTexture(playerCharacter.createAvatar());
 				}
@@ -219,11 +194,13 @@ export class MapScreen {
 					SDL_FreeSurface(characterSurface);
 					playerCharacter.setTexture(characterTexture);
 				}
-
 			}
 
 			screenType = ScreenType::Map;
 			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
+
+			running = ensurePlayerHasSuit();
+			animate = false;
 
 			hBlocksTotal = mapForm.blocksWidth;
 			vBlocksTotal = mapForm.blocksHeight;
@@ -406,6 +383,7 @@ export class MapScreen {
 		Panel hudPanel;
 
 		int passingMessageCountdown = 0; /* optional */
+		bool running;
 };
 
 
@@ -624,8 +602,6 @@ export void MapScreen::run() {
 
 	/* loop and event control */
 	SDL_Event e;
-	bool running = ensurePlayerHasSuit();
-	animate = false;
 
 	/* Making the Limbs rotate. */
 	int spriteAnimMax = 15;
