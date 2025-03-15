@@ -36,6 +36,7 @@ import Resources;
 import Database;
 import UI;
 import CharacterClasses;
+import Audio;
 
 using namespace std;
 
@@ -102,6 +103,8 @@ void MenuScreen::run() {
 	GameState& gameState = GameState::getInstance();
 	menuPanel.setShow(true);
 	settingsPanel.setShow(false);
+	AudioBooth& audioBooth = AudioBooth::getInstance();
+	audioBooth.playMusic();
 
 	/* Timeout data */
 	const int TARGET_FPS = 120;
@@ -114,6 +117,7 @@ void MenuScreen::run() {
 	running = true;
 
 	while (running) {
+
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
 		frameStartTime = SDL_GetTicks();
 
@@ -243,6 +247,10 @@ void MenuScreen::handleEvent(SDL_Event& e, GameState& gameState) {
 	else {
 		// user clicked
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
+
+			AudioBooth& audioBooth = AudioBooth::getInstance();
+			audioBooth.playKickDrum();
+
 			cout << "user clicked mouse\n";
 			// These events might change the value of screenToLoad
 			int mouseX, mouseY;

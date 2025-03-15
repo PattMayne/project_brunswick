@@ -38,6 +38,7 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include <SDL_mixer.h>
 
 import UI;
 import GameState;
@@ -48,6 +49,7 @@ import CharacterCreationScreen;
 import TypeStorage;
 import Resources;
 import Database;
+import Audio;
 using namespace std;
 const bool DEBUG = false;
 
@@ -67,6 +69,7 @@ int main(int argc, char* args[]) {
 
 	/* instantiate the UI instance, and hold the reference for eventual destruction in this file. */
 	UI& ui = UI::getInstance();
+	AudioBooth& audioBooth = AudioBooth::getInstance();
 	GameState& gameState = GameState::getInstance();
 	gameState.setPlayerID(createPlayerCharacterOrGetID());
 
@@ -118,17 +121,20 @@ int main(int argc, char* args[]) {
 			running = false; }
 	}
 
+	audioBooth.freeAllAudio();
 	exit(ui.getWindowSurface(), ui.getMainWindow());
 	return 0;
 }
 
 /* Free SDL resources and quit */
 void exit(SDL_Surface* surface, SDL_Window* window) {
+
 	SDL_FreeSurface(surface);
 	surface = NULL;
 
 	SDL_DestroyWindow(window);
 	window = NULL;
 
+	Mix_CloseAudio();
 	SDL_Quit();
 }

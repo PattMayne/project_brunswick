@@ -66,6 +66,9 @@
     <ClCompile Include="BattleClasses.ixx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Audio.ixx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
@@ -86,6 +89,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="sqlite3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\SDL_mixer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
