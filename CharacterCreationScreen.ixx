@@ -118,7 +118,7 @@ public:
 		playerCharacter.setRotationPointsSDL();
 		loadedLimbIsAlreadyEquipped = false;
 
-		playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+		playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
 		playerStatsPanel.setShow(true);
 
 	}
@@ -480,7 +480,7 @@ void CharacterCreationScreen::loadLimbAttempt(int limbToLoadID) {
 		limbEquipped = playerCharacter.equipLimb(limbToLoadID);
 		if (limbEquipped) {
 			playerStatsPanel.destroyTextures();
-			playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+			playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
 			playerStatsPanel.setShow(true);
 
 		}
@@ -550,7 +550,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					cout << "CLEARING SUIT\n";
 					playerCharacter.clearSuit();
 					playerStatsPanel.destroyTextures();
-					playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+					playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
 					playerStatsPanel.setShow(true);
 					changeCreationMode(CreationMode::Review);
 					break;
@@ -682,7 +682,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 						playerCharacter.unEquipLimb(loadedLimbId);
 
 						playerStatsPanel.destroyTextures();
-						playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+						playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
 						playerStatsPanel.setShow(true);
 					}
 

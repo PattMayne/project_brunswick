@@ -140,7 +140,7 @@ export class UI {
 
 		Panel createPassingMessagePanel(string message, bool topPlacement, bool isBold);
 		Panel getNewPassingMessagePanel(string newMessage, Panel& oldPassingMessagePanel, bool topPlacement, bool isBold);
-		Panel createHud(ScreenType screenType, CharStatsData statsData, bool topRight = true);
+		Panel createStatsPanel(ScreenType screenType, CharStatsData statsData, bool topRight = true);
 
 
 		/* OTHER FUNCTIONS. */
@@ -2633,7 +2633,7 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement, bool isBo
 /* A collection of boxes upon a transparent panel.
 * Will show different things depending on the screen.
 */
-Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRight) {
+Panel UI::createStatsPanel(ScreenType screenType, CharStatsData statsData, bool topRight) {
 	Panel hudPanel = Panel();
 	hudPanel.setRect({ 0,0,0,0 });
 	Resources& resources = Resources::getInstance();

@@ -186,11 +186,11 @@ public:
 		bobbingMax = 20;
 		reverseBob = false;
 
-		playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
+		playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
 		playerStatsPanel.setShow(true);
 		SDL_Rect playerStatsPanelRect = playerStatsPanel.getRect();
 
-		npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+		npcStatsPanel = ui.createStatsPanel(ScreenType::Battle, npc.getCharStatsData());
 		npcStatsPanel.setShow(true);
 
 		playerAttackStructs = playerCharacter.getAttacks();
@@ -2147,7 +2147,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 	commitTransactionAndCloseDatabase(db);
 	createPlayerLimbPanels();
 	playerStatsPanel.destroyTextures();
-	playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
+	playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
 
 	npcAttackLoaded = AttackStruct();
 	limbIdsToUpdate = {};
@@ -2250,7 +2250,7 @@ bool BattleScreen::applyPlayerStealEffects() {
 	UI& ui = UI::getInstance();
 
 	npcStatsPanel.destroyTextures();
-	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+	npcStatsPanel = ui.createStatsPanel(ScreenType::Battle, npc.getCharStatsData());
 	createNpcLimbPanel();
 
 	/* Now check for NPC defeat. */
@@ -2280,7 +2280,7 @@ bool BattleScreen::applyPlayerStealEffects() {
 
 	createNpcLimbPanel();
 	npcStatsPanel.destroyTextures();
-	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+	npcStatsPanel = ui.createStatsPanel(ScreenType::Battle, npc.getCharStatsData());
 	playerStatsPanel.setShow(true);
 
 	playerAttackLoaded = AttackStruct();
@@ -2463,10 +2463,10 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	commitTransactionAndCloseDatabase(db);
 	createNpcLimbPanel();
 	npcStatsPanel.destroyTextures();
-	npcStatsPanel = ui.createHud(ScreenType::Battle, npc.getCharStatsData());
+	npcStatsPanel = ui.createStatsPanel(ScreenType::Battle, npc.getCharStatsData());
 
 	playerStatsPanel.destroyTextures();
-	playerStatsPanel = ui.createHud(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
+	playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
 	playerStatsPanel.setShow(true);
 
 	playerAttackLoaded = AttackStruct();

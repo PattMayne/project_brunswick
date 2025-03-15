@@ -228,8 +228,8 @@ export class MapScreen {
 			homeBaseRange = 5;
 			waitSpin = false;
 
-			hudPanel = ui.createHud(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
-			hudPanel.setShow(true);
+			statsPanel = ui.createStatsPanel(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
+			statsPanel.setShow(true);
 			pointToTrack = Point(-1, -1);
 		}
 
@@ -383,7 +383,7 @@ export class MapScreen {
 		Panel gameMenuPanel;
 		Panel messagePanel;
 		Panel passingMessagePanel;
-		Panel hudPanel;
+		Panel statsPanel;
 
 		int passingMessageCountdown = 0; /* optional */
 		bool running;
@@ -1009,7 +1009,7 @@ void MapScreen::draw(UI& ui) {
 	gameMenuPanel.draw(ui);
 	messagePanel.draw(ui);
 	passingMessagePanel.draw(ui);
-	hudPanel.draw(ui);
+	statsPanel.draw(ui);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
