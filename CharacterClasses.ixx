@@ -942,7 +942,7 @@ public:
 	void setMapSlug(string mapSlug) { this->mapSlug = mapSlug; }
 
 	DominanceNode getDominanceNode();
-	CharStatsData getCharStatsData(Point trackedPoint = Point(-1, -1));
+	CharStatsData getCharStatsData();
 
 	void sortLimbsByNumberOfJoints() {
 		sort(limbs.begin(), limbs.end(), compareJointsNumber); }
@@ -1049,15 +1049,14 @@ unordered_set<int> Character::getChildLimbIdsRecursively(Limb& parentLimb, unord
 	return childLimbIds;
 }
 
-CharStatsData Character::getCharStatsData(Point trackedPoint) {
+CharStatsData Character::getCharStatsData() {
 	return CharStatsData(
 		getName(),
 		getHP(),
 		getStrength(),
 		getSpeed(),
 		getIntelligence(),
-		getDominanceNode(),
-		trackedPoint
+		getDominanceNode()
 	);
 }
 

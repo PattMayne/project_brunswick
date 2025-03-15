@@ -2257,6 +2257,16 @@ bool BattleScreen::applyPlayerStealEffects() {
 
 	if (npc.getNumberOfEquippedLimbs() < 1) {
 		/* NPC defeat. */
+
+		/* Check to see if they have any limbs to drop. */
+		if (npcLimbs.size() > 0) {
+			for (Limb& limb: npcLimbs) {
+				limb.unEquip();
+				limb.setCharacterId(playerCharacter.getId());
+				updateLimbBattleEffectsInTransaction(limb, db);
+			}
+		}
+
 		npc.buildDrawLimbList();
 		/* Now destroy the NPC from the database. */
 		deleteCharacterInTrans(npc.getId(), db);
@@ -2414,24 +2424,22 @@ bool BattleScreen::applyPlayerAttackEffects() {
 	* ---> Player gets previously-equipped limbs.
 	* ---> Non-equipped limbs return to Roaming Limbs (on the NPCs block).
 	*/
-		for (Limb& limb : npc.getLimbs()) {
+		vector<Limb>& npcsLimbs = npc.getLimbs();
+		for (Limb& limb : npcsLimbs) {
 			npc.unEquipLimb(limb.getId());
 			limb.unEquip();
 
-			bool limbWasGonnaEquip = false;
-			for (int limbIdToEquip : limbIdsToEquip) {
-				if (limb.getId() == limbIdToEquip) {
-					limbWasGonnaEquip = true;
-				}
-			}
-
-			if (!limbWasGonnaEquip) {
+			/* Move the Limb to either Player or RoamingLimbs, and save to the DB.
+			* Character keeps defeated limbs. Limbs with HP shall roam.
+			*/
+			if (limb.getHP() > 0) {
 				limb.setCharacterId(-1);
 				limb.setPosition(npc.getPosition());
 			}
 			else {
 				limb.setCharacterId(playerId);
 			}
+			updateLimbBattleEffectsInTransaction(limb, db); /* The limbs don't belong to the npc anymore. */
 		}
 
 		npc.buildDrawLimbList();

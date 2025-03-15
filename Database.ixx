@@ -3008,7 +3008,7 @@ export Map loadMap(string mapSlug) {
     */
 
     /* The NPCs vector which will be given to the Map object's constructor. */
-    vector<MapCharacter> npcs;
+    vector<MapCharacter> npcs = {};
 
     /* Create statement template for querying Character objects with this slug. */
     const char* queryNpcsSQL = "SELECT * FROM character WHERE map_slug = ? AND character_type = ?;";

@@ -59,11 +59,10 @@ export struct CharStatsData {
 	CharStatsData(
 		string name, int hp,
 		int strength, int speed, int intelligence,
-		DominanceNode dNode,
-		Point trackedPoint = Point(0, 0)
+		DominanceNode dNode
 	) :
 		name(name), hp(hp), strength(strength), speed(speed), dNode(dNode),
-		intelligence(intelligence), trackedPoint(trackedPoint) { }
+		intelligence(intelligence) { }
 
 	
 	string name;
@@ -72,7 +71,6 @@ export struct CharStatsData {
 	int hp;
 	int speed;
 	DominanceNode dNode;
-	Point trackedPoint;
 };
 
 /*
@@ -2641,8 +2639,6 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	Resources& resources = Resources::getInstance();
 	unordered_map<string, SDL_Color> colors = getColorsByFunction();
 
-	
-
 	/*
 	* 
 	* 
@@ -2653,6 +2649,7 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	* --> Avatar from surface (requires altering createAvatar() to deliver just a surface).
 	* --> Tracking Point box.
 	* ----> Must include a string of text for name of limb.
+	* 
 	*/
 
 	/* First make the nameSurface */
@@ -2669,7 +2666,7 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	if (screenType == ScreenType::Battle) {
 		string nameString = statsData.name;
 		nameSurface = TTF_RenderUTF8_Blended_Wrapped(
-			headlineFont, nameString.c_str(), colors["DARK_TEXT"], 0);
+			headlineFont, nameString.c_str(), colors["DARK_TEXT"], 285);
 
 		/* We have the surface. Now make the rect. */
 		nameRect = {
@@ -2705,6 +2702,7 @@ Panel UI::createHud(ScreenType screenType, CharStatsData statsData, bool topRigh
 	SDL_Surface* attributesSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, attsString.c_str(), colors["DARK_TEXT"], 0);
 	int attsWidth = attributesSurface->w;
 	int attsHeight = attributesSurface->h;
+
 
 	/*
 	* 

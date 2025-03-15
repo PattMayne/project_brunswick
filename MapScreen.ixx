@@ -228,10 +228,9 @@ export class MapScreen {
 			homeBaseRange = 5;
 			waitSpin = false;
 
-
-
 			hudPanel = ui.createHud(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
 			hudPanel.setShow(true);
+			pointToTrack = Point(-1, -1);
 		}
 
 		/* Destructor */
@@ -275,6 +274,8 @@ export class MapScreen {
 		void startAnimationCountdown(AnimationType iType);
 		void decrementCountdown();
 		void createShrineMessage(Character& suit);
+		void setLastKnownPositionOfTrackedLimb();
+
 		bool ensurePlayerHasSuit();
 
 	private:
@@ -386,6 +387,8 @@ export class MapScreen {
 
 		int passingMessageCountdown = 0; /* optional */
 		bool running;
+
+		Point pointToTrack;
 };
 
 
@@ -1613,6 +1616,17 @@ void MapScreen::drawMap(UI& ui) {
 	}
 }
 
+/* 
+* Tracking a limb means setting the Point of its last known location.
+* We set it at a shrine, and do NOT save to DB.
+* So we can only track it during this session.
+*/
+void MapScreen::setLastKnownPositionOfTrackedLimb() {
+
+	/* GET ALL THAT STUFF FROM WITHIN THE CHECK_LANDMARK_COLLISION FUNCTION. */
+
+}
+
 /* Specifically create a passing message for while the user is on a shrine. */
 void MapScreen::createShrineMessage(Character& suit) {
 	UI& ui = UI::getInstance();
@@ -1719,6 +1733,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 						*/
 						
 						bool unscrambledSomething = false;
+						vector<int> limbIndexesToTrack = {}; /* In the same loop, find a still-scrambled limb in the suit that we must track. */
 
 						for (int u = playerLimbs.size() - 1; u >= 0; --u) {
 							Limb& playerLimb = playerLimbs[u];
@@ -1756,8 +1771,58 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										);
 									}
 								}
+
+								/* Also, track a scrambled limb. */
+								if (!suitLimb.getUnscrambled()) {
+									limbIndexesToTrack.emplace_back(s);
+								}
+
 							}
 						}
+
+						/* Track one of the limbs. */
+						if (limbIndexesToTrack.size() > 0) {
+							int indexIndex = rand() % limbIndexesToTrack.size();
+							Limb& limbToTrack = suit.getLimbs()[limbIndexesToTrack[indexIndex]];
+							string slug_to_track = limbToTrack.getForm().slug;
+							vector<Limb>& roamingLimbs = map.getRoamingLimbs();
+							bool foundLimb = false;
+
+							/* FIRST search ROAMING LIMBS. */
+							for (Limb& limb : roamingLimbs) {
+								if (slug_to_track == limb.getForm().slug) {
+									pointToTrack = limb.getPosition();
+									foundLimb = true;
+									break;
+								}
+							}
+
+							if (!foundLimb) {
+								vector<MapCharacter>& npcs = map.getNPCs();
+								bool npcHasLimb = false;
+
+								/* check each NPC*/
+								for (MapCharacter& npc : npcs) {
+									vector<Limb>& npcLimbs = npc.getLimbs();
+									for (Limb& limb : npcLimbs) {
+										if (slug_to_track == limb.getForm().slug) {
+											pointToTrack = npc.getPosition();
+											foundLimb = true;
+											break;
+										}
+										if (foundLimb) { break; }
+									}
+								}
+							}
+
+							if (!foundLimb) {
+								/* TO DO: create a copy of the limb and track it. */
+								cout << "LIMB IS MISSING FROM MAP. CREATE ROAMING LIMB\n\n";
+							}
+
+						}
+
+						cout << "Tracking " << pointToTrack.x << ", " << pointToTrack.y << endl;
 
 						/* Now delete all non-equipped versions of this limb (player, NPCs, and Roaming Limbs). */
 
@@ -2218,30 +2283,34 @@ bool MapScreen::checkNpcOnNpcCollision() {
 	vector<MapCharacter>& npcs = map.getNPCs();
 	unordered_map<int, unordered_map<int, unordered_set<int>>> doublesMaps = {}; /* <x, <y, ids>>  */
 
-	/* First make lists of doubles. */
-	for (int i = 0; i < npcs.size() - 1; ++i) {
-		MapCharacter& baseNpc = npcs[i];
-		int baseNpcId = baseNpc.getId();
-		Point baseLocation = baseNpc.getPosition();
+	if (!npcs.empty()) {
+		/* First make lists of doubles. */
+		int limit = npcs.size() - 1;
+		for (int i = 0; i < limit; ++i) {
+			MapCharacter& baseNpc = npcs[i];
+			int baseNpcId = baseNpc.getId();
+			Point baseLocation = baseNpc.getPosition();
 
-		/* Check every npc ABOVE this one for their location. */
-		for (int k = i + 1; k < npcs.size(); ++k) {
-			MapCharacter& comparisonNpc = npcs[k];
-			Point comparisonPoint = comparisonNpc.getPosition();
-			int comparisonNpcId = comparisonNpc.getId();
-			if (comparisonNpcId == baseNpcId) { continue; }
-			else if (comparisonPoint.equals(baseNpc.getPosition())) {
-				/* We are on the SAME LOCATION now. A new "guy" must be "amalgamated" from our limbs. */
-				unordered_map<int, int> idsToGuyIndex;
-				idsToGuyIndex[baseNpcId] = -1;
-				idsToGuyIndex[comparisonNpcId] = -1;
-				bool guyAlreadyExists = false;
+			/* Check every npc ABOVE this one for their location. */
+			for (int k = i + 1; k < npcs.size(); ++k) { 
+				MapCharacter& comparisonNpc = npcs[k];
+				Point comparisonPoint = comparisonNpc.getPosition();
+				int comparisonNpcId = comparisonNpc.getId();
+				if (comparisonNpcId == baseNpcId) { continue; }
+				else if (comparisonPoint.equals(baseNpc.getPosition())) {
+					/* We are on the SAME LOCATION now. A new "guy" must be "amalgamated" from our limbs. */
+					unordered_map<int, int> idsToGuyIndex;
+					idsToGuyIndex[baseNpcId] = -1;
+					idsToGuyIndex[comparisonNpcId] = -1;
+					bool guyAlreadyExists = false;
 
-				doublesMaps[comparisonPoint.x][comparisonPoint.y].insert(baseNpcId);
-				doublesMaps[comparisonPoint.x][comparisonPoint.y].insert(comparisonNpcId);
+					doublesMaps[comparisonPoint.x][comparisonPoint.y].insert(baseNpcId);
+					doublesMaps[comparisonPoint.x][comparisonPoint.y].insert(comparisonNpcId);
+				}
 			}
 		}
 	}
+
 
 	/* Now iterate through amalgamatedGuysIds and make new guys from the old guys. */
 	unordered_set<int> characterIdsToDelete = {}; // keep
@@ -2420,7 +2489,7 @@ void MapScreen::moveCharacter(MapDirection direction) {
 	}
 }
 
-/* destailed documentation for the first function. Other functions follow same process. */
+/* Detailed documentation for the first function. Other functions follow same process. */
 void MapScreen::requestUp() {
 	if (animate || animationCountdown > 0) { return; }
 	/* Get player character */
