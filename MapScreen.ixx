@@ -231,6 +231,9 @@ export class MapScreen {
 			statsPanel = ui.createStatsPanel(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
 			statsPanel.setShow(true);
 			pointToTrack = Point(-1, -1);
+
+			trackerPanel = Panel();
+			trackerPanel.setShow(false);
 		}
 
 		/* Destructor */
@@ -384,11 +387,13 @@ export class MapScreen {
 		Panel messagePanel;
 		Panel passingMessagePanel;
 		Panel statsPanel;
+		Panel trackerPanel;
 
 		int passingMessageCountdown = 0; /* optional */
 		bool running;
 
 		Point pointToTrack;
+		string nameToTrack;
 };
 
 
@@ -670,6 +675,13 @@ export void MapScreen::run() {
 				if (!playerNpcCollision) {
 					/* After every Player animation, we start the NPC animation (Turning the switch) unless we hit an NPC. */
 					startNpcAnimation = true;
+				}
+
+				/* Recalculate trackerPanel. */
+				if (trackerPanel.getShow()) {
+					trackerPanel.destroyTextures();
+					trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
+					trackerPanel.setShow(true);
 				}
 				 
 			}
@@ -1010,6 +1022,7 @@ void MapScreen::draw(UI& ui) {
 	messagePanel.draw(ui);
 	passingMessagePanel.draw(ui);
 	statsPanel.draw(ui);
+	trackerPanel.draw(ui);
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
@@ -1734,12 +1747,12 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 						
 						bool unscrambledSomething = false;
 						vector<int> limbIndexesToTrack = {}; /* In the same loop, find a still-scrambled limb in the suit that we must track. */
+						vector<Limb>& suitLimbs = suit.getLimbs();
 
 						for (int u = playerLimbs.size() - 1; u >= 0; --u) {
 							Limb& playerLimb = playerLimbs[u];
 							if (playerLimb.isEquipped()) { continue; }
 
-							vector<Limb>& suitLimbs = suit.getLimbs();
 
 							for (int s = 0; s < suitLimbs.size(); ++s) {
 								Limb& suitLimb = suitLimbs[s];
@@ -1755,9 +1768,12 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										/* We are FINALLY unscrambling this Suit's Limb. */
 										unscrambledSomething = true;
 										unscrambleLimb(suitLimb);
+										suitLimb.unscramble();
 										suit.setTexture(suit.createAvatar(false));
 										int rotationAngleIncrement = (rand() % 2) == 0 ? 4 : -4;
 										slugsToDeleteFromPlayer.insert(suitLimb.getForm().slug);
+
+										cout << "---> Unscrambling " << suitLimb.getName() << endl;
 
 										/* create acquiredLimbStruct for the animation. */
 										SDL_Rect diffRect = { 0, 0, 0, 0 };
@@ -1771,12 +1787,15 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										);
 									}
 								}
+							}
+						}
 
-								/* Also, track a scrambled limb. */
-								if (!suitLimb.getUnscrambled()) {
-									limbIndexesToTrack.emplace_back(s);
-								}
-
+						/* Also, track a scrambled limb. */
+						for (int s = 0; s < suitLimbs.size(); ++s) {
+							Limb& suitLimb = suitLimbs[s];
+							if (!suitLimb.getUnscrambled()) {
+								cout << suitLimb.getName() << " is NOT unscrambled\n";
+								limbIndexesToTrack.emplace_back(s);
 							}
 						}
 
@@ -1785,6 +1804,7 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							int indexIndex = rand() % limbIndexesToTrack.size();
 							Limb& limbToTrack = suit.getLimbs()[limbIndexesToTrack[indexIndex]];
 							string slug_to_track = limbToTrack.getForm().slug;
+							nameToTrack = limbToTrack.getName();
 							vector<Limb>& roamingLimbs = map.getRoamingLimbs();
 							bool foundLimb = false;
 
@@ -1819,10 +1839,12 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 								/* TO DO: create a copy of the limb and track it. */
 								cout << "LIMB IS MISSING FROM MAP. CREATE ROAMING LIMB\n\n";
 							}
+							else {
+								trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
+								trackerPanel.setShow(true);
+							}
 
 						}
-
-						cout << "Tracking " << pointToTrack.x << ", " << pointToTrack.y << endl;
 
 						/* Now delete all non-equipped versions of this limb (player, NPCs, and Roaming Limbs). */
 

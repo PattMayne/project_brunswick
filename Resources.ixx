@@ -37,6 +37,7 @@ export class Resources {
         vector<string> getTitleWords();
         string getButtonText(string buttonLabel);
         string getMessageText(string messageLabel);
+        string getCardinalDirectionText(string directionKey);
         Resolution getDefaultDimensions(WindowResType restype);
         int getFontSize(FontContext fontContext, int windowWidth);
         int getButtonBorder(int windowWidth);
@@ -122,6 +123,17 @@ string Resources::getMessageText(string messageLabel) {
     else {
         cerr << "Key does not exist";
         return messageLabel;
+    }
+}
+
+/* Get string values for message box. */
+string Resources::getCardinalDirectionText(string directionKey) {
+    if (jsonData.contains("CARDINAL_DIRECTIONS") && jsonData["CARDINAL_DIRECTIONS"].contains(directionKey)) {
+        return jsonData["CARDINAL_DIRECTIONS"][directionKey];
+    }
+    else {
+        cerr << "Key does not exist";
+        return directionKey;
     }
 }
 

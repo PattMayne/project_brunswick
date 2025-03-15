@@ -16,17 +16,17 @@
   },
   "BUTTON_TEXT": {
     "ABOUT": "ABOUT",
-    "LOAD_GAME":  "LOAD GAME",
+    "LOAD_GAME": "LOAD GAME",
     "SETTINGS": "SETTINGS",
     "NEW_GAME": "NEW GAME",
     "EXIT": "EXIT",
     "OPTIONS": "OPTIONS",
-    "CONTINUE":  "CONTINUE",
+    "CONTINUE": "CONTINUE",
 
     "SAVE": "SAVE",
     "LIMBS": "LIMBS",
     "FREE_LIMBS": "FREE LIMBS",
-    "EQUIPPED_LIMBS":  "EQUIPPED LIMBS",
+    "EQUIPPED_LIMBS": "EQUIPPED LIMBS",
     "CLEAR": "CLEAR",
     "RETURN": "RETURN",
     "BACK_TO_GAME": "BACK TO GAME",
@@ -34,7 +34,7 @@
     "LOAD": "LOAD",
     "NEXT": "NEXT",
     "PREVIOUS": "PREVIOUS",
-    "MORE":  "MORE",
+    "MORE": "MORE",
 
     "NEXT_CHARACTER_JOINT": "NEXT CHARACTER JOINT",
     "NEXT_LIMB_JOINT": "NEXT LIMB JOINT",
@@ -43,9 +43,9 @@
     "UNLOAD_LIMB": "UNLOAD LIMB",
     "EQUIP_LIMB": "EQUIP",
 
-    "BUILD":  "BUILD",
+    "BUILD": "BUILD",
     "BACK": "BACK",
-    "BETTER":  "BETTER",
+    "BETTER": "BETTER",
 
     "MOBILE": "360x800",
     "TABLET": "810x1080",
@@ -66,11 +66,11 @@
     "PUNCH": "PUNCH",
     "STEAL": "STEAL LIMB",
     "HEAL": "HEAL LIMB",
-    "RUN":  "RUN AWAY"
+    "RUN": "RUN AWAY"
   },
   "BUTTON_BORDER": {
     "SMALL": 10,
-    "LARGE":  20
+    "LARGE": 20
   },
   "FONT_SIZES": {
     "TITLE": {
@@ -118,5 +118,11 @@
   },
   "MESSAGES": {
     "NO_FREE_CHAR_JOINTS": "This character has no free joints."
+  },
+  "CARDINAL_DIRECTIONS": {
+    "EAST": "East",
+    "WEST": "West",
+    "NORTH": "North",
+    "SOUTH": "South"
   }
 }

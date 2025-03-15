@@ -141,6 +141,7 @@ export class UI {
 		Panel createPassingMessagePanel(string message, bool topPlacement, bool isBold);
 		Panel getNewPassingMessagePanel(string newMessage, Panel& oldPassingMessagePanel, bool topPlacement, bool isBold);
 		Panel createStatsPanel(ScreenType screenType, CharStatsData statsData, bool topRight = true);
+		Panel createTrackerPanel(Point trackedPoint, Point playerPoint, string name);
 
 
 		/* OTHER FUNCTIONS. */
@@ -2629,6 +2630,92 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement, bool isBo
 
 	return Panel(panelRect, buttons, panelTexture);
 }
+
+/*
+* Shows the distance (in map tiles) between the player and the last known position of the tracked thing.
+* Format:
+*
+* Last known position of Fairy Head
+* 32 East, 7 North
+*
+* 
+* TO DO: catch SDL failures.
+*/
+Panel UI::createTrackerPanel(Point trackedPoint, Point playerPoint, string name) {
+	Resources& resources = Resources::getInstance();
+	unordered_map<string, SDL_Color> colors = getColorsByFunction();
+	Panel trackerPanel = Panel();
+	trackerPanel.setRect({ 0,0,0,0 });
+
+	/* First make the two text strings as data. */
+
+	int xDistance = trackedPoint.x - playerPoint.x;
+	int yDistance = trackedPoint.y - playerPoint.y;
+
+	string xDirectionKey = xDistance > 0 ? "WEST" : "EAST";
+	string yDirectionKey = yDistance > 0 ? "NORTH" : "SOUTH";
+
+	string xDirectionString = resources.getCardinalDirectionText(xDirectionKey);
+	string yDirectionString = resources.getCardinalDirectionText(yDirectionKey);
+
+	if (xDistance < 0) {
+		xDistance *= -1;
+	}
+
+	if (yDistance < 0) {
+		yDistance *= -1;
+	}
+
+	string labelText = "Last known position of " + name;
+	string trackerText = to_string(xDistance) + " " + xDirectionKey + ", ";
+	trackerText += to_string(yDistance) + " " + yDirectionKey;
+
+	/* Now make them into surfaces with max width of 300. */
+
+	SDL_Surface* labelSurface = TTF_RenderUTF8_Blended_Wrapped(bodyFont, labelText.c_str(), colors["DARK_TEXT"], 300);
+	int labelWidth = labelSurface->w;
+	int labelHeight = labelSurface->h;
+
+	SDL_Surface* trackerTextSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, trackerText.c_str(), colors["DARK_TEXT"], 300);
+	int trackerTextWidth = trackerTextSurface->w;
+	int trackerTextHeight = trackerTextSurface->h;
+
+	/* Set the dimensions of the panel, based on the text surfaces. */
+
+	int widestTextSurfaceWidth = labelWidth > trackerTextWidth ? labelWidth : trackerTextWidth;
+	int panelWidth = widestTextSurfaceWidth + (PANEL_PADDING * 2);
+	int panelHeight = trackerTextHeight + labelHeight + (PANEL_PADDING * 3);
+
+	/* Set the rects for both surfaces. */
+
+	SDL_Rect labelSurfaceRect = { PANEL_PADDING, PANEL_PADDING, labelWidth, labelHeight };
+	SDL_Rect trackerTextRect = {
+		PANEL_PADDING,
+		labelHeight + (PANEL_PADDING * 2),
+		trackerTextWidth, trackerTextHeight
+	};
+
+	/* Create the panel surface. */
+
+	SDL_Surface* panelSurface = createTransparentSurface(panelWidth, panelHeight);
+	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
+
+	/* Blit the text surfaces onto the panel surface, and make the texture. */
+
+	SDL_BlitSurface(labelSurface, NULL, panelSurface, &labelSurfaceRect);
+	SDL_BlitSurface(trackerTextSurface, NULL, panelSurface, &trackerTextRect);
+	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
+
+	SDL_FreeSurface(trackerTextSurface);
+	SDL_FreeSurface(labelSurface);
+	SDL_FreeSurface(panelSurface);
+
+	trackerPanel.setRect({ PANEL_PADDING, PANEL_PADDING, panelWidth, panelHeight });
+	trackerPanel.setTexture(panelTexture);
+
+	return trackerPanel;
+}
+
 
 /* A collection of boxes upon a transparent panel.
 * Will show different things depending on the screen.
