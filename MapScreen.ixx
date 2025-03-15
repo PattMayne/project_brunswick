@@ -711,7 +711,6 @@ export void MapScreen::run() {
 				vector<AcquiredLimb>& acquiredLimbStructs = playerCharacter.getAcquiredLimbStructs();
 
 				for (AcquiredLimb& aLimb : acquiredLimbStructs) {
-					cout << "Acquired " << aLimb.name << "\n";
 					message = message + aLimb.name + "\n";
 				}
 
@@ -1773,8 +1772,6 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 										int rotationAngleIncrement = (rand() % 2) == 0 ? 4 : -4;
 										slugsToDeleteFromPlayer.insert(suitLimb.getForm().slug);
 
-										cout << "---> Unscrambling " << suitLimb.getName() << endl;
-
 										/* create acquiredLimbStruct for the animation. */
 										SDL_Rect diffRect = { 0, 0, 0, 0 };
 										landmark.getAcquiredLimbStructs().emplace_back(
@@ -1794,7 +1791,6 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 						for (int s = 0; s < suitLimbs.size(); ++s) {
 							Limb& suitLimb = suitLimbs[s];
 							if (!suitLimb.getUnscrambled()) {
-								cout << suitLimb.getName() << " is NOT unscrambled\n";
 								limbIndexesToTrack.emplace_back(s);
 							}
 						}
@@ -2283,6 +2279,10 @@ bool MapScreen::checkPlayerLimbCollision() {
 				thisLimb.getName()
 			);
 
+			if (thisLimb.getName() == nameToTrack) {
+				trackerPanel.setShow(false);
+			}
+
 			/* Remove from list at the end to avoid changing the item referenced by i. */
 			roamingLimbs.erase(roamingLimbs.begin() + i);
 		}
@@ -2431,7 +2431,6 @@ bool MapScreen::checkNpcOnNpcCollision() {
 		}
 	}
 
-	//cout << "We would make " << amalgamatedGuysIds.size() << " new guys this turn\n";
 	/* END OBSOLETE SECTION. */
 
 	commitTransactionAndCloseDatabase(db);

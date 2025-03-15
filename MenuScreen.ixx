@@ -53,6 +53,8 @@ export class MenuScreen {
 			settingsPanel = ui.createSettingsPanel();
 			confirmationPanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
 			confirmationPanel.setShow(false);
+			requestingNewGame = false;
+			running = false;
 		}
 
 		/* Destructor */
@@ -79,7 +81,7 @@ export class MenuScreen {
 		SDL_Rect bgDestinationRect;
 		SDL_Texture* titleTexture;
 		SDL_Rect titleRect;
-		void handleEvent(SDL_Event &e, bool& running, GameState& gameState);
+		void handleEvent(SDL_Event &e, GameState& gameState);
 		void checkMouseLocation(SDL_Event& e);
 		void rebuildDisplay();
 		void draw(UI& ui);
@@ -87,6 +89,9 @@ export class MenuScreen {
 		Panel menuPanel;
 		Panel settingsPanel;
 		Panel confirmationPanel;
+		bool requestingNewGame;
+		void loadGame();
+		bool running;
 };
 
 /* The main function of the class. Contains the game loop. */
@@ -106,7 +111,7 @@ void MenuScreen::run() {
 
 	/* loop and event control */
 	SDL_Event e;
-	bool running = true;
+	running = true;
 
 	while (running) {
 		/* Get the total running time(tick count) at the beginning of the frame, for the frame timeout at the end */
@@ -114,7 +119,7 @@ void MenuScreen::run() {
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
-			handleEvent(e, running, gameState);
+			handleEvent(e, gameState);
 		}
 
 		/* check mouse location in every frame (so buttons stay "hovered" after click */
@@ -187,8 +192,51 @@ void MenuScreen::rebuildDisplay() {
 	ui.rebuildMainMenuPanel(menuPanel);
 }
 
+
+void MenuScreen::loadGame() {
+	GameState& gameState = GameState::getInstance();
+
+	/* Check to see if a Battle is ongoing.
+	* -- make sure the player has limbs (if they don't, make it a loss).
+	* -- make sure the NPC exists and has limbs (if they don't, make it a win).
+	* Send to battle if all above is true.
+	* Otherwise send to Map.
+	* Map will need a method to give vanilla limbs to limbless player.
+	*
+	* TO DO: Check that NPCs exist for the id (we are already retrieving the NPC id).
+	*/
+	Character playerCharacter = loadPlayerCharacter();
+
+	if (!playerCharacter.isGameOver() || !mapObjectExists("forest")) {
+		running = false;
+		cout << "LOAD GAME (currently map by default for now)\n";
+
+		/* Cheating with an if statement to create a block where I can declare variables within switch/case options. */
+		if (true) {
+			int battleId = getCurrentBattleId(gameState.getPlayerID());
+			cout << "Battle id: " << battleId << endl;
+
+			if (battleId < 1) {
+				screenToLoadStruct.screenType = ScreenType::Map;
+			}
+			else {
+				screenToLoadStruct.screenType = ScreenType::Battle;
+				screenToLoadStruct.id = battleId;
+			}
+		}
+	}
+	else {
+		cout << "It's game over, man!" << endl;
+		string messageString = "GAME OVER!\n\nYour player ran out of limbs before making an offering at a shrine.\n\nStart a new game?";
+		confirmationPanel.destroyTextures();
+		confirmationPanel = getNewConfirmationMessage(confirmationPanel, messageString, ConfirmationButtonType::YesNo, false);
+		confirmationPanel.setShow(true);
+	}
+}
+
+
 /* Process user input */
-void MenuScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
+void MenuScreen::handleEvent(SDL_Event& e, GameState& gameState) {
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) { running = false; }
 	else {
@@ -202,18 +250,28 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) 
 				if (confirmationPanel.isInPanel(mouseX, mouseY)) {
 					ButtonClickStruct clickStruct = confirmationPanel.checkButtonClick(mouseX, mouseY);
 
-					// see what button might have been clicked:
+					/* see what button might have been clicked : */
 					switch (clickStruct.buttonOption) {
 					case ButtonOption::Agree:
 						cout << "AGREED\n";
+
+						if (requestingNewGame) {
+							destroyAndCreateDB();
+							gameState.setPlayerID(createPlayerCharacterOrGetID());
+							loadGame();
+						}
+
+						requestingNewGame = false;
 						confirmationPanel.setShow(false);
 						break;
 					case ButtonOption::Refuse:
 						cout << "REFUSED\n";
 						confirmationPanel.setShow(false);
+						requestingNewGame = false;
 						break;
 					default:
 						cout << "NEITHER AGREED NOR REFUSED\n";
+						requestingNewGame = false;
 						break;
 					}
 				}
@@ -249,50 +307,13 @@ void MenuScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) 
 							confirmationPanel.destroyTextures();
 							confirmationPanel = getNewConfirmationMessage(confirmationPanel, messageString, ConfirmationButtonType::YesNo, true);
 							confirmationPanel.setShow(true);
+							requestingNewGame = true;
 						}
 
 						cout << "NEW GAME\n";
 						break;
 					case ButtonOption::LoadGame:
-
-						/* Check to see if a Battle is ongoing.
-						* -- make sure the player has limbs (if they don't, make it a loss).
-						* -- make sure the NPC exists and has limbs (if they don't, make it a win).
-						* Send to battle if all above is true.
-						* Otherwise send to Map.
-						* Map will need a method to give vanilla limbs to limbless player.
-						* 
-						* TO DO: Check that NPCs exist for the id (we are already retrieving the NPC id).
-						*/
-						if (true) {
-							Character playerCharacter = loadPlayerCharacter();
-
-							if (!playerCharacter.isGameOver() || !mapObjectExists("forest")) {
-								running = false;
-								cout << "LOAD GAME (currently map by default for now)\n";
-
-								/* Cheating with an if statement to create a block where I can declare variables within switch/case options. */
-								if (true) {
-									int battleId = getCurrentBattleId(gameState.getPlayerID());
-									cout << "Battle id: " << battleId << endl;
-
-									if (battleId < 1) {
-										screenToLoadStruct.screenType = ScreenType::Map;
-									}
-									else {
-										screenToLoadStruct.screenType = ScreenType::Battle;
-										screenToLoadStruct.id = battleId;
-									}
-								}
-							}
-							else {
-								cout << "It's game over, man!" << endl;
-								string messageString = "GAME OVER!\n\nYour player ran out of limbs before making an offering at a shrine.\n\nStart a new game?";
-								confirmationPanel.destroyTextures();
-								confirmationPanel = getNewConfirmationMessage(confirmationPanel, messageString, ConfirmationButtonType::YesNo, false);
-								confirmationPanel.setShow(true);
-							}
-						}
+						loadGame();
 						break;
 
 					case ButtonOption::Settings:
