@@ -231,6 +231,7 @@ void MenuScreen::loadGame() {
 		confirmationPanel.destroyTextures();
 		confirmationPanel = getNewConfirmationMessage(confirmationPanel, messageString, ConfirmationButtonType::YesNo, false);
 		confirmationPanel.setShow(true);
+		requestingNewGame = true;
 	}
 }
 
