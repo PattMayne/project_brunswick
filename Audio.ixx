@@ -77,6 +77,10 @@ public:
         Mix_PlayChannel(-1, mouseClick, 0);
     }
 
+    void playClickConnect() {
+        Mix_PlayChannel(-1, clickConnect, 0);
+    }
+
     void playAttack() {
         vector<Mix_Chunk*> attacks = {
             attack1, attack2, attack3
@@ -142,6 +146,7 @@ private:
 
     Mix_Chunk* kickDrumSound = NULL;
     Mix_Chunk* mouseClick = NULL;
+    Mix_Chunk* clickConnect = NULL;
     Mix_Chunk* brainDrainSound = NULL;
     Mix_Chunk* swoopSound = NULL;
     Mix_Chunk* walkPlayerSound = NULL;
@@ -200,7 +205,14 @@ AudioBooth::AudioBooth() {
         return;
     }
 
-    mouseClick = Mix_LoadWAV("assets/audio/click.wav");
+    clickConnect = Mix_LoadWAV("assets/audio/click_connect.wav");
+    if (clickConnect == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    mouseClick = Mix_LoadWAV("assets/audio/click_snap.wav");
     if (mouseClick == NULL) {
         printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
         Mix_CloseAudio();
@@ -386,6 +398,11 @@ void AudioBooth::freeAllAudio() {
 
     if (pickupSound3 != NULL) {
         Mix_FreeChunk(pickupSound3);
+    }
+
+
+    if (clickConnect != NULL) {
+        Mix_FreeChunk(clickConnect);
     }
 
 }

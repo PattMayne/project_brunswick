@@ -130,7 +130,9 @@ export class MapScreen {
 		*/
 		MapScreen(string mapSlug) {
 			UI& ui = UI::getInstance();
+			Resources& resources = Resources::getInstance();
 			mapForm = getMapFormFromSlug(mapSlug);
+			bool newMap = false;
 
 			if (mapObjectExists(mapSlug)) {
 				/* Load existing map. */
@@ -153,6 +155,7 @@ export class MapScreen {
 				}
 			}
 			else {
+				newMap = true;
 				/* Create new map. */
 				map = Map(mapForm);
 				createNewMap(map);
@@ -200,8 +203,9 @@ export class MapScreen {
 			gameMenuPanel = ui.createGameMenuPanel(ScreenType::Map);
 			gameMenuPanel.setShow(true);
 
-			messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
-			messagePanel.setShow(false);
+			string introMessage = resources.getMessageText("INTRO");
+			messagePanel = ui.createConfirmationPanel(introMessage, ConfirmationButtonType::OkCancel, false);
+			messagePanel.setShow(newMap);
 
 			passingMessagePanel = ui.createPassingMessagePanel("", true, false);
 			passingMessagePanel.setShow(false);

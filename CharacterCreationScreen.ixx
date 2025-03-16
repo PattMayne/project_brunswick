@@ -593,14 +593,15 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				cout << "\n\nCLICK LIMB MENU \n\n";
 				ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
 				int limbToLoadID = clickStruct.itemID;
-				audioBooth.playClick();
 
 				/* If we sent in a limb id/index: */
 				if (clickStruct.buttonOption == ButtonOption::LoadLimb && limbToLoadID > 0) {
+					audioBooth.playClickConnect();
 					loadLimbAttempt(limbToLoadID);
 				}
 				else if(clickStruct.buttonOption == ButtonOption::Back) {
 					if (creationMode != CreationMode::Review) {
+						audioBooth.playClick();
 						changeCreationMode(CreationMode::Review);
 					}
 					else {
@@ -609,6 +610,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					
 				}
 				else if (clickStruct.buttonOption == ButtonOption::NextPage) {
+					audioBooth.playClick();
 					bool showEquippedLimbs = creationMode == CreationMode::Review;
 					createChooseLimbPanel(showEquippedLimbs, clickStruct.itemID);
 					chooseLimbPanel.setShow(true);
