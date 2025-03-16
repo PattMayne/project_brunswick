@@ -249,7 +249,7 @@ void MenuScreen::handleEvent(SDL_Event& e, GameState& gameState) {
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
 
 			AudioBooth& audioBooth = AudioBooth::getInstance();
-			audioBooth.playKickDrum();
+			audioBooth.playClick();
 
 			cout << "user clicked mouse\n";
 			// These events might change the value of screenToLoad

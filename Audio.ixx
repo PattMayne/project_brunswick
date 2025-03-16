@@ -7,11 +7,9 @@ export module Audio;
 
 using namespace std;
 
+/* FOR REFERENCE ONLY. DO NOT USE. */
 export void playThing() {
-
-
-
-
+    return;
     // Initialize SDL
     if (SDL_Init(SDL_INIT_AUDIO) < 0) {
         printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -43,11 +41,6 @@ export void playThing() {
     // Clean up
     Mix_FreeMusic(music);
     Mix_CloseAudio();
-
-
-
-
-
 }
 
 
@@ -66,14 +59,14 @@ public:
 
     void freeAllAudio() {
         if (kickDrumSound != NULL) {
-            Mix_FreeMusic(music);
+            Mix_FreeMusic(musicForMenu);
             Mix_FreeChunk(kickDrumSound);
         }
 
     }
 
     void playMusic() {
-        if (Mix_PlayMusic(music, -1) == -1) {
+        if (Mix_PlayMusic(musicForMenu, -1) == -1) {
             printf("Failed to play music! SDL_mixer Error: %s\n", Mix_GetError());
         }
     }
@@ -82,45 +75,191 @@ public:
         Mix_PlayChannel(-1, kickDrumSound, 0);
     }
 
+    void playClick() {
+        Mix_PlayChannel(-1, mouseClick, 0);
+    }
+
+    void playAttack() {
+        vector<Mix_Chunk*> attacks = {
+            attack1, attack2, attack3
+        };
+
+        int attackIndex = rand() % attacks.size();
+        Mix_Chunk* attack = attacks[attackIndex];
+
+        Mix_PlayChannel(-1, attack, 0);
+    }
+
+    void playChorus() {
+        vector<Mix_Chunk*> choruses = {
+            chorus1, chorus2, chorus3
+        };
+
+        int chorusIndex = rand() % choruses.size();
+        Mix_Chunk* chorus = choruses[chorusIndex];
+
+        Mix_PlayChannel(-1, chorus, 0);
+    }
+
+    void playNpcWalk() {
+        Mix_PlayChannel(-1, walkNpcSound, 0);
+    }
+
+    void playPlayerWalk() {
+        Mix_PlayChannel(-1, walkPlayerSound, 0);
+    }
+
+    void playSwoop() {
+        Mix_PlayChannel(-1, swoopSound, 0);
+    }
+
+    void playBrainDrain() {
+        Mix_PlayChannel(-1, brainDrainSound, 0);
+    }
+
 
 private:
     /* Constructor is private to prevent outside instantiation */
-    AudioBooth() {
-        cout << "AudioBooth created\n";
-
-        /* Initialize SDL audio. */
-        if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-            printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-            return;
-        }
-
-        // Initialize SDL_mixer
-        if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
-            printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
-            Mix_CloseAudio();
-            return;
-        }
-
-        /* Load WAV files. */
-        kickDrumSound = Mix_LoadWAV("assets/audio/kick_drum.wav");
-        if (kickDrumSound == NULL) {
-            printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
-            Mix_CloseAudio();
-            return;
-        }
-
-        music = Mix_LoadMUS("assets/audio/neptovian.wav");
-        if (music == NULL) {
-            printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
-            Mix_CloseAudio();
-            return;
-        }
-
-
-    }
+    AudioBooth();
     /* private destructor prevents deletion through a pointer to the base class */
     ~AudioBooth() = default;
 
-    Mix_Music* music = NULL;
+    Mix_Music* musicForMenu = NULL;
+    Mix_Music* musicForMap = NULL;
+
     Mix_Chunk* kickDrumSound = NULL;
+    Mix_Chunk* mouseClick = NULL;
+    Mix_Chunk* brainDrainSound = NULL;
+    Mix_Chunk* swoopSound = NULL;
+    Mix_Chunk* walkPlayerSound = NULL;
+    Mix_Chunk* walkNpcSound = NULL;
+    Mix_Chunk* attack1 = NULL;
+    Mix_Chunk* attack2 = NULL;
+    Mix_Chunk* attack3 = NULL;
+    Mix_Chunk* chorus1 = NULL;
+    Mix_Chunk* chorus2 = NULL;
+    Mix_Chunk* chorus3 = NULL;
 };
+
+AudioBooth::AudioBooth() {
+    cout << "AudioBooth created\n";
+
+    /* Initialize SDL audio. */
+    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        return;
+    }
+
+    // Initialize SDL_mixer
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    /* LOAD MUSIC FILES */
+
+    musicForMenu = Mix_LoadMUS("assets/audio/music_neptovian.wav");
+    if (musicForMenu == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    musicForMap = Mix_LoadMUS("assets/audio/music_flutes_1.wav");
+    if (musicForMap == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+
+    /* Load FX files. */
+
+    kickDrumSound = Mix_LoadWAV("assets/audio/kick_drum.wav");
+    if (kickDrumSound == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    mouseClick = Mix_LoadWAV("assets/audio/click.wav");
+    if (mouseClick == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    attack1 = Mix_LoadWAV("assets/audio/attack_1.wav");
+    if (attack1 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    attack2 = Mix_LoadWAV("assets/audio/attack_2.wav");
+    if (attack2 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    attack3 = Mix_LoadWAV("assets/audio/attack_3.wav");
+    if (attack3 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    chorus1 = Mix_LoadWAV("assets/audio/chorus_1.wav");
+    if (chorus1 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    chorus2 = Mix_LoadWAV("assets/audio/chorus_2.wav");
+    if (chorus2 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    chorus3 = Mix_LoadWAV("assets/audio/chorus_3.wav");
+    if (chorus3 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    brainDrainSound = Mix_LoadWAV("assets/audio/brain_drain.wav");
+    if (brainDrainSound == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+
+    swoopSound = Mix_LoadWAV("assets/audio/swoop.wav");
+    if (swoopSound == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+
+    walkPlayerSound = Mix_LoadWAV("assets/audio/walk_player.wav");
+    if (walkPlayerSound == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+
+    walkNpcSound = Mix_LoadWAV("assets/audio/walk_npc.wav");
+    if (walkNpcSound == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+}
