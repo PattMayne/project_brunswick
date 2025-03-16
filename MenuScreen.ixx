@@ -138,6 +138,8 @@ void MenuScreen::run() {
 		}
 	}
 
+	audioBooth.stopMusic();
+
 	/* set the next screen to load */
 	gameState.setScreenStruct(screenToLoadStruct);
 }

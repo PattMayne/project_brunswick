@@ -69,6 +69,7 @@ import UI;
 import CharacterClasses;
 import BattleClasses;
 import Database;
+import Audio;
 
 using namespace std;
 
@@ -971,6 +972,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						* After the NEXT animation we'll execute the results.
 						*/
 						UI& ui = UI::getInstance();
+						AudioBooth& audioBooth = AudioBooth::getInstance();
 						playerAttackLoaded.targetLimbId = clickStruct.itemID;
 						animateAttack = true;
 						animationCountdown = 1000;
@@ -984,6 +986,11 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						playerStatsPanel.setShow(true);
 						npcStatsPanel.setShow(true);
 						npcLimbsPanel.setShow(false);
+
+						/* Play swoop before the advance begins. Swoop is the sound of advance, not impact. */
+						if (playerAttackLoaded.attackType == AttackType::Swoop || playerAttackLoaded.attackType == AttackType::Steal) {
+							audioBooth.playSwoop();
+						}
 					}
 					else if (clickStruct.buttonOption == ButtonOption::Back) {
 						/* unload attack, reset panels. */
@@ -1072,6 +1079,8 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 	int clickID = clickStruct.itemID;
 
 	UI& ui = UI::getInstance();
+	AudioBooth& audioBooth = AudioBooth::getInstance();
+
 	cout << "\nBATTLE MOVE!\n";
 
 	/* Check which attack. */
@@ -1112,7 +1121,6 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 				npcLimbsPanel.setShow(true);
 				playerStatsPanel.setShow(false);
 				npcStatsPanel.setShow(false);
-
 			}
 			else if (aStruct.attackType == AttackType::BrainDrain) {
 
@@ -1142,7 +1150,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 				playerTurnPanel.setShow(false);
 
 				cout << "BRAIN DRAIN!\n";
-
+				audioBooth.playBrainDrain();
 			}
 			else if (aStruct.attackType == AttackType::Steal) {
 
@@ -1165,7 +1173,6 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 						break;
 					}
 				}
-				
 			}
 			else if (aStruct.attackType == AttackType::RunAway) {
 				/* 
@@ -1221,6 +1228,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 					confirmationPanel.destroyTextures();
 					confirmationPanel = getNewConfirmationMessage(confirmationPanel, ranAwayString, ConfirmationButtonType::OkCancel, false);
 					confirmationPanel.setShow(true);
+					audioBooth.playSwoop();
 				}
 				else {
 					string failMessage = battle.getPlayerCharacter().getName() + " failed to run away!";
@@ -1501,6 +1509,9 @@ void BattleScreen::calculateNpcBrainDrain() {
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 
+	AudioBooth& audioBooth = AudioBooth::getInstance();
+	audioBooth.playBrainDrain();
+
 	/* Calculate the attack. */
 	int attack = 0;
 	int numberOfEquippedLimbs = 0;
@@ -1668,6 +1679,12 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 
 	Limb& targetLimb = targetLimbId > 0 ? npc.getLimbById(targetLimbId) : npcLimbs[0];
+
+	if (!isSwoop) {
+		/* Play non-swoop effects after the advance is finished. */
+		AudioBooth& audioBooth = AudioBooth::getInstance();
+		audioBooth.playAttack();
+	}
 
 	npcLimbsPanel.setShow(false);
 
@@ -1870,6 +1887,9 @@ void BattleScreen::calculateNpcDamageAttackStruct(int sourceLimbId, int targetLi
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 	Limb& targetLimb = targetLimbId > 0 ? playerCharacter.getLimbById(targetLimbId) : playerLimbs[0];
+
+	AudioBooth& audioBooth = AudioBooth::getInstance();
+	audioBooth.playAttack();
 
 	/*
 	* Calculate how much of which attributes to take from which limbs.

@@ -62,7 +62,6 @@ public:
             Mix_FreeMusic(musicForMenu);
             Mix_FreeChunk(kickDrumSound);
         }
-
     }
 
     void playMusic() {
@@ -101,6 +100,17 @@ public:
         Mix_PlayChannel(-1, chorus, 0);
     }
 
+    void playPickupSound() {
+        vector<Mix_Chunk*> pickupSounds = {
+            pickupSound1, pickupSound2, pickupSound3
+        };
+
+        int soundIndex = rand() % pickupSounds.size();
+        Mix_Chunk* sound = pickupSounds[soundIndex];
+
+        Mix_PlayChannel(-1, sound, 0);
+    }
+
     void playNpcWalk() {
         Mix_PlayChannel(-1, walkNpcSound, 0);
     }
@@ -115,6 +125,10 @@ public:
 
     void playBrainDrain() {
         Mix_PlayChannel(-1, brainDrainSound, 0);
+    }
+
+    void stopMusic() {
+        Mix_HaltMusic();
     }
 
 
@@ -139,6 +153,10 @@ private:
     Mix_Chunk* chorus1 = NULL;
     Mix_Chunk* chorus2 = NULL;
     Mix_Chunk* chorus3 = NULL;
+    Mix_Chunk* pickupSound1 = NULL;
+    Mix_Chunk* pickupSound2 = NULL;
+    Mix_Chunk* pickupSound3 = NULL;
+
 };
 
 AudioBooth::AudioBooth() {
@@ -232,6 +250,28 @@ AudioBooth::AudioBooth() {
         return;
     }
 
+
+    pickupSound1 = Mix_LoadWAV("assets/audio/flute_roll_1.wav");
+    if (pickupSound1 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    pickupSound2 = Mix_LoadWAV("assets/audio/flute_roll_2.wav");
+    if (pickupSound2 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    pickupSound3 = Mix_LoadWAV("assets/audio/flute_roll_3.wav");
+    if (pickupSound3 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
     brainDrainSound = Mix_LoadWAV("assets/audio/brain_drain.wav");
     if (brainDrainSound == NULL) {
         printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
@@ -262,4 +302,17 @@ AudioBooth::AudioBooth() {
         Mix_CloseAudio();
         return;
     }
+
+    walkNpcSound = Mix_LoadWAV("assets/audio/walk_npc.wav");
+    if (walkNpcSound == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    /* Set the volume. */
+
+    int volume = 52; /* range: 0 to 128. */
+    Mix_VolumeMusic(volume);
+    Mix_Volume(-1, volume);
 }

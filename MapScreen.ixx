@@ -90,6 +90,7 @@ import LimbFormMasterList;
 import UI;
 import MapClasses;
 import Database;
+import Audio;
 
 using namespace std;
 
@@ -610,6 +611,7 @@ export void MapScreen::run() {
 	/* singletons */
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
+	AudioBooth& audioBooth = AudioBooth::getInstance();
 
 	/* Timeout data */
 	const int TARGET_FPS = 120;
@@ -637,8 +639,6 @@ export void MapScreen::run() {
 		frameStartTime = SDL_GetTicks();
 		bool startNpcAnimation = false;
 
-
-		
 		if (animate && animationCountdown < 1) {
 			/* Animation counter has run out but animate is still true (final frame of animation).
 			* We check collisions on the final frame.
@@ -683,6 +683,13 @@ export void MapScreen::run() {
 					trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
 					trackerPanel.setShow(true);
 				}
+
+				if (landmarkCollided) {
+					audioBooth.playChorus();
+				}
+				else if (playerLimbCollision) {
+					audioBooth.playPickupSound();
+				}
 				 
 			}
 			else if (animationType == AnimationType::NPC) {
@@ -717,6 +724,7 @@ export void MapScreen::run() {
 				passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, false);
 				passingMessagePanel.setShow(true);
 				passingMessageCountdown = 3;
+				audioBooth.playPickupSound();
 			}
 
 			if (playerNpcCollision) {
@@ -757,6 +765,9 @@ export void MapScreen::run() {
 		if (animate) { decrementCountdown(); }
 
 		if (startNpcAnimation) {
+
+			audioBooth.playNpcWalk();
+
 			/* First move the NPCs and the Limbs */
 
 			/*
@@ -2492,6 +2503,7 @@ void MapScreen::moveCharacter(MapDirection direction) {
 	/* Change the character's position */
 	bool moved = map.getPlayerCharacter().move(direction);
 	if (moved) {
+		AudioBooth& audioBooth = AudioBooth::getInstance();
 		/* Change the block to draw based on the character's new position. */
 		setDrawStartBlock();
 		/* Instead of immediately displaying the move, we start a move animation. */
@@ -2506,7 +2518,7 @@ void MapScreen::moveCharacter(MapDirection direction) {
 				--passingMessageCountdown;
 			}
 		}
-		
+		audioBooth.playPlayerWalk();
 	}
 }
 
@@ -2570,6 +2582,9 @@ void MapScreen::waitTurn() {
 	waitSpin = true;
 	map.getPlayerCharacter().updateLastBlock();
 	startAnimationCountdown(AnimationType::Player);
+
+	AudioBooth& audioBooth = AudioBooth::getInstance();
+	audioBooth.playSwoop();
 }
 
 
