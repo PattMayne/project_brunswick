@@ -70,6 +70,7 @@ import GameState;
 import Resources;
 import UI;
 import Database;
+import Audio;
 
 using namespace std;
 
@@ -519,10 +520,12 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 			/* These events might change the value of screenToLoad. */
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
+			AudioBooth& audioBooth = AudioBooth::getInstance();
 
 			if (messagePanel.getShow() && messagePanel.isInPanel(mouseX, mouseY)) {
 				/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
 				ButtonClickStruct clickStruct = messagePanel.checkButtonClick(mouseX, mouseY);
+				audioBooth.playClick();
 
 				switch (clickStruct.buttonOption) {
 				case ButtonOption::Agree:
@@ -536,6 +539,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				cout << "\n\nCLICKED REVIEW MENU \n\n";
 				ButtonClickStruct clickStruct = reviewModePanel.checkButtonClick(mouseX, mouseY);
 				string suitSavedString = "Suit Saved.";
+				audioBooth.playClick();
 
 				UI& ui = UI::getInstance();
 				/* see what button might have been clicked : */
@@ -589,6 +593,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				cout << "\n\nCLICK LIMB MENU \n\n";
 				ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
 				int limbToLoadID = clickStruct.itemID;
+				audioBooth.playClick();
 
 				/* If we sent in a limb id/index: */
 				if (clickStruct.buttonOption == ButtonOption::LoadLimb && limbToLoadID > 0) {
@@ -613,6 +618,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				cout << "\n\nCLICK LOADED LIMB MENU \n\n";
 				ButtonClickStruct clickStruct = limbLoadedPanel.checkButtonClick(mouseX, mouseY);
 				UI& ui = UI::getInstance();
+				audioBooth.playClick();
 
 				/* see what button might have been clicked : */
 				switch (clickStruct.buttonOption) {

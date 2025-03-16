@@ -1427,8 +1427,8 @@ vector<AttackStruct> Character::getAttacks() {
 
 	cout << "Dominant node is " << theColor << " with " << dNodeScores[dominantNode] << " limbs\n";
 
-	if (headCount > 1) {
-		/* Two heads means BRAIN DRAIN. */
+	if (headCount > 0) {
+		/* One head means BRAIN DRAIN. */
 
 		AttributeType attTypeHP = AttributeType::HP;
 		AttributeType attTypeIntel = AttributeType::Intelligence;

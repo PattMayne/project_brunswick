@@ -893,6 +893,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
 			int mouseX, mouseY;
 			SDL_GetMouseState(&mouseX, &mouseY);
+			AudioBooth& audioBooth = AudioBooth::getInstance();
 
 			/* Check if confirmation panel is shown first (should deactivate other panels. */
 
@@ -909,7 +910,9 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 					cout << "\n\nCLICK CONFIRMATION PANEL \n\n";
 
 					if (clickStruct.buttonOption == ButtonOption::Agree) {
+						audioBooth.playClick();
 						BattleStatus battleStatus = battle.getBattleStatus();
+
 						if (battleStatus == BattleStatus::PlayerDefeat ||
 							battleStatus == BattleStatus::PlayerVictory ||
 							battleStatus == BattleStatus::RebuildRequired ||
@@ -924,11 +927,14 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 
 						confirmationPanel.setShow(false);
 					}
+					else if (clickStruct.buttonOption == ButtonOption::Refuse) {
+						audioBooth.playClick();
+					}
 				}				
 
 			}
 			else {
-				cout << "user clicked mouse\n";
+				audioBooth.playClick();
 				if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
 					/* 
 					* 
@@ -967,6 +973,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 
 					/* It might be the "back" button (but usually won't be so deal with that first). */
 					if (clickStruct.buttonOption == ButtonOption::LoadLimb) {
+						audioBooth.playClick();
 						/* Do the animation.
 						* When it counts down we'll launch the calculations.
 						* After the NEXT animation we'll execute the results.
@@ -993,6 +1000,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						}
 					}
 					else if (clickStruct.buttonOption == ButtonOption::Back) {
+						audioBooth.playClick();
 						/* unload attack, reset panels. */
 						playerTurnPanel.setShow(true);
 						npcLimbsPanel.setShow(false);
@@ -1508,9 +1516,6 @@ void BattleScreen::calculateNpcBrainDrain() {
 	Character& npc = battle.getNpc();
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
-
-	AudioBooth& audioBooth = AudioBooth::getInstance();
-	audioBooth.playBrainDrain();
 
 	/* Calculate the attack. */
 	int attack = 0;
@@ -2712,6 +2717,10 @@ void BattleScreen::launchNpcTurn() {
 	else if(attackType == AttackType::BrainDrain) {
 
 		UI& ui = UI::getInstance();
+
+		AudioBooth& audioBooth = AudioBooth::getInstance();
+		audioBooth.playBrainDrain();
+
 		npcAttackLoaded.targetLimbId = targetLimbIds[rand() % targetLimbIds.size()];
 		animateBrainDrain = true;
 		headRotation = 0;

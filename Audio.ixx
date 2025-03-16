@@ -57,15 +57,14 @@ public:
         return instance;
     }
 
-    void freeAllAudio() {
-        if (kickDrumSound != NULL) {
-            Mix_FreeMusic(musicForMenu);
-            Mix_FreeChunk(kickDrumSound);
-        }
-    }
+    void freeAllAudio();
 
+    /* TO DO: This should take a screenType parameter so we can play appropriate music. */
     void playMusic() {
-        if (Mix_PlayMusic(musicForMenu, -1) == -1) {
+        vector<Mix_Music*> musicFiles = { musicForMap , musicForMenu };
+        Mix_Music* music = musicFiles[rand() % musicFiles.size()];
+
+        if (Mix_PlayMusic(music, -1) == -1) {
             printf("Failed to play music! SDL_mixer Error: %s\n", Mix_GetError());
         }
     }
@@ -303,16 +302,90 @@ AudioBooth::AudioBooth() {
         return;
     }
 
-    walkNpcSound = Mix_LoadWAV("assets/audio/walk_npc.wav");
-    if (walkNpcSound == NULL) {
-        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
-        Mix_CloseAudio();
-        return;
-    }
 
     /* Set the volume. */
 
     int volume = 52; /* range: 0 to 128. */
     Mix_VolumeMusic(volume);
     Mix_Volume(-1, volume);
+}
+
+void AudioBooth::freeAllAudio() {
+
+    if (musicForMenu != NULL) {
+        Mix_FreeMusic(musicForMenu);
+    }
+
+    if (musicForMap != NULL) {
+        Mix_FreeMusic(musicForMap);
+    }
+
+    if (kickDrumSound != NULL) {
+        Mix_FreeChunk(kickDrumSound);
+    }
+
+    if (chorus1 != NULL) {
+        Mix_FreeChunk(chorus1);
+    }
+
+    if (chorus2 != NULL) {
+        Mix_FreeChunk(chorus2);
+    }
+
+    if (chorus3 != NULL) {
+        Mix_FreeChunk(chorus3);
+    }
+
+    if (pickupSound1 != NULL) {
+        Mix_FreeChunk(pickupSound1);
+    }
+
+    if (pickupSound2 != NULL) {
+        Mix_FreeChunk(pickupSound2);
+    }
+
+    if (pickupSound3 != NULL) {
+        Mix_FreeChunk(pickupSound3);
+    }
+
+    if (brainDrainSound != NULL) {
+        Mix_FreeChunk(brainDrainSound);
+    }
+
+    if (swoopSound != NULL) {
+        Mix_FreeChunk(swoopSound);
+    }
+
+    if (walkPlayerSound != NULL) {
+        Mix_FreeChunk(walkPlayerSound);
+    }
+
+    if (walkNpcSound != NULL) {
+        Mix_FreeChunk(walkNpcSound);
+    }
+
+    if (attack1 != NULL) {
+        Mix_FreeChunk(attack1);
+    }
+
+    if (attack2 != NULL) {
+        Mix_FreeChunk(attack2);
+    }
+
+    if (attack3 != NULL) {
+        Mix_FreeChunk(attack3);
+    }
+
+    if (pickupSound1 != NULL) {
+        Mix_FreeChunk(pickupSound1);
+    }
+
+    if (pickupSound2 != NULL) {
+        Mix_FreeChunk(pickupSound2);
+    }
+
+    if (pickupSound3 != NULL) {
+        Mix_FreeChunk(pickupSound3);
+    }
+
 }

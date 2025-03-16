@@ -439,6 +439,9 @@ bool MapScreen::ensurePlayerHasSuit() {
 
 					if (slugsToBestow.size() > 0) {
 						UI& ui = UI::getInstance();
+						AudioBooth& audioBooth = AudioBooth::getInstance();
+						audioBooth.playChorus();
+
 						sqlite3* db = startTransaction();
 						vector<Limb> newLimbs = createLimbsAtShrineInTrans(playerCharacter.getId(), map.getSlug(), slugsToBestow, db);
 
@@ -684,10 +687,7 @@ export void MapScreen::run() {
 					trackerPanel.setShow(true);
 				}
 
-				if (landmarkCollided) {
-					audioBooth.playChorus();
-				}
-				else if (playerLimbCollision) {
+				if (playerLimbCollision) {
 					audioBooth.playPickupSound();
 				}
 				 
@@ -1739,7 +1739,10 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 			vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 			sqlite3* db = startTransaction();
 
-			if (collisionInfo.type == LandmarkType::Shrine) {				
+			if (collisionInfo.type == LandmarkType::Shrine) {
+				AudioBooth& audioBooth = AudioBooth::getInstance();
+				audioBooth.playChorus();
+
 				vector<string> limbSlugsToHeal;
 				unordered_set<string> slugsToDeleteFromPlayer;
 
@@ -2646,32 +2649,39 @@ void MapScreen::handleMousedown(SDL_Event& e, bool& running) {
 	if (gameMenuPanel.getShow() && gameMenuPanel.isInPanel(mouseX, mouseY)) {
 		ButtonClickStruct clickStruct = gameMenuPanel.checkButtonClick(mouseX, mouseY);
 		UI& ui = UI::getInstance();
+		AudioBooth& audioBooth = AudioBooth::getInstance();
 		/* see what button might have been clicked : */
 		switch (clickStruct.buttonOption) {
 		case ButtonOption::Build:
 			screenToLoadStruct.screenType = ScreenType::CharacterCreation;
 			running = false;
+			audioBooth.playClick();
 			break;
 		case ButtonOption::Exit:
 			screenToLoadStruct.screenType = ScreenType::Menu;
 			running = false;
+			audioBooth.playClick();
 			break;
 		default:
 			cout << "ERROR\n";
+			audioBooth.playClick();
 		}
 	} else if (messagePanel.getShow() && messagePanel.isInPanel(mouseX, mouseY)) {
 		/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
 		ButtonClickStruct clickStruct = messagePanel.checkButtonClick(mouseX, mouseY);
+		AudioBooth& audioBooth = AudioBooth::getInstance();
 
 		switch (clickStruct.buttonOption) {
 		case ButtonOption::Agree:
 			messagePanel.setShow(false);
 			/* Find the context. */
+			audioBooth.playClick();
 
 
 			break;
 		case ButtonOption::Refuse:
 			messagePanel.setShow(false);
+			audioBooth.playClick();
 			break;
 		}
 	}
