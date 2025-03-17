@@ -1,4 +1,4 @@
-# Land of Limbs
+# Modular Action Puzzle Game
 
 This is a **work in progress.** It's an action-puzzle game with modular characters made from limbs that snap together.
 
