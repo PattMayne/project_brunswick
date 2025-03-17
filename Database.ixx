@@ -2079,18 +2079,8 @@ export int createPlayerCharacterOrGetID() {
 * 
 */
 
-
-
-export void updatePlayerMapLocation(string slugString, Point position) {
-    sqlite3* db;
+export void updatePlayerMapLocationInTrans(string slugString, Point position, sqlite3* db) {
     const char* mapSlug = slugString.c_str();
-
-    /* Open database. */
-    int dbFailed = sqlite3_open(dbPath(), &db);
-    if (dbFailed != 0) {
-        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
-        return;
-    }
 
     /* Create statement for updating player position in a Map table entry in the DB. */
     const char* insertSQL = "UPDATE map SET character_x = ?, character_y = ? WHERE slug = ?;";
@@ -2118,7 +2108,13 @@ export void updatePlayerMapLocation(string slugString, Point position) {
 
     /* Finalize statement. */
     sqlite3_finalize(statement);
-    sqlite3_close(db);
+}
+
+
+export void updatePlayerMapLocation(string slugString, Point position) {
+    sqlite3* db = startTransaction();
+    updatePlayerMapLocationInTrans(slugString, position, db);
+    commitTransactionAndCloseDatabase(db);
 }
 
 /*
@@ -2727,7 +2723,8 @@ export bool mapObjectExists(string mapSlug) {
 }
 
 
-export bool unscrambleLimb(Limb& limb) {
+export bool unscrambleLimbInTrans(Limb& limb, sqlite3* db) {
+
     limb.unscramble();
     int limbId = limb.getId();
 
@@ -2736,14 +2733,6 @@ export bool unscrambleLimb(Limb& limb) {
     }
 
     bool success = false;
-    sqlite3* db;
-
-    /* Open database. */
-    int dbFailed = sqlite3_open(dbPath(), &db);
-    if (dbFailed != 0) {
-        cerr << "Error opening DB: " << sqlite3_errmsg(db) << endl;
-        return success;
-    }
 
     /* Create the statement/ */
     const char* updateSQL = "UPDATE limb SET is_unscrambled = 1 WHERE id = ?;";
@@ -2767,7 +2756,16 @@ export bool unscrambleLimb(Limb& limb) {
 
     /* Finalize statement and close database. */
     sqlite3_finalize(statement);
-    sqlite3_close(db);
+
+    return success;
+}
+
+
+export bool unscrambleLimb(Limb& limb) {
+
+    sqlite3* db = startTransaction();
+    bool success = unscrambleLimbInTrans(limb, db);
+    commitTransactionAndCloseDatabase(db);
 
     return success;
 }

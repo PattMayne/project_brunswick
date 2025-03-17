@@ -199,8 +199,22 @@ export class MapScreen {
 					playerCharacter.setTexture(characterTexture);
 				}
 			}
+			MapCharacter& playerCharacter = map.getPlayerCharacter();
 			AudioBooth& audioBooth = AudioBooth::getInstance();
-			audioBooth.playChorus();
+
+			bool playChorus = false;
+			for (Landmark& landmark : map.getLandmarks()) {
+				if (playerCharacter.getPosition().equals(landmark.getPosition())) {
+					playChorus = true;
+				}
+			}
+
+			if (playChorus) {
+				audioBooth.playChorus();
+			}
+			else {
+				audioBooth.playPickupSound();
+			}
 
 			gameMenuPanel = ui.createGameMenuPanel(ScreenType::Map);
 			gameMenuPanel.setShow(true);
@@ -235,7 +249,7 @@ export class MapScreen {
 			homeBaseRange = 5;
 			waitSpin = false;
 
-			statsPanel = ui.createStatsPanel(ScreenType::Map, map.getPlayerCharacter().getCharStatsData());
+			statsPanel = ui.createStatsPanel(ScreenType::Map, playerCharacter.getCharStatsData());
 			statsPanel.setShow(true);
 			pointToTrack = Point(-1, -1);
 
@@ -277,7 +291,7 @@ export class MapScreen {
 		bool checkPlayerLimbCollision(); /* Limb-on-player collision. */
 		bool checkLimbOnLimbCollision(); /* Limb collides with Limb to make NPC. */
 		bool checkNpcOnLimbCollision();
-		bool checkLandmarkCollision(bool& running, MapCharacter& playerCharacter);
+		bool checkLandmarkCollision(bool& running, MapCharacter& playerCharacter, bool isFirstLoad);
 		bool checkNpcOnNpcCollision();
 
 		void run();
@@ -434,6 +448,8 @@ bool MapScreen::ensurePlayerHasSuit() {
 					playerCharacter.setHomePosition(latestLandmarkPoint);
 					playerCharacter.moveToPosition(latestLandmarkPoint);
 					Character& suit = map.getSuitFromLandmarkId(latestLandmarkId);
+					sqlite3* db = startTransaction();
+					updatePlayerMapLocationInTrans(map.getSlug(), latestLandmarkPoint, db);
 
 					unordered_set<string> slugsToBestow = {};
 					for (Limb& limb : suit.getLimbs()) {
@@ -441,12 +457,18 @@ bool MapScreen::ensurePlayerHasSuit() {
 							/* Player can have this limb. */
 							slugsToBestow.insert(limb.getForm().slug);
 						}
+						else {
+							if (playerCharacter.limbsContainId(limb.getId())) {
+								/* Player had this limb, so unscramble it. */
+								unscrambleLimbInTrans(limb, db);
+								limb.unscramble();
+							}
+						}
 					}
 
 					if (slugsToBestow.size() > 0) {
 						UI& ui = UI::getInstance();
 
-						sqlite3* db = startTransaction();
 						vector<Limb> newLimbs = createLimbsAtShrineInTrans(playerCharacter.getId(), map.getSlug(), slugsToBestow, db);
 
 						for (Limb& newLimb : newLimbs) {
@@ -468,7 +490,6 @@ bool MapScreen::ensurePlayerHasSuit() {
 						playerCharacter.equipLimbsDefault();
 						playerCharacter.setTexture(playerCharacter.createAvatar());
 						updateCharacterLimbsInTransaction(playerCharacter.getId(), playerCharacter.getAnchorLimbId(), playerLimbs, db);
-						commitTransactionAndCloseDatabase(db);
 
 						string message = playerCharacter.getName() + " is resurrected at the " + suit.getName() + " shrine.";
 						passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, true);
@@ -478,6 +499,7 @@ bool MapScreen::ensurePlayerHasSuit() {
 						playerHasSuit = true;
 					}
 
+					commitTransactionAndCloseDatabase(db);
 					break;
 				}
 			}
@@ -673,7 +695,7 @@ export void MapScreen::run() {
 				lastDrawStartY = drawStartY;
 
 				/* collisions with LANDMARK: */
-				landmarkCollided = checkLandmarkCollision(running, playerCharacter); /* Player landed on landmark. */
+				landmarkCollided = checkLandmarkCollision(running, playerCharacter, false); /* Player landed on landmark. */
 				playerLimbCollision = checkPlayerLimbCollision(); /* Player collects limb. */
 
 				 /* Collisions with NPCs */
@@ -1732,7 +1754,7 @@ void MapScreen::decrementCountdown() {
 		animationCountdown = 0;}
 }
 
-bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharacter) {
+bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharacter, bool isFirstLoad) {
 	UI& ui = UI::getInstance();
 	bool landmarkCollided = false;
 	for (Landmark& landmark : map.getLandmarks()) {
