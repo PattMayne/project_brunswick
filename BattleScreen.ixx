@@ -129,17 +129,6 @@ public:
 		getBackgroundTexture(ui);
 		createTitleTexture(ui);
 
-		settingsPanel = ui.createSettingsPanel(ScreenType::Map);
-		settingsPanel.setShow(false);
-
-		unordered_map<string, ButtonOption> buttonOptions = {
-			{"OPTIONS", ButtonOption::Options },
-			{"EXIT", ButtonOption::Exit }
-		};
-
-		optionsMenu = ui.createGeneralMenuPanel(buttonOptions, false);
-		optionsMenu.setShow(true);
-
 		showTitle = true;
 		titleCountdown = 140;
 
@@ -153,6 +142,8 @@ public:
 		playerCharacter.setTexture(playerCharacter.createAvatar());
 		npc.setTexture(npc.createAvatar());
 
+		createMainPanels(ui, playerCharacter, npc);
+
 		/* Get the draw start points (WILL CHANGE after we implement button panels.) */
 		int playerAvatarWidth, playerAvatarHeight, npcAvatarWidth, npcAvatarHeight;
 		SDL_QueryTexture(playerCharacter.getTexture(), NULL, NULL, &playerAvatarWidth, &playerAvatarHeight);
@@ -165,10 +156,12 @@ public:
 		SDL_Rect npcAnchorLimbDrawRect = npc.getAnchorLimb().getDrawRect();
 
 		int playerX = ((windowWidth / 2) - playerAvatarWidth + playerAnchorLimbDrawRect.x) - 100 ;
-		int playerY = (windowHeight / 2) - (playerAvatarHeight / 2) + playerAnchorLimbDrawRect.y;
+		int playerY = (windowHeight / 2) - (playerAvatarHeight / 2) + (npcAnchorLimbDrawRect.y / 2);
 
-		int npcX = (windowWidth / 2) + npcAnchorLimbDrawRect.x + 100;
-		int npcY = (windowHeight / 2) - (npcAvatarHeight / 2) + npcAnchorLimbDrawRect.y;
+		//int npcX = (windowWidth / 2) + npcAnchorLimbDrawRect.x + 100;
+		//int npcY = (windowHeight / 2) - (npcAvatarHeight / 2) + npcAnchorLimbDrawRect.y;
+		int npcX = windowWidth - (npcAvatarWidth + 100 + optionsMenu.getRect().w);
+		int npcY = (windowHeight / 2) - (npcAvatarHeight / 2) + (npcAnchorLimbDrawRect.y / 2);
 
 		playerDrawStartPoint = Point( playerX, playerY );
 		npcDrawStartPoint = Point(npcX, npcY);
@@ -185,28 +178,6 @@ public:
 		bobbingMeter = 0;
 		bobbingMax = 20;
 		reverseBob = false;
-
-		playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
-		playerStatsPanel.setShow(true);
-		SDL_Rect playerStatsPanelRect = playerStatsPanel.getRect();
-
-		npcStatsPanel = ui.createStatsPanel(ScreenType::Battle, npc.getCharStatsData());
-		npcStatsPanel.setShow(true);
-
-		playerAttackStructs = playerCharacter.getAttacks();
-		npcAttackStructs = npc.getAttacks();
-
-		playerTurnPanel = ui.createBattlePanel(playerAttackStructs, playerStatsPanelRect.h);
-		playerTurnPanel.setShow(true);
-
-		confirmationPanel = ui.createConfirmationPanel("Ready for Battle!", ConfirmationButtonType::OkCancel, false);
-		confirmationPanel.setShow(true);
-
-		passingMessagePanel = ui.createPassingMessagePanel("", true, true);
-		passingMessagePanel.setShow(false);
-
-		createNpcLimbPanel();
-		createPlayerLimbPanels();
 
 		flashingLimbCountdown = 10;
 		drawFlashingLimb = true;
@@ -232,6 +203,7 @@ public:
 	void calculatePlayerBrainDrain();
 	void calculateNpcBrainDrain();
 	void calculatePlayerSteal();
+	void createMainPanels(UI& ui, Character& playerCharacter, Character& npc);
 
 	ScreenType getScreenType() { return screenType; }
 	void run();
@@ -338,6 +310,41 @@ private:
 	bool running;
 };
 
+void BattleScreen::createMainPanels(UI& ui, Character& playerCharacter, Character& npc) {
+	playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
+	playerStatsPanel.setShow(true);
+	SDL_Rect playerStatsPanelRect = playerStatsPanel.getRect();
+
+	npcStatsPanel = ui.createStatsPanel(ScreenType::Battle, npc.getCharStatsData());
+	npcStatsPanel.setShow(true);
+
+	playerAttackStructs = playerCharacter.getAttacks();
+	npcAttackStructs = npc.getAttacks();
+
+	playerTurnPanel = ui.createBattlePanel(playerAttackStructs, playerStatsPanelRect.h);
+	playerTurnPanel.setShow(true);
+
+	confirmationPanel = ui.createConfirmationPanel("Ready for Battle!", ConfirmationButtonType::OkCancel, false);
+	confirmationPanel.setShow(true);
+
+	passingMessagePanel = ui.createPassingMessagePanel("", true, true);
+	passingMessagePanel.setShow(false);
+
+
+	settingsPanel = ui.createSettingsPanel(ScreenType::Map);
+	settingsPanel.setShow(false);
+
+	unordered_map<string, ButtonOption> buttonOptions = {
+		{"OPTIONS", ButtonOption::Options },
+		{"EXIT", ButtonOption::Exit }
+	};
+
+	optionsMenu = ui.createGeneralMenuPanel(buttonOptions, false);
+	optionsMenu.setShow(true);
+
+	createNpcLimbPanel();
+	createPlayerLimbPanels();
+}
 
 
 void BattleScreen::createNpcLimbPanel() {
@@ -928,8 +935,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 					else if (clickStruct.buttonOption == ButtonOption::Refuse) {
 						audioBooth.playClick();
 					}
-				}				
-
+				}
 			}
 			else {
 				audioBooth.playClick();

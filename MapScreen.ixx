@@ -115,6 +115,7 @@ const int DRAW_TEST_SUITS_IN_CORNER = false;
 * If player collides with NPC, go to Battle Screen.
 * If limbs collide they form a hostile NPC.
 * NPCs can pick up new limbs, which are either equipped or stored in inventory.
+* When two NPCs collide, they are merged into a new NPC (old ones are both destroyed).
 * 
 * Movements are animated, during which time the game is paused and input is ignored.
 * Limb-acquisition and NPC-formation are also animated, but this does not pause the game.
@@ -1970,15 +1971,17 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 							for (Limb& newLimb : newLimbs) {
 								playerCharacter.addLimb(newLimb);
 
-								SDL_Rect diffRect = { 0, 0, 0, 0 };
-								playerCharacter.getAcquiredLimbStructs().emplace_back(
-									newLimb.getTexture(),
-									limbCollisionCountdown,
-									newLimb.getRotationAngle(),
-									diffRect,
-									7,
-									newLimb.getName()
-								);
+								if (!unscrambledSomething) {
+									SDL_Rect diffRect = { 0, 0, 0, 0 };
+									playerCharacter.getAcquiredLimbStructs().emplace_back(
+										newLimb.getTexture(),
+										limbCollisionCountdown,
+										newLimb.getRotationAngle(),
+										diffRect,
+										7,
+										newLimb.getName()
+									);
+								}
 							}
 
 							/* Set the latest landmark flag. This can ONLY be your new home IF you have unscrambled at least one limb here. */
