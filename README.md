@@ -10,7 +10,7 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 
 **Language:** C++, JSON, SQL
 
-**Libraries:** SDL2, SDL_TTF, SDL_Image, nlohmann (JSON), SQLite3
+**Libraries:** SDL2, SDL_TTF, SDL_Image, SDL_Mixer, nlohmann (JSON), SQLite3
  
 ## TO DO:
 
