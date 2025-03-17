@@ -2393,7 +2393,6 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		* ALSO check for VICTORY CONDITIONS.
 		*/
 		npc.clearSuit();
-
 		for (Limb& limb : npcLimbs) {
 			if (removedIds.count(limb.getId()) > 0) {
 				cout << "Removed limb STILL INSIDE NPC LIST (erase didn't work) 22222 \n";
@@ -2402,10 +2401,14 @@ bool BattleScreen::applyPlayerAttackEffects() {
 			updateLimbBattleEffectsInTransaction(limb, db);
 		}
 
+
 		if (limbIdsToEquip.size() > 0) {
+			npc.sortLimbsByNumberOfJoints();
 			bool keepEquippingLimbs = true;
 
-			for (Limb& limb : npc.getLimbs()) {
+			for (int i = 0; i < npcLimbs.size(); ++i) {
+				Limb& limb = npcLimbs[i];
+
 				if (keepEquippingLimbs) {
 					for (int limbIdToEquip : limbIdsToEquip) {
 						if (limb.getId() == limbIdToEquip) {

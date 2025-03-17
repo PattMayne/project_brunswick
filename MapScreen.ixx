@@ -199,6 +199,8 @@ export class MapScreen {
 					playerCharacter.setTexture(characterTexture);
 				}
 			}
+			AudioBooth& audioBooth = AudioBooth::getInstance();
+			audioBooth.playChorus();
 
 			gameMenuPanel = ui.createGameMenuPanel(ScreenType::Map);
 			gameMenuPanel.setShow(true);
@@ -443,8 +445,6 @@ bool MapScreen::ensurePlayerHasSuit() {
 
 					if (slugsToBestow.size() > 0) {
 						UI& ui = UI::getInstance();
-						AudioBooth& audioBooth = AudioBooth::getInstance();
-						audioBooth.playChorus();
 
 						sqlite3* db = startTransaction();
 						vector<Limb> newLimbs = createLimbsAtShrineInTrans(playerCharacter.getId(), map.getSlug(), slugsToBestow, db);
