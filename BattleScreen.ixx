@@ -151,8 +151,7 @@ public:
 		playerCharacter.buildDrawLimbList();
 
 		playerCharacter.setTexture(playerCharacter.createAvatar());
-		SDL_Texture* newTexture = npc.createAvatar();
-		npc.setTexture(newTexture);
+		npc.setTexture(npc.createAvatar());
 
 		/* Get the draw start points (WILL CHANGE after we implement button panels.) */
 		int playerAvatarWidth, playerAvatarHeight, npcAvatarWidth, npcAvatarHeight;
@@ -551,7 +550,7 @@ export void BattleScreen::run() {
 			}
 		}
 		else {
-			/* End of ANY animation. */
+			/* End of either animation (Player or NPC). */
 
 			if (animateEffect) {
 				/* LAST FRAME. End of animateEffect animations (for either character). */
@@ -574,7 +573,6 @@ export void BattleScreen::run() {
 					else {
 						applyPlayerAttackEffects();
 						Character& thisNpc = battle.getNpc();
-						int number7 = 7;
 					}
 
 					playerAttackLoaded = AttackStruct();
@@ -1674,6 +1672,7 @@ void BattleScreen::calculateNpcBrainDrain() {
 * These calculations provide info for the next animation, but we don't execute on the calculations until after the last animation.
 */
 void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targetLimbId) {
+	AudioBooth& audioBooth = AudioBooth::getInstance();
 	/* This should happen AFTER the animation.*/
 	AttackType attackType = playerAttackLoaded.attackType;
 	bool isSwoop = attackType == AttackType::Swoop;
@@ -1684,13 +1683,7 @@ void BattleScreen::calculatePlayerDamageAttackStruct(int sourceLimbId, int targe
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
 
 	Limb& targetLimb = targetLimbId > 0 ? npc.getLimbById(targetLimbId) : npcLimbs[0];
-
-	if (!isSwoop) {
-		/* Play non-swoop effects after the advance is finished. */
-		AudioBooth& audioBooth = AudioBooth::getInstance();
-		audioBooth.playAttack();
-	}
-
+	audioBooth.playAttack();
 	npcLimbsPanel.setShow(false);
 
 	/*

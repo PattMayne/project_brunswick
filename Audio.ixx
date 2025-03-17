@@ -7,43 +7,6 @@ export module Audio;
 
 using namespace std;
 
-/* FOR REFERENCE ONLY. DO NOT USE. */
-export void playThing() {
-    return;
-    // Initialize SDL
-    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-        return;
-    }
-
-    // Initialize SDL_mixer
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
-        printf("SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError());
-        return;
-    }
-
-    // Load WAV file
-    Mix_Music* music = Mix_LoadMUS("assets/audio/kick_drum.wav");
-    if (music == NULL) {
-        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
-        Mix_CloseAudio();
-        return;
-    }
-
-    // Play music
-    if (Mix_PlayMusic(music, -1) == -1) {
-        printf("Failed to play music! SDL_mixer Error: %s\n", Mix_GetError());
-        Mix_FreeMusic(music);
-        Mix_CloseAudio();
-        return;
-    }
-
-    // Clean up
-    Mix_FreeMusic(music);
-    Mix_CloseAudio();
-}
-
-
 
 export class AudioBooth {
 public:
@@ -181,13 +144,14 @@ AudioBooth::AudioBooth() {
 
     /* LOAD MUSIC FILES */
 
-    musicForMenu = Mix_LoadMUS("assets/audio/music_neptovian.wav");
+    musicForMenu = Mix_LoadMUS("assets/audio/music_flutes_1.wav");
     if (musicForMenu == NULL) {
         printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
         Mix_CloseAudio();
         return;
     }
 
+    /* POSSIBLY DELETE. Do we need music in the map? */
     musicForMap = Mix_LoadMUS("assets/audio/music_flutes_1.wav");
     if (musicForMap == NULL) {
         printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());

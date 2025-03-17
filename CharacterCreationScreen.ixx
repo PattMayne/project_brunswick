@@ -607,7 +607,6 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					else {
 						chooseLimbPanel.setShow(false);
 					}
-					
 				}
 				else if (clickStruct.buttonOption == ButtonOption::NextPage) {
 					audioBooth.playClick();

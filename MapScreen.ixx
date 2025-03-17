@@ -1979,12 +1979,27 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 				}
 
 			} else if (collisionInfo.type == LandmarkType::Exit) {
-				bool totallyUnscrambled = false;
+				int unscrambledCount = 0;
+				for (Character& suit : map.getSuits()) {
+					if (suit.hasScrambledLimbs()) {
+						++unscrambledCount;
+					}
+				}
+
+				bool totallyUnscrambled = unscrambledCount < 1;
+
 
 				if (totallyUnscrambled) {
 					cout << "EXITING\n";
 					/* Restart MapScreen with new map_slug in GameState. */
-					running = false;
+					//running = false;
+
+					/* PLACEHOLDER MESSAGE UNTIL WE CREATE NEW MAPS. */
+					string message = "   YOU WIN!\nYou may now proceed to the next map... "
+						"except that there is no next map right now, since this is just a prototype.";
+					passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, false);
+					passingMessagePanel.setShow(true);
+					passingMessageCountdown = 0;
 				}
 				else {
 					string message = "You cannot exit until you unscramble all the citizens.";
