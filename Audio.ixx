@@ -44,6 +44,27 @@ public:
         Mix_PlayChannel(-1, clickConnect, 0);
     }
 
+    void playCaw() {
+        Mix_PlayChannel(-1, birdCaw, 0);
+    }
+
+    void playBirdUp() {
+        Mix_PlayChannel(-1, birdUp, 0);
+    }
+
+    void playBirdDown() {
+        Mix_PlayChannel(-1, birdDown, 0);
+    }
+
+    void playBird() {
+        if (rand() % 1 == 0) {
+            playBirdUp();
+        }
+        else {
+            playBirdDown();
+        }
+    }
+
     void playAttack() {
         vector<Mix_Chunk*> attacks = {
             attack1, attack2, attack3
@@ -123,6 +144,9 @@ private:
     Mix_Chunk* pickupSound1 = NULL;
     Mix_Chunk* pickupSound2 = NULL;
     Mix_Chunk* pickupSound3 = NULL;
+    Mix_Chunk* birdUp = NULL;
+    Mix_Chunk* birdDown = NULL;
+    Mix_Chunk* birdCaw = NULL;
 
 };
 
@@ -164,6 +188,27 @@ AudioBooth::AudioBooth() {
 
     kickDrumSound = Mix_LoadWAV("assets/audio/kick_drum.wav");
     if (kickDrumSound == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    birdUp = Mix_LoadWAV("assets/audio/bird_up.wav");
+    if (birdUp == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    birdDown = Mix_LoadWAV("assets/audio/bird_down.wav");
+    if (birdDown == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    birdCaw = Mix_LoadWAV("assets/audio/bird_caw.wav");
+    if (birdCaw == NULL) {
         printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
         Mix_CloseAudio();
         return;

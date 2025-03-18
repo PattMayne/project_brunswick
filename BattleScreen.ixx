@@ -135,12 +135,13 @@ public:
 		/* Make sure characters have avatars (for now... later will draw limbs). */
 		Character& playerCharacter = battle.getPlayerCharacter();
 		Character& npc = battle.getNpc();
-
+		npc.rebuildStrong();
 		npc.buildDrawLimbList();
-		playerCharacter.buildDrawLimbList();
-
-		playerCharacter.setTexture(playerCharacter.createAvatar());
 		npc.setTexture(npc.createAvatar());
+		updateCharacterLimbs(npc.getId(), npc.getAnchorLimbId(), npc.getLimbs());
+
+		playerCharacter.buildDrawLimbList();
+		playerCharacter.setTexture(playerCharacter.createAvatar());
 
 		createMainPanels(ui, playerCharacter, npc);
 
@@ -1340,6 +1341,15 @@ void BattleScreen::calculatePlayerSteal() {
 	passingMessageCountdown = 250;
 	passingMessagePanel = ui.getNewPassingMessagePanel(stealMessage, passingMessagePanel, true, true);
 	passingMessagePanel.setShow(true);
+
+	AudioBooth& audioBooth = AudioBooth::getInstance();
+
+	if (stealSuccess) {
+		audioBooth.playBirdUp();
+	}
+	else {
+		audioBooth.playBirdDown();
+	}
 }
 
 void BattleScreen::calculatePlayerBrainDrain() {
@@ -2207,6 +2217,7 @@ bool BattleScreen::applyPlayerStealEffects() {
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	int targetLimbId = playerAttackLoaded.targetLimbId;
 	Limb& targetLimb = npc.getLimbById(targetLimbId);
+	bool rebuildSuit = false;
 
 	/*
 	* STEAL SUCCESS.
@@ -2216,10 +2227,12 @@ bool BattleScreen::applyPlayerStealEffects() {
 	/* Take the limb immediately. */
 	sqlite3* db = startTransaction();
 	unordered_set<int> stolenLimbChildIds = npc.getChildLimbIdsRecursively(targetLimb);
+	unordered_set<int> reEquipLimbIds = {};
 
 	for (int i = npcLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = npcLimbs[i];
-		if (limb.getId() == targetLimbId) {
+		int limbId = limb.getId();
+		if (limbId == targetLimbId) {
 			/* Steal the target limb. */
 
 			npc.unEquipLimb(targetLimbId);
@@ -2227,11 +2240,20 @@ bool BattleScreen::applyPlayerStealEffects() {
 			playerCharacter.addLimb(targetLimb);
 			updateLimbBattleEffectsInTransaction(limb, db);
 			npcLimbs.erase(npcLimbs.begin() + i);
+			rebuildSuit = true;
 			continue;
 		}
-		else if (stolenLimbChildIds.count(limb.getId()) > 0) {
+		else if (stolenLimbChildIds.count(limbId) > 0) {
 			/* Unequip the child limbs. */
-			npc.unEquipLimb(limb.getId());
+			npc.unEquipLimb(limbId);
+			rebuildSuit = true;
+
+			if (limb.getHP() > 0) {
+				reEquipLimbIds.insert(limbId);
+			}
+		}
+		else if (limb.isEquipped() && limb.getHP() > 0) {
+			reEquipLimbIds.insert(limbId);
 		}
 	}
 
@@ -2241,8 +2263,9 @@ bool BattleScreen::applyPlayerStealEffects() {
 		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}
 
-	if (stolenLimbChildIds.size() > 0) {
+	if (rebuildSuit) {
 		/* Rebuild suit. Save. */
+		npc.clearSuit();
 
 		for (Limb& limb : npcLimbs) {
 			npc.unEquipLimb(limb.getId());
@@ -2253,7 +2276,7 @@ bool BattleScreen::applyPlayerStealEffects() {
 
 		for (Limb& limb : npcLimbs) {
 			if (keepEquippingLimbs) {
-				if (stolenLimbChildIds.count(limb.getId()) > 0) {
+				if (reEquipLimbIds.count(limb.getId()) > 0) {
 					keepEquippingLimbs = npc.equipLimb(limb.getId());
 				}
 			}
@@ -2265,7 +2288,6 @@ bool BattleScreen::applyPlayerStealEffects() {
 		if (npc.getNumberOfEquippedLimbs() > 0) {
 			npc.setTexture(npc.createAvatar());
 		}
-		
 	}
 
 	updateCharacterAnchorIdInTrans(npc.getId(), npc.getAnchorLimbId(), db);
@@ -2285,8 +2307,13 @@ bool BattleScreen::applyPlayerStealEffects() {
 		/* Check to see if they have any limbs to drop. */
 		if (npcLimbs.size() > 0) {
 			for (Limb& limb: npcLimbs) {
+				npc.unEquipLimb(limb.getId());
 				limb.unEquip();
-				limb.setCharacterId(playerCharacter.getId());
+				if (rand() % 1 == 0) {
+					limb.setCharacterId(playerCharacter.getId());
+				} else {
+					limb.setCharacterId(-1);
+				}
 				updateLimbBattleEffectsInTransaction(limb, db);
 			}
 		}

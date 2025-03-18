@@ -757,6 +757,15 @@ export void MapScreen::run() {
 			if (playerNpcCollision) {
 				running = false;
 			}
+
+			/* Now play a sound. */
+			if (playerNpcCollision || npcOnNpcCollision) {
+				audioBooth.playCaw();
+			}
+
+			if (npcLimbCollition) {
+				audioBooth.playBird();
+			}
 		}
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
@@ -2362,6 +2371,7 @@ bool MapScreen::checkPlayerLimbCollision() {
 bool MapScreen::checkNpcOnNpcCollision() {
 	vector<MapCharacter>& npcs = map.getNPCs();
 	unordered_map<int, unordered_map<int, unordered_set<int>>> doublesMaps = {}; /* <x, <y, ids>>  */
+	bool collisionHappened = false;
 
 	if (!npcs.empty()) {
 		/* First make lists of doubles. */
@@ -2379,6 +2389,7 @@ bool MapScreen::checkNpcOnNpcCollision() {
 				if (comparisonNpcId == baseNpcId) { continue; }
 				else if (comparisonPoint.equals(baseNpc.getPosition())) {
 					/* We are on the SAME LOCATION now. A new "guy" must be "amalgamated" from our limbs. */
+					collisionHappened = true;
 					unordered_map<int, int> idsToGuyIndex;
 					idsToGuyIndex[baseNpcId] = -1;
 					idsToGuyIndex[comparisonNpcId] = -1;
@@ -2493,7 +2504,7 @@ bool MapScreen::checkNpcOnNpcCollision() {
 
 	commitTransactionAndCloseDatabase(db);
 
-	return true;
+	return collisionHappened;
 }
 
 

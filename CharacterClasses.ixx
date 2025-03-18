@@ -933,6 +933,7 @@ public:
 	void setLimbDrawOrder(vector<int> limbIdsInDrawOrder);
 	void unEquipLimb(int limbId);
 	void clearSuit();
+	void rebuildStrong();
 	void setRotationPointsSDL();
 	void setAnchorJointIDs();
 	void addToDrawLimbList(int limbId);
@@ -1676,14 +1677,30 @@ SDL_Texture* Character::createAvatar(bool resetRenderer) {
 
 void Character::clearSuit() {
 	for (Limb& limb : limbs) {
-		if (limb.isEquipped()) {
-			unEquipLimb(limb.getId());
-		}
+		unEquipLimb(limb.getId());
 		limb.unEquip();
 	}
+
 	anchorLimbId = -1;
 	drawLimbListIDs = {};
 	drawLimbListIndexes = {};
+}
+
+void Character::rebuildStrong() {
+	clearSuit();
+	sortLimbsByNumberOfJoints();
+
+	bool keepEquippingLimbs = true;
+
+	for (Limb& limb : limbs) {
+		if (keepEquippingLimbs) {
+			if (limb.getHP() > 0) {
+				keepEquippingLimbs = equipLimb(limb.getId());
+			}
+		}
+		else { break; }
+	}
+	buildDrawLimbList();
 }
 
 /*
