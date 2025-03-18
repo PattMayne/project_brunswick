@@ -136,7 +136,6 @@ public:
 		Character& playerCharacter = battle.getPlayerCharacter();
 		Character& npc = battle.getNpc();
 		npc.rebuildStrong();
-		npc.buildDrawLimbList();
 		npc.setTexture(npc.createAvatar());
 		updateCharacterLimbs(npc.getId(), npc.getAnchorLimbId(), npc.getLimbs());
 
@@ -159,8 +158,6 @@ public:
 		int playerX = ((windowWidth / 2) - playerAvatarWidth + playerAnchorLimbDrawRect.x) - 100 ;
 		int playerY = (windowHeight / 2) - (playerAvatarHeight / 2) + (npcAnchorLimbDrawRect.y / 2);
 
-		//int npcX = (windowWidth / 2) + npcAnchorLimbDrawRect.x + 100;
-		//int npcY = (windowHeight / 2) - (npcAvatarHeight / 2) + npcAnchorLimbDrawRect.y;
 		int npcX = windowWidth - (npcAvatarWidth + 100 + optionsMenu.getRect().w);
 		int npcY = (windowHeight / 2) - (npcAvatarHeight / 2) + (npcAnchorLimbDrawRect.y / 2);
 
@@ -607,7 +604,7 @@ export void BattleScreen::run() {
 					limbIdsToUpdate = {};
 					
 					playerTurnPanel.destroyTextures();
-					playerTurnPanel = ui.createBattlePanel(playerAttackStructs, playerStatsPanel.getRect().h);
+					playerTurnPanel = ui.createBattlePanel(battle.getPlayerCharacter().getAttacks(), playerStatsPanel.getRect().h);
 					playerTurnPanel.setShow(true);
 					npcLimbsPanel.setShow(false);
 					playerStatsPanel.setShow(true);
@@ -1657,7 +1654,7 @@ void BattleScreen::calculateNpcBrainDrain() {
 		}
 	}
 
-	/* Now also give those intelligenceDrained points to the Player. */
+	/* Now also give those intelligenceDrained points to the NPC. */
 	int intelDecreaser = intelligenceDrained + 0;
 	while (intelDecreaser > 0) {
 
@@ -2266,11 +2263,6 @@ bool BattleScreen::applyPlayerStealEffects() {
 	if (rebuildSuit) {
 		/* Rebuild suit. Save. */
 		npc.clearSuit();
-
-		for (Limb& limb : npcLimbs) {
-			npc.unEquipLimb(limb.getId());
-		}
-
 		npc.sortLimbsByNumberOfJoints();
 		bool keepEquippingLimbs = true;
 

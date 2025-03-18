@@ -139,8 +139,9 @@ export class MapScreen {
 				/* Load existing map. */
 				map = loadMap(mapSlug);
 				for (MapCharacter& npc : map.getNPCs()) {
-					SDL_Texture* avatar = npc.createAvatar();
-					npc.setTexture(avatar);
+					npc.clearSuit();
+					npc.rebuildStrong();
+					npc.setTexture(npc.createAvatar());
 				}
 
 				map.setPlayerCharacter(loadPlayerMapCharacter());
