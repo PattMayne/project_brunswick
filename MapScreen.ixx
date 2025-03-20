@@ -336,6 +336,8 @@ export class MapScreen {
 		void setMaxDrawBlock();
 		void setViewResAndBlockWidth(UI& ui);
 		void setScrollLimits();
+		bool sendPlayerToLatestShrine();
+		bool sendPlayerToShrineNumber(int shrineNumber);
 
 		int xViewRes; /* Horizontal Resolution of the screen ( # of blocks displayed across the top) */
 		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on xViewRes) */
@@ -1148,7 +1150,8 @@ void MapScreen::drawPlayerCharacter(UI& ui) {
 	*/
 	
 	if (animate && animationType == AnimationType::Player) {
-		animateMovingObject(characterRect, blockX, blockY, playerCharacter.getLastPosition()); }
+		animateMovingObject(characterRect, blockX, blockY, playerCharacter.getLastPosition());
+	}
 
 	double playerRotation = !waitSpin ? 0 : animationCountdown * 20;
 
@@ -2638,12 +2641,124 @@ void MapScreen::requestRight() {
 /* Player wants to let the limbs and NPCs move one turn. */
 void MapScreen::waitTurn() {
 	/* Set spin in motion. */
+	setDrawStartBlock();
 	waitSpin = true;
 	map.getPlayerCharacter().updateLastBlock();
 	startAnimationCountdown(AnimationType::Player);
 
 	AudioBooth& audioBooth = AudioBooth::getInstance();
 	audioBooth.playSwoop();
+}
+
+bool MapScreen::sendPlayerToLatestShrine() {
+	MapCharacter& playerCharacter = map.getPlayerCharacter();
+	int latestLandmarkId = playerCharacter.getLatestLandmarkId();
+
+	if (latestLandmarkId < 1 || map.getLandmarkById(latestLandmarkId).getType() != LandmarkType::Shrine) {
+		/* No latest landmark. See if there are ANY shrines with unscrambled limbs. */
+		
+		for (Landmark& landmark : map.getLandmarks()) {
+			if (landmark.getType() == LandmarkType::Shrine) {
+
+				/* how are the limbs of the suit? */
+				for (Character& suit : map.getSuits()) {
+					
+					if (suit.getId() == landmark.getCharacterId()) {
+						/* This is the suit for this landmark. Check for unscrambled. */
+						for (Limb& limb : suit.getLimbs()) {
+							if (limb.getUnscrambled()) {
+								/* We have a winner */
+								latestLandmarkId = landmark.getId();
+								break;
+							}
+						}
+					}
+
+					if (latestLandmarkId > 0) { break; }
+				}
+			}
+
+			if (latestLandmarkId > 0) { break; }
+		}
+	}
+
+	/* Did we get a landmark id? */
+	if (latestLandmarkId < 1) { return false; }
+
+	/* We have a landmark id. */
+	Landmark& shrine = map.getLandmarkById(latestLandmarkId);
+	playerCharacter.moveToPosition(shrine.getPosition());
+	playerCharacter.setBlockPosition(shrine.getPosition());
+	playerCharacter.setLatestLandmarkId(latestLandmarkId);
+	playerCharacter.updateLastBlock();
+	setDrawStartBlock();
+	updatePlayerMapLocation(map.getSlug(), map.getPlayerCharacter().getPosition());
+
+	bool fakeBool = true;
+	checkLandmarkCollision(fakeBool, playerCharacter, false);
+}
+
+
+bool MapScreen::sendPlayerToShrineNumber(int shrineNumber) {
+	/*
+	* 1. Count shrines until you reach the shrineNumber (instead of making a list and giving them indexes, just stop when the index is found/created).
+	* 2. Match a shrine to the number.
+	* 3. If the shrines has NO unscrambled limbs (or does not exist) show message.
+	* 4. Otherwise, go to that shrine.
+	*/
+
+	int shrineCounter = 1;
+	MapCharacter& playerCharacter = map.getPlayerCharacter();
+	vector<Landmark>& landmarks = map.getLandmarks();
+	vector<Character>& suits = map.getSuits();
+	UI& ui = UI::getInstance();
+
+	for (Landmark& landmark : landmarks) {
+		if (landmark.getType() == LandmarkType::Shrine) {
+			/* It's a shrine. Count it.*/
+			if (shrineCounter == shrineNumber) {
+				/* We found our selected shrine. Does it have unscrambled limbs? */
+
+				for (Character& suit : suits) {
+
+					if (suit.getId() == landmark.getCharacterId()) {
+						/* This is the suit for this landmark. Check for unscrambled. */
+						vector<Limb>& suitLimbs = suit.getLimbs();
+						for (Limb& limb : suitLimbs) {
+							if (limb.getUnscrambled()) {
+								/* We can travel here. */
+
+								playerCharacter.moveToPosition(landmark.getPosition());
+								playerCharacter.setBlockPosition(landmark.getPosition());
+								playerCharacter.setLatestLandmarkId(landmark.getId());
+								playerCharacter.updateLastBlock();
+								setDrawStartBlock();
+								updatePlayerMapLocation(map.getSlug(), map.getPlayerCharacter().getPosition());
+
+								bool fakeBool = true;
+								checkLandmarkCollision(fakeBool, playerCharacter, false);
+								return true;
+							}
+						}
+
+						/* show message */
+						string message = "You have made no offerings to that shrine.";
+						passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, true);
+						passingMessagePanel.setShow(true);
+						passingMessageCountdown = 2;
+						return false;
+					}
+				}
+			}
+			++shrineCounter;
+		}
+	}
+
+	string message = "That shrine does not exist...";
+	passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, true);
+	passingMessagePanel.setShow(true);
+	passingMessageCountdown = 2;
+	return false;
 }
 
 
@@ -2691,11 +2806,41 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 	case SDLK_SPACE:
 		waitTurn();
 		break;
+	case SDLK_TAB:
+		cout << "Hit tab. Go build\n";
+		break;
+	case SDLK_0:
+		sendPlayerToLatestShrine();
+		cout << "Go to latest shrine\n";
+		break;
+	case SDLK_1:
+		sendPlayerToShrineNumber(1);
+		cout << "Go to shrine 1\n";
+		break;
+	case SDLK_2:
+		cout << "Go to shrine 2\n";
+		sendPlayerToShrineNumber(2);
+		break;
+	case SDLK_3:
+		cout << "Go to shrine 3\n";
+		sendPlayerToShrineNumber(3);
+		break;
+	case SDLK_4:
+		cout << "Go to shrine 4\n";
+		sendPlayerToShrineNumber(4);
+		break;
+	case SDLK_5:
+		cout << "Go to shrine 5\n";
+		sendPlayerToShrineNumber(5);
+		break;
+	case SDLK_6:
+		cout << "Go to shrine 6\n";
+		sendPlayerToShrineNumber(6);
+		break;
 	default:
 		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";
 	}
 }
-
 
 /* User clicked the mouse. */
 void MapScreen::handleMousedown(SDL_Event& e, bool& running) {

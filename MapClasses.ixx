@@ -363,6 +363,7 @@ public:
 	vector<MapCharacter>& getNPCs() { return NPCs; }
 	vector<Character>& getSuits() { return mapForm.suits; }
 	MapCharacter& getNpcById(int id);
+	Landmark& getLandmarkById(int landmarkId);
 
 	void setLandmarks(vector<Landmark> landmarks) { this->landmarks = landmarks; }
 	void setPlayerCharacter(MapCharacter playerCharacter) { this->playerCharacter = playerCharacter; }
@@ -541,6 +542,17 @@ Map::Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows,
 /* For each NPC, if they're on a landmark, */
 void Map::removeRoamingLimbsFromLandmarks() {
 
+}
+
+Landmark& Map::getLandmarkById(int landmarkId) {
+	for (Landmark& landmark : landmarks) {
+		if (landmark.getId() == landmarkId) {
+			return landmark;
+		}
+	}
+
+	cerr << "NO landmark WITH ID " << landmarkId << ". DANGEROUS REPLACE.\n";
+	return landmarks[0];
 }
 
 MapCharacter& Map::getNpcById(int id) {
