@@ -264,7 +264,7 @@ private:
 	vector<AcquiredLimb> acquiredLimbStructs;
 };
 
-export Landmark getExitLandmark(Point position) {
+export Landmark createExitLandmark(Point position) {
 	UI& ui = UI::getInstance();
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	SDL_Texture* gateTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
@@ -272,7 +272,7 @@ export Landmark getExitLandmark(Point position) {
 	return Landmark(position, gateTexture, LandmarkType::Exit, -1);
 }
 
-export Landmark getEntranceLandmark(Point position) {
+export Landmark createEntranceLandmark(Point position) {
 	UI& ui = UI::getInstance();
 	SDL_Surface* gateSurface = IMG_Load("assets/ENTRANCE.png");
 	SDL_Texture* gateTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), gateSurface);
@@ -672,8 +672,8 @@ vector<Point> Map::buildMap() {
 
 
 	/* Entrance & Exit landmarks. */
-	landmarks.emplace_back(getExitLandmark(Point(endBlockX, 3)));
-	landmarks.emplace_back(getEntranceLandmark(Point(pathX, pathY)));
+	landmarks.emplace_back(createExitLandmark(Point(endBlockX, 3)));
+	landmarks.emplace_back(createEntranceLandmark(Point(pathX, pathY)));
 
 	/*
 	* Give the Shrines each a location.

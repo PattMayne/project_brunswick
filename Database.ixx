@@ -3024,11 +3024,11 @@ export Map loadMap(string mapSlug) {
         */
 
         if (landmarkType == Entrance) {
-            Landmark entrance = getEntranceLandmark(position);
+            Landmark entrance = createEntranceLandmark(position);
             entrance.setId(landmarkId);
             landmarks.push_back(entrance);
         } else if (landmarkType == Exit) {
-            Landmark exit = getExitLandmark(position);
+            Landmark exit = createExitLandmark(position);
             exit.setId(landmarkId);
             landmarks.emplace_back(exit);
         }

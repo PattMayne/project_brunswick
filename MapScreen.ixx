@@ -338,6 +338,8 @@ export class MapScreen {
 		void setScrollLimits();
 		bool sendPlayerToLatestShrine();
 		bool sendPlayerToShrineNumber(int shrineNumber);
+		Landmark& getExitLandmark();
+		Landmark& getEntranceLandmark();
 
 		int xViewRes; /* Horizontal Resolution of the screen ( # of blocks displayed across the top) */
 		int yViewRes; /* Vertical Resolution of the screen ( # of vertical blocks, depends on xViewRes) */
@@ -2059,8 +2061,47 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 		}
 	}
 
+	int stillScrambledCount = 0;
+	for (Character& suit : map.getSuits()) {
+		if (suit.hasScrambledLimbs()) {
+			++stillScrambledCount;
+		}
+	}
+
+	if (stillScrambledCount < 1) {
+		/* track exit */
+		pointToTrack = getExitLandmark().getPosition();
+		nameToTrack = "EXIT";
+
+		trackerPanel.destroyTextures();
+		trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
+		trackerPanel.setShow(true);
+	}
+
 	SDL_SetRenderTarget(ui.getMainRenderer(), NULL);
 	return landmarkCollided;
+}
+
+Landmark& MapScreen::getExitLandmark() {
+	vector<Landmark>& landmarks = map.getLandmarks();
+	for (Landmark& landmark : landmarks) {
+		if (landmark.getType() == LandmarkType::Exit) {
+			return landmark;
+		}
+	}
+	cout << "ERROR: NO EXIT LANDMARK. REPLACE THIS LOGIC\n";
+	return landmarks[0];
+}
+
+Landmark& MapScreen::getEntranceLandmark() {
+	vector<Landmark>& landmarks = map.getLandmarks();
+	for (Landmark& landmark : landmarks) {
+		if (landmark.getType() == LandmarkType::Entrance) {
+			return landmark;
+		}
+	}
+	cout << "ERROR: NO ENTRANCE LANDMARK. REPLACE THIS LOGIC\n";
+	return landmarks[0];
 }
 
 
