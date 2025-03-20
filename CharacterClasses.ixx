@@ -1678,6 +1678,7 @@ SDL_Texture* Character::createAvatar(bool resetRenderer) {
 	return offscreenTexture;
 }
 
+/* Unequip all limbs. */
 void Character::clearSuit() {
 	for (Limb& limb : limbs) {
 		unEquipLimb(limb.getId());
@@ -1689,6 +1690,7 @@ void Character::clearSuit() {
 	drawLimbListIndexes = {};
 }
 
+/* Auto-build the suit with the maximum possible number of limbs. */
 void Character::rebuildStrong() {
 	clearSuit();
 	sortLimbsByNumberOfJoints();
@@ -1769,7 +1771,7 @@ void Character::unEquipLimb(int limbId) {
 	buildDrawLimbList();
 }
 
-
+/* Limbs are equippable if they have HP. */
 int Character::getNumberOfEquippableLimbs() {
 	int numberOfEquippableLimbs = 0;
 
@@ -1782,7 +1784,10 @@ int Character::getNumberOfEquippableLimbs() {
 	return numberOfEquippableLimbs;
 }
 
-
+/*
+* If the limb has a parent limb,
+* get the id of that parent limb.
+*/
 int Character::getParentLimbId(int childLimbId) {
 	for (int i = 0; i < limbs.size(); ++i) {
 		vector<Joint> theseJoints = limbs[i].getJoints();

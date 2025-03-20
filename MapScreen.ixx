@@ -2783,6 +2783,11 @@ bool MapScreen::sendPlayerToShrineNumber(int shrineNumber) {
 
 								bool fakeBool = true;
 								checkLandmarkCollision(fakeBool, playerCharacter, false);
+
+								trackerPanel.destroyTextures();
+								trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
+								trackerPanel.setShow(true);
+
 								return true;
 							}
 						}
@@ -2804,10 +2809,6 @@ bool MapScreen::sendPlayerToShrineNumber(int shrineNumber) {
 	passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, true);
 	passingMessagePanel.setShow(true);
 	passingMessageCountdown = 2;
-
-	trackerPanel.destroyTextures();
-	trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
-	trackerPanel.setShow(true);
 
 	return false;
 }
