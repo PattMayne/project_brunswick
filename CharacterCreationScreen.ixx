@@ -162,7 +162,9 @@ private:
 
 	void draw(UI& ui);
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
+	void continueGame(GameState& gameState, bool& running);
 	void checkMouseLocation(SDL_Event& e);
+	void handleKeydown(SDL_Event& e, GameState& gameState, bool& running);
 
 	void getBackgroundTexture(UI& ui);
 	void rebuildDisplay();
@@ -326,7 +328,7 @@ export void CharacterCreationScreen::run() {
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
-			if (e.type == SDL_MOUSEBUTTONDOWN) {
+			if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_KEYDOWN) {
 				handleEvent(e, running, gameState); }
 		}
 
@@ -505,8 +507,28 @@ void CharacterCreationScreen::loadLimbAttempt(int limbToLoadID) {
 	playerCharacter.buildDrawLimbList();
 }
 
+void CharacterCreationScreen::continueGame(GameState& gameState, bool& running) {
+	/*
+	* 1. FIND OUT if player is ready to go (suit is saved, suit has limbs equipped).
+	* 2. FIND OUT where player is supposed to go (Map or Battle).
+	*/
+	int battleId = getCurrentBattleId(gameState.getPlayerID());
+	cout << "Battle id: " << battleId << endl;
+
+	if (battleId < 1) {
+		screenToLoadStruct.screenType = ScreenType::Map;
+	}
+	else {
+		screenToLoadStruct.screenType = ScreenType::Battle;
+		screenToLoadStruct.id = battleId;
+	}
+
+	running = false;
+}
+
 /* Process user input */
 void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
+	cout << "event\n";
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) {
 		cout << "\nQUIT\n";
@@ -565,25 +587,7 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 					messagePanel.setShow(true);
 					break;
 				case ButtonOption::Continue:
-
-					/* 
-					* 1. FIND OUT if player is ready to go (suit is saved, suit has limbs equipped).
-					* 2. FIND OUT where player is supposed to go (Map or Battle).
-					*/
-					if (true) {
-						int battleId = getCurrentBattleId(gameState.getPlayerID());
-						cout << "Battle id: " << battleId << endl;
-
-						if (battleId < 1) {
-							screenToLoadStruct.screenType = ScreenType::Map;
-						}
-						else {
-							screenToLoadStruct.screenType = ScreenType::Battle;
-							screenToLoadStruct.id = battleId;
-						}
-					}					
-
-					running = false;
+					continueGame(gameState, running);
 					break;
 				default:
 					cout << "ERROR\n";
@@ -713,8 +717,25 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 				}
 			}
 		}
+		else if (e.type == SDL_KEYDOWN) {
+			cout << "key pressed\n";
+			handleKeydown(e, gameState, running);
+		}
 	}
 }
+
+
+void CharacterCreationScreen::handleKeydown(SDL_Event& e, GameState& gameState, bool& running) {
+	switch (e.key.keysym.sym)
+	{
+	case SDLK_TAB:
+		continueGame(gameState, running);
+		break;
+	default:
+		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";
+	}
+}
+
 
 void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
 	/* check for mouse over(for button hover) */

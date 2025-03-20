@@ -231,6 +231,7 @@ private:
 	void setNpcAttackAdvance();
 
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
+	void handleKeydown(SDL_Event& e, GameState& gameState, bool& running);
 	void checkMouseLocation(SDL_Event& e);
 	void handlePlayerMove(ButtonClickStruct clickStruct);
 
@@ -495,7 +496,7 @@ export void BattleScreen::run() {
 
 		/* Check for events in queue, and handle them(really just checking for X close now */
 		while (SDL_PollEvent(&e) != 0) {
-			if (e.type == SDL_MOUSEBUTTONDOWN) {
+			if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_KEYDOWN) {
 				handleEvent(e, running, gameState);
 			}
 		}
@@ -1021,12 +1022,28 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 						cout << "Clicked EXIT" << endl;
 						running = false;
 					}
-
 				}
 			}
 		}
+		else if (e.type == SDL_KEYDOWN) {
+			handleKeydown(e, gameState, running);
+		}
 	}
 }
+
+
+void BattleScreen::handleKeydown(SDL_Event& e, GameState& gameState, bool& running) {
+	switch (e.key.keysym.sym)
+	{
+	case SDLK_TAB:
+		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+		running = false;
+		break;
+	default:
+		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";
+	}
+}
+
 
 
 void BattleScreen::checkMouseLocation(SDL_Event& e) {

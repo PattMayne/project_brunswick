@@ -2653,6 +2653,7 @@ void MapScreen::waitTurn() {
 bool MapScreen::sendPlayerToLatestShrine() {
 	MapCharacter& playerCharacter = map.getPlayerCharacter();
 	int latestLandmarkId = playerCharacter.getLatestLandmarkId();
+	UI& ui = UI::getInstance();
 
 	if (latestLandmarkId < 1 || map.getLandmarkById(latestLandmarkId).getType() != LandmarkType::Shrine) {
 		/* No latest landmark. See if there are ANY shrines with unscrambled limbs. */
@@ -2696,6 +2697,10 @@ bool MapScreen::sendPlayerToLatestShrine() {
 
 	bool fakeBool = true;
 	checkLandmarkCollision(fakeBool, playerCharacter, false);
+
+	trackerPanel.destroyTextures();
+	trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
+	trackerPanel.setShow(true);
 }
 
 
@@ -2758,6 +2763,11 @@ bool MapScreen::sendPlayerToShrineNumber(int shrineNumber) {
 	passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, true);
 	passingMessagePanel.setShow(true);
 	passingMessageCountdown = 2;
+
+	trackerPanel.destroyTextures();
+	trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
+	trackerPanel.setShow(true);
+
 	return false;
 }
 
@@ -2807,34 +2817,28 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 		waitTurn();
 		break;
 	case SDLK_TAB:
-		cout << "Hit tab. Go build\n";
+		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+		running = false;
 		break;
 	case SDLK_0:
 		sendPlayerToLatestShrine();
-		cout << "Go to latest shrine\n";
 		break;
 	case SDLK_1:
 		sendPlayerToShrineNumber(1);
-		cout << "Go to shrine 1\n";
 		break;
 	case SDLK_2:
-		cout << "Go to shrine 2\n";
 		sendPlayerToShrineNumber(2);
 		break;
 	case SDLK_3:
-		cout << "Go to shrine 3\n";
 		sendPlayerToShrineNumber(3);
 		break;
 	case SDLK_4:
-		cout << "Go to shrine 4\n";
 		sendPlayerToShrineNumber(4);
 		break;
 	case SDLK_5:
-		cout << "Go to shrine 5\n";
 		sendPlayerToShrineNumber(5);
 		break;
 	case SDLK_6:
-		cout << "Go to shrine 6\n";
 		sendPlayerToShrineNumber(6);
 		break;
 	default:
