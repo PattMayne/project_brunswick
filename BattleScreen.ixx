@@ -1362,7 +1362,7 @@ void BattleScreen::calculatePlayerBrainDrain() {
 	Character& npc = battle.getNpc();
 	vector<Limb>& npcLimbs = npc.getLimbs();
 	vector<Limb>& playerLimbs = playerCharacter.getLimbs();
-	Limb& targetLimb = npcLimbs[0];
+	Limb targetLimbCopy = npcLimbs[0];
 
 	/* Calculate the attack. */
 	int attack = 0;
@@ -1381,28 +1381,27 @@ void BattleScreen::calculatePlayerBrainDrain() {
 
 	/* Score some NPC data. */
 	vector<int> equippedNpcLimbIds = {};
-	for (Limb& limb : npcLimbs) {
-		if (limb.isEquipped()) {
-			equippedNpcLimbIds.emplace_back(limb.getId());
+	for (Limb limbCopy : npcLimbs) {
+		if (limbCopy.isEquipped()) {
+			equippedNpcLimbIds.emplace_back(limbCopy.getId());
 
-			if (limb.getBodyPartType() == BodyPartType::Head) {
-				targetLimbId = limb.getId();
-				targetLimb = limb;
+			if (limbCopy.getBodyPartType() == BodyPartType::Head) {
+				targetLimbId = limbCopy.getId();
+				targetLimbCopy = limbCopy;
 			}
 		}
 	}
 
-
 	if (targetLimbId < 1) {
 		targetLimbId = equippedNpcLimbIds[rand() % equippedNpcLimbIds.size()];
-		targetLimb = npc.getLimbById(targetLimbId);
+		targetLimbCopy = npc.getLimbById(targetLimbId);
 	}
 
 	attack = (attack / 8) + (numberOfEquippedLimbs / 2);
 	int spreadAttack = 0;
 
 	/* Give a possible Dominance Cycle boost or detriment. */
-	DominancePosition playerDomPosition = attackerDominancePosition(playerCharacter.getDominanceNode(), targetLimb.getDominanceNode());
+	DominancePosition playerDomPosition = attackerDominancePosition(playerCharacter.getDominanceNode(), targetLimbCopy.getDominanceNode());
 	if (playerDomPosition == DominancePosition::Dom) {
 		attack += (attack / 3);
 	} else if (playerDomPosition == DominancePosition::Sub) {
@@ -1532,7 +1531,7 @@ void BattleScreen::calculateNpcBrainDrain() {
 	int attack = 0;
 	int numberOfEquippedLimbs = 0;
 	int targetLimbId = -1;
-	Limb& targetLimb = playerLimbs[0];
+	Limb targetLimbCopy = playerLimbs[0];
 
 	/* Score some player NPC data. */
 	vector<int> equippedLimbIds = {};
@@ -1546,26 +1545,28 @@ void BattleScreen::calculateNpcBrainDrain() {
 
 	/* Score some Player data. */
 	vector<int> equippedPlayerLimbIds = {};
-	for (Limb& limb : playerLimbs) {
-		if (limb.isEquipped()) {
-			equippedPlayerLimbIds.emplace_back(limb.getId());
+	for (Limb limbCopy : playerLimbs) {
+		if (limbCopy.isEquipped()) {
+			equippedPlayerLimbIds.emplace_back(limbCopy.getId());
 
-			if (limb.getBodyPartType() == BodyPartType::Head) {
-				targetLimbId = limb.getId();
-				targetLimb = limb;
+			if (limbCopy.getBodyPartType() == BodyPartType::Head) {
+				targetLimbId = limbCopy.getId();
+				targetLimbCopy = limbCopy;
+				break;
 			}
 		}
 	}
 
-	if (targetLimbId < 1) {
+	if (targetLimbId < 1 && equippedPlayerLimbIds.size() > 0) {
 		targetLimbId = equippedPlayerLimbIds[rand() % equippedPlayerLimbIds.size()];
+		targetLimbCopy = playerCharacter.getLimbById(targetLimbId);
 	}
 
 	attack = (attack / 8) + (numberOfEquippedLimbs / 2);
 	int spreadAttack = 0;
 
 	/* Get dominance cycle advantage. */
-	DominancePosition playerDomPosition = attackerDominancePosition(npc.getDominanceNode(), targetLimb.getDominanceNode());
+	DominancePosition playerDomPosition = attackerDominancePosition(npc.getDominanceNode(), targetLimbCopy.getDominanceNode());
 	if (playerDomPosition == DominancePosition::Dom) {
 		attack += (attack / 3);
 	}
@@ -1672,7 +1673,6 @@ void BattleScreen::calculateNpcBrainDrain() {
 	passingMessageCountdown = 250;
 	passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
 	passingMessagePanel.setShow(true);
-
 
 	/* Attack is calculated and saved to BattleScreen variables, to be used after Effect animation. */
 }
@@ -2075,7 +2075,6 @@ bool BattleScreen::applyNpcAttackEffects() {
 	int playerId = playerCharacter.getId();
 	int npcId = npc.getId();
 	UI& ui = UI::getInstance();
-
 	sqlite3* db = startTransaction();
 
 	/*
@@ -2084,6 +2083,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 	* 2. Save all limbs and both characters.
 	* 
 	*/
+
 
 	bool defeatedAnchorLimb = false;
 	bool defeatedAnyLimb = false;
@@ -2118,7 +2118,12 @@ bool BattleScreen::applyNpcAttackEffects() {
 			limbToRemove.setCharacterId(npc.getId());
 			npc.addLimb(limbToRemove);
 			updateLimbBattleEffectsInTransaction(limbToRemove, db);
-			playerLimbs.erase(std::remove(playerLimbs.begin(), playerLimbs.end(), limbToRemove), playerLimbs.end());
+
+			for (int i = playerLimbs.size() - 1; i >= 0; --i) {
+				if (playerLimbs[i].getId() == idToRemove) {
+					playerLimbs.erase(playerLimbs.begin() + i);
+				}
+			}
 		}
 	}
 
@@ -2180,9 +2185,6 @@ bool BattleScreen::applyNpcAttackEffects() {
 	playerStatsPanel.destroyTextures();
 	playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
 
-	npcAttackLoaded = AttackStruct();
-	limbIdsToUpdate = {};
-
 	/* If player has no EQUIPPABLE limbs they lose. */
 
 	int equippableLimbsCount = 0;
@@ -2201,6 +2203,9 @@ bool BattleScreen::applyNpcAttackEffects() {
 		playerTurnPanel.destroyTextures();
 		playerTurnPanel = ui.createBattlePanel(playerAttackStructs, playerStatsPanel.getRect().h);
 	}
+
+	npcAttackLoaded = AttackStruct();
+	limbIdsToUpdate = {};
 
 	return true;
 }
@@ -2374,33 +2379,33 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		if (limb.isEquipped() && limb.getHP() < 1) {
 			erasedLimb = true;
 			int limbId = limb.getId();
-
-			if (limbIdsToEquip.count(limbId) > 0) {
-				limbIdsToEquip.erase(limbId);
-			}
-
+			limbIdsToEquip.erase(limbId);
 			removedIds.insert(limbId);
 		}
 	}
 
 	for (int idToRemove : removedIds) {
 		if (npc.limbsContainId(idToRemove)) {
-			Limb limbToRemove = npc.getLimbById(idToRemove);
-			cout << "11111 Going to remove NPC limb " << limbToRemove.getId() << ", " << limbToRemove.getName() << endl;
+			Limb limbToRemoveCopy = npc.getLimbById(idToRemove);
 			npc.unEquipLimb(idToRemove);
-			limbToRemove.unEquip(); /* Must unEquip this one specifically... it's a COPY that we're sending. */
-			limbToRemove.setCharacterId(playerCharacter.getId());
-			playerCharacter.addLimb(limbToRemove); /* Limb must be added AFTER we change the characterId! */
-			cout << "Limb to remove character id is " << limbToRemove.getCharacterId() << endl;
-			updateLimbBattleEffectsInTransaction(limbToRemove, db);
-			npcLimbs.erase(std::remove(npcLimbs.begin(), npcLimbs.end(), limbToRemove), npcLimbs.end());
+			limbToRemoveCopy.unEquip(); /* Must unEquip this one specifically... it's a COPY that we're sending. */
+			limbToRemoveCopy.setCharacterId(playerCharacter.getId());
+			playerCharacter.addLimb(limbToRemoveCopy); /* Limb must be added AFTER we change the characterId! */
+			updateLimbBattleEffectsInTransaction(limbToRemoveCopy, db);
+
+			for (int i = npcLimbs.size() - 1; i >= 0; --i) {
+				if (npcLimbs[i].getId() == idToRemove) {
+					npcLimbs.erase(npcLimbs.begin() + i);
+				}
+			}
+			
 		}
 	}
 
 	/* Update all survivors in the DB (also updates the joints which might previously have linked to now-removed limbs). */
 	for (int i = 0; i < npcLimbs.size(); ++i) {
 		if (removedIds.count(npcLimbs[i].getId()) > 0) {
-			cout << "Removed limb STILL INSIDE NPC LIST (erase didn't work)\n";
+			cout << "Removed limb " << npcLimbs[i].getName() << " STILL INSIDE NPC LIST(erase didn't work)\n";
 		}
 		updateLimbBattleEffectsInTransaction(npcLimbs[i], db);
 	}
@@ -2420,7 +2425,7 @@ bool BattleScreen::applyPlayerAttackEffects() {
 		npc.clearSuit();
 		for (Limb& limb : npcLimbs) {
 			if (removedIds.count(limb.getId()) > 0) {
-				cout << "Removed limb STILL INSIDE NPC LIST (erase didn't work) 22222 \n";
+				cout << "Removed limb " << limb.getName() << " STILL INSIDE NPC LIST(erase didn't work) 22222 \n";
 			}
 			npc.unEquipLimb(limb.getId());
 			updateLimbBattleEffectsInTransaction(limb, db);

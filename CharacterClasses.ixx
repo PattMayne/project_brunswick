@@ -1184,8 +1184,10 @@ void Character::setLimbDrawOrder(vector<int> limbIdsInDrawOrder) {
 * then sets the list of vectors to draw.
 */
 void Character::addToDrawLimbList(int limbId) {
-	drawLimbListIDs.push_back(limbId);
-	setLimbDrawOrder(drawLimbListIDs);
+	if (count(drawLimbListIDs.begin(), drawLimbListIDs.end(), limbId) < 1) {
+		drawLimbListIDs.push_back(limbId);
+		setLimbDrawOrder(drawLimbListIDs);
+	}
 }
 
 
@@ -1203,6 +1205,7 @@ void Character::buildDrawLimbList() {
 		return;
 	}
 
+	/* Put them in the right order before we flatten them down to 0 (rising by 1 with each limb). */
 	sortLimbsByDrawOrder();
 	int drawOrder = 0;
 	unordered_set<int> allConnectedLimbs = getChildLimbIdsRecursively(getAnchorLimb());

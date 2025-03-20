@@ -368,3 +368,6 @@ FodyWeavers.xsd
 /sqlite3.h
 /sqlite3.c
 /data/databases/bk/limbs_data.db
+/data/databases/bk/limbs_data_heads_and_MISSING_SPIDER_BODY.db
+/data/databases/bk/limbs_data_HEADS_only_sticks.db
+/data/databases/bk/limbs_data_MANY HEADS.db
