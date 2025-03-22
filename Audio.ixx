@@ -7,7 +7,6 @@ export module Audio;
 
 using namespace std;
 
-
 export class AudioBooth {
 public:
     /* Deleted copy constructor and assignment operator to prevent copies */
@@ -44,10 +43,6 @@ public:
         Mix_PlayChannel(-1, clickConnect, 0);
     }
 
-    void playCaw() {
-        Mix_PlayChannel(-1, birdCaw, 0);
-    }
-
     void playBirdUp() {
         Mix_PlayChannel(-1, birdUp, 0);
     }
@@ -56,45 +51,42 @@ public:
         Mix_PlayChannel(-1, birdDown, 0);
     }
 
+    void playBird3() {
+        Mix_PlayChannel(-1, bird3, 0);
+    }
+
+
+    void playBird4() {
+        Mix_PlayChannel(-1, bird4, 0);
+    }
+
+    void playCaw() {
+        int cawIndex = rand() % caws.size();
+        Mix_Chunk* caw = caws[cawIndex];
+        Mix_PlayChannel(-1, caw, 0);
+    }
+
     void playBird() {
-        if (rand() % 1 == 0) {
-            playBirdUp();
-        }
-        else {
-            playBirdDown();
-        }
+        int birdIndex = rand() % birds.size();
+        Mix_Chunk* bird = birds[birdIndex];
+        Mix_PlayChannel(-1, bird, 0);
     }
 
     void playAttack() {
-        vector<Mix_Chunk*> attacks = {
-            attack1, attack2, attack3
-        };
-
         int attackIndex = rand() % attacks.size();
         Mix_Chunk* attack = attacks[attackIndex];
-
         Mix_PlayChannel(-1, attack, 0);
     }
 
     void playChorus() {
-        vector<Mix_Chunk*> choruses = {
-            chorus1, chorus2, chorus3
-        };
-
         int chorusIndex = rand() % choruses.size();
         Mix_Chunk* chorus = choruses[chorusIndex];
-
         Mix_PlayChannel(-1, chorus, 0);
     }
 
     void playPickupSound() {
-        vector<Mix_Chunk*> pickupSounds = {
-            pickupSound1, pickupSound2, pickupSound3
-        };
-
         int soundIndex = rand() % pickupSounds.size();
         Mix_Chunk* sound = pickupSounds[soundIndex];
-
         Mix_PlayChannel(-1, sound, 0);
     }
 
@@ -146,7 +138,16 @@ private:
     Mix_Chunk* pickupSound3 = NULL;
     Mix_Chunk* birdUp = NULL;
     Mix_Chunk* birdDown = NULL;
-    Mix_Chunk* birdCaw = NULL;
+    Mix_Chunk* birdCaw1 = NULL;
+    Mix_Chunk* birdCaw2 = NULL;
+    Mix_Chunk* bird3 = NULL;
+    Mix_Chunk* bird4 = NULL;
+
+    vector<Mix_Chunk*> attacks;
+    vector<Mix_Chunk*> birds;
+    vector<Mix_Chunk*> choruses;
+    vector<Mix_Chunk*> pickupSounds;
+    vector<Mix_Chunk*> caws;
 
 };
 
@@ -207,8 +208,29 @@ AudioBooth::AudioBooth() {
         return;
     }
 
-    birdCaw = Mix_LoadWAV("assets/audio/bird_caw.wav");
-    if (birdCaw == NULL) {
+    bird3 = Mix_LoadWAV("assets/audio/bird_3.wav");
+    if (bird3 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    bird4 = Mix_LoadWAV("assets/audio/bird_4.wav");
+    if (bird4 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    birdCaw1 = Mix_LoadWAV("assets/audio/bird_caw.wav");
+    if (birdCaw1 == NULL) {
+        printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
+        Mix_CloseAudio();
+        return;
+    }
+
+    birdCaw2 = Mix_LoadWAV("assets/audio/bird_caw_2.wav");
+    if (birdCaw2 == NULL) {
         printf("Failed to load WAV file! SDL_mixer Error: %s\n", Mix_GetError());
         Mix_CloseAudio();
         return;
@@ -322,6 +344,14 @@ AudioBooth::AudioBooth() {
         Mix_CloseAudio();
         return;
     }
+
+    /* Make the vollections. */
+
+    attacks = { attack1, attack2, attack3 };
+    birds = { birdUp, birdDown, bird3, bird4 };
+    choruses = { chorus1, chorus2, chorus3 };
+    pickupSounds = { pickupSound1, pickupSound2, pickupSound3 };
+    caws = { birdCaw1, birdCaw2 };
 
 
     /* Set the volume. */

@@ -254,8 +254,8 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Fairy Body", "fairy_body",
 			60, 40, 70, 70,
 			DominanceNode::Green, "data/maps/forest/fairy_body.png",
-			{ Point(88, 12), Point(55, 23), Point(66, 39), Point(73, 133),
-				Point(100, 126), Point(101, 38), Point(112, 29) },
+			{ Point(112, 12), Point(145, 23), Point(134, 39), Point(127, 133),
+				Point(100, 126), Point(99, 38), Point(88, 29) },
 			BodyPartType::Torso);
 		};
 
