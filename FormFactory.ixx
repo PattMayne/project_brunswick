@@ -617,9 +617,9 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	}
 
 	for (Limb& limb : fairy.getLimbs()) {
-		if (limb.getFormSlug() == "fairy_arm_left") {
+		if (limb.getFormSlug() == "fairy_arm_right") {
 			fairy.equipLimb(limb.getId());
-			limb.setDrawOrder(5);
+			limb.setDrawOrder(6);
 			break;
 		}
 	}
@@ -656,14 +656,14 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 		}
 	}
 
+
 	for (Limb& limb : fairy.getLimbs()) {
-		if (limb.getFormSlug() == "fairy_arm_right") {
+		if (limb.getFormSlug() == "fairy_arm_left") {
 			fairy.equipLimb(limb.getId());
-			limb.setDrawOrder(6);
+			limb.setDrawOrder(5);
 			break;
 		}
 	}
-
 
 
 	/* Equip Owl limbs. */

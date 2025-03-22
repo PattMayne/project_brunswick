@@ -264,16 +264,16 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Fairy Head", "fairy_head",
 			50, 40, 70, 100,
 			DominanceNode::Blue, "data/maps/forest/fairy_head.png",
-			{ Point(97, 102) },
+			{ Point(103, 102) },
 			BodyPartType::Head);
 		};
 
-	limbForms["fairy_arm_left"] = []() {
+	limbForms["fairy_arm_right"] = []() {
 		return LimbForm(
-			"Fairy Left Arm", "fairy_arm_left",
+			"Fairy Right Arm", "fairy_arm_right",
 			30, 30, 80, 70,
-			DominanceNode::Green, "data/maps/forest/fairy_arm_left.png",
-			{ Point(139, 125) },
+			DominanceNode::Green, "data/maps/forest/fairy_arm_right.png",
+			{ Point(61, 125) },
 			BodyPartType::Arm);
 		};
 
@@ -282,7 +282,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Fairy Left Wing", "fairy_wing_left",
 			20, 20, 100, 70,
 			DominanceNode::Blue, "data/maps/forest/fairy_wing_left.png",
-			{ Point(109, 128) },
+			{ Point(91, 128) },
 			BodyPartType::Wing);
 		};
 
@@ -291,7 +291,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Fairy Left Leg", "fairy_leg_left",
 			40, 30, 80, 60,
 			DominanceNode::Blue, "data/maps/forest/fairy_leg_left.png",
-			{ Point(25, 31) },
+			{ Point(174, 31) },
 			BodyPartType::Leg);
 		};
 
@@ -300,7 +300,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Fairy Right Leg", "fairy_leg_right",
 			40, 30, 80, 60,
 			DominanceNode::Green, "data/maps/forest/fairy_leg_right.png",
-			{ Point(134, 23) },
+			{ Point(66, 23) },
 			BodyPartType::Leg);
 		};
 
@@ -309,16 +309,16 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Fairy Right Wing", "fairy_wing_right",
 			20, 20, 100, 70,
 			DominanceNode::Green, "data/maps/forest/fairy_wing_right.png",
-			{ Point(81, 133) },
+			{ Point(119, 133) },
 			BodyPartType::Wing);
 		};
 
-	limbForms["fairy_arm_right"] = []() {
+	limbForms["fairy_arm_left"] = []() {
 		return LimbForm(
-			"Fairy Right Arm", "fairy_arm_right",
+			"Fairy Left Arm", "fairy_arm_left",
 			30, 30, 80, 70,
-			DominanceNode::Green, "data/maps/forest/fairy_arm_right.png",
-			{ Point(44, 80) },
+			DominanceNode::Green, "data/maps/forest/fairy_arm_left.png",
+			{ Point(156, 80) },
 			BodyPartType::Arm);
 		};
 
