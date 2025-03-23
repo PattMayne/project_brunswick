@@ -633,17 +633,17 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	}
 
 	for (Limb& limb : fairy.getLimbs()) {
-		if (limb.getFormSlug() == "fairy_leg_left") {
+		if (limb.getFormSlug() == "fairy_leg_right") {
 			fairy.equipLimb(limb.getId());
-			limb.setDrawOrder(1);
+			limb.setDrawOrder(2);
 			break;
 		}
 	}
 
 	for (Limb& limb : fairy.getLimbs()) {
-		if (limb.getFormSlug() == "fairy_leg_right") {
+		if (limb.getFormSlug() == "fairy_leg_left") {
 			fairy.equipLimb(limb.getId());
-			limb.setDrawOrder(2);
+			limb.setDrawOrder(1);
 			break;
 		}
 	}
