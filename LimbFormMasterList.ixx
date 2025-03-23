@@ -330,7 +330,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Owl Body", "owl_body",
 			60, 40, 70, 40,
 			DominanceNode::Green, "data/maps/forest/owl_body.png",
-			{ Point(90, 37), Point(117, 51), Point(66, 39) },
+			{ Point(90, 37), Point(66, 39), Point(117, 51) },
 			BodyPartType::Torso);
 		};
 

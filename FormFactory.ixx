@@ -692,17 +692,17 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	}
 
 	for (Limb& limb : owl.getLimbs()) {
-		if (limb.getFormSlug() == "owl_wing_right") {
+		if (limb.getFormSlug() == "owl_wing_left") {
 			owl.equipLimb(limb.getId());
-			limb.setDrawOrder(1);
+			limb.setDrawOrder(0);
 			break;
 		}
 	}
 
 	for (Limb& limb : owl.getLimbs()) {
-		if (limb.getFormSlug() == "owl_wing_left") {
+		if (limb.getFormSlug() == "owl_wing_right") {
 			owl.equipLimb(limb.getId());
-			limb.setDrawOrder(0);
+			limb.setDrawOrder(1);
 			break;
 		}
 	}
