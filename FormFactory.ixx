@@ -341,11 +341,20 @@ export void equipWardenSuit(Character& playerCharacter) {
 		}
 	}
 
-	/* Equip LEFT arm. */
+	/* Equip RIGHT arm. */
 	for (Limb& limb : playerLimbs) {
-		if (limb.getFormSlug() == "warden_arm_left") {
+		if (limb.getFormSlug() == "warden_arm_right") {
 			playerCharacter.equipLimb(limb.getId());
-			limb.setDrawOrder(2);
+			limb.setDrawOrder(5);
+			break;
+		}
+	}
+	
+	/* Equip RIGHT leg. */
+	for (Limb& limb : playerLimbs) {
+		if (limb.getFormSlug() == "warden_leg_right") {
+			playerCharacter.equipLimb(limb.getId());
+			limb.setDrawOrder(4);
 			break;
 		}
 	}
@@ -358,24 +367,15 @@ export void equipWardenSuit(Character& playerCharacter) {
 			break;
 		}
 	}
-
-	/* Equip RIGHT leg. */
+	/* Equip LEFT arm. */
 	for (Limb& limb : playerLimbs) {
-		if (limb.getFormSlug() == "warden_leg_right") {
+		if (limb.getFormSlug() == "warden_arm_left") {
 			playerCharacter.equipLimb(limb.getId());
-			limb.setDrawOrder(4);
+			limb.setDrawOrder(2);
 			break;
 		}
 	}
 
-	/* Equip RIGHT arm. */
-	for (Limb& limb : playerLimbs) {
-		if (limb.getFormSlug() == "warden_arm_right") {
-			playerCharacter.equipLimb(limb.getId());
-			limb.setDrawOrder(5);
-			break;
-		}
-	}
 }
 
 

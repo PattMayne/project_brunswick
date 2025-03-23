@@ -390,7 +390,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Warden Body", "warden_body",
 			25, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_body.png",
-			{ Point(100, 43), Point(68, 51), Point(71, 152), Point(109, 158), Point(137, 63) },
+			{ Point(100, 43), Point(132, 51), Point(129, 152), Point(91, 158), Point(63, 63) },
 			BodyPartType::Warden);
 		};
 
@@ -399,7 +399,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Warden Head", "warden_head",
 			10, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_head.png",
-			{ Point(107, 121) },
+			{ Point(93, 121) },
 			BodyPartType::Warden);
 		};
 
@@ -408,16 +408,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Warden Left Arm", "warden_arm_left",
 			10, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_arm_left.png",
-			{ Point(155, 92) },
-			BodyPartType::Warden);
-		};
-
-	limbForms["warden_leg_left"] = []() {
-		return LimbForm(
-			"Warden Left Leg", "warden_leg_left",
-			10, 10, 10, 10,
-			DominanceNode::Green, "data/maps/forest/warden_leg_left.png",
-			{ Point(112, 18) },
+			{ Point(83, 70) },
 			BodyPartType::Warden);
 		};
 
@@ -426,7 +417,16 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Warden Right Leg", "warden_leg_right",
 			10, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_leg_right.png",
-			{ Point(82, 14) },
+			{ Point(88, 18) },
+			BodyPartType::Warden);
+		};
+
+	limbForms["warden_leg_left"] = []() {
+		return LimbForm(
+			"Warden Left Leg", "warden_leg_left",
+			10, 10, 10, 10,
+			DominanceNode::Green, "data/maps/forest/warden_leg_left.png",
+			{ Point(118, 14) },
 			BodyPartType::Warden);
 		};
 
@@ -435,7 +435,7 @@ void addForestLimbFormMasterList(unordered_map<string, function<LimbForm()>>& li
 			"Warden Right Arm", "warden_arm_right",
 			10, 10, 10, 10,
 			DominanceNode::Green, "data/maps/forest/warden_arm_right.png",
-			{ Point(117, 70) },
+			{ Point(45, 92) },
 			BodyPartType::Warden);
 		};
 
