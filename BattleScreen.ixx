@@ -132,9 +132,10 @@ public:
 		showTitle = true;
 		titleCountdown = 140;
 
-		/* Make sure characters have avatars (for now... later will draw limbs). */
 		Character& playerCharacter = battle.getPlayerCharacter();
 		Character& npc = battle.getNpc();
+
+
 		npc.rebuildStrong();
 		npc.setTexture(npc.createAvatar());
 		updateCharacterLimbs(npc.getId(), npc.getAnchorLimbId(), npc.getLimbs());
@@ -489,6 +490,13 @@ export void BattleScreen::run() {
 		* Maybe GameState deserves a message string to display.
 		*/
 		running = false;
+	}
+
+	/* Make sure characters have limbs. */
+	if (battle.getPlayerCharacter().getNumberOfEquippedLimbs() < 1) {
+		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+		setExitMessage(BattleStatus::RebuildRequired);
+		updateBattleStatus(battle.getId(), BattleStatus::RebuildRequired);
 	}
 
 	while (running) {
