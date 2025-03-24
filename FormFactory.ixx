@@ -500,14 +500,6 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	}
 
 	for (Limb& limb : bear.getLimbs()) {
-		if (limb.getFormSlug() == "bear_arm_right") {
-			limb.setDrawOrder(3);
-			bear.equipLimb(limb.getId());
-			break;
-		}
-	}
-
-	for (Limb& limb : bear.getLimbs()) {
 		if (limb.getFormSlug() == "bear_leg_left") {
 			limb.setDrawOrder(2);
 			bear.equipLimb(limb.getId());
@@ -518,6 +510,14 @@ export void equipForestSuitLimbs(vector<Character>& forestSuits) {
 	for (Limb& limb : bear.getLimbs()) {
 		if (limb.getFormSlug() == "bear_leg_right") {
 			limb.setDrawOrder(1);
+			bear.equipLimb(limb.getId());
+			break;
+		}
+	}
+
+	for (Limb& limb : bear.getLimbs()) {
+		if (limb.getFormSlug() == "bear_arm_right") {
+			limb.setDrawOrder(3);
 			bear.equipLimb(limb.getId());
 			break;
 		}
