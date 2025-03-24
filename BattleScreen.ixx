@@ -231,6 +231,7 @@ private:
 	void setNpcAttackAdvance();
 
 	void handleEvent(SDL_Event& e, bool& running, GameState& gameState);
+	void handleMouseDown(SDL_Event& e, bool& running, GameState& gameState);
 	void handleKeydown(SDL_Event& e, GameState& gameState, bool& running);
 	void checkMouseLocation(SDL_Event& e);
 	void handlePlayerMove(ButtonClickStruct clickStruct);
@@ -861,7 +862,6 @@ void BattleScreen::draw(UI& ui) {
 	passingMessagePanel.draw(ui);
 	optionsMenu.draw(ui);
 
-
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
 
@@ -895,135 +895,7 @@ void BattleScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState
 	else {
 		// user clicked
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
-			int mouseX, mouseY;
-			SDL_GetMouseState(&mouseX, &mouseY);
-			AudioBooth& audioBooth = AudioBooth::getInstance();
-
-			/* Check if confirmation panel is shown first (should deactivate other panels. */
-
-			if (confirmationPanel.getShow()) {
-
-				if (confirmationPanel.isInPanel(mouseX, mouseY)) {
-					/* 
-					* 
-					*			YES/NO CONFIRMATION PANEL. 
-					* 
-					*/
-
-					ButtonClickStruct clickStruct = confirmationPanel.checkButtonClick(mouseX, mouseY);
-					cout << "\n\nCLICK CONFIRMATION PANEL \n\n";
-
-					if (clickStruct.buttonOption == ButtonOption::Agree) {
-						audioBooth.playClick();
-						BattleStatus battleStatus = battle.getBattleStatus();
-
-						if (battleStatus == BattleStatus::PlayerDefeat ||
-							battleStatus == BattleStatus::PlayerVictory ||
-							battleStatus == BattleStatus::RebuildRequired ||
-							screenToLoadStruct.screenType == ScreenType::CharacterCreation
-						) {
-							running = false;
-						}
-						else if (battleStatus == BattleStatus::RanAway) {
-							screenToLoadStruct.screenType = ScreenType::Map;
-							running = false;
-						}
-
-						confirmationPanel.setShow(false);
-					}
-					else if (clickStruct.buttonOption == ButtonOption::Refuse) {
-						audioBooth.playClick();
-					}
-				}
-			}
-			else {
-				audioBooth.playClick();
-				if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
-					/* 
-					* 
-					*				BATTLE MENU.
-					* 
-					*/
-
-					cout << "\n\nCLICKED BATTLE MENU \n\n";
-
-					ButtonClickStruct clickStruct = playerTurnPanel.checkButtonClick(mouseX, mouseY);
-
-					UI& ui = UI::getInstance();
-					/* see what button might have been clicked : */
-					switch (clickStruct.buttonOption) {
-					case ButtonOption::BattleMove:
-						cout << "\nBATTLE MOVE!\n";
-
-						handlePlayerMove(clickStruct);
-
-						break;
-					case ButtonOption::Build:
-						screenToLoadStruct.screenType = ScreenType::CharacterCreation;
-						running = false;
-						break;
-					default:
-						cout << "ERROR\n";
-
-					}
-				}
-				else if (npcLimbsPanel.getShow() && npcLimbsPanel.isInPanel(mouseX, mouseY)) {
-					/* NPC LIMBS PANEL. */
-
-					cout << "\n\nCLICK NPC LIMB MENU \n\n";
-					ButtonClickStruct clickStruct = npcLimbsPanel.checkButtonClick(mouseX, mouseY);
-
-
-					/* It might be the "back" button (but usually won't be so deal with that first). */
-					if (clickStruct.buttonOption == ButtonOption::LoadLimb) {
-						audioBooth.playClick();
-						/* Do the animation.
-						* When it counts down we'll launch the calculations.
-						* After the NEXT animation we'll execute the results.
-						*/
-						UI& ui = UI::getInstance();
-						AudioBooth& audioBooth = AudioBooth::getInstance();
-						playerAttackLoaded.targetLimbId = clickStruct.itemID;
-						animateAttack = true;
-						animationCountdown = 1000;
-						attackAdvanceHitTarget = false;
-
-						string attackMessage = "Player uses " + playerAttackLoaded.name + "!";
-						passingMessageCountdown = 250;
-						passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
-						passingMessagePanel.setShow(true);
-
-						playerStatsPanel.setShow(true);
-						npcStatsPanel.setShow(true);
-						npcLimbsPanel.setShow(false);
-
-						/* Play swoop before the advance begins. Swoop is the sound of advance, not impact. */
-						if (playerAttackLoaded.attackType == AttackType::Swoop || playerAttackLoaded.attackType == AttackType::Steal) {
-							audioBooth.playSwoop();
-						}
-					}
-					else if (clickStruct.buttonOption == ButtonOption::Back) {
-						audioBooth.playClick();
-						/* unload attack, reset panels. */
-						playerTurnPanel.setShow(true);
-						npcLimbsPanel.setShow(false);
-						playerStatsPanel.setShow(true);
-						npcStatsPanel.setShow(true);
-						playerAttackLoaded = AttackStruct();
-						return;
-					}
-				}
-				else if (optionsMenu.getShow() && optionsMenu.isInPanel(mouseX, mouseY)) {
-					/* OPTIONS MENU */
-
-					ButtonClickStruct clickStruct = optionsMenu.checkButtonClick(mouseX, mouseY);
-
-					if (clickStruct.buttonOption == ButtonOption::Exit) {
-						cout << "Clicked EXIT" << endl;
-						running = false;
-					}
-				}
-			}
+			handleMouseDown(e, running, gameState);
 		}
 		else if (e.type == SDL_KEYDOWN) {
 			handleKeydown(e, gameState, running);
@@ -1045,7 +917,6 @@ void BattleScreen::handleKeydown(SDL_Event& e, GameState& gameState, bool& runni
 }
 
 
-
 void BattleScreen::checkMouseLocation(SDL_Event& e) {
 	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
@@ -1063,6 +934,136 @@ void BattleScreen::checkMouseLocation(SDL_Event& e) {
 	}
 }
 
+
+void BattleScreen::handleMouseDown(SDL_Event& e, bool& running, GameState& gameState) {
+	int mouseX, mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+	AudioBooth& audioBooth = AudioBooth::getInstance();
+
+	/* Check if confirmation panel is shown first (should deactivate other panels. */
+
+	if (confirmationPanel.getShow()) {
+
+		if (confirmationPanel.isInPanel(mouseX, mouseY)) {
+			/*
+			*
+			*			YES/NO CONFIRMATION PANEL.
+			*
+			*/
+
+			ButtonClickStruct clickStruct = confirmationPanel.checkButtonClick(mouseX, mouseY);
+			cout << "\n\nCLICK CONFIRMATION PANEL \n\n";
+
+			if (clickStruct.buttonOption == ButtonOption::Agree) {
+				audioBooth.playClick();
+				BattleStatus battleStatus = battle.getBattleStatus();
+
+				if (battleStatus == BattleStatus::PlayerDefeat ||
+					battleStatus == BattleStatus::PlayerVictory ||
+					battleStatus == BattleStatus::RebuildRequired ||
+					screenToLoadStruct.screenType == ScreenType::CharacterCreation
+					) {
+					running = false;
+				}
+				else if (battleStatus == BattleStatus::RanAway) {
+					screenToLoadStruct.screenType = ScreenType::Map;
+					running = false;
+				}
+
+				confirmationPanel.setShow(false);
+			}
+			else if (clickStruct.buttonOption == ButtonOption::Refuse) {
+				audioBooth.playClick();
+			}
+		}
+	}
+	else {
+		audioBooth.playClick();
+		if (playerTurnPanel.getShow() && playerTurnPanel.isInPanel(mouseX, mouseY)) {
+			/*
+			*
+			*				BATTLE MENU.
+			*
+			*/
+
+			cout << "\n\nCLICKED BATTLE MENU \n\n";
+
+			ButtonClickStruct clickStruct = playerTurnPanel.checkButtonClick(mouseX, mouseY);
+
+			UI& ui = UI::getInstance();
+			/* see what button might have been clicked : */
+			switch (clickStruct.buttonOption) {
+			case ButtonOption::BattleMove:
+				handlePlayerMove(clickStruct);
+
+				break;
+			case ButtonOption::Build:
+				screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+				running = false;
+				break;
+			default:
+				cout << "ERROR\n";
+
+			}
+		}
+		else if (npcLimbsPanel.getShow() && npcLimbsPanel.isInPanel(mouseX, mouseY)) {
+			/* NPC LIMBS PANEL. */
+
+			cout << "\n\nCLICK NPC LIMB MENU \n\n";
+			ButtonClickStruct clickStruct = npcLimbsPanel.checkButtonClick(mouseX, mouseY);
+
+
+			/* It might be the "back" button (but usually won't be so deal with that first). */
+			if (clickStruct.buttonOption == ButtonOption::LoadLimb) {
+				audioBooth.playClick();
+				/* Do the animation.
+				* When it counts down we'll launch the calculations.
+				* After the NEXT animation we'll execute the results.
+				*/
+				UI& ui = UI::getInstance();
+				AudioBooth& audioBooth = AudioBooth::getInstance();
+				playerAttackLoaded.targetLimbId = clickStruct.itemID;
+				animateAttack = true;
+				animationCountdown = 1000;
+				attackAdvanceHitTarget = false;
+
+				string attackMessage = "Player uses " + playerAttackLoaded.name + "!";
+				passingMessageCountdown = 250;
+				passingMessagePanel = ui.getNewPassingMessagePanel(attackMessage, passingMessagePanel, true, true);
+				passingMessagePanel.setShow(true);
+
+				playerStatsPanel.setShow(true);
+				npcStatsPanel.setShow(true);
+				npcLimbsPanel.setShow(false);
+
+				/* Play swoop before the advance begins. Swoop is the sound of advance, not impact. */
+				if (playerAttackLoaded.attackType == AttackType::Swoop || playerAttackLoaded.attackType == AttackType::Steal) {
+					audioBooth.playSwoop();
+				}
+			}
+			else if (clickStruct.buttonOption == ButtonOption::Back) {
+				audioBooth.playClick();
+				/* unload attack, reset panels. */
+				playerTurnPanel.setShow(true);
+				npcLimbsPanel.setShow(false);
+				playerStatsPanel.setShow(true);
+				npcStatsPanel.setShow(true);
+				playerAttackLoaded = AttackStruct();
+				return;
+			}
+		}
+		else if (optionsMenu.getShow() && optionsMenu.isInPanel(mouseX, mouseY)) {
+			/* OPTIONS MENU */
+
+			ButtonClickStruct clickStruct = optionsMenu.checkButtonClick(mouseX, mouseY);
+
+			if (clickStruct.buttonOption == ButtonOption::Exit) {
+				cout << "Clicked EXIT" << endl;
+				running = false;
+			}
+		}
+	}
+}
 
 /*
 * 
@@ -1107,6 +1108,8 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 
 	UI& ui = UI::getInstance();
 	AudioBooth& audioBooth = AudioBooth::getInstance();
+	playerAttackStructs = battle.getPlayerCharacter().getAttacks();
+	bool moveComplete = false;
 
 	cout << "\nBATTLE MOVE!\n";
 
@@ -1140,7 +1143,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 				* Animate Attack (flashing limb)
 				* Show message panel with effects of attack.
 				*/
-
+				moveComplete = true;
 				playerAttackLoaded = aStruct;
 
 				/* Open the NPC Limb panel and user chooses targetId. */
@@ -1156,6 +1159,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 				* 2. Turning heads instead of advanceAttack.
 				* 3. Calculate damage in the run() function after spinHead animation is over.
 				*/
+				moveComplete = true;
 				playerAttackLoaded = aStruct;
 
 				UI& ui = UI::getInstance();
@@ -1189,6 +1193,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 
 				/* Show the panel of limbs and choose something to steal */
 
+				moveComplete = true;
 				npcLimbsPanel.setShow(true);
 				playerStatsPanel.setShow(false);
 				npcStatsPanel.setShow(false);
@@ -1210,6 +1215,7 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 				* FOR NOW it always works. Add chances later.
 				*/
 
+				moveComplete = true;
 				int numberOfPlayerLegs = 0;
 				int numberOfNpcLegs = 0;
 
@@ -1265,7 +1271,13 @@ void BattleScreen::handlePlayerMove(ButtonClickStruct clickStruct) {
 					battle.switchTurn();
 				}
 			}
+
+
 		}
+	}
+
+	if (!moveComplete) {
+		cout << "Attack didn't match any player attacks.\n";
 	}
 }
 
