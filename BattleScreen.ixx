@@ -2104,9 +2104,12 @@ bool BattleScreen::applyNpcAttackEffects() {
 
 	bool defeatedAnchorLimb = false;
 	bool defeatedAnyLimb = false;
+	bool limbsOrphaned = false;
 	int numberOfEquippableLimb = 0;
 	unordered_set<int> removedIds = {};
+	unordered_set<int> reEquippableIds = {};
 
+	/* Make sets of limbs to keep (re-equip) and limbs that are defeated. */
 	for (int i = playerLimbs.size() - 1; i >= 0; --i) {
 		Limb& limb = playerLimbs[i];
 		int limbId = limb.getId();
@@ -2114,8 +2117,12 @@ bool BattleScreen::applyNpcAttackEffects() {
 		if (limb.getHP() > 0) {
 			++numberOfEquippableLimb;
 
+			if (limb.isEquipped()) {
+				reEquippableIds.insert(limbId);
+			}
+
 		} else if (limb.isEquipped()) {
-			/* Equipped limb is defeated. Give it to NPC. */
+			/* Equipped limb is defeated. Flag to give to NPC. */
 			defeatedAnyLimb = true;
 
 			if (playerCharacter.getAnchorLimbId() == limbId) {
@@ -2123,10 +2130,14 @@ bool BattleScreen::applyNpcAttackEffects() {
 			}
 
 			removedIds.insert(limbId);
+
+			/* Does it have child limbs? */
+			limbsOrphaned = limb.hasChildLimbs();
+			
 		}
 	}
 
-
+	/* Actually remove the defeated limbs. */
 	for (int idToRemove : removedIds) {
 		if (playerCharacter.limbsContainId(idToRemove)) {
 			Limb limbToRemove = playerCharacter.getLimbById(idToRemove);
@@ -2144,41 +2155,40 @@ bool BattleScreen::applyNpcAttackEffects() {
 		}
 	}
 
+	/* 
+	* If any limbs have been removed, clear suit,
+	* sort by number of joints, equip if id exists in reEquippableIds.
+	*/
+	if (limbsOrphaned) {
+		playerCharacter.clearSuit();
+		playerCharacter.sortLimbsByNumberOfJoints();
+		bool keepEquippingLimbs = true;
 
-	/* If limb is still connected to a limbs that's been removed, disconnect. */
-	for (Limb& limb : playerLimbs) {
-		for (Joint& joint : limb.getJoints()) {
-			int connectedLimbId = joint.getConnectedLimbId();
-			if (connectedLimbId > 0 && removedIds.count(connectedLimbId) > 0) {
-				cout << "Manually detached something FROM limb " << limb.getName() << "\n";
-				joint.detachLimb();
-				updateLimbBattleEffectsInTransaction(limb, db);
+		for (int i = 0; i < playerLimbs.size(); ++i) {
+			Limb& playerLimb = playerLimbs[i];
+
+			if (keepEquippingLimbs && reEquippableIds.count(playerLimb.getId()) > 0) {
+				keepEquippingLimbs = playerCharacter.equipLimb(playerLimb.getId());
 			}
+
+			updateLimbBattleEffectsInTransaction(playerLimb, db);
 		}
 	}
-	
-	if (!playerCharacter.limbsContainId(playerCharacter.getAnchorLimbId())) {
-		defeatedAnchorLimb = true;
-	}
 
-	if (defeatedAnchorLimb) {
-		cout << "DEFEATED ANCHOR LIMB.\n Sending to Character Creation Screen.\n";
+	/* Defeated equipped limbs. Sending to CC screen. */
+	if (reEquippableIds.size() < 1 && numberOfEquippableLimb > 0) {
 		playerCharacter.clearSuit();
 		updateCharacterAnchorIdInTrans(playerId, -1, db);
 
-		if (numberOfEquippableLimb > 0) {
-			cout << "Sending to Character Creation Screen.\n";
-			screenToLoadStruct.screenType = ScreenType::CharacterCreation;
-			setExitMessage(BattleStatus::RebuildRequired);
-			updateBattleStatusInTrans(battle.getId(), BattleStatus::RebuildRequired, db);
-		}
-		else {
-			cout << "Sending to Menu DEFEATED.\n";
-			screenToLoadStruct.screenType = ScreenType::Menu;
-			setExitMessage(BattleStatus::PlayerDefeat);
-			cout << "PLAyer DEFOoTED\n";
-			updateBattleStatusInTrans(battle.getId(), BattleStatus::PlayerDefeat, db);
-		}
+		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
+		setExitMessage(BattleStatus::RebuildRequired);
+		updateBattleStatusInTrans(battle.getId(), BattleStatus::RebuildRequired, db);
+	}
+	else if (numberOfEquippableLimb < 1) {
+		/* If player has no EQUIPPABLE limbs they lose. */
+		screenToLoadStruct.screenType = ScreenType::Menu;
+		setExitMessage(BattleStatus::PlayerDefeat);
+		updateBattleStatusInTrans(battle.getId(), BattleStatus::PlayerDefeat, db);
 	}
 
 	playerCharacter.buildDrawLimbList();
@@ -2202,20 +2212,7 @@ bool BattleScreen::applyNpcAttackEffects() {
 	playerStatsPanel.destroyTextures();
 	playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), false);
 
-	/* If player has no EQUIPPABLE limbs they lose. */
-
-	int equippableLimbsCount = 0;
-	for (Limb& limb : playerLimbs) {
-		if (limb.getHP() > 0) {
-			++equippableLimbsCount;
-		}
-	}
-
-	if (equippableLimbsCount < 1) {
-		setExitMessage(BattleStatus::PlayerDefeat);
-		updateBattleStatus(battle.getId(), BattleStatus::PlayerDefeat);
-	}
-	else {
+	if (numberOfEquippableLimb > 0) {
 		/* Reload playerTurnPanel in case they lost a limb. */
 		playerTurnPanel.destroyTextures();
 		playerTurnPanel = ui.createBattlePanel(playerAttackStructs, playerStatsPanel.getRect().h);

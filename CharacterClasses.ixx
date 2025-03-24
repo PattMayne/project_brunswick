@@ -385,6 +385,7 @@ export class Limb {
 		SDL_Texture* getTexture() { return texture; }
 		bool getIsAnchor() { return isAnchor; }
 		bool getIsFlipped() { return flipped; }
+		bool hasChildLimbs();
 
 		BodyPartType getBodyPartType() { return form.type; }
 		DominanceNode getDominanceNode() { return form.domNode; }
@@ -651,6 +652,17 @@ vector<int> Limb::getFreeJointIndexes() {
 	return indexes;
 }
 
+
+/* Are there any limbs attached to this one? */
+bool Limb::hasChildLimbs() {
+	for (Joint& joint : joints) {
+		if (joint.getConnectedLimbId() > 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
 
 
 /*

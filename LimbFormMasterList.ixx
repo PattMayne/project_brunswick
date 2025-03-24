@@ -16,6 +16,9 @@
 * No textures will be created here, but the paths to the PNGs will be coded here.
 * 
 * Limb objects will be created from these LimbForms.
+* 
+* When a limb has more than 2 joints, we start at a neck connection (or topmost if none are neck),
+* and always go counter-clockwise.
 */
 
 module;
