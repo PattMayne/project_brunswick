@@ -773,7 +773,7 @@ export void MapScreen::run() {
 				audioBooth.playCaw();
 			}
 
-			if (npcLimbCollition) {
+			if (npcLimbCollition || limbLimbCollision) {
 				audioBooth.playBird();
 			}
 		}
@@ -822,14 +822,16 @@ export void MapScreen::run() {
 			* 
 			*/
 
+			int moveDistance = 7;
+
 			for (MapCharacter& npc : map.getNPCs()) {
 				Point npcPosition = npc.getPosition();
 				int posX = npcPosition.x;
 				int posY = npcPosition.y;
 
 				/* skip limbs that are too far outside of the frame. (still animate them if they're nearby). */
-				if (posX < drawStartX - 19 || posX > drawStartX + xViewRes + 19 ||
-					posY < drawStartY - 19 || posY > drawStartY + yViewRes + 19
+				if (posX < drawStartX - moveDistance || posX > drawStartX + xViewRes + moveDistance ||
+					posY < drawStartY - moveDistance || posY > drawStartY + yViewRes + moveDistance
 					) { continue; }
 
 				moveNPC(npc);
@@ -849,8 +851,8 @@ export void MapScreen::run() {
 				int posY = limbPosition.y;
 
 				/* skip limbs that are too far outside of the frame. (still animate them if they're nearby). */
-				if (posX < drawStartX - 19 || posX > drawStartX + xViewRes + 19 ||
-					posY < drawStartY - 19 || posY > drawStartY + yViewRes + 19
+				if (posX < drawStartX - moveDistance || posX > drawStartX + xViewRes + moveDistance ||
+					posY < drawStartY - moveDistance || posY > drawStartY + yViewRes + moveDistance
 					) { continue; }
 
 				moveLimb(limb); }
