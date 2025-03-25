@@ -340,7 +340,7 @@ void BattleScreen::createMainPanels(UI& ui, Character& playerCharacter, Characte
 	settingsPanel.setShow(false);
 
 	unordered_map<string, ButtonOption> buttonOptions = {
-		{"OPTIONS", ButtonOption::Options },
+		{"CONTROLS", ButtonOption::Controls },
 		{"EXIT", ButtonOption::Exit }
 	};
 
@@ -348,7 +348,7 @@ void BattleScreen::createMainPanels(UI& ui, Character& playerCharacter, Characte
 	optionsMenu.setShow(true);
 
 	keyControlsPanel = ui.createKeyControlsPanel(getScreenType());
-	keyControlsPanel.setShow(true);
+	keyControlsPanel.setShow(false);
 
 	createNpcLimbPanel();
 	createPlayerLimbPanels();
@@ -868,6 +868,7 @@ void BattleScreen::draw(UI& ui) {
 		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 	}
 
+	keyControlsPanel.draw(ui);
 	settingsPanel.draw(ui);
 	playerStatsPanel.draw(ui);
 	npcStatsPanel.draw(ui);
@@ -875,7 +876,6 @@ void BattleScreen::draw(UI& ui) {
 	npcLimbsPanel.draw(ui);
 	passingMessagePanel.draw(ui);
 	optionsMenu.draw(ui);
-	keyControlsPanel.draw(ui);
 	confirmationPanel.draw(ui);
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
@@ -926,6 +926,15 @@ void BattleScreen::handleKeydown(SDL_Event& e, GameState& gameState, bool& runni
 	case SDLK_TAB:
 		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
 		running = false;
+		break;
+
+	case SDLK_a:
+		/* Get first attack. */
+		if (playerTurnPanel.getButtons().size() > 0) {
+			ButtonClickStruct clickStruct = playerTurnPanel.getButtons()[0].getClickStruct();
+			handlePlayerMove(clickStruct);
+		}
+
 		break;
 
 	case SDLK_k:
@@ -1081,6 +1090,8 @@ void BattleScreen::handleMouseDown(SDL_Event& e, bool& running, GameState& gameS
 			if (clickStruct.buttonOption == ButtonOption::Exit) {
 				cout << "Clicked EXIT" << endl;
 				running = false;
+			} else if (clickStruct.buttonOption == ButtonOption::Controls) {
+				keyControlsPanel.setShow(!keyControlsPanel.getShow());
 			}
 		}
 	}
