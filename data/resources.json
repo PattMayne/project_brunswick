@@ -136,6 +136,8 @@
       "K": "Open Key Commands"
     },
     "MAP_SCREEN": {
+      "W-A-S-D": "Move Around",
+      "SPACE": "Wait",
       "TAB": "Build Screen",
       "K": "Open Key Commands"
     },
@@ -143,9 +145,10 @@
       "TAB": "Continue",
       "S": "Save Suit",
       "UP": "Next Character Joint",
-      "DOWN": "Prev. Character Joint",
       "RIGHT": "Next Limb Joint",
-      "LEFT": "Prev. Limb Joint",
+      "R": "Rotate",
+      "E": "Equip Loaded Limb",
+      "U": "Unequip Loaded Limb",
       "SPACE": "Unequipped Limbs",
       "C": "Clear Suit",
       "K": "Open Key Commands"

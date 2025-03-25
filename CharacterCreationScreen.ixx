@@ -108,6 +108,9 @@ public:
 		createLimbLoadedPanel(ui);
 		createChooseLimbPanel(false);
 
+		keyControlsPanel = ui.createKeyControlsPanel(getScreenType());
+		keyControlsPanel.setShow(false);
+
 		changeCreationMode(CreationMode::Review);
 		messagePanel = ui.createConfirmationPanel("", ConfirmationButtonType::OkCancel, false);
 		messagePanel.setShow(false);
@@ -128,6 +131,11 @@ public:
 	~CharacterCreationScreen() {
 		SDL_DestroyTexture(bgTexture);
 		SDL_DestroyTexture(titleTexture);
+
+		/* destroy all PANEL textures. */
+		keyControlsPanel.destroyTextures();
+
+		/* destroy all LIMB textures. */
 	}
 
 	void createLimbLoadedPanel(UI& ui);
@@ -154,6 +162,7 @@ private:
 	Panel chooseLimbPanel;
 	Panel messagePanel;
 	Panel playerStatsPanel;
+	Panel keyControlsPanel;
 
 	void drawCharacter(UI& ui);
 
@@ -165,6 +174,15 @@ private:
 	void continueGame(GameState& gameState, bool& running);
 	void checkMouseLocation(SDL_Event& e);
 	void handleKeydown(SDL_Event& e, GameState& gameState, bool& running);
+	void handleMousedown(SDL_Event& e, GameState& gameState, bool& running);
+
+	void unloadLimb();
+	void equipLimb();
+	void rotateClockwise();
+	bool nextCharJoint();
+	bool nextLimbJoint();
+	bool clearSuit();
+	bool saveSuit(GameState& gameState);
 
 	void getBackgroundTexture(UI& ui);
 	void rebuildDisplay();
@@ -308,7 +326,7 @@ export void CharacterCreationScreen::run() {
 	*/
 	bool running = true;
 	if (playerCharacter.getNumberOfEquippableLimbs() < 1) {
-		screenToLoadStruct.screenType == ScreenType::Map;
+		screenToLoadStruct.screenType = ScreenType::Map; /* why map? to do: handle where to send player with no limbs. */
 		running = false;
 	}
 
@@ -381,6 +399,7 @@ void CharacterCreationScreen::draw(UI& ui) {
 		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE);
 	}	
 
+	keyControlsPanel.draw(ui);
 	limbLoadedPanel.draw(ui);
 	reviewModePanel.draw(ui);
 	drawCharacter(ui);
@@ -472,9 +491,7 @@ void CharacterCreationScreen::loadLimbAttempt(int limbToLoadID) {
 	/*
 	* To set the draw order of the limbs, we set the draw order of the clicked limb to the SIZE of the vector of limbs.
 	* Then at the end we rebuild the draLimbList which brings everything down to the floor (starts at 0 and increments).
-	* 
 	*/
-
 	clickedLimb.setDrawOrder(playerCharacter.getEquippedLimbs().size());
 	loadedLimbId = limbToLoadID;
 
@@ -507,6 +524,7 @@ void CharacterCreationScreen::loadLimbAttempt(int limbToLoadID) {
 	playerCharacter.buildDrawLimbList();
 }
 
+/* Go back to map or battle screen, whichever is appropriate. */
 void CharacterCreationScreen::continueGame(GameState& gameState, bool& running) {
 	/*
 	* 1. FIND OUT if player is ready to go (suit is saved, suit has limbs equipped).
@@ -526,6 +544,120 @@ void CharacterCreationScreen::continueGame(GameState& gameState, bool& running) 
 	running = false;
 }
 
+/* Move loaded limb to the next available joint among the equipped limbs. */
+bool CharacterCreationScreen::nextCharJoint() {
+	UI& ui = UI::getInstance();
+	/*
+	* Move the loaded limb to the next available joint in the character's equipped limbs.
+	* Also, cycle back to the beginning of the list once we reach the end.
+	* Maybe put this in a function in the character class.
+	*/
+
+	if (loadedLimbId > 0) {
+		bool switched = playerCharacter.shiftChildLimb(loadedLimbId);
+		/* Reset all joints. */
+		playerCharacter.setAnchorJointIDs();
+		playerCharacter.setRotationPointsSDL();
+		playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
+		return true;
+	}
+	return false;
+}
+
+/* Cycle to the loaded limb's next joint as its anchor limb. */
+bool CharacterCreationScreen::nextLimbJoint() {
+	UI& ui = UI::getInstance();
+	/* Change the anchor joint of the loaded limb. */
+	if (playerCharacter.getAnchorLimbId() == loadedLimbId) {
+		return false;
+	}
+	else {
+		Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
+		cout << "LIMB: " << loadedLimb.getForm().slug << "\n";
+		bool anchorShifted = loadedLimb.shiftAnchorLimb();
+		if (anchorShifted) {
+			playerCharacter.setAnchorJointIDs();
+			playerCharacter.setRotationPointsSDL();
+			playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
+		}
+		return true;
+	}
+}
+
+/* Unequipe EVERYTHING. */
+bool CharacterCreationScreen::clearSuit() {
+	UI& ui = UI::getInstance();
+	cout << "CLEARING SUIT\n";
+	playerCharacter.clearSuit();
+	playerStatsPanel.destroyTextures();
+	playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+	playerStatsPanel.setShow(true);
+	changeCreationMode(CreationMode::Review);
+
+	return true;
+}
+
+/* Save all the equipped limbs. */
+bool CharacterCreationScreen::saveSuit(GameState& gameState) {
+	string suitSavedString = "Suit Saved.";
+	updateCharacterLimbs(gameState.getPlayerID(), playerCharacter.getAnchorLimbId(), playerCharacter.getLimbs());
+	cout << suitSavedString << endl;
+	messagePanel = getNewConfirmationMessage(messagePanel, suitSavedString, ConfirmationButtonType::OkCancel, false);
+	messagePanel.setShow(true);
+
+	return true;
+}
+
+void CharacterCreationScreen::rotateClockwise() {
+	UI& ui = UI::getInstance();
+	if (loadedLimbId > 0) {
+		Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
+		loadedLimb.rotate(15);
+		/* Make all the child limbs follow the rotation. */
+		playerCharacter.setChildLimbDrawRects(loadedLimb, ui);
+	}
+}
+
+/* "Unload" (and unequip) loaded limb. */
+void CharacterCreationScreen::unloadLimb() {
+	UI& ui = UI::getInstance();
+	/*
+	* Unequip that limb.
+	* Go back to the ChooseLimb mode.
+	*/
+	if (loadedLimbId > 0) {
+		Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
+		if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
+			playerCharacter.setAnchorLimbId(-1);
+		}
+		playerCharacter.unEquipLimb(loadedLimbId);
+
+		playerStatsPanel.destroyTextures();
+		playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
+		playerStatsPanel.setShow(true);
+	}
+	else {
+		return;
+	}
+
+	if (loadedLimbIsAlreadyEquipped) {
+		changeCreationMode(CreationMode::Review);
+		loadedLimbIsAlreadyEquipped = false;
+	}
+	else {
+		changeCreationMode(CreationMode::ChooseLimb);
+	}
+
+	loadedLimbId = -1;
+}
+
+/* The limb is actually already equipped. We're just unloading it while keeping it equipped. */
+void CharacterCreationScreen::equipLimb() {
+	loadedLimbId = -1;
+	changeCreationMode(CreationMode::Review);
+	loadedLimbIsAlreadyEquipped = false;
+}
+
 /* Process user input */
 void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
 	cout << "event\n";
@@ -539,187 +671,135 @@ void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState
 		/* user clicked */
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
 			cout << "user clicked mouse\n";
-			/* These events might change the value of screenToLoad. */
-			int mouseX, mouseY;
-			SDL_GetMouseState(&mouseX, &mouseY);
-			AudioBooth& audioBooth = AudioBooth::getInstance();
-
-			if (messagePanel.getShow() && messagePanel.isInPanel(mouseX, mouseY)) {
-				/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
-				ButtonClickStruct clickStruct = messagePanel.checkButtonClick(mouseX, mouseY);
-				audioBooth.playClick();
-
-				switch (clickStruct.buttonOption) {
-				case ButtonOption::Agree:
-					messagePanel.setShow(false);
-					break;
-				case ButtonOption::Refuse:
-					messagePanel.setShow(false);
-					break;
-				}
-			} else if (reviewModePanel.getShow() && reviewModePanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICKED REVIEW MENU \n\n";
-				ButtonClickStruct clickStruct = reviewModePanel.checkButtonClick(mouseX, mouseY);
-				string suitSavedString = "Suit Saved.";
-				audioBooth.playClick();
-
-				UI& ui = UI::getInstance();
-				/* see what button might have been clicked : */
-				switch (clickStruct.buttonOption) {
-				case ButtonOption::MapOptions:
-					cout << "\nMAP OPTIONS\n";
-					break;
-				case ButtonOption::ShowLimbs:
-					changeCreationMode(CreationMode::ChooseLimb);
-					break;
-				case ButtonOption::ClearSuit:
-					cout << "CLEARING SUIT\n";
-					playerCharacter.clearSuit();
-					playerStatsPanel.destroyTextures();
-					playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
-					playerStatsPanel.setShow(true);
-					changeCreationMode(CreationMode::Review);
-					break;
-				case ButtonOption::SaveSuit:
-					updateCharacterLimbs(gameState.getPlayerID(), playerCharacter.getAnchorLimbId(), playerCharacter.getLimbs());
-					cout << suitSavedString << endl;
-					messagePanel = getNewConfirmationMessage(messagePanel, suitSavedString, ConfirmationButtonType::OkCancel, false);
-					messagePanel.setShow(true);
-					break;
-				case ButtonOption::Continue:
-					continueGame(gameState, running);
-					break;
-				default:
-					cout << "ERROR\n";
-				}
-			}
-			else if (chooseLimbPanel.getShow() && chooseLimbPanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICK LIMB MENU \n\n";
-				ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
-				int limbToLoadID = clickStruct.itemID;
-
-				/* If we sent in a limb id/index: */
-				if (clickStruct.buttonOption == ButtonOption::LoadLimb && limbToLoadID > 0) {
-					audioBooth.playClickConnect();
-					loadLimbAttempt(limbToLoadID);
-				}
-				else if(clickStruct.buttonOption == ButtonOption::Back) {
-					if (creationMode != CreationMode::Review) {
-						audioBooth.playClick();
-						changeCreationMode(CreationMode::Review);
-					}
-					else {
-						chooseLimbPanel.setShow(false);
-					}
-				}
-				else if (clickStruct.buttonOption == ButtonOption::NextPage) {
-					audioBooth.playClick();
-					bool showEquippedLimbs = creationMode == CreationMode::Review;
-					createChooseLimbPanel(showEquippedLimbs, clickStruct.itemID);
-					chooseLimbPanel.setShow(true);
-				}
-			}
-			else if (limbLoadedPanel.getShow() && limbLoadedPanel.isInPanel(mouseX, mouseY)) {
-				cout << "\n\nCLICK LOADED LIMB MENU \n\n";
-				ButtonClickStruct clickStruct = limbLoadedPanel.checkButtonClick(mouseX, mouseY);
-				UI& ui = UI::getInstance();
-				audioBooth.playClick();
-
-				/* see what button might have been clicked : */
-				switch (clickStruct.buttonOption) {
-				case ButtonOption::Equip:
-					loadedLimbId = -1;
-					changeCreationMode(CreationMode::Review);
-					loadedLimbIsAlreadyEquipped = false;
-					break;
-				case ButtonOption::NextCharJoint:
-					/* 
-					* Move the loaded limb to the next available joint in the character's equipped limbs.
-					* Also, cycle back to the beginning of the list once we reach the end.
-					* Maybe put this in a function in the character class.
-					*/
-
-					if (loadedLimbId > 0) {
-						bool switched = playerCharacter.shiftChildLimb(loadedLimbId);
-						/* Reset all joints. */
-						playerCharacter.setAnchorJointIDs();
-						playerCharacter.setRotationPointsSDL();
-						playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
-					}
-
-					break;
-				case ButtonOption::NextLimbJoint:
-					/* Change the anchor joint of the loaded limb. */
-					if (playerCharacter.getAnchorLimbId() == loadedLimbId) {
-						break;
-					}
-					else {
-						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
-						cout << "LIMB: " << loadedLimb.getForm().slug << "\n";
-						bool anchorShifted = loadedLimb.shiftAnchorLimb();
-						if (anchorShifted) {
-							playerCharacter.setAnchorJointIDs();
-							playerCharacter.setRotationPointsSDL();
-							playerCharacter.setChildLimbDrawRects(playerCharacter.getAnchorLimb(), ui);
-						}
-						break;
-					}
-
-				case ButtonOption::RotateClockwise:
-					if (loadedLimbId > 0) {
-						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
-						loadedLimb.rotate(15);
-						/* Make all the child limbs follow the rotation. */
-						playerCharacter.setChildLimbDrawRects(loadedLimb, ui);
-					}
-					break;
-				case ButtonOption::RotateCounterClockwise:
-					if (loadedLimbId > 0) {
-						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
-						loadedLimb.rotate(-15);
-						/* Make all the child limbs follow the rotation. */
-						playerCharacter.setChildLimbDrawRects(loadedLimb, ui);
-					}
-					break;
-				case ButtonOption::UnloadLimb:
-					/*
-					* Unequip that limb.
-					* Go back to the ChooseLimb mode.
-					*/
-					if (loadedLimbId >= 0) {
-						Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
-						if (loadedLimbId == playerCharacter.getAnchorLimbId()) {
-							playerCharacter.setAnchorLimbId(-1); }
-						playerCharacter.unEquipLimb(loadedLimbId);
-
-						playerStatsPanel.destroyTextures();
-						playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
-						playerStatsPanel.setShow(true);
-					}
-
-					if (loadedLimbIsAlreadyEquipped) {
-						changeCreationMode(CreationMode::Review);
-						loadedLimbIsAlreadyEquipped = false; }
-					else {
-						changeCreationMode(CreationMode::ChooseLimb); }
-					
-					loadedLimbId = -1;
-					break;
-				default:
-					cout << "ERROR\n";
-				}
-			}
-			else {
-				/* Clicked outside all panels. */
-
-				if (creationMode == CreationMode::Review && !chooseLimbPanel.getShow()) {
-					chooseLimbPanel.setShow(true);
-				}
-			}
+			handleMousedown(e, gameState, running);
 		}
 		else if (e.type == SDL_KEYDOWN) {
 			cout << "key pressed\n";
 			handleKeydown(e, gameState, running);
+		}
+	}
+}
+
+
+void CharacterCreationScreen::handleMousedown(SDL_Event& e, GameState& gameState, bool& running) {
+	/* These events might change the value of screenToLoad. */
+	int mouseX, mouseY;
+	SDL_GetMouseState(&mouseX, &mouseY);
+	AudioBooth& audioBooth = AudioBooth::getInstance();
+
+	if (messagePanel.getShow() && messagePanel.isInPanel(mouseX, mouseY)) {
+		/* panel has a function to return which ButtonOption was clicked, and an ID(in the ButtonClickStruct). */
+		ButtonClickStruct clickStruct = messagePanel.checkButtonClick(mouseX, mouseY);
+		audioBooth.playClick();
+
+		switch (clickStruct.buttonOption) {
+		case ButtonOption::Agree:
+			messagePanel.setShow(false);
+			break;
+		case ButtonOption::Refuse:
+			messagePanel.setShow(false);
+			break;
+		}
+	}
+	else if (reviewModePanel.getShow() && reviewModePanel.isInPanel(mouseX, mouseY)) {
+		cout << "\n\nCLICKED REVIEW MENU \n\n";
+		ButtonClickStruct clickStruct = reviewModePanel.checkButtonClick(mouseX, mouseY);
+		audioBooth.playClick();
+
+		UI& ui = UI::getInstance();
+		/* see what button might have been clicked : */
+		switch (clickStruct.buttonOption) {
+		case ButtonOption::MapOptions:
+			cout << "\nMAP OPTIONS\n";
+			break;
+		case ButtonOption::ShowLimbs:
+			changeCreationMode(CreationMode::ChooseLimb);
+			break;
+		case ButtonOption::ClearSuit:
+			clearSuit();
+			break;
+		case ButtonOption::SaveSuit:
+			saveSuit(gameState);
+			break;
+		case ButtonOption::Continue:
+			continueGame(gameState, running);
+			break;
+		default:
+			cout << "ERROR\n";
+		}
+	}
+	else if (chooseLimbPanel.getShow() && chooseLimbPanel.isInPanel(mouseX, mouseY)) {
+		cout << "\n\nCLICK LIMB MENU \n\n";
+		ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
+		int limbToLoadID = clickStruct.itemID;
+
+		/* If we sent in a limb id/index: */
+		if (clickStruct.buttonOption == ButtonOption::LoadLimb && limbToLoadID > 0) {
+			audioBooth.playClickConnect();
+			loadLimbAttempt(limbToLoadID);
+		}
+		else if (clickStruct.buttonOption == ButtonOption::Back) {
+			if (creationMode != CreationMode::Review) {
+				audioBooth.playClick();
+				changeCreationMode(CreationMode::Review);
+			}
+			else {
+				chooseLimbPanel.setShow(false);
+			}
+		}
+		else if (clickStruct.buttonOption == ButtonOption::NextPage) {
+			audioBooth.playClick();
+			bool showEquippedLimbs = creationMode == CreationMode::Review;
+			createChooseLimbPanel(showEquippedLimbs, clickStruct.itemID);
+			chooseLimbPanel.setShow(true);
+		}
+	}
+	else if (limbLoadedPanel.getShow() && limbLoadedPanel.isInPanel(mouseX, mouseY)) {
+		cout << "\n\nCLICK LOADED LIMB MENU \n\n";
+		ButtonClickStruct clickStruct = limbLoadedPanel.checkButtonClick(mouseX, mouseY);
+		UI& ui = UI::getInstance();
+		audioBooth.playClick();
+
+		/* see what button might have been clicked : */
+		switch (clickStruct.buttonOption) {
+		case ButtonOption::Equip:
+			equipLimb();
+			break;
+
+		case ButtonOption::NextCharJoint:
+			nextCharJoint();
+			break;
+
+		case ButtonOption::NextLimbJoint:
+			nextLimbJoint();
+			break;
+
+		case ButtonOption::RotateClockwise:
+			rotateClockwise();
+			break;
+
+		case ButtonOption::RotateCounterClockwise:
+			if (loadedLimbId > 0) {
+				Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
+				loadedLimb.rotate(-15);
+				/* Make all the child limbs follow the rotation. */
+				playerCharacter.setChildLimbDrawRects(loadedLimb, ui);
+			}
+			break;
+
+		case ButtonOption::UnloadLimb:
+			unloadLimb();
+			break;
+
+		default:
+			cout << "ERROR\n";
+		}
+	}
+	else {
+		/* Clicked outside all panels. */
+
+		if (creationMode == CreationMode::Review && !chooseLimbPanel.getShow()) {
+			chooseLimbPanel.setShow(true);
 		}
 	}
 }
@@ -731,14 +811,51 @@ void CharacterCreationScreen::handleKeydown(SDL_Event& e, GameState& gameState, 
 	case SDLK_TAB:
 		continueGame(gameState, running);
 		break;
+
+	case SDLK_k:
+		keyControlsPanel.setShow(!keyControlsPanel.getShow());
+		break;
+
+	case SDLK_s:
+		saveSuit(gameState);
+		break;
+
+	case SDLK_c:
+		clearSuit();
+		break;
+
+	case SDLK_e:
+		equipLimb();
+		break;
+
+	case SDLK_u:
+		unloadLimb();
+		break;
+
+	case SDLK_r:
+		rotateClockwise();
+		break;
+
+	case SDLK_SPACE:
+		// Toggle unequipped limbs
+		break;
+
+	case SDLK_UP:
+		nextCharJoint();
+		break;
+
+	case SDLK_RIGHT:
+		nextLimbJoint();
+		break;
+
 	default:
 		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";
 	}
 }
 
 
+/* check for mouse over (for button hover) */
 void CharacterCreationScreen::checkMouseLocation(SDL_Event& e) {
-	/* check for mouse over(for button hover) */
 	int mouseX, mouseY;
 	SDL_GetMouseState(&mouseX, &mouseY);
 	/* send the x and y to the panel and its buttons to change the color */

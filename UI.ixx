@@ -2856,10 +2856,19 @@ Panel UI::createStatsPanel(ScreenType screenType, CharStatsData statsData, bool 
 	return hudPanel;
 }
 
+string getCommandLineFromPair(pair<string, string> pair) {
+	return "[ " + pair.first + " ] " + pair.second + "\n";
+}
 
 /* Show a map of keys to their functions. */
 Panel UI::createKeyControlsPanel(ScreenType screenType) {
 	Panel panel = Panel();
+
+	if (screenType == ScreenType::NoScreen) {
+		cerr << "ERROR: NO SCREEN\n";
+		return panel;
+	}
+
 	panel.setRect({ 0,0,0,0 });
 	Resources& resources = Resources::getInstance();
 	unordered_map<string, string> keyControlsMap = resources.getKeyCommands(screenType);
@@ -2875,7 +2884,6 @@ Panel UI::createKeyControlsPanel(ScreenType screenType) {
 	SDL_Surface* titleSurface = NULL;
 
 	titleSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, titleString.c_str(), colors["DARK_TEXT"], 285);
-	//titleSurface = createCenteredWrappedText(titleString, headlineFont, colors["DARK_TEXT"]);
 
 	/* We have the surface. Now make the rect. */
 	SDL_Rect titleRect = {
@@ -2884,14 +2892,22 @@ Panel UI::createKeyControlsPanel(ScreenType screenType) {
 		titleSurface->h
 	};
 
-	/* Now make the key map surface. */
+	/* Now make the key map surface. Do Map in a specific order. */
 	string keyMapString = "";
+
 	for (const auto& pair : keyControlsMap) {
-		string thisLine = "[ " + pair.first + " ] " + pair.second + "\n";
-		keyMapString += thisLine;
+		keyMapString += getCommandLineFromPair(pair);
 	}
+	
 
 	SDL_Surface* keyMapSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, keyMapString.c_str(), colors["DARK_TEXT"], 0);
+
+	if (!keyMapSurface) {
+		std::cerr << "SDL failed to initialize. SDL_Error: " << SDL_GetError() << std::endl;
+		SDL_FreeSurface(titleSurface);
+		return panel;
+	}
+
 	int keyMapWidth = keyMapSurface->w;
 	int keyMapHeight = keyMapSurface->h;
 
@@ -2956,7 +2972,7 @@ Panel UI::createKeyControlsPanel(ScreenType screenType) {
 
 	SDL_FreeSurface(keyMapSurface);
 	SDL_FreeSurface(panelSurface);
-	if (titleSurface != NULL) { SDL_FreeSurface(titleSurface); }
+	SDL_FreeSurface(titleSurface);
 
 	return panel;
 }

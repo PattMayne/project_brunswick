@@ -204,6 +204,10 @@ export class MapScreen {
 			MapCharacter& playerCharacter = map.getPlayerCharacter();
 			AudioBooth& audioBooth = AudioBooth::getInstance();
 
+			screenType = ScreenType::Map;
+			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
+
+
 			bool playChorus = false;
 			for (Landmark& landmark : map.getLandmarks()) {
 				if (playerCharacter.getPosition().equals(landmark.getPosition())) {
@@ -228,8 +232,8 @@ export class MapScreen {
 			passingMessagePanel = ui.createPassingMessagePanel("", true, false);
 			passingMessagePanel.setShow(false);
 
-			screenType = ScreenType::Map;
-			screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
+			keyControlsPanel = ui.createKeyControlsPanel(getScreenType());
+			keyControlsPanel.setShow(false);
 
 			running = ensurePlayerHasSuit();
 			animate = false;
@@ -415,6 +419,7 @@ export class MapScreen {
 		Panel passingMessagePanel;
 		Panel statsPanel;
 		Panel trackerPanel;
+		Panel keyControlsPanel;
 
 		int passingMessageCountdown = 0; /* optional */
 		bool running;
@@ -1069,6 +1074,7 @@ void MapScreen::draw(UI& ui) {
 	if (showTitle) {
 		SDL_RenderCopyEx(ui.getMainRenderer(), titleTexture, NULL, &titleRect, 0, NULL, SDL_FLIP_NONE); }
 
+	keyControlsPanel.draw();
 	gameMenuPanel.draw(ui);
 	messagePanel.draw(ui);
 	passingMessagePanel.draw(ui);
@@ -2857,34 +2863,48 @@ void MapScreen::handleKeydown(SDL_Event& e) {
 	case SDLK_d:
 		requestRight();
 		break;
+
+	case SDLK_k:
+		keyControlsPanel.setShow(!keyControlsPanel.getShow());
+		break;
+
 	case SDLK_SPACE:
 		waitTurn();
 		break;
+
 	case SDLK_TAB:
 		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
 		running = false;
 		break;
+
 	case SDLK_0:
 		sendPlayerToLatestShrine();
 		break;
+
 	case SDLK_1:
 		sendPlayerToShrineNumber(1);
 		break;
+
 	case SDLK_2:
 		sendPlayerToShrineNumber(2);
 		break;
+
 	case SDLK_3:
 		sendPlayerToShrineNumber(3);
 		break;
+
 	case SDLK_4:
 		sendPlayerToShrineNumber(4);
 		break;
+
 	case SDLK_5:
 		sendPlayerToShrineNumber(5);
 		break;
+
 	case SDLK_6:
 		sendPlayerToShrineNumber(6);
 		break;
+
 	default:
 		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";
 	}
