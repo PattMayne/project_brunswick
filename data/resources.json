@@ -118,12 +118,35 @@
   },
   "MESSAGES": {
     "NO_FREE_CHAR_JOINTS": "This character has no free joints.",
-    "INTRO":  "  A force of chaos has swept across the land and scrambled the citizens.\n  You must gather their limbs before they fuse together into hostile freaks!\n  Return their limbs to their Shrines, so the citizens can be whole again."
+    "INTRO": "  A force of chaos has swept across the land and scrambled the citizens.\n  You must gather their limbs before they fuse together into hostile freaks!\n  Return their limbs to their Shrines, so the citizens can be whole again.",
+    "KEY_COMMANDS_TITLE": "KEY COMMANDS"
   },
   "CARDINAL_DIRECTIONS": {
     "EAST": "East",
     "WEST": "West",
     "NORTH": "North",
     "SOUTH": "South"
+  },
+  "KEY_COMMANDS": {
+    "BATTLE_SCREEN": {
+      "A": "Top Move",
+      "TAB": "Build Screen",
+      "K": "Open Key Commands"
+    },
+    "MAP_SCREEN": {
+      "TAB": "Build Screen",
+      "K": "Open Key Commands"
+    },
+    "CHARACTER_CREATION_SCREEN": {
+      "TAB": "Continue",
+      "S": "Save Suit",
+      "UP": "Next Character Joint",
+      "DOWN": "Prev. Character Joint",
+      "RIGHT": "Next Limb Joint",
+      "LEFT": "Prev. Limb Joint",
+      "SPACE": "Unequipped Limbs",
+      "C": "Clear Suit",
+      "K": "Open Key Commands"
+    }
   }
 }

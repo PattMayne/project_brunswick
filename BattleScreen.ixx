@@ -115,6 +115,9 @@ public:
 		GameState& gameState = GameState::getInstance();
 		UI& ui = UI::getInstance();
 
+		Resources& resources = Resources::getInstance();
+		resources.getKeyCommands(ScreenType::Battle);
+
 		screenToLoadStruct = ScreenStruct(ScreenType::Menu, 0);
 
 		id = gameState.getScreenStruct().id;
@@ -273,6 +276,7 @@ private:
 	Panel passingMessagePanel;
 	Panel confirmationPanel;
 	Panel optionsMenu;
+	Panel keyControlsPanel;
 
 	int passingMessageCountdown;
 	Battle battle;
@@ -342,6 +346,9 @@ void BattleScreen::createMainPanels(UI& ui, Character& playerCharacter, Characte
 
 	optionsMenu = ui.createGeneralMenuPanel(buttonOptions, false);
 	optionsMenu.setShow(true);
+
+	keyControlsPanel = ui.createKeyControlsPanel(getScreenType());
+	keyControlsPanel.setShow(true);
 
 	createNpcLimbPanel();
 	createPlayerLimbPanels();
@@ -866,9 +873,10 @@ void BattleScreen::draw(UI& ui) {
 	npcStatsPanel.draw(ui);
 	playerTurnPanel.draw(ui);
 	npcLimbsPanel.draw(ui);
-	confirmationPanel.draw(ui);
 	passingMessagePanel.draw(ui);
 	optionsMenu.draw(ui);
+	keyControlsPanel.draw(ui);
+	confirmationPanel.draw(ui);
 
 	SDL_RenderPresent(ui.getMainRenderer()); /* update window */
 }
@@ -919,6 +927,11 @@ void BattleScreen::handleKeydown(SDL_Event& e, GameState& gameState, bool& runni
 		screenToLoadStruct.screenType = ScreenType::CharacterCreation;
 		running = false;
 		break;
+
+	case SDLK_k:
+		keyControlsPanel.setShow(!keyControlsPanel.getShow());
+		break;
+
 	default:
 		cout << e.key.keysym.sym << " KEY PRESSED" << "\n";
 	}

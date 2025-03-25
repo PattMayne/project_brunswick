@@ -41,6 +41,7 @@ export class Resources {
         Resolution getDefaultDimensions(WindowResType restype);
         int getFontSize(FontContext fontContext, int windowWidth);
         int getButtonBorder(int windowWidth);
+        unordered_map<string, string> getKeyCommands(ScreenType screenType);
 
     private:
         /* constructors */
@@ -234,4 +235,31 @@ int Resources::getButtonBorder(int windowWidth) {
     }
 
     return 15;
+}
+
+unordered_map<string, string> Resources::getKeyCommands(ScreenType screenType) {
+    unordered_map<string, string> keyCommands = {};
+
+    if (jsonData.contains("KEY_COMMANDS")) {
+        json keyCommandsData = jsonData["KEY_COMMANDS"];
+
+        string screenTypeText = screenType == ScreenType::Battle ? "BATTLE_SCREEN" :
+            screenType == ScreenType::CharacterCreation ? "CHARACTER_CREATION_SCREEN" :
+            screenType == ScreenType::Map ? "MAP_SCREEN" : "MENU_SCREEN";
+
+        cout << screenTypeText << endl;
+
+        if (keyCommandsData.contains(screenTypeText)) {
+            json screenCommandsData = keyCommandsData[screenTypeText];
+
+            for (const auto& pair : screenCommandsData.items()) {
+                cout << pair.key() << ", " << pair.value() << endl;
+                string key = pair.key();
+                string value = pair.value();
+                keyCommands.insert({ key, value });
+            }
+        }
+    }
+
+    return keyCommands;
 }

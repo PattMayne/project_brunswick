@@ -2742,6 +2742,8 @@ bool MapScreen::sendPlayerToLatestShrine() {
 	trackerPanel.destroyTextures();
 	trackerPanel = ui.createTrackerPanel(playerCharacter.getPosition(), pointToTrack, nameToTrack);
 	trackerPanel.setShow(true);
+
+	return true;
 }
 
 

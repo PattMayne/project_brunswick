@@ -13,7 +13,6 @@ export module TypeStorage;
 using namespace std;
 
 export enum class CardinalDirection { North, South, East, West };
-
 export enum class DominancePosition { Dom, Sub, Neutral };
 
 /* Dominance Node is a Limb's node in the Dominance Cycle (think Rock, Paper, Scissors). */

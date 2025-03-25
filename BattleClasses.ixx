@@ -89,10 +89,18 @@ private:
 
 BattleStatus Battle::switchTurn() {
 
-	if (battleStatus == BattleStatus::PlayerTurn) {
-		battleStatus = BattleStatus::NpcTurn;
-	} else if (battleStatus == BattleStatus::NpcTurn) {
-		battleStatus = BattleStatus::PlayerTurn;
+	if (playerCharacter.getNumberOfEquippableLimbs() < 1) {
+		battleStatus = BattleStatus::PlayerDefeat;
+	} else if (playerCharacter.getNumberOfEquippedLimbs() < 1) {
+		battleStatus = BattleStatus::RebuildRequired;
+	}
+	else {
+		if (battleStatus == BattleStatus::PlayerTurn) {
+			battleStatus = BattleStatus::NpcTurn;
+		}
+		else if (battleStatus == BattleStatus::NpcTurn) {
+			battleStatus = BattleStatus::PlayerTurn;
+		}
 	}
 
 	return battleStatus;

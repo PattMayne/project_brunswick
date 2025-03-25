@@ -142,6 +142,7 @@ export class UI {
 		Panel getNewPassingMessagePanel(string newMessage, Panel& oldPassingMessagePanel, bool topPlacement, bool isBold);
 		Panel createStatsPanel(ScreenType screenType, CharStatsData statsData, bool topRight = true);
 		Panel createTrackerPanel(Point trackedPoint, Point playerPoint, string name);
+		Panel createKeyControlsPanel(ScreenType screenType);
 
 
 		/* OTHER FUNCTIONS. */
@@ -2853,4 +2854,109 @@ Panel UI::createStatsPanel(ScreenType screenType, CharStatsData statsData, bool 
 	if (nameSurface != NULL) { SDL_FreeSurface(nameSurface); }
 
 	return hudPanel;
+}
+
+
+/* Show a map of keys to their functions. */
+Panel UI::createKeyControlsPanel(ScreenType screenType) {
+	Panel panel = Panel();
+	panel.setRect({ 0,0,0,0 });
+	Resources& resources = Resources::getInstance();
+	unordered_map<string, string> keyControlsMap = resources.getKeyCommands(screenType);
+	unordered_map<string, SDL_Color> colors = getColorsByFunction();
+	string keyCommandsString = resources.getMessageText("KEY_COMMANDS_TITLE");
+	string titlePrefix = screenType == ScreenType::Battle ? "BATTLE " :
+		screenType == ScreenType::CharacterCreation ? "BUILD " :
+		screenType == ScreenType::Map ? "MAP " : "";
+	string titleString = titlePrefix + keyCommandsString + "\n";
+
+	/* First make the title surface */
+
+	SDL_Surface* titleSurface = NULL;
+
+	titleSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, titleString.c_str(), colors["DARK_TEXT"], 285);
+	//titleSurface = createCenteredWrappedText(titleString, headlineFont, colors["DARK_TEXT"]);
+
+	/* We have the surface. Now make the rect. */
+	SDL_Rect titleRect = {
+		PANEL_PADDING, PANEL_PADDING,
+		titleSurface->w,
+		titleSurface->h
+	};
+
+	/* Now make the key map surface. */
+	string keyMapString = "";
+	for (const auto& pair : keyControlsMap) {
+		string thisLine = "[ " + pair.first + " ] " + pair.second + "\n";
+		keyMapString += thisLine;
+	}
+
+	SDL_Surface* keyMapSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, keyMapString.c_str(), colors["DARK_TEXT"], 0);
+	int keyMapWidth = keyMapSurface->w;
+	int keyMapHeight = keyMapSurface->h;
+
+
+	SDL_Rect keyMapRect = {
+		titleRect.x,
+		titleRect.y + titleRect.h + PANEL_PADDING,
+		keyMapWidth,
+		keyMapHeight
+	};
+
+	int widestWidth = keyMapRect.w > titleRect.w ? keyMapRect.w : titleRect.w;
+
+
+	/*
+	*
+	* ENTIRE PANEL
+	*
+	*/
+
+	/* Get the dimensions for the entire panel. */
+	int panelWidth = widestWidth + (PANEL_PADDING * 2);
+	int panelHeight = titleRect.h + keyMapRect.h + (PANEL_PADDING * 3);
+
+
+	/*
+	*
+	*
+	* MAKE THE HUD PANEL SURFACE AND BLIT THE SMALLER TEXTURES ONTO IT.
+	*
+	*
+	*/
+
+	SDL_Surface* panelSurface = createTransparentSurface(panelWidth, panelHeight);
+	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
+
+
+	/*
+	*      BLITTING
+	*/
+
+	if (titleSurface != NULL) {
+		SDL_BlitSurface(titleSurface, NULL, panelSurface, &titleRect);
+	}
+
+	SDL_BlitSurface(keyMapSurface, NULL, panelSurface, &keyMapRect);
+	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
+
+	/*
+	*
+	*
+	* MAKE THE HUD PANEL TEXTURE AND RETURN IT.
+	*
+	*
+	*/
+
+	int drawX = (getWindowWidth() / 2) - (panelWidth / 2);
+	int drawY = PANEL_PADDING;
+
+	panel.setRect({ drawX, drawY, panelWidth , panelHeight });
+	panel.setTexture(panelTexture);
+
+	SDL_FreeSurface(keyMapSurface);
+	SDL_FreeSurface(panelSurface);
+	if (titleSurface != NULL) { SDL_FreeSurface(titleSurface); }
+
+	return panel;
 }
