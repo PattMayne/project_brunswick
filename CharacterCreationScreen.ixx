@@ -312,6 +312,7 @@ export void CharacterCreationScreen::run() {
 	GameState& gameState = GameState::getInstance();
 	UI& ui = UI::getInstance();
 	reviewModePanel.setShow(true);
+	chooseLimbPanel.setShow(false);
 
 	/* Timeout data */
 	const int TARGET_FPS = 60;
@@ -328,6 +329,10 @@ export void CharacterCreationScreen::run() {
 	if (playerCharacter.getNumberOfEquippableLimbs() < 1) {
 		screenToLoadStruct.screenType = ScreenType::Map; /* why map? to do: handle where to send player with no limbs. */
 		running = false;
+	}
+	else if (playerCharacter.getNumberOfEquippedLimbs() < 1) {
+		createChooseLimbPanel(false, 1);
+		chooseLimbPanel.setShow(true);
 	}
 
 	/* loop and event control */
@@ -531,7 +536,6 @@ void CharacterCreationScreen::continueGame(GameState& gameState, bool& running) 
 	* 2. FIND OUT where player is supposed to go (Map or Battle).
 	*/
 	int battleId = getCurrentBattleId(gameState.getPlayerID());
-	cout << "Battle id: " << battleId << endl;
 
 	if (battleId < 1) {
 		screenToLoadStruct.screenType = ScreenType::Map;
@@ -573,7 +577,6 @@ bool CharacterCreationScreen::nextLimbJoint() {
 	}
 	else {
 		Limb& loadedLimb = playerCharacter.getLimbById(loadedLimbId);
-		cout << "LIMB: " << loadedLimb.getForm().slug << "\n";
 		bool anchorShifted = loadedLimb.shiftAnchorLimb();
 		if (anchorShifted) {
 			playerCharacter.setAnchorJointIDs();
@@ -587,7 +590,6 @@ bool CharacterCreationScreen::nextLimbJoint() {
 /* Unequipe EVERYTHING. */
 bool CharacterCreationScreen::clearSuit() {
 	UI& ui = UI::getInstance();
-	cout << "CLEARING SUIT\n";
 	playerCharacter.clearSuit();
 	playerStatsPanel.destroyTextures();
 	playerStatsPanel = ui.createStatsPanel(ScreenType::Battle, playerCharacter.getCharStatsData(), true);
@@ -601,7 +603,6 @@ bool CharacterCreationScreen::clearSuit() {
 bool CharacterCreationScreen::saveSuit(GameState& gameState) {
 	string suitSavedString = "Suit Saved.";
 	updateCharacterLimbs(gameState.getPlayerID(), playerCharacter.getAnchorLimbId(), playerCharacter.getLimbs());
-	cout << suitSavedString << endl;
 	messagePanel = getNewConfirmationMessage(messagePanel, suitSavedString, ConfirmationButtonType::OkCancel, false);
 	messagePanel.setShow(true);
 
@@ -660,23 +661,18 @@ void CharacterCreationScreen::equipLimb() {
 
 /* Process user input */
 void CharacterCreationScreen::handleEvent(SDL_Event& e, bool& running, GameState& gameState) {
-	cout << "event\n";
+
 	/* User pressed X to close */
 	if (e.type == SDL_QUIT) {
-		cout << "\nQUIT\n";
 		running = false;
 		return;
 	}
 	else {
 		/* user clicked */
 		if (e.type == SDL_MOUSEBUTTONDOWN) {
-			cout << "user clicked mouse\n";
-			handleMousedown(e, gameState, running);
-		}
+			handleMousedown(e, gameState, running); }
 		else if (e.type == SDL_KEYDOWN) {
-			cout << "key pressed\n";
-			handleKeydown(e, gameState, running);
-		}
+			handleKeydown(e, gameState, running); }
 	}
 }
 
@@ -729,7 +725,6 @@ void CharacterCreationScreen::handleMousedown(SDL_Event& e, GameState& gameState
 		}
 	}
 	else if (chooseLimbPanel.getShow() && chooseLimbPanel.isInPanel(mouseX, mouseY)) {
-		cout << "\n\nCLICK LIMB MENU \n\n";
 		ButtonClickStruct clickStruct = chooseLimbPanel.checkButtonClick(mouseX, mouseY);
 		int limbToLoadID = clickStruct.itemID;
 
@@ -755,7 +750,6 @@ void CharacterCreationScreen::handleMousedown(SDL_Event& e, GameState& gameState
 		}
 	}
 	else if (limbLoadedPanel.getShow() && limbLoadedPanel.isInPanel(mouseX, mouseY)) {
-		cout << "\n\nCLICK LOADED LIMB MENU \n\n";
 		ButtonClickStruct clickStruct = limbLoadedPanel.checkButtonClick(mouseX, mouseY);
 		UI& ui = UI::getInstance();
 		audioBooth.playClick();
@@ -837,7 +831,7 @@ void CharacterCreationScreen::handleKeydown(SDL_Event& e, GameState& gameState, 
 		break;
 
 	case SDLK_SPACE:
-		// Toggle unequipped limbs
+		chooseLimbPanel.setShow(!chooseLimbPanel.getShow());
 		break;
 
 	case SDLK_UP:

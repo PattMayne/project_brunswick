@@ -2903,7 +2903,7 @@ Panel UI::createKeyControlsPanel(ScreenType screenType) {
 	SDL_Surface* keyMapSurface = TTF_RenderUTF8_Blended_Wrapped(monoFont, keyMapString.c_str(), colors["DARK_TEXT"], 0);
 
 	if (!keyMapSurface) {
-		std::cerr << "SDL failed to initialize. SDL_Error: " << SDL_GetError() << std::endl;
+		std::cerr << "SDL failed to initialize... SDL_Error: " << SDL_GetError() << std::endl;
 		SDL_FreeSurface(titleSurface);
 		return panel;
 	}

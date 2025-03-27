@@ -247,13 +247,10 @@ unordered_map<string, string> Resources::getKeyCommands(ScreenType screenType) {
             screenType == ScreenType::CharacterCreation ? "CHARACTER_CREATION_SCREEN" :
             screenType == ScreenType::Map ? "MAP_SCREEN" : "MENU_SCREEN";
 
-        cout << screenTypeText << endl;
-
         if (keyCommandsData.contains(screenTypeText)) {
             json screenCommandsData = keyCommandsData[screenTypeText];
 
             for (const auto& pair : screenCommandsData.items()) {
-                cout << pair.key() << ", " << pair.value() << endl;
                 string key = pair.key();
                 string value = pair.value();
                 keyCommands.insert({ key, value });
