@@ -59,6 +59,13 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 - [ ] Error checks for all Texture & Surface generation.
 - [x] incorporate SQLite database (#include <sqlite3.h>)
 - [x] Make a Resources module to encapsulate string and int resources (JSON)
+- [ ] Tweak path-generation algorithm to make more beautiful path networks
+- [ ] Create House Landmarks
+    - [ ] Create House Maps
+          - which are clearly owned by a main map)
+          - There are two or three of them in every map
+    - [ ] Include friendly NPCs in the mini-maps
+- [ ] 
 
 ### Long-Range Notes & Plans
 
@@ -70,9 +77,9 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 ## How The Software Works
 
 There is a main game loop (in main.cpp), and then each "screen" has its own game loop (which we will call "screen loops") nested in the "main loop".
-The main loop checks the GameState, which holds information about which screen loop should run next. The screen loop is contained in a Screen object's "run" function. The screen loop will keep running until something tells it to quit (player action, or some event in the game). When the screen loop ends, the Screen's "run" function will also end, and will return information about which screen loop should run next.
+The main loop checks the GameState object, which holds information about which screen loop should run next. The screen loop is contained in a Screen object's "run" function. The screen loop will keep running until something tells it to quit (player action, or some event in the game). When the screen loop ends, the Screen's "run" function will also end, and will return information about which screen (loop) should run next.
 
-The Map screen takes an id for which Map object to load from the database. The Map object contains a collection of Row objects, which each contain a collection of Block objects. The Row's index in its collection is the row number (y position in the grid of the 2D map). The Block object's index in its collection is the column number (x position in the 2D map). A Block can either be a Floor or a Wall. In previous versions of this game the map would be infinite, the Block objects were Floors by default, and I would randomly generate clusters of walls, whose perimeters would never meet. For this version of the Map, I will instead make Block objects *Wall* by default, and place landmarks (buildings, shrines, etc) at (possibly randomized) locations within a finite map, and procedurally/semi-randomly draw paths of Floor to connect them. Once generated, these Maps are saved to the database. So each one will be unique, but persistent once the player starts their game.
+The Map screen takes an id for which Map object to load from the database. The Map object contains a collection of Row objects, which each contain a collection of Block objects. The Row's index in its collection is the row number (y position in the grid of the 2D map). The Block object's index in its collection is the column number (x position in the 2D map). A Block can either be a Floor or a Wall. In previous versions of this game the map would be infinite, the Block objects were Floors by default, and I would randomly generate clusters of walls, whose perimeters would never meet. For this version of the Map, I will instead make Block objects *Wall* by default, and place landmarks (buildings, shrines, etc) at (possibly randomized) locations within a finite map, and procedurally/semi-randomly draw paths of Floor to connect them (this algorithm must be tweaked to make more beautiful path networks). Once generated, these Maps are saved to the database. So each one will be unique, but persistent once the player starts their game.
 
 There will be World Maps (the main maps), Building Maps, and Dungeon Maps. Buildings and dungeons can be accessed within world maps.
 
