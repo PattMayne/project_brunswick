@@ -177,6 +177,9 @@
   <ItemGroup>
     <ResourceCompile Include="LandOfLimbs.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\pics\Land of Limbs\building_001.png" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

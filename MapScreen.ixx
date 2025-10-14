@@ -157,6 +157,8 @@ export class MapScreen {
 				}
 			}
 			else {
+				// Map object (from map_slug) does NOT exist, so create a new one.
+
 				newMap = true;
 				/* Create new map. */
 				map = Map(mapForm);

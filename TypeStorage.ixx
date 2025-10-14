@@ -19,6 +19,11 @@ export enum class DominancePosition { Dom, Sub, Neutral };
 export enum class DominanceNode { Red, Green, Blue };
 export int const dominanceCycleAdvantage = 15;
 
+/*
+* Is the attacker dominant, submissive, or neutral in this exchange?
+* This function takes the attacker's dominance node, compares it to the defender's dom node, 
+* and returns an answer to that question.
+*/
 export DominancePosition attackerDominancePosition(DominanceNode attackerNode, DominanceNode defenderNode) {
 	DominancePosition dPosition = DominancePosition::Neutral;
 	if (attackerNode == defenderNode) { return dPosition; }

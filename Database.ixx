@@ -3032,14 +3032,14 @@ export Map loadMap(string mapSlug) {
             exit.setId(landmarkId);
             landmarks.emplace_back(exit);
         }
-        else if (landmarkType == Shrine) {
+        else if (landmarkType == Shrine || landmarkType == Building) {
             UI& ui = UI::getInstance();
-            SDL_Surface* shrineSurface = IMG_Load("assets/shrine.png");
-            SDL_Texture* shrineTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), shrineSurface);
-            SDL_FreeSurface(shrineSurface);
+            SDL_Surface* landmarkSurface = landmarkType == Shrine ? IMG_Load("assets/shrine.png") : IMG_Load("assets/building_001.png");
+            SDL_Texture* landmarkTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), landmarkSurface);
+            SDL_FreeSurface(landmarkSurface);
             Landmark shrine = Landmark(
                 position,
-                shrineTexture,
+                landmarkTexture,
                 landmarkType,
                 suitCharacterId,
                 suitType

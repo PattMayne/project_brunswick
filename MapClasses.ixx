@@ -41,7 +41,7 @@ import UI;
 using namespace std;
 
 
-export enum MapDirection { Up, Down, Left, Right, Total }; /* NOT a CLASS because we want to use it as int. */
+export enum MapDirection { Up, Down, Left, Right, Total }; /* NOT an enum CLASS because we want to use it as int. */
 
 export struct AcquiredLimb {
 	SDL_Texture* texture;
@@ -348,7 +348,9 @@ export class Map {
 public:
 	/* constructors */
 	Map() {};
+	// Generate brand new map
 	Map(MapForm mapForm);
+	// Load existing map
 	Map(MapForm mapForm, vector<Limb> roamingLimbs, vector<vector<Block>> rows, Point characterPosition, vector<MapCharacter> hostileNpcs);
 	vector<vector<Block>>& getRows() { return rows; }
 	vector<Landmark>& getLandmarks() { return landmarks; }
@@ -434,10 +436,10 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 	* The map building function will also add the Point location.
 	*/
 
+	SDL_Surface* shrineSurface = IMG_Load("assets/shrine.png");
+	SDL_Surface* buildingSurface = IMG_Load("assets/building_001.png");
+
 	for (Character& suit : mapForm.suits) {
-		SDL_Surface* shrineSurface = IMG_Load("assets/shrine.png");
-		SDL_Texture* shrineTexture = SDL_CreateTextureFromSurface(ui.getMainRenderer(), shrineSurface);
-		SDL_FreeSurface(shrineSurface);
 
 		/* create a landmark */
 
@@ -445,12 +447,33 @@ Map::Map(MapForm mapForm) : mapForm(mapForm) {
 
 		landmarks.emplace_back(
 			shrinePoint,
-			shrineTexture,
+			SDL_CreateTextureFromSurface(ui.getMainRenderer(), shrineSurface),
 			LandmarkType::Shrine,
 			suit.getId(),
 			suit.getSuitType()
 		);
 	}
+
+	// Now let's add two buildings (maybe every building needs to be OWNED by a friendly NPC?)
+	// YES: in the future make a list of friendly NPCs and give SOME of them BUILDINGS.
+	// ALSO, a landmark demands a character ID anyway.
+	// For now we'll just add two buildings, and draw them as shrines.
+	// THEN we'll draw them as huts
+	// THEN we'll clear more space to draw them as multi-block buildings.
+
+	for (int i = 0; i < 3; i++) {
+		landmarks.emplace_back(
+			Point(0, 0),
+			SDL_CreateTextureFromSurface(ui.getMainRenderer(), buildingSurface),
+			LandmarkType::Building,
+			1,
+			SuitType::NoSuit
+		);
+	}
+
+	// We created many shrine textures from this surface.
+	SDL_FreeSurface(shrineSurface);
+	SDL_FreeSurface(buildingSurface);
 
 	/* Build the actual grid for the first time. Receive a list of floor coordinates. */
 	vector<Point> floorPositions = buildMap();
@@ -696,9 +719,9 @@ vector<Point> Map::buildMap() {
 		}
 	}
 
-	/* Now give the shrines positions, and add those positions to pointsToReach. */
+	/* Now give the shrines and buildings positions, and add those positions to pointsToReach. */
 	for (Landmark& landmark : landmarks) {
-		if (landmark.getType() == LandmarkType::Shrine) {
+		if (landmark.getType() == LandmarkType::Shrine || landmark.getType() == LandmarkType::Building) {
 			int randX = (rand() % (mapForm.blocksWidth - 10)) + 5;
 			int randY = (rand() % (mapForm.blocksHeight - 10)) + 5;
 			landmark.setPosition(Point(randX, randY));
@@ -710,7 +733,7 @@ vector<Point> Map::buildMap() {
 
 	/* Now add the spaced out Shrine positions to the pointsToReach list. */
 	for (Landmark& landmark : landmarks) {
-		if (landmark.getType() == LandmarkType::Shrine) {
+		if (landmark.getType() == LandmarkType::Shrine || landmark.getType() == LandmarkType::Building) {
 			pointsToReach.push_back(landmark.getPosition());
 		}
 	}
