@@ -2067,6 +2067,17 @@ bool MapScreen::checkLandmarkCollision(bool& running, MapCharacter& playerCharac
 				passingMessagePanel.setShow(true);
 				passingMessageCountdown = 0;
 			}
+			else if (collisionInfo.type == LandmarkType::Building) {
+				cout << "YOU CANNOT LEAVE THIS WAY\n";
+				/* TO DO: animate PUSHING the character OFF the entrance???
+				*/
+				string message = "Welcome to a building. Soon this will take you to a building map screen, but for now you will just chill or maybe spin.";
+				passingMessagePanel = ui.getNewPassingMessagePanel(message, passingMessagePanel, true, false);
+				passingMessagePanel.setShow(true);
+				passingMessageCountdown = 0;
+			}
+
+
 			commitTransactionAndCloseDatabase(db);
 		}
 	}

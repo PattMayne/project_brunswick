@@ -60,11 +60,20 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
 - [x] incorporate SQLite database (#include <sqlite3.h>)
 - [x] Make a Resources module to encapsulate string and int resources (JSON)
 - [ ] Tweak path-generation algorithm to make more beautiful path networks
-- [ ] Create House Landmarks
+- [x] Create House Landmarks
     - [ ] Create House Maps
           - which are clearly owned by a main map)
           - There are two or three of them in every map
     - [ ] Include friendly NPCs in the mini-maps
+- [ ] Make a limb-trader in a house map.
+    - [ ] make dialog with friendly NPC
+    - [ ] Trader stuff will be stored in the landmark
+        - [ ] the "owner" is the player_id in the landmark DB
+        - [ ] inventory will be an optional field in the landmark, holding a "Shop" struct
+            - [ ] The limbs are the actual inventory of the owner of the shop.
+            - [ ] Every friendly NPC can also trade their non-equipped inventory (but some exist solely for that reason)
+            - [ ] Step on a friendly NPC and buttons appear: SHOP / TRADE
+            - [ ] Friendly NPCs bob at the same rhythm as you
 - [ ] 
 
 ### Long-Range Notes & Plans
