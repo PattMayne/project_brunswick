@@ -72,9 +72,13 @@ Old code for the Java version is here: [Limbs Cyberpunk](https://github.com/Patt
         - [ ] inventory will be an optional field in the landmark, holding a "Shop" struct
             - [ ] The limbs are the actual inventory of the owner of the shop.
             - [ ] Every friendly NPC can also trade their non-equipped inventory (but some exist solely for that reason)
+            - [ ] Every friendly NPC has at least one line of dialog
             - [ ] Step on a friendly NPC and buttons appear: SHOP / TRADE
             - [ ] Friendly NPCs bob at the same rhythm as you
-- [ ] 
+- [ ] DESERT MAP
+    - [ ] The paths should be highway like burnt american or australian desert.
+- [ ] Friendly and Hostile NPC behavior
+    - [ ] make ALL friendly for testing
 
 ### Long-Range Notes & Plans
 

@@ -1244,7 +1244,9 @@ bool UI::initializeFonts(Resources& resources) {
 		return false;
 	}
 
-	bodyFont = TTF_OpenFont("assets/classica_book.ttf", bodyFontSize);
+	//bodyFont = TTF_OpenFont("assets/classica_book.ttf", bodyFontSize);
+	bodyFont = TTF_OpenFont("assets/imperator.ttf", bodyFontSize);
+	TTF_SetFontLineSkip(bodyFont, 27); // SET LINE HEIGHT (imperator line height smushes them all together)
 
 	if (!bodyFont) {
 		SDL_Log("Font (classica_book) failed to load. TTF_Error: %s\n", TTF_GetError());
@@ -1252,7 +1254,11 @@ bool UI::initializeFonts(Resources& resources) {
 		return false;
 	}
 
-	dialogFont = TTF_OpenFont("assets/la_belle_aurore.ttf", dialogFontSize);
+	// backup original file
+	//dialogFont = TTF_OpenFont("assets/la_belle_aurore.ttf", dialogFontSize);
+	dialogFont = TTF_OpenFont("assets/imperator.ttf", dialogFontSize);
+
+	
 
 	if (!dialogFont) {
 		SDL_Log("Font failed to load. TTF_Error: %s\n", TTF_GetError());
@@ -2615,16 +2621,33 @@ Panel UI::createPassingMessagePanel(string message, bool topPlacement, bool isBo
 		textHeight
 	};
 
+	SDL_Rect overlayRect = {
+		0,0, panelRectWidth, panelRectHeight
+	};
+
 
 	/* Create the panel surface. */
+
+	// BACKUPS of simply filling in with a color
+	//SDL_Surface* panelSurface = createTransparentSurface(panelRectWidth, panelRectHeight);
+	//SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
+
+
+	// create the transparent panel surface (to be drawn on)
 	SDL_Surface* panelSurface = createTransparentSurface(panelRectWidth, panelRectHeight);
-	SDL_FillRect(panelSurface, NULL, convertSDL_ColorToUint32(panelSurface->format, colors["PANEL_BG"]));
+
+	// load the texture overlay
+	SDL_Surface* overlaySurface = IMG_Load("assets/msg_paper.jpg");
+
+	// blit the overlay onto the transparent panelSurface
+	SDL_BlitSurface(overlaySurface, NULL, panelSurface, &overlayRect);
 
 	/* Blit the text onto the panel, make the texture, destroy the surfaces. */
 	SDL_BlitSurface(textSurface, NULL, panelSurface, &textRect);
 	SDL_Texture* panelTexture = SDL_CreateTextureFromSurface(mainRenderer, panelSurface);
 	SDL_FreeSurface(textSurface);
 	SDL_FreeSurface(panelSurface);
+	SDL_FreeSurface(overlaySurface);
 
 	/* Empty buttons vector because the constructor needs a vector. */
 	vector<Button> buttons;

@@ -26,6 +26,9 @@
 *
 * A puzzle/adventure/RPG game where you build a modular character from LIMBs.
 *
+* 
+* 
+* NOTE: I am using DYNAMIC LINKING and compiling from DLLs
 */
 
 #include "include/json.hpp"
